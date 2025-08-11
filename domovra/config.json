@@ -1,1 +1,23 @@
-
+{
+  "name": "Domovra (Stock Manager)",
+  "slug": "domovra",
+  "version": "0.1.0",
+  "description": "Gestion de stock domestique (frigo, congélateur, placards) — interface web via Ingress.",
+  "arch": ["aarch64", "amd64", "armv7"],
+  "startup": "application",
+  "boot": "auto",
+  "init": false,
+  "ingress": true,
+  "ingress_port": 8099,
+  "ingress_entry": "/",
+  "panel_icon": "mdi:package-variant-closed",
+  "map": ["data:rw"],
+  "options": {
+    "retention_days_warning": 30,
+    "retention_days_critical": 14
+  },
+  "schema": {
+    "retention_days_warning": "int",
+    "retention_days_critical": "int"
+  }
+}
