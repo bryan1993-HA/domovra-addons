@@ -1,1 +1,42 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <title>Domovra</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <style>
+    body { font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; margin: 1rem 1.25rem; }
+    h1 { margin: 0 0 .5rem; }
+    p.muted { color:#666; }
+    .card { border:1px solid #e5e7eb; border-radius:12px; padding:1rem; }
+    .grid { display:grid; gap:1rem; grid-template-columns: repeat(auto-fit,minmax(240px,1fr)); }
+    .btn { padding:.6rem 1rem; border:1px solid #ddd; border-radius:10px; background:#fafafa; cursor:pointer; }
+  </style>
+</head>
+<body>
+  <h1>Domovra</h1>
+  <p class="muted">Gestion de stock domestique (frigo, congélateur, placards) — prototype</p>
 
+  <div class="grid">
+    <div class="card">
+      <h3>📦 Stock</h3>
+      <p>Liste des articles, recherche, tri (à venir).</p>
+      <button class="btn" disabled>Ouvrir</button>
+    </div>
+    <div class="card">
+      <h3>➕ Entrée rapide</h3>
+      <p>Ajout d’un produit en 10 secondes (à venir).</p>
+      <button class="btn" disabled>Ouvrir</button>
+    </div>
+    <div class="card">
+      <h3>🏷️ Emplacements</h3>
+      <p>Créer Bac 1, Bac 2, Placard, etc. (à venir).</p>
+      <button class="btn" disabled>Ouvrir</button>
+    </div>
+  </div>
+
+  <p class="muted" style="margin-top:1rem">
+    Ceci est l’écran Ingress “Hello”. Prochaine étape : ajouter la base de données et le CRUD.
+  </p>
+</body>
+</html>
