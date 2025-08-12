@@ -5,38 +5,106 @@
   <title>Domovra</title>
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <style>
+    :root{ color-scheme: dark; }
     body { font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; margin: 1rem 1.25rem; }
     h1 { margin: 0 0 .5rem; }
-    p.muted { color:#666; }
-    .card { border:1px solid #e5e7eb; border-radius:12px; padding:1rem; }
-    .grid { display:grid; gap:1rem; grid-template-columns: repeat(auto-fit,minmax(240px,1fr)); }
-    .btn { padding:.6rem 1rem; border:1px solid #ddd; border-radius:10px; background:#fafafa; cursor:pointer; }
+    .muted { color:#9aa0a6; }
+    .grid { display:grid; gap:1rem; grid-template-columns: repeat(auto-fit,minmax(260px,1fr)); margin: .75rem 0 1rem; }
+    .card { border:1px solid #2f3237; border-radius:12px; padding:1rem; }
+    input, select { width:100%; padding:.55rem .6rem; border-radius:8px; border:1px solid #3a3d43; background:#1f2125; color:#e8eaed; }
+    button { padding:.55rem .9rem; border-radius:8px; border:1px solid #3a3d43; background:#2b2f36; color:#e8eaed; cursor:pointer; }
+    table { width:100%; border-collapse: collapse; margin-top:.5rem; }
+    th, td { padding:.5rem .6rem; border-bottom:1px solid #2f3237; text-align:left; }
+    .tag { padding:.2rem .5rem; border-radius:.5rem; font-size:.85rem; }
+    .green{ background:#134e19; } .yellow{ background:#6a5b0a; } .red{ background:#6a1a1a; } .unknown{ background:#374151; }
+    .row { display:flex; gap:.5rem; }
   </style>
 </head>
 <body>
   <h1>Domovra</h1>
-  <p class="muted">Gestion de stock domestique (frigo, congélateur, placards) — prototype</p>
+  <p class="muted">Gestion de stock domestique — ajout rapide d’emplacements, produits et lots.</p>
 
   <div class="grid">
     <div class="card">
-      <h3>📦 Stock</h3>
-      <p>Liste des articles, recherche, tri (à venir).</p>
-      <button class="btn" disabled>Ouvrir</button>
+      <h3>🏷️ Emplacement</h3>
+      <form method="post" action="/location/add">
+        <input name="name" placeholder="ex. Bac 1, Frigo, Placard haut" required>
+        <div style="margin-top:.5rem"><button>Ajouter</button></div>
+      </form>
+      <p class="muted" style="margin-top:.5rem">Emplacements : 
+        {% for l in locations %}<span class="tag unknown">{{ l.name }}</span> {% endfor %}
+      </p>
     </div>
+
     <div class="card">
-      <h3>➕ Entrée rapide</h3>
-      <p>Ajout d’un produit en 10 secondes (à venir).</p>
-      <button class="btn" disabled>Ouvrir</button>
+      <h3>📦 Produit</h3>
+      <form method="post" action="/product/add">
+        <input name="name" placeholder="ex. Rôti de porc" required>
+        <div class="row" style="margin-top:.5rem">
+          <input name="unit" placeholder="unité (pièce, g, tranches)" value="pièce">
+          <input name="shelf" type="number" placeholder="Jours de conservation par défaut" value="90" min="1">
+        </div>
+        <div style="margin-top:.5rem"><button>Ajouter</button></div>
+      </form>
+      <p class="muted" style="margin-top:.5rem">Produits : {{ products|length }}</p>
     </div>
+
     <div class="card">
-      <h3>🏷️ Emplacements</h3>
-      <p>Créer Bac 1, Bac 2, Placard, etc. (à venir).</p>
-      <button class="btn" disabled>Ouvrir</button>
+      <h3>➕ Entrée de stock</h3>
+      <form method="post" action="/lot/add">
+        <select name="product_id" required>
+          <option value="" disabled selected>Produit…</option>
+          {% for p in products %}<option value="{{ p.id }}">{{ p.name }} ({{ p.unit }})</option>{% endfor %}
+        </select>
+        <div class="row" style="margin-top:.5rem">
+          <select name="location_id" required>
+            <option value="" disabled selected>Emplacement…</option>
+            {% for l in locations %}<option value="{{ l.id }}">{{ l.name }}</option>{% endfor %}
+          </select>
+          <input name="qty" type="number" step="0.01" min="0.01" placeholder="Quantité" required>
+        </div>
+        <div class="row" style="margin-top:.5rem">
+          <label style="flex:1">Congelé le
+            <input type="date" name="frozen_on">
+          </label>
+          <label style="flex:1">À consommer avant
+            <input type="date" name="best_before">
+          </label>
+        </div>
+        <div style="margin-top:.5rem"><button>Ajouter au stock</button></div>
+      </form>
     </div>
   </div>
 
-  <p class="muted" style="margin-top:1rem">
-    Ceci est l’écran Ingress “Hello”. Prochaine étape : ajouter la base de données et le CRUD.
-  </p>
+  <div class="card">
+    <h3>⏳ À consommer en priorité</h3>
+    <table>
+      <thead>
+        <tr><th>Produit</th><th>Emplacement</th><th>Qté</th><th>Congelé le</th><th>À consommer avant</th><th>État</th><th>Action</th></tr>
+      </thead>
+      <tbody>
+        {% for it in lots %}
+          <tr>
+            <td>{{ it.product }}</td>
+            <td>{{ it.location }}</td>
+            <td>{{ it.qty }} {{ it.unit }}</td>
+            <td>{{ it.frozen_on or '' }}</td>
+            <td>{{ it.best_before or '' }}</td>
+            <td><span class="tag {{ it.status }}">{{ "OK" if it.status=="green" else ("Bientôt" if it.status=="yellow" else ("Urgent" if it.status=="red" else "—")) }}</span></td>
+            <td>
+              <form method="post" action="/lot/consume" class="row">
+                <input type="hidden" name="lot_id" value="{{ it.id }}">
+                <input type="number" step="0.01" min="0.01" name="qty" placeholder="Qté à consommer">
+                <button>Consommer</button>
+              </form>
+            </td>
+          </tr>
+        {% else %}
+          <tr><td colspan="7" class="muted">Aucun lot pour l’instant.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    <p class="muted">Codes couleur : <span class="tag green">OK</span> <span class="tag yellow">Bientôt</span> <span class="tag red">Urgent</span></p>
+  </div>
 </body>
 </html>
