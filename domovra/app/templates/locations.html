@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% block title %}Domovra — Emplacements{% endblock %}
+
+{% block content %}
+  <h1>Emplacements</h1>
+  <p class="muted">Tous les emplacements disponibles pour ranger vos produits.</p>
+
+  <div class="card">
+    <form method="post" action="{{ BASE }}location/add" style="display:flex; gap:.5rem;">
+      <input name="name" placeholder="ex. Bac 1, Frigo, Placard haut" required>
+      <button>Ajouter</button>
+    </form>
+  </div>
+
+  <table>
+    <thead><tr><th>Nom</th></tr></thead>
+    <tbody>
+      {% for l in items %}
+      <tr><td>{{ l.name }}</td></tr>
+      {% else %}
+      <tr><td class="muted">Aucun emplacement pour l’instant.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+{% endblock %}
