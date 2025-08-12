@@ -1,10 +1,10 @@
 {
   "name": "Domovra (Stock Manager)",
   "slug": "domovra",
-  "version": "0.1.4.6",
+  "version": "0.1.4.7",
   "description": "Gestion de stock domestique (frigo, congélateur, placards) — interface web via Ingress. Ajout/édition/suppression de produits, emplacements et lots, avec filtres et statut des DLC.",
   "url": "https://github.com/bryan1993-HA/domovra-addons",
-  "documentation": "https://github.com/bryan1993-HA/domovra-addons/blob/main/README.md",
+  "documentation": "https://github.com/bryan1993-HA/domovra-addons/blob/main/domovra/README.md",
   "issue_tracker": "https://github.com/bryan1993-HA/domovra-addons/issues",
   "changelog": "https://github.com/bryan1993-HA/domovra-addons/releases",
   "arch": ["aarch64", "amd64", "armv7"],
