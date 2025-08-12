@@ -5,21 +5,21 @@ from fastapi import FastAPI, Request, Form
 from fastapi.responses import HTMLResponse, RedirectResponse, JSONResponse, PlainTextResponse, Response
 from jinja2 import Environment, FileSystemLoader, select_autoescape
 
-# ====== IMPORTS DB
+# DB
 from db import (
     init_db, add_location, list_locations,
     add_product, list_products,
-    add_lot, list_lots, consume_lot, status_for
+    add_lot, list_lots, consume_lot, status_for,
+    delete_product  # <- NEW
 )
 
-# Essaie d'importer list_products_with_stats depuis db.py
+# `list_products_with_stats` peut manquer si build pas à jour -> fallback
 _DB_HAS_STATS = True
 try:
     from db import list_products_with_stats  # type: ignore
 except Exception:
     _DB_HAS_STATS = False
 
-# ====== LOGS & CONFIG
 logger = logging.getLogger("domovra")
 logging.basicConfig(level=logging.INFO)
 
@@ -34,14 +34,12 @@ templates = Environment(
     autoescape=select_autoescape()
 )
 
-# ====== FALLBACK SI db.py N'A PAS list_products_with_stats
 def _conn():
     c = sqlite3.connect(DB_PATH)
     c.row_factory = sqlite3.Row
     return c
 
 def _list_products_with_stats_fallback():
-    logger.warning("db.py ne fournit pas list_products_with_stats -> utilisation du fallback SQL direct.")
     q = """
     SELECT
       p.id, p.name, p.unit, p.default_shelf_life_days,
@@ -60,11 +58,9 @@ def get_products_with_stats():
         try:
             return list_products_with_stats()  # type: ignore
         except Exception:
-            # au cas où l'import existe mais l’implémentation plante
             return _list_products_with_stats_fallback()
     return _list_products_with_stats_fallback()
 
-# ====== LIFECYCLE
 @app.on_event("startup")
 def _startup():
     logger.info("Domovra starting. DB_PATH=%s", DB_PATH)
@@ -78,11 +74,7 @@ def ping():
 def nocache_html(html: str) -> Response:
     return HTMLResponse(
         html,
-        headers={
-            "Cache-Control": "no-store, no-cache, must-revalidate, max-age=0",
-            "Pragma": "no-cache",
-            "Expires": "0",
-        },
+        headers={"Cache-Control":"no-store, no-cache, must-revalidate, max-age=0","Pragma":"no-cache","Expires":"0"},
     )
 
 def render(name: str, **ctx):
@@ -91,11 +83,10 @@ def render(name: str, **ctx):
 
 def ingress_base(request: Request) -> str:
     base = request.headers.get("X-Ingress-Path") or "/"
-    if not base.endswith("/"):
-        base += "/"
+    if not base.endswith("/"): base += "/"
     return base
 
-# ====== ROUTES PAGES
+# ---------- Pages
 @app.get("/", response_class=HTMLResponse)
 @app.get("//", response_class=HTMLResponse)
 def index(request: Request):
@@ -104,17 +95,8 @@ def index(request: Request):
     lots      = list_lots()
     for it in lots:
         it["status"] = status_for(it.get("best_before"), WARNING_DAYS, CRITICAL_DAYS)
-    logger.info("Index: %d locations, %d products, %d lots", len(locations), len(products), len(lots))
-    return render(
-        "index.html",
-        BASE=ingress_base(request),
-        locations=locations,
-        products=products,
-        lots=lots,
-        WARNING_DAYS=WARNING_DAYS,
-        CRITICAL_DAYS=CRITICAL_DAYS,
-        page="home"
-    )
+    return render("index.html", BASE=ingress_base(request), locations=locations, products=products, lots=lots,
+                  WARNING_DAYS=WARNING_DAYS, CRITICAL_DAYS=CRITICAL_DAYS, page="home")
 
 @app.get("/products", response_class=HTMLResponse)
 def products_page(request: Request):
@@ -123,6 +105,7 @@ def products_page(request: Request):
 
 @app.get("/locations", response_class=HTMLResponse)
 def locations_page(request: Request):
+    from db import list_locations
     items = list_locations()
     return render("locations.html", BASE=ingress_base(request), items=items, page="locations")
 
@@ -133,55 +116,58 @@ def lots_page(request: Request):
         it["status"] = status_for(it.get("best_before"), WARNING_DAYS, CRITICAL_DAYS)
     return render("lots.html", BASE=ingress_base(request), items=items, page="lots")
 
-# ====== ACTIONS (POST)
+# ---------- Actions
 @app.post("/location/add")
 def location_add(request: Request, name: str = Form(...)):
     add_location(name)
-    return RedirectResponse(ingress_base(request), status_code=303, headers={"Cache-Control": "no-store"})
+    return RedirectResponse(ingress_base(request), status_code=303, headers={"Cache-Control":"no-store"})
 
 @app.get("/location/add", include_in_schema=False)
 def location_add_get(request: Request):
-    return RedirectResponse(ingress_base(request), status_code=303, headers={"Cache-Control": "no-store"})
+    return RedirectResponse(ingress_base(request), status_code=303, headers={"Cache-Control":"no-store"})
 
 @app.post("/product/add")
 def product_add(request: Request, name: str = Form(...), unit: str = Form("pièce"), shelf: int = Form(90)):
-    try:
-        shelf = int(shelf)
-    except Exception:
-        shelf = 90
+    try: shelf = int(shelf)
+    except Exception: shelf = 90
     add_product(name, unit or "pièce", shelf)
-    return RedirectResponse(ingress_base(request), status_code=303, headers={"Cache-Control": "no-store"})
+    return RedirectResponse(ingress_base(request), status_code=303, headers={"Cache-Control":"no-store"})
 
 @app.get("/product/add", include_in_schema=False)
 def product_add_get(request: Request):
-    return RedirectResponse(ingress_base(request), status_code=303, headers={"Cache-Control": "no-store"})
+    return RedirectResponse(ingress_base(request), status_code=303, headers={"Cache-Control":"no-store"})
+
+# --- NEW: suppression produit
+@app.post("/product/delete")
+def product_delete(request: Request, product_id: int = Form(...)):
+    delete_product(product_id)
+    # Retour direct vers la page Produits
+    return RedirectResponse(ingress_base(request) + "products", status_code=303, headers={"Cache-Control":"no-store"})
+
+@app.get("/product/delete", include_in_schema=False)
+def product_delete_get(request: Request):
+    return RedirectResponse(ingress_base(request) + "products", status_code=303, headers={"Cache-Control":"no-store"})
 
 @app.post("/lot/add")
-def lot_add(
-    request: Request,
-    product_id: int = Form(...),
-    location_id: int = Form(...),
-    qty: float = Form(...),
-    frozen_on: str = Form(""),
-    best_before: str = Form("")
-):
+def lot_add(request: Request, product_id: int = Form(...), location_id: int = Form(...),
+            qty: float = Form(...), frozen_on: str = Form(""), best_before: str = Form("")):
     add_lot(product_id, location_id, float(qty), frozen_on or None, best_before or None)
-    return RedirectResponse(ingress_base(request), status_code=303, headers={"Cache-Control": "no-store"})
+    return RedirectResponse(ingress_base(request), status_code=303, headers={"Cache-Control":"no-store"})
 
 @app.get("/lot/add", include_in_schema=False)
 def lot_add_get(request: Request):
-    return RedirectResponse(ingress_base(request), status_code=303, headers={"Cache-Control": "no-store"})
+    return RedirectResponse(ingress_base(request), status_code=303, headers={"Cache-Control":"no-store"})
 
 @app.post("/lot/consume")
 def lot_consume(request: Request, lot_id: int = Form(...), qty: float = Form(...)):
     consume_lot(lot_id, float(qty))
-    return RedirectResponse(ingress_base(request), status_code=303, headers={"Cache-Control": "no-store"})
+    return RedirectResponse(ingress_base(request), status_code=303, headers={"Cache-Control":"no-store"})
 
 @app.get("/lot/consume", include_in_schema=False)
 def lot_consume_get(request: Request):
-    return RedirectResponse(ingress_base(request), status_code=303, headers={"Cache-Control": "no-store"})
+    return RedirectResponse(ingress_base(request), status_code=303, headers={"Cache-Control":"no-store"})
 
-# ====== API/DEBUG
+# ---------- API debug
 @app.get("/api/locations")
 def api_locations(): return JSONResponse(list_locations())
 
@@ -193,4 +179,4 @@ def api_lots(): return JSONResponse(list_lots())
 
 @app.get("/{path:path}", include_in_schema=False)
 def fallback(request: Request, path: str):
-    return RedirectResponse(ingress_base(request), status_code=303, headers={"Cache-Control": "no-store"})
+    return RedirectResponse(ingress_base(request), status_code=303, headers={"Cache-Control":"no-store"})
