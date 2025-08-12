@@ -1,15 +1,25 @@
 import os
 import logging
+import sqlite3
 from fastapi import FastAPI, Request, Form
 from fastapi.responses import HTMLResponse, RedirectResponse, JSONResponse, PlainTextResponse, Response
 from jinja2 import Environment, FileSystemLoader, select_autoescape
+
+# ====== IMPORTS DB
 from db import (
     init_db, add_location, list_locations,
-    add_product, list_products, list_products_with_stats,
+    add_product, list_products,
     add_lot, list_lots, consume_lot, status_for
 )
 
-# Logs
+# Essaie d'importer list_products_with_stats depuis db.py
+_DB_HAS_STATS = True
+try:
+    from db import list_products_with_stats  # type: ignore
+except Exception:
+    _DB_HAS_STATS = False
+
+# ====== LOGS & CONFIG
 logger = logging.getLogger("domovra")
 logging.basicConfig(level=logging.INFO)
 
@@ -24,6 +34,37 @@ templates = Environment(
     autoescape=select_autoescape()
 )
 
+# ====== FALLBACK SI db.py N'A PAS list_products_with_stats
+def _conn():
+    c = sqlite3.connect(DB_PATH)
+    c.row_factory = sqlite3.Row
+    return c
+
+def _list_products_with_stats_fallback():
+    logger.warning("db.py ne fournit pas list_products_with_stats -> utilisation du fallback SQL direct.")
+    q = """
+    SELECT
+      p.id, p.name, p.unit, p.default_shelf_life_days,
+      COALESCE(SUM(l.qty),0) AS qty_total,
+      COUNT(l.id) AS lots_count
+    FROM products p
+    LEFT JOIN stock_lots l ON l.product_id = p.id
+    GROUP BY p.id
+    ORDER BY p.name
+    """
+    with _conn() as c:
+        return [dict(r) for r in c.execute(q)]
+
+def get_products_with_stats():
+    if _DB_HAS_STATS:
+        try:
+            return list_products_with_stats()  # type: ignore
+        except Exception:
+            # au cas où l'import existe mais l’implémentation plante
+            return _list_products_with_stats_fallback()
+    return _list_products_with_stats_fallback()
+
+# ====== LIFECYCLE
 @app.on_event("startup")
 def _startup():
     logger.info("Domovra starting. DB_PATH=%s", DB_PATH)
@@ -54,7 +95,7 @@ def ingress_base(request: Request) -> str:
         base += "/"
     return base
 
-# -------- Accueil
+# ====== ROUTES PAGES
 @app.get("/", response_class=HTMLResponse)
 @app.get("//", response_class=HTMLResponse)
 def index(request: Request):
@@ -63,6 +104,7 @@ def index(request: Request):
     lots      = list_lots()
     for it in lots:
         it["status"] = status_for(it.get("best_before"), WARNING_DAYS, CRITICAL_DAYS)
+    logger.info("Index: %d locations, %d products, %d lots", len(locations), len(products), len(lots))
     return render(
         "index.html",
         BASE=ingress_base(request),
@@ -74,19 +116,16 @@ def index(request: Request):
         page="home"
     )
 
-# -------- Produits
 @app.get("/products", response_class=HTMLResponse)
 def products_page(request: Request):
-    items = list_products_with_stats()
+    items = get_products_with_stats()
     return render("products.html", BASE=ingress_base(request), items=items, page="products")
 
-# -------- Emplacements
 @app.get("/locations", response_class=HTMLResponse)
 def locations_page(request: Request):
     items = list_locations()
     return render("locations.html", BASE=ingress_base(request), items=items, page="locations")
 
-# -------- Lots (tous)
 @app.get("/lots", response_class=HTMLResponse)
 def lots_page(request: Request):
     items = list_lots()
@@ -94,7 +133,7 @@ def lots_page(request: Request):
         it["status"] = status_for(it.get("best_before"), WARNING_DAYS, CRITICAL_DAYS)
     return render("lots.html", BASE=ingress_base(request), items=items, page="lots")
 
-# -------- Actions (POST) + redirections Ingress
+# ====== ACTIONS (POST)
 @app.post("/location/add")
 def location_add(request: Request, name: str = Form(...)):
     add_location(name)
@@ -142,7 +181,7 @@ def lot_consume(request: Request, lot_id: int = Form(...), qty: float = Form(...
 def lot_consume_get(request: Request):
     return RedirectResponse(ingress_base(request), status_code=303, headers={"Cache-Control": "no-store"})
 
-# -------- API debug
+# ====== API/DEBUG
 @app.get("/api/locations")
 def api_locations(): return JSONResponse(list_locations())
 
@@ -152,7 +191,6 @@ def api_products(): return JSONResponse(list_products())
 @app.get("/api/lots")
 def api_lots(): return JSONResponse(list_lots())
 
-# -------- Fallback
 @app.get("/{path:path}", include_in_schema=False)
 def fallback(request: Request, path: str):
     return RedirectResponse(ingress_base(request), status_code=303, headers={"Cache-Control": "no-store"})
