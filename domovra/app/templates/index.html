@@ -4,71 +4,189 @@
 {% block head %}
 <style>
   /* —— Overrides thème clair (spécifique page) —— */
-  body[data-theme="light"] { color:#1f2328; background:#ffffff; }
-  body[data-theme="light"] :root { color-scheme: light; }
+  body[data-theme="light"] {
+    color: #1f2328;
+    background: #ffffff;
+  }
 
-  body[data-theme="light"] aside { background:#f7f7f8; border-right:1px solid #e5e7eb; }
-  body[data-theme="light"] header { background:#ffffff; border-bottom:1px solid #e5e7eb; }
-  body[data-theme="light"] .muted { color:#6b7280; }
+  body[data-theme="light"] :root {
+    color-scheme: light;
+  }
 
-  body[data-theme="light"] .menu a { background:#ffffff; border:1px solid #e5e7eb; color:#1f2328; }
-  body[data-theme="light"] .menu a.active { background:#eef2ff; border-color:#c7d2fe; }
+  body[data-theme="light"] aside {
+    background: #f7f7f8;
+    border-right: 1px solid #e5e7eb;
+  }
 
-  body[data-theme="light"] .card { background:#ffffff; border:1px solid #e5e7eb; }
+  body[data-theme="light"] header {
+    background: #ffffff;
+    border-bottom: 1px solid #e5e7eb;
+  }
+
+  body[data-theme="light"] .muted {
+    color: #6b7280;
+  }
+
+  body[data-theme="light"] .menu a {
+    background: #ffffff;
+    border: 1px solid #e5e7eb;
+    color: #1f2328;
+  }
+
+  body[data-theme="light"] .menu a.active {
+    background: #eef2ff;
+    border-color: #c7d2fe;
+  }
+
+  body[data-theme="light"] .card {
+    background: #ffffff;
+    border: 1px solid #e5e7eb;
+  }
 
   body[data-theme="light"] input,
   body[data-theme="light"] select {
-    background:#ffffff; color:#111827; border:1px solid #d1d5db;
+    background: #ffffff;
+    color: #111827;
+    border: 1px solid #d1d5db;
   }
+
   body[data-theme="light"] button {
-    background:#f3f4f6; color:#111827; border:1px solid #d1d5db; cursor:pointer;
+    background: #f3f4f6;
+    color: #111827;
+    border: 1px solid #d1d5db;
+    cursor: pointer;
   }
-  body[data-theme="light"] button:hover { filter:brightness(0.98); }
+
+  body[data-theme="light"] button:hover {
+    filter: brightness(0.98);
+  }
 
   body[data-theme="light"] th,
-  body[data-theme="light"] td { border:1px solid #e5e7eb; }
-  body[data-theme="light"] th { background:#f8fafc; color:#111827; }
-  body[data-theme="light"] tbody tr:nth-child(even) { background:#f9fafb; }
+  body[data-theme="light"] td {
+    border: 1px solid #e5e7eb;
+  }
+
+  body[data-theme="light"] th {
+    background: #f8fafc;
+    color: #111827;
+  }
+
+  body[data-theme="light"] tbody tr:nth-child(even) {
+    background: #f9fafb;
+  }
 
   /* —— Switch “pilule” ☀️/🌙 —— */
-  .theme-switch{
-    position: fixed; top: 12px; right: 56px; /* espace pour le hamburger */
-    z-index: 60; width: 64px; height: 32px;
-    border:0; padding:0; border-radius:999px; cursor:pointer;
+  .theme-switch {
+    position: fixed;
+    /* reste fixé même en scrollant */
+    top: 16px;
+    /* espace depuis le haut */
+    right: 16px;
+    /* espace depuis le bord droit */
+    z-index: 9999;
+    /* au-dessus de tout */
+    width: 64px;
+    height: 32px;
+    border: 0;
+    padding: 0;
+    border-radius: 999px;
+    cursor: pointer;
     background: var(--switch-bg, #111315);
-    box-shadow: 0 2px 8px rgba(0,0,0,.25) inset, 0 2px 4px rgba(0,0,0,.15);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, .25) inset,
+      0 2px 4px rgba(0, 0, 0, .15);
   }
-  .theme-switch:focus{ outline:2px solid #8b8b8b; outline-offset:2px; }
-  .theme-switch::after{
-    content:""; position:absolute; top:3px; left:3px;
-    width:26px; height:26px; border-radius:50%;
-    background:#ffffff; box-shadow:0 1px 2px rgba(0,0,0,.25);
+
+  .theme-switch:focus {
+    outline: 2px solid #8b8b8b;
+    outline-offset: 2px;
+  }
+
+  .theme-switch::after {
+    content: "";
+    position: absolute;
+    top: 3px;
+    left: 3px;
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    background: #ffffff;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, .25);
     transition: transform .25s ease, background-color .25s ease;
   }
-  .theme-switch .sun, .theme-switch .moon{
-    position:absolute; top:50%; transform:translateY(-50%);
-    font-size:16px; line-height:1; transition:opacity .2s ease;
-    user-select:none; pointer-events:none;
-  }
-  .theme-switch .sun{ left:12px; }
-  .theme-switch .moon{ right:12px; }
-  body[data-theme="dark"] .theme-switch{ --switch-bg:#111315; }
-  body[data-theme="dark"] .theme-switch::after{ transform:translateX(0); background:#ffffff; }
-  body[data-theme="dark"] .theme-switch .moon{ opacity:1; }
-  body[data-theme="dark"] .theme-switch .sun{ opacity:.25; }
-  body[data-theme="light"] .theme-switch{ --switch-bg:#e6e7eb; }
-  body[data-theme="light"] .theme-switch::after{ transform:translateX(32px); background:#111111; }
-  body[data-theme="light"] .theme-switch .sun{ opacity:1; }
-  body[data-theme="light"] .theme-switch .moon{ opacity:.25; }
 
-  @media (max-width:480px){
-    .theme-switch{ right:10px; top:56px; }
+  .theme-switch .sun,
+  .theme-switch .moon {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 16px;
+    line-height: 1;
+    transition: opacity .2s ease;
+    user-select: none;
+    pointer-events: none;
+  }
+
+  .theme-switch .sun {
+    left: 12px;
+  }
+
+  .theme-switch .moon {
+    right: 12px;
+  }
+
+  body[data-theme="dark"] .theme-switch {
+    --switch-bg: #111315;
+  }
+
+  body[data-theme="dark"] .theme-switch::after {
+    transform: translateX(0);
+    background: #ffffff;
+  }
+
+  body[data-theme="dark"] .theme-switch .moon {
+    opacity: 1;
+  }
+
+  body[data-theme="dark"] .theme-switch .sun {
+    opacity: .25;
+  }
+
+  body[data-theme="light"] .theme-switch {
+    --switch-bg: #e6e7eb;
+  }
+
+  body[data-theme="light"] .theme-switch::after {
+    transform: translateX(32px);
+    background: #111111;
+  }
+
+  body[data-theme="light"] .theme-switch .sun {
+    opacity: 1;
+  }
+
+  body[data-theme="light"] .theme-switch .moon {
+    opacity: .25;
+  }
+
+  @media (max-width:480px) {
+    .theme-switch {
+      right: 10px;
+      top: 56px;
+    }
+  }
+
+  @media (max-width: 768px) {
+    .theme-switch {
+      top: 16px;
+      right: 70px;
+      /* laisse la place au bouton hamburger */
+    }
   }
 </style>
 
 <script>
   /* Appliquer le thème mémorisé dès le head */
-  (function(){
+  (function () {
     const KEY = 'domovra_theme';
     const saved = localStorage.getItem(KEY);
     const initial = (saved === 'light' || saved === 'dark') ? saved : 'dark';
@@ -79,123 +197,131 @@
 {% endblock %}
 
 {% block content %}
-  <!-- Switch thème style “pilule” -->
-  <button id="theme-toggle" class="theme-switch" type="button"
-          aria-label="Basculer clair/sombre" aria-pressed="false">
-    <span class="sun" aria-hidden="true">☀️</span>
-    <span class="moon" aria-hidden="true">🌙</span>
-  </button>
+<!-- Switch thème style “pilule” -->
+<button id="theme-toggle" class="theme-switch" type="button" aria-label="Basculer clair/sombre" aria-pressed="false">
+  <span class="sun" aria-hidden="true">☀️</span>
+  <span class="moon" aria-hidden="true">🌙</span>
+</button>
 
-  <h1>Accueil</h1>
-  <p class="muted">Ajoute rapidement des emplacements, produits et lots. Utilise le menu pour parcourir toutes les données.</p>
+<h1>Accueil</h1>
+<p class="muted">Ajoute rapidement des emplacements, produits et lots. Utilise le menu pour parcourir toutes les
+  données.</p>
 
-  <div class="grid">
-    <div class="card">
-      <h2>🏷️ Emplacement</h2>
-      <form method="post" action="{{ BASE }}location/add">
-        <input name="name" placeholder="ex. Bac 1, Frigo, Placard haut" required>
-        <div class="row" style="margin-top:.5rem"><button>Ajouter</button></div>
-      </form>
-      <p class="muted" style="margin-top:.5rem">Emplacements :
-        {% for l in locations %}<span class="tag unknown">{{ l.name }}</span> {% endfor %}
-      </p>
-    </div>
+<div class="grid">
+  <div class="card">
+    <h2>🏷️ Emplacement</h2>
+    <form method="post" action="{{ BASE }}location/add">
+      <input name="name" placeholder="ex. Bac 1, Frigo, Placard haut" required>
+      <div class="row" style="margin-top:.5rem"><button>Ajouter</button></div>
+    </form>
+    <p class="muted" style="margin-top:.5rem">Emplacements :
+      {% for l in locations %}<span class="tag unknown">{{ l.name }}</span> {% endfor %}
+    </p>
+  </div>
 
-    <div class="card">
-      <h2>📦 Produit</h2>
-      <form method="post" action="{{ BASE }}product/add">
-        <input name="name" placeholder="ex. Rôti de porc" required>
-        <div class="row" style="margin-top:.5rem">
-          <input name="unit" placeholder="unité (pièce, g, tranches)" value="pièce">
-          <input name="shelf" type="number" placeholder="Jours de conservation par défaut" value="90" min="1">
-        </div>
-        <div class="row" style="margin-top:.5rem"><button>Ajouter</button></div>
-      </form>
-      <p class="muted" style="margin-top:.5rem">Produits : {{ products|length }}</p>
-    </div>
+  <div class="card">
+    <h2>📦 Produit</h2>
+    <form method="post" action="{{ BASE }}product/add">
+      <input name="name" placeholder="ex. Rôti de porc" required>
+      <div class="row" style="margin-top:.5rem">
+        <input name="unit" placeholder="unité (pièce, g, tranches)" value="pièce">
+        <input name="shelf" type="number" placeholder="Jours de conservation par défaut" value="90" min="1">
+      </div>
+      <div class="row" style="margin-top:.5rem"><button>Ajouter</button></div>
+    </form>
+    <p class="muted" style="margin-top:.5rem">Produits : {{ products|length }}</p>
+  </div>
 
-    <div class="card">
-      <h2>➕ Entrée de stock</h2>
-      <form method="post" action="{{ BASE }}lot/add">
-        <select name="product_id" required>
-          <option value="" disabled selected>Produit…</option>
-          {% for p in products %}<option value="{{ p.id }}">{{ p.name }} ({{ p.unit }})</option>{% endfor %}
+  <div class="card">
+    <h2>➕ Entrée de stock</h2>
+    <form method="post" action="{{ BASE }}lot/add">
+      <select name="product_id" required>
+        <option value="" disabled selected>Produit…</option>
+        {% for p in products %}<option value="{{ p.id }}">{{ p.name }} ({{ p.unit }})</option>{% endfor %}
+      </select>
+      <div class="row" style="margin-top:.5rem">
+        <select name="location_id" required>
+          <option value="" disabled selected>Emplacement…</option>
+          {% for l in locations %}<option value="{{ l.id }}">{{ l.name }}</option>{% endfor %}
         </select>
-        <div class="row" style="margin-top:.5rem">
-          <select name="location_id" required>
-            <option value="" disabled selected>Emplacement…</option>
-            {% for l in locations %}<option value="{{ l.id }}">{{ l.name }}</option>{% endfor %}
-          </select>
-          <input name="qty" type="number" step="0.01" min="0.01" placeholder="Quantité" required>
-        </div>
-        <div class="row" style="margin-top:.5rem">
-          <label style="flex:1">Congelé le
-            <input type="date" name="frozen_on">
-          </label>
-          <label style="flex:1">À consommer avant
-            <input type="date" name="best_before">
-          </label>
-        </div>
-        <div class="row" style="margin-top:.5rem"><button>Ajouter au stock</button></div>
-      </form>
-    </div>
+        <input name="qty" type="number" step="0.01" min="0.01" placeholder="Quantité" required>
+      </div>
+      <div class="row" style="margin-top:.5rem">
+        <label style="flex:1">Congelé le
+          <input type="date" name="frozen_on">
+        </label>
+        <label style="flex:1">À consommer avant
+          <input type="date" name="best_before">
+        </label>
+      </div>
+      <div class="row" style="margin-top:.5rem"><button>Ajouter au stock</button></div>
+    </form>
   </div>
+</div>
 
-  <div class="card table-responsive" style="margin-top:16px">
-    <h2>⏳ À consommer en priorité</h2>
-    <table>
-      <thead>
-        <tr>
-          <th>Produit</th><th>Emplacement</th><th>Qté</th><th>Congelé le</th>
-          <th>À consommer avant</th><th>État</th><th>Action</th>
-        </tr>
-      </thead>
-      <tbody>
-        {% for it in lots %}
-          <tr>
-            <td>{{ it.product }}</td>
-            <td>{{ it.location }}</td>
-            <td>{{ it.qty }} {{ it.unit }}</td>
-            <td>{{ it.frozen_on or '' }}</td>
-            <td>{{ it.best_before or '' }}</td>
-            <td>
-              <span class="tag {{ it.status }}">
-                {{ "OK" if it.status=="green" else ("Bientôt" if it.status=="yellow" else ("Urgent" if it.status=="red" else "—")) }}
-              </span>
-            </td>
-            <td>
-              <form method="post" action="{{ BASE }}lot/consume" class="row">
-                <input type="hidden" name="lot_id" value="{{ it.id }}">
-                <input type="number" step="0.01" min="0.01" name="qty" placeholder="Qté à consommer">
-                <button>Consommer</button>
-              </form>
-            </td>
-          </tr>
-        {% else %}
-          <tr><td colspan="7" class="muted">Aucun lot pour l’instant.</td></tr>
-        {% endfor %}
-      </tbody>
-    </table>
-  </div>
+<div class="card table-responsive" style="margin-top:16px">
+  <h2>⏳ À consommer en priorité</h2>
+  <table>
+    <thead>
+      <tr>
+        <th>Produit</th>
+        <th>Emplacement</th>
+        <th>Qté</th>
+        <th>Congelé le</th>
+        <th>À consommer avant</th>
+        <th>État</th>
+        <th>Action</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for it in lots %}
+      <tr>
+        <td>{{ it.product }}</td>
+        <td>{{ it.location }}</td>
+        <td>{{ it.qty }} {{ it.unit }}</td>
+        <td>{{ it.frozen_on or '' }}</td>
+        <td>{{ it.best_before or '' }}</td>
+        <td>
+          <span class="tag {{ it.status }}">
+            {{ "OK" if it.status=="green" else ("Bientôt" if it.status=="yellow" else ("Urgent" if it.status=="red" else
+            "—")) }}
+          </span>
+        </td>
+        <td>
+          <form method="post" action="{{ BASE }}lot/consume" class="row">
+            <input type="hidden" name="lot_id" value="{{ it.id }}">
+            <input type="number" step="0.01" min="0.01" name="qty" placeholder="Qté à consommer">
+            <button>Consommer</button>
+          </form>
+        </td>
+      </tr>
+      {% else %}
+      <tr>
+        <td colspan="7" class="muted">Aucun lot pour l’instant.</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
 
-  <script>
-    // Switch pilule + persistance
-    (function(){
-      const KEY = 'domovra_theme';
-      const btn = document.getElementById('theme-toggle');
-      function setTheme(next){
-        document.body.setAttribute('data-theme', next);
-        document.documentElement.style.colorScheme = (next === 'light') ? 'light' : 'dark';
-        localStorage.setItem(KEY, next);
-        btn.setAttribute('aria-pressed', next === 'light' ? 'true' : 'false');
-        btn.setAttribute('title', 'Basculer clair/sombre');
-      }
-      const current = document.body.getAttribute('data-theme') || 'dark';
-      setTheme(current);
-      btn.addEventListener('click', () => {
-        const now = document.body.getAttribute('data-theme') || 'dark';
-        setTheme(now === 'light' ? 'dark' : 'light');
-      });
-    })();
-  </script>
+<script>
+  // Switch pilule + persistance
+  (function () {
+    const KEY = 'domovra_theme';
+    const btn = document.getElementById('theme-toggle');
+    function setTheme(next) {
+      document.body.setAttribute('data-theme', next);
+      document.documentElement.style.colorScheme = (next === 'light') ? 'light' : 'dark';
+      localStorage.setItem(KEY, next);
+      btn.setAttribute('aria-pressed', next === 'light' ? 'true' : 'false');
+      btn.setAttribute('title', 'Basculer clair/sombre');
+    }
+    const current = document.body.getAttribute('data-theme') || 'dark';
+    setTheme(current);
+    btn.addEventListener('click', () => {
+      const now = document.body.getAttribute('data-theme') || 'dark';
+      setTheme(now === 'light' ? 'dark' : 'light');
+    });
+  })();
+</script>
 {% endblock %}
