@@ -6,6 +6,36 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>{% block title %}Domovra{% endblock %}</title>
 
+  <!-- Appliquer immédiatement thème + sidebar compacte (sans reload ni reboot) -->
+  <script>
+    (function () {
+      const PREF_THEME = "{{ SETTINGS.theme if SETTINGS else 'auto' }}";
+      const SIDEBAR_MINI = {{ 'true' if SETTINGS and SETTINGS.sidebar_compact else 'false' }
+    };
+    try {
+      if (PREF_THEME === 'light' || PREF_THEME === 'dark') {
+        document.body?.setAttribute('data-theme', PREF_THEME);
+        document.documentElement.style.colorScheme = PREF_THEME;
+        localStorage.setItem('domovra_theme', PREF_THEME);
+      } else {
+        const saved = localStorage.getItem('domovra_theme');
+        if (saved === 'light' || saved === 'dark') {
+          document.body?.setAttribute('data-theme', saved);
+          document.documentElement.style.colorScheme = saved;
+        }
+      }
+    } catch (e) { /* noop */ }
+
+    if (SIDEBAR_MINI) {
+      document.documentElement.classList.add('sidebar-mini');
+      document.body?.classList.add('sidebar-mini');
+    } else {
+      document.documentElement.classList.remove('sidebar-mini');
+      document.body?.classList.remove('sidebar-mini');
+    }
+    }) ();
+  </script>
+
   <style>
     :root {
       color-scheme: dark;
@@ -223,6 +253,28 @@
       }
     }
 
+    /* Mode "sidebar compacte" (desktop) */
+    @media (min-width:1025px) {
+      .sidebar-mini .layout {
+        grid-template-columns: 72px 1fr;
+      }
+
+      .sidebar-mini aside {
+        padding: 12px 8px;
+      }
+
+      .sidebar-mini .menu a {
+        justify-content: center;
+        gap: 0;
+      }
+
+      .sidebar-mini .menu a span:not(.ico) {
+        display: none;
+      }
+
+      /* cache le texte, garde l'icône */
+    }
+
     /* Hamburger (mobile seulement) */
     .hamburger {
       display: inline-grid;
@@ -286,7 +338,6 @@
         <a href="{{ BASE }}settings" class="{% if request.path.startswith(BASE ~ 'settings') %}active{% endif %}">
           <span class="ico">⚙️</span> <span>Paramètres</span>
         </a>
-
       </nav>
     </aside>
 
@@ -305,24 +356,21 @@
     </main>
   </div>
 
-  <!-- JS : sidebar mobile -->
+  <!-- JS : sidebar mobile (ouvre/ferme) -->
   <script>
     (function () {
-      const pref = "{{ SETTINGS.theme if SETTINGS else 'auto' }}";
-      if (pref === "light" || pref === "dark") {
-        document.body.setAttribute("data-theme", pref);
-        document.documentElement.style.colorScheme = pref;
-        try { localStorage.setItem("domovra_theme", pref); } catch (e) { }
-      } else {
-        const saved = localStorage.getItem("domovra_theme");
-        if (saved === "light" || saved === "dark") {
-          document.body.setAttribute("data-theme", saved);
-          document.documentElement.style.colorScheme = saved;
-        }
-      }
+      const btn = document.getElementById('hamburger');
+      if (!btn) return;
+      const isMobile = () => matchMedia('(max-width:1024px)').matches;
+      const open = () => { document.body.classList.add('sidebar-open'); btn.setAttribute('aria-expanded', 'true'); };
+      const close = () => { document.body.classList.remove('sidebar-open'); btn.setAttribute('aria-expanded', 'false'); };
+      btn.addEventListener('click', () => (document.body.classList.contains('sidebar-open') ? close() : open()));
+      addEventListener('resize', () => { if (!isMobile()) close(); });
+      document.querySelector('aside')?.addEventListener('click', (e) => {
+        const a = e.target.closest('a'); if (a && isMobile()) close();
+      });
     })();
   </script>
-
 
   {% block scripts %}{% endblock %}
 </body>

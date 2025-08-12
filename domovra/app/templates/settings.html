@@ -13,7 +13,7 @@
         grid-column: 1 / -1;
     }
 
-    @media (min-width: 900px) {
+    @media (min-width:900px) {
         .settings-card {
             grid-column: span 6;
         }
@@ -51,6 +51,46 @@
             }
         }
     })();
+
+    /* Application INSTANTANÉE quand on change les contrôles (sans redémarrer) */
+    document.addEventListener('DOMContentLoaded', () => {
+        const selTheme = document.querySelector('select[name="theme"]');
+        const cbMini = document.querySelector('input[name="sidebar_compact"]');
+
+        if (selTheme) {
+            selTheme.addEventListener('change', () => {
+                const v = selTheme.value;
+                if (v === 'light' || v === 'dark') {
+                    document.body.setAttribute('data-theme', v);
+                    document.documentElement.style.colorScheme = v;
+                    try { localStorage.setItem('domovra_theme', v); } catch (e) { }
+                } else {
+                    const saved = localStorage.getItem('domovra_theme');
+                    if (saved === 'light' || saved === 'dark') {
+                        document.body.setAttribute('data-theme', saved);
+                        document.documentElement.style.colorScheme = saved;
+                    } else {
+                        document.body.removeAttribute('data-theme');
+                        document.documentElement.style.colorScheme = '';
+                    }
+                }
+            });
+        }
+
+        if (cbMini) {
+            const applyMini = () => {
+                if (cbMini.checked) {
+                    document.documentElement.classList.add('sidebar-mini');
+                    document.body.classList.add('sidebar-mini');
+                } else {
+                    document.documentElement.classList.remove('sidebar-mini');
+                    document.body.classList.remove('sidebar-mini');
+                }
+            };
+            cbMini.addEventListener('change', applyMini);
+            applyMini();
+        }
+    });
 </script>
 {% endblock %}
 
@@ -89,7 +129,8 @@
                 <option value="stacked" {{ 'selected' if SETTINGS.table_mode=='stacked' }}>Empilé (mobile)</option>
             </select>
         </label>
-        <div class="hint">Le mode “Empilé” masque l’en-tête et affiche chaque ligne comme une carte.</div>
+        <div class="hint">Le mode “Empilé” masque l’en-tête et affiche chaque ligne comme une carte. Reviens sur la page
+            contenant les tableaux pour voir le changement.</div>
 
         <label class="form-row" style="margin-top:12px;">
             <span>Jours de conservation par défaut</span>
