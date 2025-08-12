@@ -3,15 +3,45 @@
 
 {% block head %}
 <style>
-  /* Spécifiques de la page si besoin — (le thème est géré par base.html) */
+  /* Aide inline */
   .inline-help {
     font-size: .9rem;
     opacity: .7;
     margin-top: .25rem;
   }
 
-  .row .unit-custom {
-    display: none;
+  /* --- Mise en avant des lots urgents (ligne entière colorée) --- */
+  /* Mode sombre */
+  html[data-theme="dark"] .row-status-red {
+    background-color: #3b1a1a;
+  }
+
+  html[data-theme="dark"] .row-status-yellow {
+    background-color: #3a3517;
+  }
+
+  html[data-theme="dark"] .row-status-green {
+    background-color: #17361a;
+  }
+
+  /* Mode clair */
+  html[data-theme="light"] .row-status-red {
+    background-color: #fde8e8;
+  }
+
+  html[data-theme="light"] .row-status-yellow {
+    background-color: #fff4cc;
+  }
+
+  html[data-theme="light"] .row-status-green {
+    background-color: #e6f6ea;
+  }
+
+  /* Pour s’assurer que le texte reste lisible en sombre */
+  .row-status-red td,
+  .row-status-yellow td,
+  .row-status-green td {
+    color: inherit;
   }
 </style>
 {% endblock %}
@@ -41,7 +71,7 @@
       <input name="name" placeholder="ex. Rôti de porc" required>
 
       <div class="row" style="margin-top:.5rem">
-        <!-- Sélecteur d'unité logique -->
+        <!-- Sélecteur d'unité logique (sans "Autre…") -->
         <select name="unit" required>
           <optgroup label="Poids">
             <option value="g">g</option>
@@ -74,7 +104,6 @@
 
     <p class="muted" style="margin-top:.5rem">Produits : {{ products|length }}</p>
   </div>
-
 
   <!-- Entrée de stock -->
   <div class="card">
@@ -121,7 +150,7 @@
     </thead>
     <tbody>
       {% for it in lots %}
-      <tr>
+      <tr class="row-status-{{ it.status }}">
         <td>{{ it.product }}</td>
         <td>{{ it.location }}</td>
         <td>{{ it.qty }} {{ it.unit }}</td>
@@ -149,51 +178,6 @@
     </tbody>
   </table>
 </div>
+{% endblock %}
 
 {% block scripts %}{% endblock %}
-<script>
-  // Gestion sélecteur d'unité + champ "Autre…"
-  (function () {
-    const sel = document.getElementById('unit-choice');
-    const custom = document.getElementById('unit-custom');
-    const hidden = document.getElementById('unit');
-    const form = document.getElementById('product-form');
-
-    function sync() {
-      const v = sel.value;
-      if (v === '__other') {
-        custom.style.display = '';
-        custom.required = true;
-        // On n’écrase pas hidden tant que l’utilisateur n’a pas tapé
-        if (custom.value.trim()) hidden.value = custom.value.trim();
-      } else {
-        custom.style.display = 'none';
-        custom.required = false;
-        hidden.value = v; // valeur logique choisie
-      }
-    }
-
-    sel.addEventListener('change', sync);
-    custom.addEventListener('input', () => {
-      if (sel.value === '__other') hidden.value = custom.value.trim();
-    });
-
-    // Sécurité : avant envoi, assure que "unit" est cohérent
-    form.addEventListener('submit', (e) => {
-      if (sel.value === '__other') {
-        if (!custom.value.trim()) {
-          e.preventDefault();
-          custom.focus();
-          return;
-        }
-        hidden.value = custom.value.trim();
-      } else {
-        hidden.value = sel.value;
-      }
-    });
-
-    // init
-    sync();
-  })();
-</script>
-{% endblock %}
