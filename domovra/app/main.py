@@ -1,4 +1,5 @@
 import os, logging, sqlite3, time, json
+from logging.handlers import RotatingFileHandler
 from datetime import datetime, timezone
 from fastapi import FastAPI, Request, Form, Query
 from fastapi.responses import HTMLResponse, RedirectResponse, JSONResponse, PlainTextResponse, Response
@@ -25,8 +26,33 @@ except Exception:
     def save_settings(new_values: dict):
         cur = load_settings(); cur.update(new_values or {}); return cur
 
+# ---------------- Logging global (console + /data/domovra.log)
+def setup_logging():
+    root = logging.getLogger()
+    if root.handlers:
+        # éviter doublons si rechargé
+        for h in list(root.handlers):
+            root.removeHandler(h)
+    root.setLevel(logging.INFO)
+
+    fmt = logging.Formatter("[%(asctime)s] %(name)s %(levelname)s: %(message)s")
+
+    ch = logging.StreamHandler()
+    ch.setLevel(logging.INFO)
+    ch.setFormatter(fmt)
+    root.addHandler(ch)
+
+    try:
+        os.makedirs("/data", exist_ok=True)
+        fh = RotatingFileHandler("/data/domovra.log", maxBytes=1_000_000, backupCount=3, encoding="utf-8")
+        fh.setLevel(logging.INFO)
+        fh.setFormatter(fmt)
+        root.addHandler(fh)
+    except Exception as e:
+        logging.getLogger("domovra").warning("Impossible d'ouvrir /data/domovra.log: %s", e)
+
+setup_logging()
 logger = logging.getLogger("domovra")
-logging.basicConfig(level=logging.INFO)
 
 WARNING_DAYS  = int(os.environ.get("WARNING_DAYS",  "30"))
 CRITICAL_DAYS = int(os.environ.get("CRITICAL_DAYS", "14"))
@@ -102,6 +128,11 @@ def _startup():
     logger.info("WARNING_DAYS=%s CRITICAL_DAYS=%s", WARNING_DAYS, CRITICAL_DAYS)
     init_db()
     _ensure_events_table()
+    try:
+        current = load_settings()
+        logger.info("Settings au démarrage: %s", current)
+    except Exception as e:
+        logger.exception("Erreur lecture settings au démarrage: %s", e)
 
 @app.get("/ping", response_class=PlainTextResponse)
 def ping(): return "ok"
@@ -110,13 +141,15 @@ def ping(): return "ok"
 @app.get("/", response_class=HTMLResponse)
 @app.get("//", response_class=HTMLResponse)
 def index(request: Request):
+    base = ingress_base(request)
+    logger.info("GET /  (BASE=%s UA=%s)", base, request.headers.get("user-agent", "-"))
     locations = list_locations()
     products  = list_products()
     lots      = list_lots()
     for it in lots:
         it["status"] = status_for(it.get("best_before"), WARNING_DAYS, CRITICAL_DAYS)
     return render("index.html",
-                  BASE=ingress_base(request),
+                  BASE=base,
                   page="home",
                   request=request,
                   locations=locations, products=products, lots=lots,
@@ -124,18 +157,22 @@ def index(request: Request):
 
 @app.get("/products", response_class=HTMLResponse)
 def products_page(request: Request):
+    base = ingress_base(request)
+    logger.info("GET /products (BASE=%s)", base)
     items = get_products_with_stats()
     return render("products.html",
-                  BASE=ingress_base(request),
+                  BASE=base,
                   page="products",
                   request=request,
                   items=items)
 
 @app.get("/locations", response_class=HTMLResponse)
 def locations_page(request: Request):
+    base = ingress_base(request)
+    logger.info("GET /locations (BASE=%s)", base)
     items = list_locations()
     return render("locations.html",
-                  BASE=ingress_base(request),
+                  BASE=base,
                   page="locations",
                   request=request,
                   items=items)
@@ -145,6 +182,8 @@ def lots_page(request: Request,
               product: str = Query("", alias="product"),
               location: str = Query("", alias="location"),
               status:  str = Query("", alias="status")):
+    base = ingress_base(request)
+    logger.info("GET /lots (BASE=%s product=%s location=%s status=%s)", base, product, location, status)
     items = list_lots()
     for it in items:
         it["status"] = status_for(it.get("best_before"), WARNING_DAYS, CRITICAL_DAYS)
@@ -159,7 +198,7 @@ def lots_page(request: Request,
 
     locations = list_locations()
     return render("lots.html",
-                  BASE=ingress_base(request),
+                  BASE=base,
                   page="lots",
                   request=request,
                   items=items, locations=locations)
@@ -167,26 +206,35 @@ def lots_page(request: Request,
 # --------- Journal page
 @app.get("/journal", response_class=HTMLResponse)
 def journal_page(request: Request, limit: int = Query(200, ge=1, le=1000)):
+    base = ingress_base(request)
+    logger.info("GET /journal (BASE=%s limit=%s)", base, limit)
     events = list_events(limit)
     return render("journal.html",
-                  BASE=ingress_base(request),
+                  BASE=base,
                   page="journal",
                   request=request,
                   events=events, limit=limit)
 
 @app.get("/api/events")
 def api_events(limit: int = 200):
+    logger.info("GET /api/events limit=%s", limit)
     return JSONResponse(list_events(limit))
 
-# ---------------- Page Paramètres (laisse en place même si tu ne l'utilises pas)
+# ---------------- Page Paramètres
 @app.get("/settings", response_class=HTMLResponse)
 def settings_page(request: Request):
-    settings = load_settings()
-    return render("settings.html",
-                  BASE=ingress_base(request),
-                  page="settings",
-                  request=request,
-                  SETTINGS=settings)
+    base = ingress_base(request)
+    try:
+        settings = load_settings()
+        logger.info("GET /settings (BASE=%s) -> %s", base, settings)
+        return render("settings.html",
+                      BASE=base,
+                      page="settings",
+                      request=request,
+                      SETTINGS=settings)
+    except Exception as e:
+        logger.exception("Erreur GET /settings: %s", e)
+        return PlainTextResponse(f"Erreur chargement paramètres: {e}", status_code=500)
 
 @app.post("/settings/save")
 def settings_save(request: Request,
@@ -195,17 +243,33 @@ def settings_save(request: Request,
                   sidebar_compact: str = Form(None),
                   default_shelf_days: int = Form(90),
                   low_stock_default: int = Form(1)):
-    new_vals = {
+    base = ingress_base(request)
+    # Normalisation / sécurisation des valeurs reçues
+    normalized = {
         "theme": theme if theme in ("auto","light","dark") else "auto",
         "table_mode": table_mode if table_mode in ("scroll","stacked") else "scroll",
         "sidebar_compact": (sidebar_compact == "on"),
         "default_shelf_days": int(default_shelf_days or 90),
         "low_stock_default": int(low_stock_default or 1),
     }
-    save_settings(new_vals)
-    log_event("settings.update", new_vals)
-    return RedirectResponse(ingress_base(request) + f"settings?ok=1&_={int(time.time())}",
-                            status_code=303, headers={"Cache-Control":"no-store"})
+    logger.info("POST /settings/save (BASE=%s) RAW: theme=%s table_mode=%s sidebar_compact=%s default_shelf_days=%s low_stock_default=%s",
+                base, theme, table_mode, sidebar_compact, default_shelf_days, low_stock_default)
+    logger.info("POST /settings/save NORMALIZED: %s", normalized)
+
+    try:
+        saved = save_settings(normalized)
+        logger.info("POST /settings/save OK -> %s", saved)
+        log_event("settings.update", saved)
+        # cache-buster pour éviter réaffichage d'ancienne page
+        return RedirectResponse(base + f"settings?ok=1&_={int(time.time())}",
+                                status_code=303,
+                                headers={"Cache-Control":"no-store"})
+    except Exception as e:
+        logger.exception("POST /settings/save ERREUR: %s", e)
+        log_event("settings.error", {"error": str(e), "payload": normalized})
+        return RedirectResponse(base + "settings?error=1",
+                                status_code=303,
+                                headers={"Cache-Control":"no-store"})
 
 # ---------------- Actions Produits
 @app.post("/product/add")
@@ -296,7 +360,9 @@ def lot_delete_action(request: Request, lot_id: int = Form(...)):
 # ---------------- Fallback
 @app.get("/{path:path}", include_in_schema=False)
 def fallback(request: Request, path: str):
-    return RedirectResponse(ingress_base(request), status_code=303, headers={"Cache-Control":"no-store"})
+    base = ingress_base(request)
+    logger.info("Fallback -> redirect %s", base)
+    return RedirectResponse(base, status_code=303, headers={"Cache-Control":"no-store"})
 
 # --------- util pour produits avec stats (fallback)
 def get_products_with_stats():
