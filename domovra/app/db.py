@@ -38,6 +38,7 @@ def init_db():
             FOREIGN KEY(lot_id) REFERENCES stock_lots(id)
         )""")
 
+# ---------- Locations
 def add_location(name:str):
     with _conn() as c:
         c.execute("INSERT OR IGNORE INTO locations(name) VALUES(?)",(name.strip(),))
@@ -46,6 +47,21 @@ def list_locations():
     with _conn() as c:
         return [dict(r) for r in c.execute("SELECT * FROM locations ORDER BY name")]
 
+def update_location(location_id:int, name:str):
+    with _conn() as c:
+        c.execute("UPDATE locations SET name=? WHERE id=?", (name.strip(), location_id))
+
+def delete_location(location_id:int):
+    """Supprime un emplacement + ses lots + mouvements liés."""
+    with _conn() as c:
+        lot_ids = [r["id"] for r in c.execute("SELECT id FROM stock_lots WHERE location_id=?", (location_id,))]
+        if lot_ids:
+            ph = ",".join("?"*len(lot_ids))
+            c.execute(f"DELETE FROM movements WHERE lot_id IN ({ph})", lot_ids)
+            c.execute(f"DELETE FROM stock_lots WHERE id IN ({ph})", lot_ids)
+        c.execute("DELETE FROM locations WHERE id=?", (location_id,))
+
+# ---------- Products
 def add_product(name:str, unit:str='pièce', shelf:int=90):
     with _conn() as c:
         c.execute("INSERT OR IGNORE INTO products(name,unit,default_shelf_life_days) VALUES(?,?,?)",
@@ -69,6 +85,23 @@ def list_products_with_stats():
         """
         return [dict(r) for r in c.execute(q)]
 
+def update_product(product_id:int, name:str, unit:str, shelf:int):
+    with _conn() as c:
+        c.execute("""UPDATE products
+                     SET name=?, unit=?, default_shelf_life_days=?
+                     WHERE id=?""", (name.strip(), unit.strip() or 'pièce', int(shelf), product_id))
+
+def delete_product(product_id:int):
+    """Supprime un produit + lots + mouvements liés."""
+    with _conn() as c:
+        lot_ids = [r["id"] for r in c.execute("SELECT id FROM stock_lots WHERE product_id=?", (product_id,))]
+        if lot_ids:
+            ph = ",".join("?"*len(lot_ids))
+            c.execute(f"DELETE FROM movements WHERE lot_id IN ({ph})", lot_ids)
+            c.execute(f"DELETE FROM stock_lots WHERE id IN ({ph})", lot_ids)
+        c.execute("DELETE FROM products WHERE id=?", (product_id,))
+
+# ---------- Lots
 def _today():
     return datetime.date.today().isoformat()
 
@@ -83,11 +116,12 @@ def add_lot(product_id:int, location_id:int, qty:float, frozen_on:str|None, best
 
 def list_lots():
     with _conn() as c:
-        q = """SELECT l.id, p.name AS product, p.unit, loc.name AS location, l.qty, l.frozen_on, l.best_before
+        q = """SELECT l.id, l.product_id, l.location_id, p.name AS product, p.unit,
+                      loc.name AS location, l.qty, l.frozen_on, l.best_before
                FROM stock_lots l
                JOIN products p ON p.id=l.product_id
                JOIN locations loc ON loc.id=l.location_id
-               ORDER BY COALESCE(l.best_before, '9999-12-31') ASC"""
+               ORDER BY COALESCE(l.best_before, '9999-12-31') ASC, p.name"""
         return [dict(r) for r in c.execute(q)]
 
 def consume_lot(lot_id:int, qty:float):
@@ -104,20 +138,19 @@ def consume_lot(lot_id:int, qty:float):
             c.execute("""INSERT INTO movements(lot_id,type,qty,ts,note)
                          VALUES(?,?,?,DATE('now'),?)""",(lot_id,'OUT',qty,None))
 
-def delete_product(product_id:int):
-    """Supprime un produit + tous ses lots et mouvements associés (en transaction)."""
+def update_lot(lot_id:int, qty:float, location_id:int, frozen_on:str|None, best_before:str|None):
     with _conn() as c:
-        # Récupérer les lots du produit
-        lot_ids = [r["id"] for r in c.execute("SELECT id FROM stock_lots WHERE product_id=?", (product_id,))]
-        if lot_ids:
-            # Supprimer mouvements liés aux lots
-            placeholders = ",".join("?"*len(lot_ids))
-            c.execute(f"DELETE FROM movements WHERE lot_id IN ({placeholders})", lot_ids)
-            # Supprimer les lots
-            c.execute(f"DELETE FROM stock_lots WHERE id IN ({placeholders})", lot_ids)
-        # Supprimer le produit
-        c.execute("DELETE FROM products WHERE id=?", (product_id,))
+        c.execute("""UPDATE stock_lots
+                     SET qty=?, location_id=?, frozen_on=?, best_before=?
+                     WHERE id=?""",
+                  (float(qty), int(location_id), frozen_on, best_before, int(lot_id)))
 
+def delete_lot(lot_id:int):
+    with _conn() as c:
+        c.execute("DELETE FROM movements WHERE lot_id=?", (lot_id,))
+        c.execute("DELETE FROM stock_lots WHERE id=?", (lot_id,))
+
+# ---------- Helpers
 def status_for(best_before:str|None, warn_days:int, crit_days:int):
     if not best_before: return "unknown"
     try:
