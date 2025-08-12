@@ -32,48 +32,79 @@
   body[data-theme="light"] th { background:#f8fafc; color:#111827; }
   body[data-theme="light"] tbody tr:nth-child(even) { background:#f9fafb; }
 
-  /* ====== Bouton de thème (fixé en haut à droite) ====== */
-  #theme-toggle {
+  /* ====== Switch pilule (☀️/🌙) ====== */
+  .theme-switch{
     position: fixed;
-    top: 12px;
-    right: 12px;
-    z-index: 50;
-    display: inline-flex;
-    align-items: center;
-    gap: .5rem;
-    padding: .5rem .75rem;
-    border-radius: 10px;
-    border: 1px solid #3a3d43;
-    background: #2b2f36;
-    color: #e8eaed;
-    font-size: .95rem;
+    top: 12px; right: 12px;
+    z-index: 60;
+    width: 64px; height: 32px;
+    border: 0; padding: 0;
+    border-radius: 999px;
+    background: var(--switch-bg, #111315);
+    box-shadow: 0 2px 8px rgba(0,0,0,.25) inset,
+                0 2px 4px rgba(0,0,0,.15);
+    cursor: pointer;
+  }
+  .theme-switch:focus { outline: 2px solid #8b8b8b; outline-offset: 2px; }
+
+  /* Pastille qui glisse */
+  .theme-switch::after{
+    content:"";
+    position: absolute;
+    top: 3px; left: 3px;
+    width: 26px; height: 26px;
+    border-radius: 50%;
+    background: #ffffff;
+    box-shadow: 0 1px 2px rgba(0,0,0,.25);
+    transition: transform .25s ease, background-color .25s ease;
+  }
+
+  /* Icônes ☀️ / 🌙 */
+  .theme-switch .sun,
+  .theme-switch .moon{
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 16px;
     line-height: 1;
+    transition: opacity .2s ease;
+    user-select: none;
+    pointer-events: none;
   }
-  #theme-toggle:focus { outline: 2px solid #6b7280; outline-offset: 2px; }
-  body[data-theme="light"] #theme-toggle {
-    background:#ffffff; color:#111827; border:1px solid #d1d5db;
-  }
+  .theme-switch .sun{ left: 12px; }
+  .theme-switch .moon{ right: 12px; }
+
+  /* État DARK (par défaut) */
+  body[data-theme="dark"] .theme-switch{ --switch-bg:#111315; }
+  body[data-theme="dark"] .theme-switch::after{ transform: translateX(0); background:#ffffff; }
+  body[data-theme="dark"] .theme-switch .moon{ opacity:1; }
+  body[data-theme="dark"] .theme-switch .sun{ opacity:.25; }
+
+  /* État LIGHT (pastille à droite + fond clair) */
+  body[data-theme="light"] .theme-switch{ --switch-bg:#e6e7eb; }
+  body[data-theme="light"] .theme-switch::after{ transform: translateX(32px); background:#111111; }
+  body[data-theme="light"] .theme-switch .sun{ opacity:1; }
+  body[data-theme="light"] .theme-switch .moon{ opacity:.25; }
 </style>
 
 <script>
   (function(){
     const KEY = 'domovra_theme';
     const saved = localStorage.getItem(KEY);
-    if (saved === 'light' || saved === 'dark') {
-      document.body.setAttribute('data-theme', saved);
-      document.documentElement.style.colorScheme = saved === 'light' ? 'light' : 'dark';
-    } else {
-      // défaut: sombre (cohérent avec base.html)
-      document.body.setAttribute('data-theme', 'dark');
-      document.documentElement.style.colorScheme = 'dark';
-    }
+    const initial = (saved === 'light' || saved === 'dark') ? saved : 'dark';
+    document.body.setAttribute('data-theme', initial);
+    document.documentElement.style.colorScheme = initial === 'light' ? 'light' : 'dark';
   })();
 </script>
 {% endblock %}
 
 {% block content %}
-  <!-- Bouton visible immédiatement -->
-  <button id="theme-toggle" type="button" aria-label="Basculer clair/sombre">🌙 Mode sombre</button>
+  <!-- Switch thème style “pilule” -->
+  <button id="theme-toggle" class="theme-switch" type="button"
+          aria-label="Basculer clair/sombre" aria-pressed="false">
+    <span class="sun" aria-hidden="true">☀️</span>
+    <span class="moon" aria-hidden="true">🌙</span>
+  </button>
 
   <h1>Accueil</h1>
   <p class="muted">Ajoute rapidement des emplacements, produits et lots. Utilise le menu pour parcourir toutes les données.</p>
@@ -161,26 +192,26 @@
   </div>
 
   <script>
-    // Brancher le bouton déjà présent dans le DOM
+    // Gestion du switch pilule + persistance
     (function(){
       const KEY = 'domovra_theme';
       const btn = document.getElementById('theme-toggle');
 
       function setTheme(next){
         document.body.setAttribute('data-theme', next);
-        document.documentElement.style.colorScheme = next === 'light' ? 'light' : 'dark';
+        document.documentElement.style.colorScheme = (next === 'light') ? 'light' : 'dark';
         localStorage.setItem(KEY, next);
-        btn.textContent = (next === 'light') ? '☀️ Mode clair' : '🌙 Mode sombre';
         btn.setAttribute('aria-pressed', next === 'light' ? 'true' : 'false');
         btn.setAttribute('title', 'Basculer clair/sombre');
       }
 
+      // Init à partir de l'attribut déjà posé dans le <head>
       const current = document.body.getAttribute('data-theme') || 'dark';
       setTheme(current);
 
       btn.addEventListener('click', () => {
         const now = document.body.getAttribute('data-theme') || 'dark';
-        const next = now === 'light' ? 'dark' : 'light';
+        const next = (now === 'light') ? 'dark' : 'light';
         setTheme(next);
       });
     })();
