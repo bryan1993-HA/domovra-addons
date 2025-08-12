@@ -3,11 +3,11 @@
 
 {% block content %}
   <h1>Lots</h1>
-  <p class="muted">Tous les lots en stock, triés par date de consommation.</p>
+  <p class="muted">Modifier quantité / emplacement / dates, ou supprimer un lot.</p>
 
   <table>
     <thead>
-      <tr><th>Produit</th><th>Emplacement</th><th>Qté</th><th>Congelé le</th><th>À consommer avant</th><th>État</th></tr>
+      <tr><th>Produit</th><th>Emplacement</th><th>Qté</th><th>Congelé le</th><th>À consommer avant</th><th>État</th><th>Actions</th></tr>
     </thead>
     <tbody>
       {% for it in items %}
@@ -18,10 +18,58 @@
         <td>{{ it.frozen_on or '' }}</td>
         <td>{{ it.best_before or '' }}</td>
         <td><span class="tag {{ it.status }}">{{ "OK" if it.status=="green" else ("Bientôt" if it.status=="yellow" else ("Urgent" if it.status=="red" else "—")) }}</span></td>
+        <td>
+          <button class="edit-btn" data-id="{{ it.id }}" style="padding:.35rem .6rem;">✏️ Modifier</button>
+          <form method="post" action="{{ BASE }}lot/delete" onsubmit="return confirm('Supprimer ce lot ?');" style="display:inline">
+            <input type="hidden" name="lot_id" value="{{ it.id }}">
+            <button title="Supprimer" aria-label="Supprimer" style="padding:.35rem .6rem; border:1px solid #5a1b1b; background:#3a0f0f; color:#ffb4b4; border-radius:8px;">🗑️</button>
+          </form>
+        </td>
+      </tr>
+      <tr class="edit-row" id="edit-{{ it.id }}" style="display:none;">
+        <td colspan="7">
+          <form method="post" action="{{ BASE }}lot/update" class="row" style="gap:.5rem; align-items:center; flex-wrap:wrap;">
+            <input type="hidden" name="lot_id" value="{{ it.id }}">
+            <label style="flex:1; min-width:160px;">Quantité
+              <input name="qty" type="number" step="0.01" min="0" value="{{ it.qty }}">
+            </label>
+            <label style="flex:1; min-width:160px;">Emplacement
+              <select name="location_id">
+                {% for l in locations %}
+                  <option value="{{ l.id }}" {% if l.id == it.location_id %}selected{% endif %}>{{ l.name }}</option>
+                {% endfor %}
+              </select>
+            </label>
+            <label style="flex:1; min-width:200px;">Congelé le
+              <input type="date" name="frozen_on" value="{{ it.frozen_on or '' }}">
+            </label>
+            <label style="flex:1; min-width:200px;">À consommer avant
+              <input type="date" name="best_before" value="{{ it.best_before or '' }}">
+            </label>
+            <button style="flex:0;">💾 Enregistrer</button>
+            <button type="button" class="cancel-btn" data-id="{{ it.id }}" style="flex:0; background:#2b2f36;">Annuler</button>
+          </form>
+        </td>
       </tr>
       {% else %}
-      <tr><td colspan="6" class="muted">Aucun lot pour l’instant.</td></tr>
+      <tr><td colspan="7" class="muted">Aucun lot pour l’instant.</td></tr>
       {% endfor %}
     </tbody>
   </table>
-{% endblock %}
+
+  <script>
+    document.querySelectorAll('.edit-btn').forEach(btn=>{
+      btn.addEventListener('click', ()=>{
+        const id = btn.dataset.id;
+        const row = document.getElementById('edit-'+id);
+        row.style.display = (row.style.display==='none'||!row.style.display)?'table-row':'none';
+      });
+    });
+    document.querySelectorAll('.cancel-btn').forEach(btn=>{
+      btn.addEventListener('click', ()=>{
+        const id = btn.dataset.id;
+        const row = document.getElementById('edit-'+id);
+        if(row) row.style.display='none';
+      });
+    });
+  </scri
