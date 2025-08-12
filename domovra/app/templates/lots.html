@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% block title %}Domovra — Lots{% endblock %}
+
+{% block content %}
+  <h1>Lots</h1>
+  <p class="muted">Tous les lots en stock, triés par date de consommation.</p>
+
+  <table>
+    <thead>
+      <tr><th>Produit</th><th>Emplacement</th><th>Qté</th><th>Congelé le</th><th>À consommer avant</th><th>État</th></tr>
+    </thead>
+    <tbody>
+      {% for it in items %}
+      <tr>
+        <td>{{ it.product }}</td>
+        <td>{{ it.location }}</td>
+        <td>{{ it.qty }} {{ it.unit }}</td>
+        <td>{{ it.frozen_on or '' }}</td>
+        <td>{{ it.best_before or '' }}</td>
+        <td><span class="tag {{ it.status }}">{{ "OK" if it.status=="green" else ("Bientôt" if it.status=="yellow" else ("Urgent" if it.status=="red" else "—")) }}</span></td>
+      </tr>
+      {% else %}
+      <tr><td colspan="6" class="muted">Aucun lot pour l’instant.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+{% endblock %}
