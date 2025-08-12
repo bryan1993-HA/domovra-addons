@@ -36,39 +36,60 @@
 </style>
 
 <script>
-    /* Applique le thème au chargement, en lisant les <meta> posées par base.html */
+    /**
+     * IMPORTANT :
+     * - On applique le thème sur <html> (document.documentElement), jamais sur <body>
+     *   car <body> peut ne pas être disponible au moment de l'exécution dans <head>.
+     * - Aucun accès à window.parent / top (ingress HA).
+     */
+
+    function applyThemeToHtml(mode) {
+        const html = document.documentElement;
+        if (!html) return;
+        if (mode === "light" || mode === "dark") {
+            html.setAttribute("data-theme", mode);
+            html.style.colorScheme = mode;
+        } else {
+            html.removeAttribute("data-theme");
+            html.style.colorScheme = "";
+        }
+    }
+
+    // Applique un thème "au plus tôt" depuis <meta>, sans toucher <body>
     (function () {
         const mTheme = document.querySelector('meta[name="domovra:theme"]');
         const pref = (mTheme && mTheme.content) || 'auto';
         if (pref === "light" || pref === "dark") {
-            document.body.setAttribute("data-theme", pref);
-            document.documentElement.style.colorScheme = pref;
             try { localStorage.setItem("domovra_theme", pref); } catch (e) { }
+            applyThemeToHtml(pref);
         } else {
-            const saved = localStorage.getItem("domovra_theme");
-            if (saved === "light" || saved === "dark") {
-                document.body.setAttribute("data-theme", saved);
-                document.documentElement.style.colorScheme = saved;
-            }
+            // auto : on regarde s'il y a une préférence enregistrée
+            try {
+                const saved = localStorage.getItem("domovra_theme");
+                if (saved === "light" || saved === "dark") {
+                    applyThemeToHtml(saved);
+                }
+            } catch (e) { }
         }
     })();
 
-    /* Application INSTANTANÉE quand on change les contrôles */
+    // Interaction des contrôles : exécutée quand le DOM est prêt
     document.addEventListener('DOMContentLoaded', () => {
         const selTheme = document.querySelector('select[name="theme"]');
         const cbMini = document.querySelector('input[name="sidebar_compact"]');
 
         if (cbMini) {
-            // état initial depuis le <meta> (posé par base.html)
+            // état initial depuis le <meta> posé par base.html
             const mSide = document.querySelector('meta[name="domovra:sidebar"]');
             cbMini.checked = (mSide && mSide.content === '1');
+
             const applyMini = () => {
+                const html = document.documentElement;
+                if (!html) return;
                 if (cbMini.checked) {
-                    document.documentElement.classList.add('sidebar-mini');
-                    document.body.classList.add('sidebar-mini');
+                    html.classList.add('sidebar-mini');
                 } else {
-                    document.documentElement.classList.remove('sidebar-mini');
-                    document.body.classList.remove('sidebar-mini');
+                    html.classList.remove('sidebar-mini');
                 }
             };
             cbMini.addEventListener('change', applyMini);
@@ -79,17 +100,16 @@
             selTheme.addEventListener('change', () => {
                 const v = selTheme.value;
                 if (v === 'light' || v === 'dark') {
-                    document.body.setAttribute('data-theme', v);
-                    document.documentElement.style.colorScheme = v;
                     try { localStorage.setItem('domovra_theme', v); } catch (e) { }
+                    applyThemeToHtml(v);
                 } else {
-                    const saved = localStorage.getItem('domovra_theme');
+                    // auto : on restaure une préférence locale s'il y en a une, sinon on retire l'attribut
+                    let saved = null;
+                    try { saved = localStorage.getItem('domovra_theme'); } catch (e) { }
                     if (saved === 'light' || saved === 'dark') {
-                        document.body.setAttribute('data-theme', saved);
-                        document.documentElement.style.colorScheme = saved;
+                        applyThemeToHtml(saved);
                     } else {
-                        document.body.removeAttribute('data-theme');
-                        document.documentElement.style.colorScheme = '';
+                        applyThemeToHtml(null);
                     }
                 }
             });
