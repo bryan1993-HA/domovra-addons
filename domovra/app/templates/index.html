@@ -37,13 +37,12 @@
   <!-- Produits -->
   <div class="card">
     <h2>📦 Produit</h2>
-    <form id="product-form" method="post" action="{{ BASE }}product/add">
+    <form method="post" action="{{ BASE }}product/add">
       <input name="name" placeholder="ex. Rôti de porc" required>
 
       <div class="row" style="margin-top:.5rem">
         <!-- Sélecteur d'unité logique -->
-        <select id="unit-choice" name="unit_choice" required>
-          <option value="pièce" selected>pièce</option>
+        <select name="unit" required>
           <optgroup label="Poids">
             <option value="g">g</option>
             <option value="kg">kg</option>
@@ -53,6 +52,7 @@
             <option value="L">L</option>
           </optgroup>
           <optgroup label="Portions / emballages">
+            <option value="pièce" selected>pièce</option>
             <option value="tranche">tranche</option>
             <option value="tranches">tranches</option>
             <option value="paquet">paquet</option>
@@ -64,25 +64,17 @@
             <option value="pot">pot</option>
             <option value="pots">pots</option>
           </optgroup>
-          <option value="__other">Autre…</option>
         </select>
-
-        <!-- Champ unité personnalisée (révélé si "Autre…") -->
-        <input id="unit-custom" class="unit-custom" type="text" placeholder="Saisis une unité (ex. sachet)">
-        <!-- Valeur réellement envoyée au backend (inchangé) -->
-        <input id="unit" name="unit" type="hidden" value="pièce">
 
         <input name="shelf" type="number" placeholder="Jours de conservation par défaut" value="90" min="1">
       </div>
-
-      <div class="inline-help">Astuce : choisis une unité logique (poids, volume, paquet…). “Autre…” permet une unité
-        personnalisée.</div>
 
       <div class="row" style="margin-top:.5rem"><button>Ajouter</button></div>
     </form>
 
     <p class="muted" style="margin-top:.5rem">Produits : {{ products|length }}</p>
   </div>
+
 
   <!-- Entrée de stock -->
   <div class="card">
