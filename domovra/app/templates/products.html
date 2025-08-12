@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% block title %}Domovra — Produits{% endblock %}
+
+{% block content %}
+  <h1>Produits</h1>
+  <p class="muted">Liste complète des produits (quantité totale et nombre de lots).</p>
+
+  <input type="search" id="q" placeholder="Rechercher un produit…" style="width:100%; margin:.5rem 0; padding:.55rem .6rem; border-radius:8px; border:1px solid #3a3d43; background:#1f2125; color:#e8eaed;">
+
+  <table id="tbl">
+    <thead>
+      <tr>
+        <th>Produit</th>
+        <th>Unité</th>
+        <th>Conservation (jours)</th>
+        <th>Quantité totale</th>
+        <th>Lots</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for p in items %}
+      <tr>
+        <td>{{ p.name }}</td>
+        <td>{{ p.unit }}</td>
+        <td>{{ p.default_shelf_life_days }}</td>
+        <td>{{ '%.2f'|format(p.qty_total|float) }}</td>
+        <td>{{ p.lots_count }}</td>
+      </tr>
+      {% else %}
+      <tr><td colspan="5" class="muted">Aucun produit pour l’instant.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  <script>
+    const q = document.getElementById('q');
+    const rows = Array.from(document.querySelectorAll('#tbl tbody tr'));
+    q.addEventListener('input', () => {
+      const s = q.value.toLowerCase().trim();
+      rows.forEach(tr => tr.style.display = tr.innerText.toLowerCase().includes(s) ? '' : 'none');
+    });
+  </script>
+{% endblock %}
