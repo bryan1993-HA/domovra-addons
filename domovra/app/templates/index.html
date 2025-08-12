@@ -3,7 +3,7 @@
 
 {% block head %}
 <style>
-  /* ====== Overrides thème clair ====== */
+  /* —— Overrides thème clair (spécifique page) —— */
   body[data-theme="light"] { color:#1f2328; background:#ffffff; }
   body[data-theme="light"] :root { color-scheme: light; }
 
@@ -13,7 +13,6 @@
 
   body[data-theme="light"] .menu a { background:#ffffff; border:1px solid #e5e7eb; color:#1f2328; }
   body[data-theme="light"] .menu a.active { background:#eef2ff; border-color:#c7d2fe; }
-  body[data-theme="light"] .collapse button { background:#ffffff; border:1px solid #e5e7eb; color:#1f2328; }
 
   body[data-theme="light"] .card { background:#ffffff; border:1px solid #e5e7eb; }
 
@@ -26,68 +25,49 @@
   }
   body[data-theme="light"] button:hover { filter:brightness(0.98); }
 
-  body[data-theme="light"] table { width:100%; border-collapse: collapse; }
   body[data-theme="light"] th,
   body[data-theme="light"] td { border:1px solid #e5e7eb; }
   body[data-theme="light"] th { background:#f8fafc; color:#111827; }
   body[data-theme="light"] tbody tr:nth-child(even) { background:#f9fafb; }
 
-  /* ====== Switch pilule (☀️/🌙) ====== */
+  /* —— Switch “pilule” ☀️/🌙 —— */
   .theme-switch{
-    position: fixed;
-    top: 12px; right: 12px;
-    z-index: 60;
-    width: 64px; height: 32px;
-    border: 0; padding: 0;
-    border-radius: 999px;
+    position: fixed; top: 12px; right: 56px; /* espace pour le hamburger */
+    z-index: 60; width: 64px; height: 32px;
+    border:0; padding:0; border-radius:999px; cursor:pointer;
     background: var(--switch-bg, #111315);
-    box-shadow: 0 2px 8px rgba(0,0,0,.25) inset,
-                0 2px 4px rgba(0,0,0,.15);
-    cursor: pointer;
+    box-shadow: 0 2px 8px rgba(0,0,0,.25) inset, 0 2px 4px rgba(0,0,0,.15);
   }
-  .theme-switch:focus { outline: 2px solid #8b8b8b; outline-offset: 2px; }
-
-  /* Pastille qui glisse */
+  .theme-switch:focus{ outline:2px solid #8b8b8b; outline-offset:2px; }
   .theme-switch::after{
-    content:"";
-    position: absolute;
-    top: 3px; left: 3px;
-    width: 26px; height: 26px;
-    border-radius: 50%;
-    background: #ffffff;
-    box-shadow: 0 1px 2px rgba(0,0,0,.25);
+    content:""; position:absolute; top:3px; left:3px;
+    width:26px; height:26px; border-radius:50%;
+    background:#ffffff; box-shadow:0 1px 2px rgba(0,0,0,.25);
     transition: transform .25s ease, background-color .25s ease;
   }
-
-  /* Icônes ☀️ / 🌙 */
-  .theme-switch .sun,
-  .theme-switch .moon{
-    position: absolute;
-    top: 50%;
-    transform: translateY(-50%);
-    font-size: 16px;
-    line-height: 1;
-    transition: opacity .2s ease;
-    user-select: none;
-    pointer-events: none;
+  .theme-switch .sun, .theme-switch .moon{
+    position:absolute; top:50%; transform:translateY(-50%);
+    font-size:16px; line-height:1; transition:opacity .2s ease;
+    user-select:none; pointer-events:none;
   }
-  .theme-switch .sun{ left: 12px; }
-  .theme-switch .moon{ right: 12px; }
-
-  /* État DARK (par défaut) */
+  .theme-switch .sun{ left:12px; }
+  .theme-switch .moon{ right:12px; }
   body[data-theme="dark"] .theme-switch{ --switch-bg:#111315; }
-  body[data-theme="dark"] .theme-switch::after{ transform: translateX(0); background:#ffffff; }
+  body[data-theme="dark"] .theme-switch::after{ transform:translateX(0); background:#ffffff; }
   body[data-theme="dark"] .theme-switch .moon{ opacity:1; }
   body[data-theme="dark"] .theme-switch .sun{ opacity:.25; }
-
-  /* État LIGHT (pastille à droite + fond clair) */
   body[data-theme="light"] .theme-switch{ --switch-bg:#e6e7eb; }
-  body[data-theme="light"] .theme-switch::after{ transform: translateX(32px); background:#111111; }
+  body[data-theme="light"] .theme-switch::after{ transform:translateX(32px); background:#111111; }
   body[data-theme="light"] .theme-switch .sun{ opacity:1; }
   body[data-theme="light"] .theme-switch .moon{ opacity:.25; }
+
+  @media (max-width:480px){
+    .theme-switch{ right:10px; top:56px; }
+  }
 </style>
 
 <script>
+  /* Appliquer le thème mémorisé dès le head */
   (function(){
     const KEY = 'domovra_theme';
     const saved = localStorage.getItem(KEY);
@@ -114,7 +94,7 @@
       <h2>🏷️ Emplacement</h2>
       <form method="post" action="{{ BASE }}location/add">
         <input name="name" placeholder="ex. Bac 1, Frigo, Placard haut" required>
-        <div style="margin-top:.5rem"><button>Ajouter</button></div>
+        <div class="row" style="margin-top:.5rem"><button>Ajouter</button></div>
       </form>
       <p class="muted" style="margin-top:.5rem">Emplacements :
         {% for l in locations %}<span class="tag unknown">{{ l.name }}</span> {% endfor %}
@@ -129,7 +109,7 @@
           <input name="unit" placeholder="unité (pièce, g, tranches)" value="pièce">
           <input name="shelf" type="number" placeholder="Jours de conservation par défaut" value="90" min="1">
         </div>
-        <div style="margin-top:.5rem"><button>Ajouter</button></div>
+        <div class="row" style="margin-top:.5rem"><button>Ajouter</button></div>
       </form>
       <p class="muted" style="margin-top:.5rem">Produits : {{ products|length }}</p>
     </div>
@@ -156,16 +136,19 @@
             <input type="date" name="best_before">
           </label>
         </div>
-        <div style="margin-top:.5rem"><button>Ajouter au stock</button></div>
+        <div class="row" style="margin-top:.5rem"><button>Ajouter au stock</button></div>
       </form>
     </div>
   </div>
 
-  <div class="card">
+  <div class="card table-responsive" style="margin-top:16px">
     <h2>⏳ À consommer en priorité</h2>
     <table>
       <thead>
-        <tr><th>Produit</th><th>Emplacement</th><th>Qté</th><th>...</th><th>À consommer avant</th><th>État</th><th>Action</th></tr>
+        <tr>
+          <th>Produit</th><th>Emplacement</th><th>Qté</th><th>Congelé le</th>
+          <th>À consommer avant</th><th>État</th><th>Action</th>
+        </tr>
       </thead>
       <tbody>
         {% for it in lots %}
@@ -175,7 +158,11 @@
             <td>{{ it.qty }} {{ it.unit }}</td>
             <td>{{ it.frozen_on or '' }}</td>
             <td>{{ it.best_before or '' }}</td>
-            <td><span class="tag {{ it.status }}">{{ "OK" if it.status=="green" else ("Bientôt" if it.status=="yellow" else ("Urgent" if it.status=="red" else "—")) }}</span></td>
+            <td>
+              <span class="tag {{ it.status }}">
+                {{ "OK" if it.status=="green" else ("Bientôt" if it.status=="yellow" else ("Urgent" if it.status=="red" else "—")) }}
+              </span>
+            </td>
             <td>
               <form method="post" action="{{ BASE }}lot/consume" class="row">
                 <input type="hidden" name="lot_id" value="{{ it.id }}">
@@ -192,11 +179,10 @@
   </div>
 
   <script>
-    // Gestion du switch pilule + persistance
+    // Switch pilule + persistance
     (function(){
       const KEY = 'domovra_theme';
       const btn = document.getElementById('theme-toggle');
-
       function setTheme(next){
         document.body.setAttribute('data-theme', next);
         document.documentElement.style.colorScheme = (next === 'light') ? 'light' : 'dark';
@@ -204,15 +190,11 @@
         btn.setAttribute('aria-pressed', next === 'light' ? 'true' : 'false');
         btn.setAttribute('title', 'Basculer clair/sombre');
       }
-
-      // Init à partir de l'attribut déjà posé dans le <head>
       const current = document.body.getAttribute('data-theme') || 'dark';
       setTheme(current);
-
       btn.addEventListener('click', () => {
         const now = document.body.getAttribute('data-theme') || 'dark';
-        const next = (now === 'light') ? 'dark' : 'light';
-        setTheme(next);
+        setTheme(now === 'light' ? 'dark' : 'light');
       });
     })();
   </script>
