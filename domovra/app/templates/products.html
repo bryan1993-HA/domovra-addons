@@ -3,7 +3,7 @@
 
 {% block content %}
   <h1>Produits</h1>
-  <p class="muted">Liste complète des produits (quantité totale et nombre de lots).</p>
+  <p class="muted">Liste complète des produits (quantité totale et nombre de lots). Vous pouvez supprimer un produit (tous ses lots seront aussi supprimés).</p>
 
   <input type="search" id="q" placeholder="Rechercher un produit…" style="width:100%; margin:.5rem 0; padding:.55rem .6rem; border-radius:8px; border:1px solid #3a3d43; background:#1f2125; color:#e8eaed;">
 
@@ -15,6 +15,7 @@
         <th>Conservation (jours)</th>
         <th>Quantité totale</th>
         <th>Lots</th>
+        <th>Actions</th>
       </tr>
     </thead>
     <tbody>
@@ -25,9 +26,15 @@
         <td>{{ p.default_shelf_life_days }}</td>
         <td>{{ '%.2f'|format(p.qty_total|float) }}</td>
         <td>{{ p.lots_count }}</td>
+        <td>
+          <form method="post" action="{{ BASE }}product/delete" onsubmit="return confirm('Supprimer le produit « {{ p.name }} » ?\\nTous les lots associés seront également supprimés.');" style="display:inline">
+            <input type="hidden" name="product_id" value="{{ p.id }}">
+            <button title="Supprimer" aria-label="Supprimer" style="padding:.35rem .6rem; border-radius:8px; border:1px solid #5a1b1b; background:#3a0f0f; color:#ffb4b4; cursor:pointer;">🗑️</button>
+          </form>
+        </td>
       </tr>
       {% else %}
-      <tr><td colspan="5" class="muted">Aucun produit pour l’instant.</td></tr>
+      <tr><td colspan="6" class="muted">Aucun produit pour l’instant.</td></tr>
       {% endfor %}
     </tbody>
   </table>
