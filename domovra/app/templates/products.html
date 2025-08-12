@@ -2,83 +2,247 @@
 {% block title %}Domovra — Produits{% endblock %}
 
 {% block content %}
-  <h1>Produits</h1>
-  <p class="muted">Modifier ou supprimer vos produits. Supprimer enlève aussi les lots liés.</p>
+<h1>Produits</h1>
+<p class="muted">Modifier ou supprimer vos produits. Supprimer enlève aussi les lots liés.</p>
 
-  <input type="search" id="q" placeholder="Rechercher un produit…" style="width:100%; margin:.5rem 0; padding:.55rem .6rem; border-radius:8px; border:1px solid #3a3d43; background:#1f2125; color:#e8eaed;">
+<!-- ====== Recherche par code‑barres (Open Food Facts) — Front only, 100% compatible ====== -->
+<div id="off-box"
+  style="margin:.75rem 0; padding:.8rem; border-radius:12px; border:1px solid #3a3d43; background:#1a1c20;">
+  <div style="display:flex; gap:.5rem; align-items:center; flex-wrap:wrap;">
+    <input id="off_barcode" type="text" inputmode="numeric" placeholder="Scanner / saisir un code‑barres (EAN/GTIN)…"
+      style="flex:1; min-width:220px; padding:.55rem .6rem; border-radius:8px; border:1px solid #3a3d43; background:#1f2125; color:#e8eaed;">
+    <button id="off_search" style="padding:.45rem .75rem;">🔎 Rechercher</button>
+    <button id="off_paste" class="secondary" type="button"
+      style="padding:.45rem .75rem; background:#2b2f36; border:1px solid #3a3d43;">📋 Coller</button>
+    <button id="off_clear" class="secondary" type="button"
+      style="padding:.45rem .75rem; background:#2b2f36; border:1px solid #3a3d43;">✖ Effacer</button>
+  </div>
 
-  <table id="tbl">
-    <thead>
-      <tr>
-        <th>Produit</th>
-        <th>Unité</th>
-        <th>Conservation (jours)</th>
-        <th>Quantité totale</th>
-        <th>Lots</th>
-        <th>Actions</th>
-      </tr>
-    </thead>
-    <tbody>
-      {% for p in items %}
-      <tr>
-        <td>{{ p.name }}</td>
-        <td>{{ p.unit }}</td>
-        <td>{{ p.default_shelf_life_days }}</td>
-        <td>{{ '%.2f'|format(p.qty_total|float) }}</td>
-        <td>{{ p.lots_count }}</td>
-        <td>
-          <button class="edit-btn" data-id="{{ p.id }}" style="padding:.35rem .6rem;">✏️ Modifier</button>
-          <form method="post" action="{{ BASE }}product/delete" onsubmit="return confirm('Supprimer le produit « {{ p.name }} » ?\\nTous les lots liés seront supprimés.');" style="display:inline">
-            <input type="hidden" name="product_id" value="{{ p.id }}">
-            <button title="Supprimer" aria-label="Supprimer" style="padding:.35rem .6rem; border:1px solid #5a1b1b; background:#3a0f0f; color:#ffb4b4; border-radius:8px;">🗑️</button>
-          </form>
-        </td>
-      </tr>
-      <tr class="edit-row" id="edit-{{ p.id }}" style="display:none;">
-        <td colspan="6">
-          <form method="post" action="{{ BASE }}product/update" class="row" style="gap:.5rem; align-items:center;">
-            <input type="hidden" name="product_id" value="{{ p.id }}">
-            <input name="name" value="{{ p.name }}" required style="flex:2;">
-            <input name="unit" value="{{ p.unit }}" style="flex:1;">
-            <input name="shelf" type="number" min="1" value="{{ p.default_shelf_life_days }}" style="flex:1;">
-            <button style="flex:0;">💾 Enregistrer</button>
-            <button type="button" class="cancel-btn" data-id="{{ p.id }}" style="flex:0; background:#2b2f36;">Annuler</button>
-          </form>
-        </td>
-      </tr>
-      {% else %}
-      <tr><td colspan="6" class="muted">Aucun produit pour l’instant.</td></tr>
-      {% endfor %}
-    </tbody>
-  </table>
+  <div id="off_hint" class="muted" style="margin-top:.4rem;">Astuce : essaie <b>5449000000996</b> (Coca‑Cola 1,5 L).
+  </div>
+  <div id="off_error" style="display:none; color:#ffb4b4; margin-top:.35rem;">Erreur</div>
 
-  <script>
-    // Recherche
-    const q = document.getElementById('q');
-    const rows = Array.from(document.querySelectorAll('#tbl tbody tr')).filter((_,i)=>i%2===0);
-    q.addEventListener('input', () => {
-      const s = q.value.toLowerCase().trim();
-      rows.forEach((tr,idx) => {
-        const match = tr.innerText.toLowerCase().includes(s);
-        tr.style.display = match ? '' : 'none';
-        const edit = tr.nextElementSibling;
-        if (edit && edit.classList.contains('edit-row')) edit.style.display = match ? edit.style.display : 'none';
-      });
+  <div id="off_result"
+    style="display:none; margin-top:.6rem; padding:.6rem; border-radius:10px; border:1px solid #2e3137; background:#1f2125;">
+    <div style="display:grid; grid-template-columns:80px 1fr; gap:.6rem; align-items:start;">
+      <img id="off_img" alt="photo produit"
+        style="width:80px; height:80px; object-fit:cover; border-radius:8px; border:1px solid #3a3d43;">
+      <div>
+        <div><b id="off_name">Nom</b></div>
+        <div id="off_brand" class="muted">Marque</div>
+        <div class="muted" style="margin-top:.25rem;">Quantité indiquée : <span id="off_qty">—</span></div>
+        <div class="muted">Source : Open Food Facts</div>
+        <div style="margin-top:.5rem; display:flex; gap:.5rem; flex-wrap:wrap;">
+          <button id="off_fill_current" type="button" style="padding:.35rem .6rem;">↘ Remplir le formulaire d’édition
+            ouvert</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<!-- ====== /Recherche OFF ====== -->
+
+<input type="search" id="q" placeholder="Rechercher un produit…"
+  style="width:100%; margin:.5rem 0; padding:.55rem .6rem; border-radius:8px; border:1px solid #3a3d43; background:#1f2125; color:#e8eaed;">
+
+<table id="tbl">
+  <thead>
+    <tr>
+      <th>Produit</th>
+      <th>Unité</th>
+      <th>Conservation (jours)</th>
+      <th>Quantité totale</th>
+      <th>Lots</th>
+      <th>Actions</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for p in items %}
+    <tr>
+      <td>{{ p.name }}</td>
+      <td>{{ p.unit }}</td>
+      <td>{{ p.default_shelf_life_days }}</td>
+      <td>{{ '%.2f'|format(p.qty_total|float) }}</td>
+      <td>{{ p.lots_count }}</td>
+      <td>
+        <button class="edit-btn" data-id="{{ p.id }}" style="padding:.35rem .6rem;">✏️ Modifier</button>
+        <form method="post" action="{{ BASE }}product/delete"
+          onsubmit="return confirm('Supprimer le produit « {{ p.name }} » ?\\nTous les lots liés seront supprimés.');"
+          style="display:inline">
+          <input type="hidden" name="product_id" value="{{ p.id }}">
+          <button title="Supprimer" aria-label="Supprimer"
+            style="padding:.35rem .6rem; border:1px solid #5a1b1b; background:#3a0f0f; color:#ffb4b4; border-radius:8px;">🗑️</button>
+        </form>
+      </td>
+    </tr>
+    <tr class="edit-row" id="edit-{{ p.id }}" style="display:none;">
+      <td colspan="6">
+        <form method="post" action="{{ BASE }}product/update" class="row" style="gap:.5rem; align-items:center;">
+          <input type="hidden" name="product_id" value="{{ p.id }}">
+          <input name="name" value="{{ p.name }}" required style="flex:2;" placeholder="Nom du produit">
+          <input name="unit" value="{{ p.unit }}" style="flex:1;" placeholder="Unité (pièce, g, kg, ml, L…)">
+          <input name="shelf" type="number" min="1" value="{{ p.default_shelf_life_days }}" style="flex:1;"
+            placeholder="Conservation (jours)">
+          <button style="flex:0;">💾 Enregistrer</button>
+          <button type="button" class="cancel-btn" data-id="{{ p.id }}"
+            style="flex:0; background:#2b2f36;">Annuler</button>
+        </form>
+      </td>
+    </tr>
+    {% else %}
+    <tr>
+      <td colspan="6" class="muted">Aucun produit pour l’instant.</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+
+<script>
+  // ----------- Recherche locale dans le tableau -----------
+  const q = document.getElementById('q');
+  const baseRows = Array.from(document.querySelectorAll('#tbl tbody tr')).filter((_, i) => i % 2 === 0);
+  q.addEventListener('input', () => {
+    const s = q.value.toLowerCase().trim();
+    baseRows.forEach((tr) => {
+      const match = tr.innerText.toLowerCase().includes(s);
+      tr.style.display = match ? '' : 'none';
+      const edit = tr.nextElementSibling;
+      if (edit && edit.classList.contains('edit-row')) {
+        // si la ligne principale est masquée, on masque aussi la ligne d'édition associée
+        if (!match) edit.style.display = 'none';
+      }
     });
-    // Toggle edit
-    document.querySelectorAll('.edit-btn').forEach(btn=>{
-      btn.addEventListener('click', ()=>{
-        const id = btn.dataset.id;
-        const row = document.getElementById('edit-'+id);
-        row.style.display = (row.style.display==='none'||!row.style.display)?'table-row':'none';
-      });
+  });
+
+  // ----------- Toggle des formulaires d'édition -----------
+  document.querySelectorAll('.edit-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const id = btn.dataset.id;
+      const row = document.getElementById('edit-' + id);
+      row.style.display = (row.style.display === 'none' || !row.style.display) ? 'table-row' : 'none';
     });
-    document.querySelectorAll('.cancel-btn').forEach(btn=>{
-      btn.addEventListener('click', ()=>{
-        const id = btn.dataset.id;
-        const row = document.getElementById('edit-'+id);
-        if(row) row.style.display='none';
-      });
+  });
+  document.querySelectorAll('.cancel-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const id = btn.dataset.id;
+      const row = document.getElementById('edit-' + id);
+      if (row) row.style.display = 'none';
     });
-  </script>
+  });
+
+  // ==================== Intégration Open Food Facts (front only) ====================
+  const $ = (sel, root = document) => root.querySelector(sel);
+
+  const elBarcode = $('#off_barcode');
+  const elSearch = $('#off_search');
+  const elPaste = $('#off_paste');
+  const elClear = $('#off_clear');
+  const elError = $('#off_error');
+  const elBoxRes = $('#off_result');
+  const elImg = $('#off_img');
+  const elName = $('#off_name');
+  const elBrand = $('#off_brand');
+  const elQty = $('#off_qty');
+  const elFill = $('#off_fill_current');
+
+  function showError(msg) {
+    elError.textContent = msg;
+    elError.style.display = 'block';
+    elBoxRes.style.display = 'none';
+  }
+  function clearError() {
+    elError.style.display = 'none';
+  }
+  function showResult(normalized) {
+    clearError();
+    elBoxRes.style.display = 'block';
+    elImg.src = normalized.image_url || '';
+    elImg.style.display = normalized.image_url ? 'block' : 'none';
+    elName.textContent = normalized.name || 'Nom inconnu';
+    elBrand.textContent = normalized.brand ? ('Marque : ' + normalized.brand) : 'Marque inconnue';
+    elQty.textContent = normalized.quantity_hint || '—';
+    // stocke pour le bouton "Remplir le formulaire"
+    elFill.dataset.payload = JSON.stringify(normalized);
+  }
+
+  function normalizeOFF(json) {
+    const p = (json && json.product) || {};
+    const name = p.product_name || p.generic_name || '';
+    const brand = Array.isArray(p.brands_tags) && p.brands_tags.length ? p.brands_tags[0] : (p.brands || '');
+    const image_url = p.image_url || p.image_front_url || p.image_small_url || '';
+    const quantity_hint = p.quantity || '';
+    return { name, brand, image_url, quantity_hint, source: 'Open Food Facts' };
+  }
+
+  function inferUnitAndQty(hint) {
+    // renvoie {unit, qty} si déductible, sinon nulls
+    if (!hint) return { unit: null, qty: null };
+    const q = hint.trim().toLowerCase();
+    const num = parseFloat((q.match(/[\d,.]+/) || [''])[0].replace(',', '.')) || null;
+    if (q.includes('kg')) return { unit: 'kg', qty: num };
+    if (q.includes(' g')) return { unit: 'g', qty: num };
+    if (q.includes(' ml')) return { unit: 'ml', qty: num };
+    if (q.includes(' l')) return { unit: 'L', qty: num };
+    return { unit: null, qty: null };
+  }
+
+  async function doLookup() {
+    const code = (elBarcode.value || '').replace(/\D+/g, '');
+    if (!code) { showError('Saisis un code‑barres valide.'); return; }
+    clearError();
+    elSearch.disabled = true; elSearch.textContent = '…';
+    try {
+      const res = await fetch(`https://world.openfoodfacts.org/api/v0/product/${code}.json`);
+      if (!res.ok) throw new Error('Erreur réseau (' + res.status + ')');
+      const data = await res.json();
+      if (!data || data.status !== 1) {
+        showError('Produit introuvable sur Open Food Facts. Tu peux remplir manuellement.');
+        return;
+      }
+      const normalized = normalizeOFF(data);
+      showResult(normalized);
+    } catch (e) {
+      console.error(e);
+      showError('Erreur lors de la recherche. Réessaie.');
+    } finally {
+      elSearch.disabled = false; elSearch.textContent = '🔎 Rechercher';
+    }
+  }
+
+  // Remplir le formulaire d'édition actuellement OUVERT
+  elFill.addEventListener('click', () => {
+    const payload = elFill.dataset.payload ? JSON.parse(elFill.dataset.payload) : null;
+    if (!payload) { showError('Aucun résultat à insérer.'); return; }
+    // on cherche une .edit-row visible
+    const opened = Array.from(document.querySelectorAll('.edit-row')).find(r => r.style.display !== 'none');
+    if (!opened) { showError('Ouvre d’abord un formulaire (clique sur ✏️ Modifier).'); return; }
+
+    const form = opened.querySelector('form');
+    if (!form) { showError('Formulaire introuvable.'); return; }
+
+    // Remplissage des champs connus
+    const inputName = form.querySelector('input[name="name"]');
+    const inputUnit = form.querySelector('input[name="unit"]');
+    if (inputName && payload.name) inputName.value = payload.name;
+
+    // Essayer de déduire l’unité depuis quantity_hint
+    const iu = inferUnitAndQty(payload.quantity_hint);
+    if (inputUnit && iu.unit) inputUnit.value = iu.unit;
+
+    // Focus sur le bouton Enregistrer pour aller vite
+    const saveBtn = form.querySelector('button[type="submit"], button:not([type])');
+    if (saveBtn) saveBtn.focus();
+  });
+
+  elSearch.addEventListener('click', doLookup);
+  elBarcode.addEventListener('keydown', e => { if (e.key === 'Enter') doLookup(); });
+  elClear.addEventListener('click', () => {
+    elBarcode.value = ''; clearError(); elBoxRes.style.display = 'none';
+  });
+  elPaste.addEventListener('click', async () => {
+    try { elBarcode.value = (await navigator.clipboard.readText()).replace(/\D+/g, ''); }
+    catch { showError("Impossible de lire le presse‑papiers (autorise l’accès ou colle manuellement)."); }
+  });
+  // ==================== /OFF ====================
+</script>
 {% endblock %}
