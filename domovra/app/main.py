@@ -1,7 +1,7 @@
 import os
 import logging
 from fastapi import FastAPI, Request, Form
-from fastapi.responses import HTMLResponse, RedirectResponse, JSONResponse, PlainTextResponse
+from fastapi.responses import HTMLResponse, RedirectResponse, JSONResponse, PlainTextResponse, Response
 from jinja2 import Environment, FileSystemLoader, select_autoescape
 from db import (
     init_db, add_location, list_locations,
@@ -9,7 +9,7 @@ from db import (
     add_lot, list_lots, consume_lot, status_for
 )
 
-# ----- Logs
+# Logs
 logger = logging.getLogger("domovra")
 logging.basicConfig(level=logging.INFO)
 
@@ -34,14 +34,26 @@ def _startup():
 def ping():
     return "ok"
 
+def nocache_html(html: str) -> Response:
+    return HTMLResponse(
+        html,
+        headers={
+            "Cache-Control": "no-store, no-cache, must-revalidate, max-age=0",
+            "Pragma": "no-cache",
+            "Expires": "0",
+        },
+    )
+
 def render(name: str, **ctx):
     tpl = templates.get_template(name)
-    return HTMLResponse(tpl.render(**ctx))
+    return nocache_html(tpl.render(**ctx))
 
 def ingress_home(request: Request) -> str:
-    # Ex: "/api/hassio_ingress/XYZ..." ou "/<slug>_domovra/ingress"
-    path = request.headers.get("X-Ingress-Path") or "/"
-    return path
+    # Exemple: "/api/hassio_ingress/XYZ..." ou "/<slug>_domovra/ingress"
+    base = request.headers.get("X-Ingress-Path") or "/"
+    if not base.endswith("/"):
+        base += "/"
+    return base
 
 # Racines possibles (Ingress peut appeler //)
 @app.get("/", response_class=HTMLResponse)
@@ -60,45 +72,37 @@ def index(request: Request):
         lots=lots,
         WARNING_DAYS=WARNING_DAYS,
         CRITICAL_DAYS=CRITICAL_DAYS,
-        BASE=ingress_home(request)
+        BASE=ingress_home(request)  # avec "/" final
     )
 
-# ----- Locations
+# ---------- Locations
 @app.post("/location/add")
 def location_add(request: Request, name: str = Form(...)):
     logger.info("POST /location/add name=%r", name)
     add_location(name)
-    locations = list_locations()
-    logger.info("Locations now: %s", [l["name"] for l in locations])
-    return RedirectResponse(ingress_home(request), status_code=303)
+    # redirection vers BASE/ (avec headers no-store)
+    return RedirectResponse(ingress_home(request), status_code=303, headers={"Cache-Control": "no-store"})
 
 @app.get("/location/add", include_in_schema=False)
 def location_add_get(request: Request):
-    return RedirectResponse(ingress_home(request), status_code=303)
+    return RedirectResponse(ingress_home(request), status_code=303, headers={"Cache-Control": "no-store"})
 
-# ----- Products
+# ---------- Products
 @app.post("/product/add")
-def product_add(
-    request: Request,
-    name: str = Form(...),
-    unit: str = Form("pièce"),
-    shelf: int = Form(90)
-):
+def product_add(request: Request, name: str = Form(...), unit: str = Form("pièce"), shelf: int = Form(90)):
     logger.info("POST /product/add name=%r unit=%r shelf=%r", name, unit, shelf)
     try:
         shelf = int(shelf)
     except Exception:
         shelf = 90
     add_product(name, unit or "pièce", shelf)
-    products = list_products()
-    logger.info("Products now: %s", [p["name"] for p in products])
-    return RedirectResponse(ingress_home(request), status_code=303)
+    return RedirectResponse(ingress_home(request), status_code=303, headers={"Cache-Control": "no-store"})
 
 @app.get("/product/add", include_in_schema=False)
 def product_add_get(request: Request):
-    return RedirectResponse(ingress_home(request), status_code=303)
+    return RedirectResponse(ingress_home(request), status_code=303, headers={"Cache-Control": "no-store"})
 
-# ----- Lots (stock entries)
+# ---------- Lots
 @app.post("/lot/add")
 def lot_add(
     request: Request,
@@ -111,27 +115,23 @@ def lot_add(
     logger.info("POST /lot/add product_id=%s location_id=%s qty=%s frozen_on=%r best_before=%r",
                 product_id, location_id, qty, frozen_on, best_before)
     add_lot(product_id, location_id, float(qty), frozen_on or None, best_before or None)
-    lots = list_lots()
-    logger.info("Lots now: %d", len(lots))
-    return RedirectResponse(ingress_home(request), status_code=303)
+    return RedirectResponse(ingress_home(request), status_code=303, headers={"Cache-Control": "no-store"})
 
 @app.get("/lot/add", include_in_schema=False)
 def lot_add_get(request: Request):
-    return RedirectResponse(ingress_home(request), status_code=303)
+    return RedirectResponse(ingress_home(request), status_code=303, headers={"Cache-Control": "no-store"})
 
 @app.post("/lot/consume")
 def lot_consume(request: Request, lot_id: int = Form(...), qty: float = Form(...)):
     logger.info("POST /lot/consume lot_id=%s qty=%s", lot_id, qty)
     consume_lot(lot_id, float(qty))
-    lots = list_lots()
-    logger.info("Lots after consume: %d", len(lots))
-    return RedirectResponse(ingress_home(request), status_code=303)
+    return RedirectResponse(ingress_home(request), status_code=303, headers={"Cache-Control": "no-store"})
 
 @app.get("/lot/consume", include_in_schema=False)
 def lot_consume_get(request: Request):
-    return RedirectResponse(ingress_home(request), status_code=303)
+    return RedirectResponse(ingress_home(request), status_code=303, headers={"Cache-Control": "no-store"})
 
-# ----- API debug & HA
+# ---------- API
 @app.get("/api/soon")
 def api_soon():
     data = []
@@ -154,7 +154,7 @@ def api_products():
 def api_lots():
     return JSONResponse(list_lots())
 
-# ----- Fallback
+# ---------- Fallback
 @app.get("/{path:path}", include_in_schema=False)
 def fallback(request: Request, path: str):
-    return RedirectResponse(ingress_home(request))
+    return RedirectResponse(ingress_home(request), status_code=303, headers={"Cache-Control": "no-store"})
