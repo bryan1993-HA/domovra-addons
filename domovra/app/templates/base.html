@@ -6,34 +6,40 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>{% block title %}Domovra{% endblock %}</title>
 
-  <!-- Appliquer immédiatement thème + sidebar compacte (sans reload ni reboot) -->
+  <!-- Injection SAFE (pas d'expressions Jinja dans le JS) -->
+  <meta name="domovra:theme" content="{{ SETTINGS.theme|default('auto') }}">
+  <meta name="domovra:sidebar" content="{{ '1' if SETTINGS.sidebar_compact else '0' }}">
+
+  <!-- Applique immédiatement thème + sidebar compacte -->
   <script>
     (function () {
-      const PREF_THEME = "{{ SETTINGS.theme if SETTINGS else 'auto' }}";
-      const SIDEBAR_MINI = {{ 'true' if SETTINGS and SETTINGS.sidebar_compact else 'false' }
-    };
-    try {
-      if (PREF_THEME === 'light' || PREF_THEME === 'dark') {
-        document.body?.setAttribute('data-theme', PREF_THEME);
-        document.documentElement.style.colorScheme = PREF_THEME;
-        localStorage.setItem('domovra_theme', PREF_THEME);
-      } else {
-        const saved = localStorage.getItem('domovra_theme');
-        if (saved === 'light' || saved === 'dark') {
-          document.body?.setAttribute('data-theme', saved);
-          document.documentElement.style.colorScheme = saved;
-        }
-      }
-    } catch (e) { /* noop */ }
+      const mTheme = document.querySelector('meta[name="domovra:theme"]');
+      const mSide = document.querySelector('meta[name="domovra:sidebar"]');
+      const PREF_THEME = (mTheme && mTheme.content) || 'auto';
+      const SIDEBAR_MINI = (mSide && mSide.content === '1');
 
-    if (SIDEBAR_MINI) {
-      document.documentElement.classList.add('sidebar-mini');
-      document.body?.classList.add('sidebar-mini');
-    } else {
-      document.documentElement.classList.remove('sidebar-mini');
-      document.body?.classList.remove('sidebar-mini');
-    }
-    }) ();
+      try {
+        if (PREF_THEME === 'light' || PREF_THEME === 'dark') {
+          document.body && document.body.setAttribute('data-theme', PREF_THEME);
+          document.documentElement.style.colorScheme = PREF_THEME;
+          localStorage.setItem('domovra_theme', PREF_THEME);
+        } else {
+          const saved = localStorage.getItem('domovra_theme');
+          if (saved === 'light' || saved === 'dark') {
+            document.body && document.body.setAttribute('data-theme', saved);
+            document.documentElement.style.colorScheme = saved;
+          }
+        }
+      } catch (e) { }
+
+      if (SIDEBAR_MINI) {
+        document.documentElement.classList.add('sidebar-mini');
+        document.body && document.body.classList.add('sidebar-mini');
+      } else {
+        document.documentElement.classList.remove('sidebar-mini');
+        document.body && document.body.classList.remove('sidebar-mini');
+      }
+    })();
   </script>
 
   <style>
@@ -100,7 +106,7 @@
       opacity: .9;
     }
 
-    /* Menu (icônes + liens cliquables) */
+    /* Menu */
     .menu {
       display: grid;
       gap: 8px;
@@ -271,8 +277,6 @@
       .sidebar-mini .menu a span:not(.ico) {
         display: none;
       }
-
-      /* cache le texte, garde l'icône */
     }
 
     /* Hamburger (mobile seulement) */
@@ -322,7 +326,6 @@
   <div class="layout">
     <aside>
       <nav class="menu">
-        <!-- IMPORTANT : routes en PLURIEL. Si besoin, remets au singulier. -->
         <a href="{{ BASE }}" class="{% if request.path == BASE %}active{% endif %}">
           <span class="ico">🏠</span> <span>Accueil</span>
         </a>
@@ -356,7 +359,7 @@
     </main>
   </div>
 
-  <!-- JS : sidebar mobile (ouvre/ferme) -->
+  <!-- JS : sidebar mobile -->
   <script>
     (function () {
       const btn = document.getElementById('hamburger');

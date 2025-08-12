@@ -36,9 +36,10 @@
 </style>
 
 <script>
-    /* Applique le thème au chargement selon SETTINGS.theme */
+    /* Applique le thème au chargement, en lisant les <meta> posées par base.html */
     (function () {
-        const pref = "{{ SETTINGS.theme }}";
+        const mTheme = document.querySelector('meta[name="domovra:theme"]');
+        const pref = (mTheme && mTheme.content) || 'auto';
         if (pref === "light" || pref === "dark") {
             document.body.setAttribute("data-theme", pref);
             document.documentElement.style.colorScheme = pref;
@@ -52,10 +53,27 @@
         }
     })();
 
-    /* Application INSTANTANÉE quand on change les contrôles (sans redémarrer) */
+    /* Application INSTANTANÉE quand on change les contrôles */
     document.addEventListener('DOMContentLoaded', () => {
         const selTheme = document.querySelector('select[name="theme"]');
         const cbMini = document.querySelector('input[name="sidebar_compact"]');
+
+        if (cbMini) {
+            // état initial depuis le <meta> (posé par base.html)
+            const mSide = document.querySelector('meta[name="domovra:sidebar"]');
+            cbMini.checked = (mSide && mSide.content === '1');
+            const applyMini = () => {
+                if (cbMini.checked) {
+                    document.documentElement.classList.add('sidebar-mini');
+                    document.body.classList.add('sidebar-mini');
+                } else {
+                    document.documentElement.classList.remove('sidebar-mini');
+                    document.body.classList.remove('sidebar-mini');
+                }
+            };
+            cbMini.addEventListener('change', applyMini);
+            applyMini();
+        }
 
         if (selTheme) {
             selTheme.addEventListener('change', () => {
@@ -75,20 +93,6 @@
                     }
                 }
             });
-        }
-
-        if (cbMini) {
-            const applyMini = () => {
-                if (cbMini.checked) {
-                    document.documentElement.classList.add('sidebar-mini');
-                    document.body.classList.add('sidebar-mini');
-                } else {
-                    document.documentElement.classList.remove('sidebar-mini');
-                    document.body.classList.remove('sidebar-mini');
-                }
-            };
-            cbMini.addEventListener('change', applyMini);
-            applyMini();
         }
     });
 </script>
@@ -130,7 +134,7 @@
             </select>
         </label>
         <div class="hint">Le mode “Empilé” masque l’en-tête et affiche chaque ligne comme une carte. Reviens sur la page
-            contenant les tableaux pour voir le changement.</div>
+            qui contient des tableaux pour voir le changement.</div>
 
         <label class="form-row" style="margin-top:12px;">
             <span>Jours de conservation par défaut</span>
