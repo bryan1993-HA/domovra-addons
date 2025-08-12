@@ -55,6 +55,20 @@ def list_products():
     with _conn() as c:
         return [dict(r) for r in c.execute("SELECT * FROM products ORDER BY name")]
 
+def list_products_with_stats():
+    with _conn() as c:
+        q = """
+        SELECT
+          p.id, p.name, p.unit, p.default_shelf_life_days,
+          COALESCE(SUM(l.qty),0) AS qty_total,
+          COUNT(l.id) AS lots_count
+        FROM products p
+        LEFT JOIN stock_lots l ON l.product_id = p.id
+        GROUP BY p.id
+        ORDER BY p.name
+        """
+        return [dict(r) for r in c.execute(q)]
+
 def _today():
     return datetime.date.today().isoformat()
 
@@ -83,7 +97,6 @@ def consume_lot(lot_id:int, qty:float):
         new_qty = float(row["qty"]) - float(qty)
         if new_qty <= 0:
             c.execute("DELETE FROM stock_lots WHERE id=?", (lot_id,))
-            # consomme le reste
             c.execute("""INSERT INTO movements(lot_id,type,qty,ts,note)
                          VALUES(?,?,?,DATE('now'),?)""",(lot_id,'OUT',float(row["qty"]),'delete lot'))
         else:
