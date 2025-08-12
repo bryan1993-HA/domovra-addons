@@ -15,15 +15,25 @@ from db import (
     status_for
 )
 
-# Certains builds anciens n'ont pas list_products_with_stats -> fallback
-_DB_HAS_STATS = True
+# ===== Import du store de paramètres =====
+# 1) même dossier que main.py : settings_store.py
+# 2) sinon, tente app.settings_store
 try:
-    from db import list_products_with_stats  # type: ignore
+    from settings_store import load_settings, save_settings  # settings_store à côté de main.py
 except Exception:
-    _DB_HAS_STATS = False
-
-# ===== import CORRECT du store =====
-from app.settings_store import load_settings, save_settings  # <-- IMPORTANT
+    try:
+        from app.settings_store import load_settings, save_settings  # si tu déplaces plus tard
+    except Exception:  # dernier recours : valeurs par défaut en mémoire
+        def load_settings():
+            return {
+                "theme": "auto",
+                "table_mode": "scroll",
+                "sidebar_compact": False,
+                "default_shelf_days": 90,
+                "low_stock_default": 1,
+            }
+        def save_settings(new_values: dict):
+            current = load_settings(); current.update(new_values or {}); return current
 
 logger = logging.getLogger("domovra")
 logging.basicConfig(level=logging.INFO)
@@ -34,8 +44,9 @@ DB_PATH       = os.environ.get("DB_PATH", "/data/domovra.sqlite3")
 
 app = FastAPI()
 
+# --- charge les templates depuis ./templates (dossier voisin de main.py)
 templates = Environment(
-    loader=FileSystemLoader(os.path.join(os.path.dirname(__file__), "app", "templates")),
+    loader=FileSystemLoader("templates"),
     autoescape=select_autoescape()
 )
 
@@ -46,7 +57,7 @@ def nocache_html(html: str) -> Response:
     })
 
 def render(name: str, **ctx):
-    # Injecte les SETTINGS automatiquement dans TOUS les rendus
+    # Injecte SETTINGS automatiquement dans tous les templates
     if "SETTINGS" not in ctx:
         ctx["SETTINGS"] = load_settings()
     tpl = templates.get_template(name)
@@ -72,6 +83,13 @@ def _list_products_with_stats_fallback():
     """
     with _conn() as c:
         return [dict(r) for r in c.execute(q)]
+
+# Certains builds anciens n'ont pas list_products_with_stats -> fallback
+_DB_HAS_STATS = True
+try:
+    from db import list_products_with_stats  # type: ignore
+except Exception:
+    _DB_HAS_STATS = False
 
 def get_products_with_stats():
     if _DB_HAS_STATS:
@@ -131,9 +149,11 @@ def lots_page(request: Request,
               location: str = Query("", alias="location"),
               status:  str = Query("", alias="status")):
     items = list_lots()
+    # calcul du statut pour chaque lot
     for it in items:
         it["status"] = status_for(it.get("best_before"), WARNING_DAYS, CRITICAL_DAYS)
 
+    # Filtres
     if product:
         needle = product.casefold()
         items = [i for i in items if needle in (i.get("product","").casefold())]
@@ -159,7 +179,7 @@ def settings_page(request: Request):
                   request=request,
                   SETTINGS=settings)
 
-# ---------------- Sauvegarde Paramètres
+# ---------------- Sauvegarde Paramètres (reload propre)
 @app.post("/settings/save")
 def settings_save(request: Request,
                   theme: str = Form("auto"),
@@ -174,26 +194,88 @@ def settings_save(request: Request,
         "default_shelf_days": int(default_shelf_days or 90),
         "low_stock_default": int(low_stock_default or 1),
     }
-    settings = save_settings(new_vals)
-    logger.info("Settings saved: %s", settings)
-
-    # Redirige sur /settings avec cache-busting
+    save_settings(new_vals)
+    # Reviens sur /settings avec un cache-busting
     return RedirectResponse(ingress_base(request) + f"settings?ok=1&_={int(time.time())}",
                             status_code=303,
                             headers={"Cache-Control":"no-store"})
 
-# ---------------- API debug (pour vérifier que ça marche)
+# ---------------- API debug (vérifier les settings)
 @app.get("/api/settings")
 def api_settings(): return JSONResponse(load_settings())
 
-@app.get("/api/locations")
-def api_locations(): return JSONResponse(list_locations())
+# ---------------- Actions Produits
+@app.post("/product/add")
+def product_add(request: Request, name: str = Form(...), unit: str = Form("pièce"), shelf: int = Form(90)):
+    try: shelf = int(shelf)
+    except Exception: shelf = 90
+    add_product(name, unit or "pièce", shelf)
+    return RedirectResponse(ingress_base(request), status_code=303, headers={"Cache-Control":"no-store"})
 
-@app.get("/api/products")
-def api_products(): return JSONResponse(list_products())
+@app.post("/product/update")
+def product_update(request: Request,
+                   product_id: int = Form(...),
+                   name: str = Form(...),
+                   unit: str = Form("pièce"),
+                   shelf: int = Form(90)):
+    try: shelf = int(shelf)
+    except Exception: shelf = 90
+    update_product(product_id, name, unit, shelf)
+    return RedirectResponse(ingress_base(request)+"products", status_code=303, headers={"Cache-Control":"no-store"})
 
-@app.get("/api/lots")
-def api_lots(): return JSONResponse(list_lots())
+@app.post("/product/delete")
+def product_delete(request: Request, product_id: int = Form(...)):
+    delete_product(product_id)
+    return RedirectResponse(ingress_base(request)+"products", status_code=303, headers={"Cache-Control":"no-store"})
+
+# ---------------- Actions Emplacements
+@app.post("/location/add")
+def location_add(request: Request, name: str = Form(...)):
+    add_location(name)
+    return RedirectResponse(ingress_base(request), status_code=303, headers={"Cache-Control":"no-store"})
+
+@app.post("/location/update")
+def location_update(request: Request, location_id: int = Form(...), name: str = Form(...)):
+    update_location(location_id, name)
+    return RedirectResponse(ingress_base(request)+"locations", status_code=303, headers={"Cache-Control":"no-store"})
+
+@app.post("/location/delete")
+def location_delete(request: Request, location_id: int = Form(...)):
+    delete_location(location_id)
+    return RedirectResponse(ingress_base(request)+"locations", status_code=303, headers={"Cache-Control":"no-store"})
+
+# ---------------- Actions Lots
+@app.post("/lot/add")
+def lot_add_action(request: Request,
+                   product_id: int = Form(...),
+                   location_id: int = Form(...),
+                   qty: float = Form(...),
+                   frozen_on: str = Form(""),
+                   best_before: str = Form("")):
+    add_lot(product_id, location_id, float(qty), frozen_on or None, best_before or None)
+    return RedirectResponse(ingress_base(request), status_code=303, headers={"Cache-Control":"no-store"})
+
+@app.post("/lot/update")
+def lot_update_action(request: Request,
+                      lot_id: int = Form(...),
+                      qty: float = Form(...),
+                      location_id: int = Form(...),
+                      frozen_on: str = Form(""),
+                      best_before: str = Form("")):
+    try: q = float(qty)
+    except Exception: q = 0.0
+    update_lot(lot_id, q, int(location_id), frozen_on or None, best_before or None)
+    return RedirectResponse(ingress_base(request)+"lots", status_code=303, headers={"Cache-Control":"no-store"})
+
+@app.post("/lot/consume")
+def lot_consume_action(request: Request, lot_id: int = Form(...), qty: float = Form(...)):
+    consume_lot(lot_id, float(qty))
+    return RedirectResponse(ingress_base(request), status_code=303, headers={"Cache-Control":"no-store"})
+
+@app.post("/lot/delete")
+def lot_delete_action(request: Request, lot_id: int = Form(...)):
+    delete_lot(lot_id)
+    return RedirectResponse(ingress_base(request)+"lots", status_code=303, headers={"Cache-Control":"no-store"})
 
 # ---------------- Fallback
 @app.get("/{path:path}", include_in_schema=False)
