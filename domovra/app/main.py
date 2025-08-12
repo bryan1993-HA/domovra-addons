@@ -1,4 +1,5 @@
-import os, logging, sqlite3, time
+import os, logging, sqlite3, time, json
+from datetime import datetime, timezone
 from fastapi import FastAPI, Request, Form, Query
 from fastapi.responses import HTMLResponse, RedirectResponse, JSONResponse, PlainTextResponse, Response
 from jinja2 import Environment, FileSystemLoader, select_autoescape
@@ -15,25 +16,14 @@ from db import (
     status_for
 )
 
-# ===== Import du store de paramètres =====
-# 1) même dossier que main.py : settings_store.py
-# 2) sinon, tente app.settings_store
+# ===== Settings store (fallback si absent) =====
 try:
-    from settings_store import load_settings, save_settings  # settings_store à côté de main.py
+    from settings_store import load_settings, save_settings  # settings_store.py à côté de main.py
 except Exception:
-    try:
-        from app.settings_store import load_settings, save_settings  # si tu déplaces plus tard
-    except Exception:  # dernier recours : valeurs par défaut en mémoire
-        def load_settings():
-            return {
-                "theme": "auto",
-                "table_mode": "scroll",
-                "sidebar_compact": False,
-                "default_shelf_days": 90,
-                "low_stock_default": 1,
-            }
-        def save_settings(new_values: dict):
-            current = load_settings(); current.update(new_values or {}); return current
+    def load_settings():
+        return {"theme":"auto","table_mode":"scroll","sidebar_compact":False,"default_shelf_days":90,"low_stock_default":1}
+    def save_settings(new_values: dict):
+        cur = load_settings(); cur.update(new_values or {}); return cur
 
 logger = logging.getLogger("domovra")
 logging.basicConfig(level=logging.INFO)
@@ -44,7 +34,6 @@ DB_PATH       = os.environ.get("DB_PATH", "/data/domovra.sqlite3")
 
 app = FastAPI()
 
-# --- charge les templates depuis ./templates (dossier voisin de main.py)
 templates = Environment(
     loader=FileSystemLoader("templates"),
     autoescape=select_autoescape()
@@ -57,7 +46,6 @@ def nocache_html(html: str) -> Response:
     })
 
 def render(name: str, **ctx):
-    # Injecte SETTINGS automatiquement dans tous les templates
     if "SETTINGS" not in ctx:
         ctx["SETTINGS"] = load_settings()
     tpl = templates.get_template(name)
@@ -69,35 +57,43 @@ def ingress_base(request: Request) -> str:
     return base
 
 def _conn():
-    c = sqlite3.connect(DB_PATH); c.row_factory = sqlite3.Row; return c
+    c = sqlite3.connect(DB_PATH)
+    c.row_factory = sqlite3.Row
+    return c
 
-def _list_products_with_stats_fallback():
-    q = """
-    SELECT p.id, p.name, p.unit, p.default_shelf_life_days,
-           COALESCE(SUM(l.qty),0) AS qty_total,
-           COUNT(l.id) AS lots_count
-    FROM products p
-    LEFT JOIN stock_lots l ON l.product_id = p.id
-    GROUP BY p.id
-    ORDER BY p.name
-    """
+# ---------------- Journal (events)
+def _ensure_events_table():
     with _conn() as c:
-        return [dict(r) for r in c.execute(q)]
+        c.execute("""
+          CREATE TABLE IF NOT EXISTS events (
+            id         INTEGER PRIMARY KEY AUTOINCREMENT,
+            created_at TEXT NOT NULL,
+            kind       TEXT NOT NULL,
+            details    TEXT
+          )
+        """)
+        c.commit()
 
-# Certains builds anciens n'ont pas list_products_with_stats -> fallback
-_DB_HAS_STATS = True
-try:
-    from db import list_products_with_stats  # type: ignore
-except Exception:
-    _DB_HAS_STATS = False
+def log_event(kind: str, details: dict):
+    """Enregistre un événement avec date UTC ISO et payload JSON."""
+    created_at = datetime.now(timezone.utc).isoformat()
+    payload = json.dumps(details or {}, ensure_ascii=False)
+    with _conn() as c:
+        c.execute("INSERT INTO events(created_at,kind,details) VALUES (?,?,?)",
+                  (created_at, kind, payload))
+        c.commit()
 
-def get_products_with_stats():
-    if _DB_HAS_STATS:
-        try:
-            return list_products_with_stats()  # type: ignore
-        except Exception:
-            return _list_products_with_stats_fallback()
-    return _list_products_with_stats_fallback()
+def list_events(limit: int = 200):
+    with _conn() as c:
+        rows = c.execute("SELECT id, created_at, kind, details FROM events ORDER BY id DESC LIMIT ?", (limit,)).fetchall()
+        items = []
+        for r in rows:
+            try:
+                det = json.loads(r["details"] or "{}")
+            except Exception:
+                det = {}
+            items.append({"id": r["id"], "created_at": r["created_at"], "kind": r["kind"], "details": det})
+        return items
 
 # ---------------- Lifecycle
 @app.on_event("startup")
@@ -105,13 +101,14 @@ def _startup():
     logger.info("Domovra starting. DB_PATH=%s", DB_PATH)
     logger.info("WARNING_DAYS=%s CRITICAL_DAYS=%s", WARNING_DAYS, CRITICAL_DAYS)
     init_db()
+    _ensure_events_table()
 
 @app.get("/ping", response_class=PlainTextResponse)
 def ping(): return "ok"
 
 # ---------------- Pages
 @app.get("/", response_class=HTMLResponse)
-@app.get("//", response_class=HTMLResponse)  # Ingress parfois envoie "//"
+@app.get("//", response_class=HTMLResponse)
 def index(request: Request):
     locations = list_locations()
     products  = list_products()
@@ -149,11 +146,9 @@ def lots_page(request: Request,
               location: str = Query("", alias="location"),
               status:  str = Query("", alias="status")):
     items = list_lots()
-    # calcul du statut pour chaque lot
     for it in items:
         it["status"] = status_for(it.get("best_before"), WARNING_DAYS, CRITICAL_DAYS)
 
-    # Filtres
     if product:
         needle = product.casefold()
         items = [i for i in items if needle in (i.get("product","").casefold())]
@@ -169,7 +164,21 @@ def lots_page(request: Request,
                   request=request,
                   items=items, locations=locations)
 
-# ---------------- Page Paramètres
+# --------- Journal page
+@app.get("/journal", response_class=HTMLResponse)
+def journal_page(request: Request, limit: int = Query(200, ge=1, le=1000)):
+    events = list_events(limit)
+    return render("journal.html",
+                  BASE=ingress_base(request),
+                  page="journal",
+                  request=request,
+                  events=events, limit=limit)
+
+@app.get("/api/events")
+def api_events(limit: int = 200):
+    return JSONResponse(list_events(limit))
+
+# ---------------- Page Paramètres (laisse en place même si tu ne l'utilises pas)
 @app.get("/settings", response_class=HTMLResponse)
 def settings_page(request: Request):
     settings = load_settings()
@@ -179,7 +188,6 @@ def settings_page(request: Request):
                   request=request,
                   SETTINGS=settings)
 
-# ---------------- Sauvegarde Paramètres (reload propre)
 @app.post("/settings/save")
 def settings_save(request: Request,
                   theme: str = Form("auto"),
@@ -195,21 +203,17 @@ def settings_save(request: Request,
         "low_stock_default": int(low_stock_default or 1),
     }
     save_settings(new_vals)
-    # Reviens sur /settings avec un cache-busting
+    log_event("settings.update", new_vals)
     return RedirectResponse(ingress_base(request) + f"settings?ok=1&_={int(time.time())}",
-                            status_code=303,
-                            headers={"Cache-Control":"no-store"})
-
-# ---------------- API debug (vérifier les settings)
-@app.get("/api/settings")
-def api_settings(): return JSONResponse(load_settings())
+                            status_code=303, headers={"Cache-Control":"no-store"})
 
 # ---------------- Actions Produits
 @app.post("/product/add")
 def product_add(request: Request, name: str = Form(...), unit: str = Form("pièce"), shelf: int = Form(90)):
     try: shelf = int(shelf)
     except Exception: shelf = 90
-    add_product(name, unit or "pièce", shelf)
+    pid = add_product(name, unit or "pièce", shelf)
+    log_event("product.add", {"id": pid, "name": name, "unit": unit, "shelf": shelf})
     return RedirectResponse(ingress_base(request), status_code=303, headers={"Cache-Control":"no-store"})
 
 @app.post("/product/update")
@@ -221,27 +225,32 @@ def product_update(request: Request,
     try: shelf = int(shelf)
     except Exception: shelf = 90
     update_product(product_id, name, unit, shelf)
+    log_event("product.update", {"id": product_id, "name": name, "unit": unit, "shelf": shelf})
     return RedirectResponse(ingress_base(request)+"products", status_code=303, headers={"Cache-Control":"no-store"})
 
 @app.post("/product/delete")
 def product_delete(request: Request, product_id: int = Form(...)):
     delete_product(product_id)
+    log_event("product.delete", {"id": product_id})
     return RedirectResponse(ingress_base(request)+"products", status_code=303, headers={"Cache-Control":"no-store"})
 
 # ---------------- Actions Emplacements
 @app.post("/location/add")
 def location_add(request: Request, name: str = Form(...)):
-    add_location(name)
+    lid = add_location(name)
+    log_event("location.add", {"id": lid, "name": name})
     return RedirectResponse(ingress_base(request), status_code=303, headers={"Cache-Control":"no-store"})
 
 @app.post("/location/update")
 def location_update(request: Request, location_id: int = Form(...), name: str = Form(...)):
     update_location(location_id, name)
+    log_event("location.update", {"id": location_id, "name": name})
     return RedirectResponse(ingress_base(request)+"locations", status_code=303, headers={"Cache-Control":"no-store"})
 
 @app.post("/location/delete")
 def location_delete(request: Request, location_id: int = Form(...)):
     delete_location(location_id)
+    log_event("location.delete", {"id": location_id})
     return RedirectResponse(ingress_base(request)+"locations", status_code=303, headers={"Cache-Control":"no-store"})
 
 # ---------------- Actions Lots
@@ -253,6 +262,8 @@ def lot_add_action(request: Request,
                    frozen_on: str = Form(""),
                    best_before: str = Form("")):
     add_lot(product_id, location_id, float(qty), frozen_on or None, best_before or None)
+    log_event("lot.add", {"product_id": product_id, "location_id": location_id, "qty": float(qty),
+                          "frozen_on": frozen_on or None, "best_before": best_before or None})
     return RedirectResponse(ingress_base(request), status_code=303, headers={"Cache-Control":"no-store"})
 
 @app.post("/lot/update")
@@ -265,19 +276,41 @@ def lot_update_action(request: Request,
     try: q = float(qty)
     except Exception: q = 0.0
     update_lot(lot_id, q, int(location_id), frozen_on or None, best_before or None)
+    log_event("lot.update", {"lot_id": lot_id, "qty": q, "location_id": int(location_id),
+                             "frozen_on": frozen_on or None, "best_before": best_before or None})
     return RedirectResponse(ingress_base(request)+"lots", status_code=303, headers={"Cache-Control":"no-store"})
 
 @app.post("/lot/consume")
 def lot_consume_action(request: Request, lot_id: int = Form(...), qty: float = Form(...)):
-    consume_lot(lot_id, float(qty))
+    q = float(qty)
+    consume_lot(lot_id, q)
+    log_event("lot.consume", {"lot_id": lot_id, "qty": q})
     return RedirectResponse(ingress_base(request), status_code=303, headers={"Cache-Control":"no-store"})
 
 @app.post("/lot/delete")
 def lot_delete_action(request: Request, lot_id: int = Form(...)):
     delete_lot(lot_id)
+    log_event("lot.delete", {"lot_id": lot_id})
     return RedirectResponse(ingress_base(request)+"lots", status_code=303, headers={"Cache-Control":"no-store"})
 
 # ---------------- Fallback
 @app.get("/{path:path}", include_in_schema=False)
 def fallback(request: Request, path: str):
     return RedirectResponse(ingress_base(request), status_code=303, headers={"Cache-Control":"no-store"})
+
+# --------- util pour produits avec stats (fallback)
+def get_products_with_stats():
+    try:
+        from db import list_products_with_stats  # type: ignore
+        return list_products_with_stats()
+    except Exception:
+        q = """
+        SELECT p.id, p.name, p.unit, p.default_shelf_life_days,
+               COALESCE(SUM(l.qty),0) AS qty_total,
+               COUNT(l.id) AS lots_count
+        FROM products p
+        LEFT JOIN stock_lots l ON l.product_id = p.id
+        GROUP BY p.id ORDER BY p.name
+        """
+        with _conn() as c:
+            return [dict(r) for r in c.execute(q)]

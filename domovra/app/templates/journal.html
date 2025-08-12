@@ -1,0 +1,136 @@
+{% extends "base.html" %}
+{% block title %}Domovra — Journal{% endblock %}
+
+{% block head %}
+<style>
+    .journal-actions {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+        margin-bottom: 12px;
+    }
+
+    .chip {
+        display: inline-flex;
+        align-items: center;
+        padding: .25rem .5rem;
+        border-radius: 999px;
+        border: 1px solid #2a2f36;
+        background: #141821;
+        font-size: .85rem;
+    }
+
+    table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+
+    th,
+    td {
+        border: 1px solid #242932;
+        padding: 8px 10px;
+        vertical-align: top;
+    }
+
+    th {
+        background: #121520;
+        position: sticky;
+        top: 0;
+    }
+
+    tbody tr:nth-child(even) {
+        background: #121620;
+    }
+
+    .mono {
+        font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+    }
+
+    .kind {
+        font-weight: 600;
+    }
+
+    .time {
+        white-space: nowrap;
+    }
+
+    .details pre {
+        margin: 0;
+        white-space: pre-wrap;
+        word-break: break-word;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<h1>Journal</h1>
+<p class="muted">Derniers évènements ({{ events|length }} affichés). Chaque action est horodatée en UTC et affichée dans
+    ton fuseau local.</p>
+
+<div class="journal-actions">
+    <span class="chip">Limite : {{ limit }}</span>
+    <a href="{{ BASE }}journal?limit=200" class="chip">200</a>
+    <a href="{{ BASE }}journal?limit=500" class="chip">500</a>
+    <a href="{{ BASE }}journal?limit=1000" class="chip">1000</a>
+    <a href="{{ BASE }}api/events?limit={{ limit }}" class="chip" target="_blank">JSON</a>
+</div>
+
+<div class="card table-responsive">
+    <table id="journal">
+        <thead>
+            <tr>
+                <th style="width:90px;">ID</th>
+                <th style="width:260px;">Horodatage</th>
+                <th style="width:160px;">Type</th>
+                <th>Détails</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for ev in events %}
+            <tr>
+                <td class="mono">#{{ ev.id }}</td>
+                <td class="time mono" data-iso="{{ ev.created_at }}">…</td>
+                <td class="kind">{{ ev.kind }}</td>
+                <td class="details">
+                    <pre class="mono">{{ ev.details | tojson(indent=2, ensure_ascii=False) }}</pre>
+                </td>
+            </tr>
+            {% else %}
+            <tr>
+                <td colspan="4" class="muted">Aucun événement pour l’instant.</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<script>
+    // Formatage local + "il y a X" pour la colonne time
+    (function () {
+        const rows = document.querySelectorAll('#journal td.time');
+        const fmt = new Intl.DateTimeFormat(undefined, { dateStyle: 'medium', timeStyle: 'medium' });
+        const rtf = new Intl.RelativeTimeFormat(undefined, { numeric: 'auto' });
+
+        const toRel = (d) => {
+            const diff = (Date.now() - d.getTime()) / 1000; // sec
+            const abs = Math.abs(diff);
+            if (abs < 60) return rtf.format(-Math.round(diff), 'second');
+            const m = diff / 60;
+            if (Math.abs(m) < 60) return rtf.format(-Math.round(m), 'minute');
+            const h = m / 60;
+            if (Math.abs(h) < 24) return rtf.format(-Math.round(h), 'hour');
+            const dd = h / 24;
+            return rtf.format(-Math.round(dd), 'day');
+        };
+
+        rows.forEach(td => {
+            const iso = td.getAttribute('data-iso');
+            try {
+                const d = new Date(iso);
+                td.textContent = fmt.format(d) + '  ·  ' + toRel(d);
+                td.title = iso + ' (UTC)';
+            } catch (e) { td.textContent = iso || '—'; }
+        });
+    })();
+</script>
+{% endblock %}
