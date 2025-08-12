@@ -22,6 +22,4 @@
 > La base SQLite est stockée dans `/data/domovra.sqlite3`.
 
 ## 🖼️ Captures
-![Accueil](images/screen_home.png)
-![Produits](images/screen_products.png)
-![Lots](images/screen_lots.png)
+![Accueil](images/EcranPrincipal.png)
