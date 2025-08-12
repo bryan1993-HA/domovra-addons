@@ -3,27 +3,20 @@
 
 {% block head %}
 <style>
-  /* =========================
-     Thème clair (overrides)
-     ========================= */
+  /* ====== Overrides thème clair ====== */
   body[data-theme="light"] { color:#1f2328; background:#ffffff; }
   body[data-theme="light"] :root { color-scheme: light; }
 
-  /* Layout & zones */
   body[data-theme="light"] aside { background:#f7f7f8; border-right:1px solid #e5e7eb; }
   body[data-theme="light"] header { background:#ffffff; border-bottom:1px solid #e5e7eb; }
   body[data-theme="light"] .muted { color:#6b7280; }
 
-  /* Menu */
   body[data-theme="light"] .menu a { background:#ffffff; border:1px solid #e5e7eb; color:#1f2328; }
   body[data-theme="light"] .menu a.active { background:#eef2ff; border-color:#c7d2fe; }
   body[data-theme="light"] .collapse button { background:#ffffff; border:1px solid #e5e7eb; color:#1f2328; }
 
-  /* Cartes & grilles */
   body[data-theme="light"] .card { background:#ffffff; border:1px solid #e5e7eb; }
-  body[data-theme="light"] .grid { /* rien de spécial */ }
 
-  /* Formulaires */
   body[data-theme="light"] input,
   body[data-theme="light"] select {
     background:#ffffff; color:#111827; border:1px solid #d1d5db;
@@ -33,23 +26,18 @@
   }
   body[data-theme="light"] button:hover { filter:brightness(0.98); }
 
-  /* Tableaux */
   body[data-theme="light"] table { width:100%; border-collapse: collapse; }
   body[data-theme="light"] th,
   body[data-theme="light"] td { border:1px solid #e5e7eb; }
   body[data-theme="light"] th { background:#f8fafc; color:#111827; }
   body[data-theme="light"] tbody tr:nth-child(even) { background:#f9fafb; }
 
-  /* Tags (OK, Soon, Urgent) – on garde tes couleurs existantes, pas d’override nécessaire */
-
-  /* =========================
-     Bouton de thème (UI)
-     ========================= */
+  /* ====== Bouton de thème (fixé en haut à droite) ====== */
   #theme-toggle {
     position: fixed;
     top: 12px;
     right: 12px;
-    z-index: 20;
+    z-index: 50;
     display: inline-flex;
     align-items: center;
     gap: .5rem;
@@ -62,8 +50,6 @@
     line-height: 1;
   }
   #theme-toggle:focus { outline: 2px solid #6b7280; outline-offset: 2px; }
-
-  /* Style du bouton en thème clair (hérité des overrides) */
   body[data-theme="light"] #theme-toggle {
     background:#ffffff; color:#111827; border:1px solid #d1d5db;
   }
@@ -71,65 +57,24 @@
 
 <script>
   (function(){
-    const STORAGE_KEY = 'domovra_theme';
-    const btnId = 'theme-toggle';
-
-    // Appliquer le thème mémorisé (ou défaut sombre si rien)
-    const saved = localStorage.getItem(STORAGE_KEY);
+    const KEY = 'domovra_theme';
+    const saved = localStorage.getItem(KEY);
     if (saved === 'light' || saved === 'dark') {
       document.body.setAttribute('data-theme', saved);
+      document.documentElement.style.colorScheme = saved === 'light' ? 'light' : 'dark';
     } else {
       // défaut: sombre (cohérent avec base.html)
       document.body.setAttribute('data-theme', 'dark');
-    }
-
-    // Maj du libellé/emoji du bouton
-    function renderButtonState(button){
-      const isLight = document.body.getAttribute('data-theme') === 'light';
-      const emoji = isLight ? '☀️' : '🌙';
-      const txt = isLight ? 'Mode clair' : 'Mode sombre';
-      button.textContent = `${emoji} ${txt}`;
-      button.setAttribute('aria-pressed', isLight ? 'true' : 'false');
-      button.setAttribute('title', 'Basculer clair/sombre');
-    }
-
-    // Créer le bouton si pas présent (au cas où le template serait rechargé en PJAX)
-    function ensureButton(){
-      let btn = document.getElementById(btnId);
-      if (!btn) {
-        btn = document.createElement('button');
-        btn.id = btnId;
-        btn.type = 'button';
-        document.body.appendChild(btn);
-      }
-      renderButtonState(btn);
-
-      btn.addEventListener('click', () => {
-        const current = document.body.getAttribute('data-theme') || 'dark';
-        const next = current === 'light' ? 'dark' : 'light';
-        document.body.setAttribute('data-theme', next);
-        localStorage.setItem(STORAGE_KEY, next);
-        // Indique au navigateur le schéma de couleur pour les widgets natifs
-        if (next === 'light') {
-          document.documentElement.style.colorScheme = 'light';
-        } else {
-          document.documentElement.style.colorScheme = 'dark';
-        }
-        renderButtonState(btn);
-      });
-    }
-
-    // Init quand le DOM est prêt
-    if (document.readyState === 'loading') {
-      document.addEventListener('DOMContentLoaded', ensureButton);
-    } else {
-      ensureButton();
+      document.documentElement.style.colorScheme = 'dark';
     }
   })();
 </script>
 {% endblock %}
 
 {% block content %}
+  <!-- Bouton visible immédiatement -->
+  <button id="theme-toggle" type="button" aria-label="Basculer clair/sombre">🌙 Mode sombre</button>
+
   <h1>Accueil</h1>
   <p class="muted">Ajoute rapidement des emplacements, produits et lots. Utilise le menu pour parcourir toutes les données.</p>
 
@@ -214,4 +159,30 @@
       </tbody>
     </table>
   </div>
+
+  <script>
+    // Brancher le bouton déjà présent dans le DOM
+    (function(){
+      const KEY = 'domovra_theme';
+      const btn = document.getElementById('theme-toggle');
+
+      function setTheme(next){
+        document.body.setAttribute('data-theme', next);
+        document.documentElement.style.colorScheme = next === 'light' ? 'light' : 'dark';
+        localStorage.setItem(KEY, next);
+        btn.textContent = (next === 'light') ? '☀️ Mode clair' : '🌙 Mode sombre';
+        btn.setAttribute('aria-pressed', next === 'light' ? 'true' : 'false');
+        btn.setAttribute('title', 'Basculer clair/sombre');
+      }
+
+      const current = document.body.getAttribute('data-theme') || 'dark';
+      setTheme(current);
+
+      btn.addEventListener('click', () => {
+        const now = document.body.getAttribute('data-theme') || 'dark';
+        const next = now === 'light' ? 'dark' : 'light';
+        setTheme(next);
+      });
+    })();
+  </script>
 {% endblock %}
