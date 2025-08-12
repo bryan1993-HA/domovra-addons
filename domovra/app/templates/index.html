@@ -27,7 +27,8 @@
   <div class="grid">
     <div class="card">
       <h3>🏷️ Emplacement</h3>
-      <form method="post" action="location/add">
+      <!-- On préfixe par le chemin Ingress injecté par le backend -->
+      <form method="post" action="{{ BASE }}/location/add">
         <input name="name" placeholder="ex. Bac 1, Frigo, Placard haut" required>
         <div style="margin-top:.5rem"><button>Ajouter</button></div>
       </form>
@@ -38,7 +39,7 @@
 
     <div class="card">
       <h3>📦 Produit</h3>
-      <form method="post" action="product/add">
+      <form method="post" action="{{ BASE }}/product/add">
         <input name="name" placeholder="ex. Rôti de porc" required>
         <div class="row" style="margin-top:.5rem">
           <input name="unit" placeholder="unité (pièce, g, tranches)" value="pièce">
@@ -51,7 +52,7 @@
 
     <div class="card">
       <h3>➕ Entrée de stock</h3>
-      <form method="post" action="lot/add">
+      <form method="post" action="{{ BASE }}/lot/add">
         <select name="product_id" required>
           <option value="" disabled selected>Produit…</option>
           {% for p in products %}<option value="{{ p.id }}">{{ p.name }} ({{ p.unit }})</option>{% endfor %}
@@ -92,7 +93,7 @@
             <td>{{ it.best_before or '' }}</td>
             <td><span class="tag {{ it.status }}">{{ "OK" if it.status=="green" else ("Bientôt" if it.status=="yellow" else ("Urgent" if it.status=="red" else "—")) }}</span></td>
             <td>
-              <form method="post" action="lot/consume" class="row">
+              <form method="post" action="{{ BASE }}/lot/consume" class="row">
                 <input type="hidden" name="lot_id" value="{{ it.id }}">
                 <input type="number" step="0.01" min="0.01" name="qty" placeholder="Qté à consommer">
                 <button>Consommer</button>
