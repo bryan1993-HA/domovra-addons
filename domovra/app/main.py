@@ -30,7 +30,6 @@ except Exception:
 def setup_logging():
     root = logging.getLogger()
     if root.handlers:
-        # éviter doublons si rechargé
         for h in list(root.handlers):
             root.removeHandler(h)
     root.setLevel(logging.INFO)
@@ -101,7 +100,6 @@ def _ensure_events_table():
         c.commit()
 
 def log_event(kind: str, details: dict):
-    """Enregistre un événement avec date UTC ISO et payload JSON."""
     created_at = datetime.now(timezone.utc).isoformat()
     payload = json.dumps(details or {}, ensure_ascii=False)
     with _conn() as c:
@@ -215,6 +213,18 @@ def journal_page(request: Request, limit: int = Query(200, ge=1, le=1000)):
                   request=request,
                   events=events, limit=limit)
 
+@app.post("/journal/clear")
+def journal_clear(request: Request):
+    base = ingress_base(request)
+    with _conn() as c:
+        c.execute("DELETE FROM events")
+        c.commit()
+    logger.info("POST /journal/clear -> journal vidé")
+    log_event("journal.clear", {"by": "ui"})
+    return RedirectResponse(base + "journal?cleared=1",
+                            status_code=303,
+                            headers={"Cache-Control":"no-store"})
+
 @app.get("/api/events")
 def api_events(limit: int = 200):
     logger.info("GET /api/events limit=%s", limit)
@@ -244,7 +254,6 @@ def settings_save(request: Request,
                   default_shelf_days: int = Form(90),
                   low_stock_default: int = Form(1)):
     base = ingress_base(request)
-    # Normalisation / sécurisation des valeurs reçues
     normalized = {
         "theme": theme if theme in ("auto","light","dark") else "auto",
         "table_mode": table_mode if table_mode in ("scroll","stacked") else "scroll",
@@ -260,7 +269,6 @@ def settings_save(request: Request,
         saved = save_settings(normalized)
         logger.info("POST /settings/save OK -> %s", saved)
         log_event("settings.update", saved)
-        # cache-buster pour éviter réaffichage d'ancienne page
         return RedirectResponse(base + f"settings?ok=1&_={int(time.time())}",
                                 status_code=303,
                                 headers={"Cache-Control":"no-store"})

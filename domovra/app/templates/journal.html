@@ -8,6 +8,7 @@
         align-items: center;
         justify-content: space-between;
         gap: 12px;
+        flex-wrap: wrap;
     }
 
     .events-head h1 {
@@ -52,25 +53,110 @@
         border: 1px solid currentColor;
         font-size: .85rem;
     }
+
+    /* Couleurs par type d'événement */
+    .kind-settings_update {
+        color: #5fb673;
+        border-color: #5fb673;
+        background: transparent;
+    }
+
+    .kind-settings_error {
+        color: #ff5a5a;
+        border-color: #ff5a5a;
+    }
+
+    .kind-journal_clear {
+        color: #7aa7ff;
+        border-color: #7aa7ff;
+    }
+
+    .kind-product_add {
+        color: #55c46a;
+        border-color: #55c46a;
+    }
+
+    .kind-product_update {
+        color: #b7a52b;
+        border-color: #b7a52b;
+    }
+
+    .kind-product_delete {
+        color: #ff6b6b;
+        border-color: #ff6b6b;
+    }
+
+    .kind-location_add {
+        color: #55c46a;
+        border-color: #55c46a;
+    }
+
+    .kind-location_update {
+        color: #b7a52b;
+        border-color: #b7a52b;
+    }
+
+    .kind-location_delete {
+        color: #ff6b6b;
+        border-color: #ff6b6b;
+    }
+
+    .kind-lot_add {
+        color: #55c46a;
+        border-color: #55c46a;
+    }
+
+    .kind-lot_update {
+        color: #b7a52b;
+        border-color: #b7a52b;
+    }
+
+    .kind-lot_consume {
+        color: #7aa7ff;
+        border-color: #7aa7ff;
+    }
+
+    .kind-lot_delete {
+        color: #ff6b6b;
+        border-color: #ff6b6b;
+    }
+
+    .flash {
+        display: none;
+        margin: 8px 0 12px;
+        padding: 10px 12px;
+        border: 1px solid var(--panel-line, rgba(255, 255, 255, .2));
+        border-radius: 8px;
+    }
 </style>
 {% endblock %}
 
 {% block content %}
 <div class="events-head">
     <h1>Journal</h1>
-    <form method="get" action="{{ BASE }}journal">
-        <label>
-            Afficher
-            <select name="limit">
-                {% for n in [50,100,200,500,1000] %}
-                <option value="{{ n }}" {{ 'selected' if n==limit }}>{{ n }}</option>
-                {% endfor %}
-            </select>
-            lignes
-        </label>
-        <button type="submit" class="button">Actualiser</button>
-    </form>
+    <div style="display:flex; gap:8px; align-items:center;">
+        <form method="get" action="{{ BASE }}journal" style="display:flex; gap:8px; align-items:center;">
+            <label>
+                Afficher
+                <select name="limit">
+                    {% for n in [50,100,200,500,1000] %}
+                    <option value="{{ n }}" {{ 'selected' if n==limit }}>{{ n }}</option>
+                    {% endfor %}
+                </select>
+                lignes
+            </label>
+            <button type="submit" class="button">Actualiser</button>
+        </form>
+
+        <form method="post" action="{{ BASE }}journal/clear"
+            onsubmit="return confirm('Vider TOUT le journal ? Cette action est irréversible.');">
+            <button type="submit" class="button" style="border-color:#ff6b6b; color:#ff6b6b;">🗑️ Vider le
+                journal</button>
+        </form>
+    </div>
 </div>
+
+<div id="flash" class="flash">Journal vidé ✅</div>
 
 <p class="muted">Historique des actions (enregistré dans la base SQLite). Les heures sont affichées en local.</p>
 
@@ -88,12 +174,12 @@
     </thead>
     <tbody>
         {% for ev in events %}
+        {% set k = ev.kind|replace('.', '_') %}
         <tr>
             <td class="nowrap">{{ ev.id }}</td>
             <td class="nowrap"><time class="ev-ts" datetime="{{ ev.created_at }}">{{ ev.created_at }}</time></td>
-            <td><span class="pill">{{ ev.kind }}</span></td>
+            <td><span class="pill kind-{{ k }}">{{ ev.kind }}</span></td>
             <td class="code">
-                {# details peut être un dict, une chaîne JSON, ou None — on le sérialise proprement #}
                 {% set d = ev.details if ev.details is not none else {} %}
                 {% if d is mapping %}
                 <pre class="code">{{ d | tojson(indent=2) }}</pre>
@@ -119,6 +205,13 @@
                 if (!isNaN(d)) t.textContent = d.toLocaleString();
             } catch (e) { }
         });
+
+        // Affiche un flash si ?cleared=1
+        const p = new URLSearchParams(location.search);
+        if (p.get('cleared') === '1') {
+            const f = document.getElementById('flash');
+            if (f) { f.style.display = 'block'; f.textContent = 'Journal vidé ✅'; }
+        }
     });
 </script>
 {% endblock %}
