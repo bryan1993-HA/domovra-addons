@@ -6,8 +6,13 @@ def _conn():
     c.row_factory = sqlite3.Row
     return c
 
+def _column_exists(c: sqlite3.Connection, table: str, column: str) -> bool:
+    rows = c.execute(f"PRAGMA table_info({table})").fetchall()
+    return any(r["name"] == column for r in rows)
+
 def init_db():
     with _conn() as c:
+        # ----- Tables de base
         c.execute("""CREATE TABLE IF NOT EXISTS locations(
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             name TEXT UNIQUE NOT NULL
@@ -17,6 +22,7 @@ def init_db():
             name TEXT UNIQUE NOT NULL,
             unit TEXT DEFAULT 'pièce',
             default_shelf_life_days INTEGER DEFAULT 90
+            -- colonne barcode ajoutée plus bas si manquante (migration)
         )""")
         c.execute("""CREATE TABLE IF NOT EXISTS stock_lots(
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -38,6 +44,14 @@ def init_db():
             FOREIGN KEY(lot_id) REFERENCES stock_lots(id)
         )""")
 
+        # ----- Migration : ajout de la colonne barcode si absente
+        if not _column_exists(c, "products", "barcode"):
+            c.execute("ALTER TABLE products ADD COLUMN barcode TEXT")
+        # Index d'unicité (en tenant compte des NULL)
+        c.execute("""CREATE UNIQUE INDEX IF NOT EXISTS idx_products_barcode_unique
+                     ON products(barcode) WHERE barcode IS NOT NULL""")
+        c.commit()
+
 # ---------- Locations
 def add_location(name: str) -> int:
     name = name.strip()
@@ -47,9 +61,8 @@ def add_location(name: str) -> int:
             c.commit()
             return cur.lastrowid
         except sqlite3.IntegrityError:
-            # existe déjà → renvoyer l'id existant
             row = c.execute("SELECT id FROM locations WHERE name=?", (name,)).fetchone()
-            return int(row["id"]) if row else 0  # 0 si vraiment introuvable (cas rare)
+            return int(row["id"]) if row else 0
 
 def list_locations():
     with _conn() as c:
@@ -72,32 +85,44 @@ def delete_location(location_id: int):
         c.commit()
 
 # ---------- Products
-def add_product(name: str, unit: str = 'pièce', shelf: int = 90) -> int:
+def add_product(name: str, unit: str = 'pièce', shelf: int = 90, barcode: str | None = None) -> int:
+    """
+    Ajoute un produit. Unicité sur name (héritée) et sur barcode (si non NULL).
+    Si conflit, renvoie l'id existant (par name ou barcode).
+    """
     name = name.strip()
     unit = (unit.strip() or 'pièce')
     shelf = int(shelf)
+    barcode = (barcode.strip() or None) if isinstance(barcode, str) else None
+
     with _conn() as c:
         try:
             cur = c.execute(
-                "INSERT INTO products(name,unit,default_shelf_life_days) VALUES (?,?,?)",
-                (name, unit, shelf)
+                "INSERT INTO products(name,unit,default_shelf_life_days,barcode) VALUES (?,?,?,?)",
+                (name, unit, shelf, barcode)
             )
             c.commit()
             return cur.lastrowid
         except sqlite3.IntegrityError:
-            # existe déjà → renvoyer l'id existant
+            # Conflit : on tente par name, puis par barcode
             row = c.execute("SELECT id FROM products WHERE name=?", (name,)).fetchone()
-            return int(row["id"]) if row else 0
+            if row:
+                return int(row["id"])
+            if barcode:
+                row = c.execute("SELECT id FROM products WHERE barcode=?", (barcode,)).fetchone()
+                if row:
+                    return int(row["id"])
+            return 0
 
 def list_products():
     with _conn() as c:
-        return [dict(r) for r in c.execute("SELECT * FROM products ORDER BY name")]
+        return [dict(r) for r in c.execute("SELECT id, name, unit, default_shelf_life_days, barcode FROM products ORDER BY name")]
 
 def list_products_with_stats():
     with _conn() as c:
         q = """
         SELECT
-          p.id, p.name, p.unit, p.default_shelf_life_days,
+          p.id, p.name, p.unit, p.default_shelf_life_days, p.barcode,
           COALESCE(SUM(l.qty),0) AS qty_total,
           COUNT(l.id) AS lots_count
         FROM products p

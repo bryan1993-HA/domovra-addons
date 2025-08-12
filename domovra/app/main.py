@@ -281,12 +281,19 @@ def settings_save(request: Request,
 
 # ---------------- Actions Produits
 @app.post("/product/add")
-def product_add(request: Request, name: str = Form(...), unit: str = Form("pièce"), shelf: int = Form(90)):
+def product_add(request: Request,
+                name: str = Form(...),
+                unit: str = Form("pièce"),
+                shelf: int = Form(90),
+                barcode: str = Form("")):
     try: shelf = int(shelf)
     except Exception: shelf = 90
-    pid = add_product(name, unit or "pièce", shelf)
-    log_event("product.add", {"id": pid, "name": name, "unit": unit, "shelf": shelf})
-    return RedirectResponse(ingress_base(request), status_code=303, headers={"Cache-Control":"no-store"})
+    bid = barcode.strip() or None
+    pid = add_product(name, unit or "pièce", shelf, bid)
+    from urllib.parse import urlencode
+    params = urlencode({"added": 1, "pid": pid})
+    log_event("product.add", {"id": pid, "name": name, "unit": unit, "shelf": shelf, "barcode": bid})
+    return RedirectResponse(ingress_base(request) + f"products?{params}", status_code=303, headers={"Cache-Control":"no-store"})
 
 @app.post("/product/update")
 def product_update(request: Request,

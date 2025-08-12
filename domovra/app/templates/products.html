@@ -46,7 +46,7 @@
 <div class="card"
   style="margin:.75rem 0; padding:.8rem; border-radius:12px; border:1px solid #3a3d43; background:#15171b;">
   <h2 style="margin-top:0;">Créer un produit</h2>
-  <form id="create_form" method="post" action="{{ BASE }}product/create" class="row"
+  <form id="create_form" method="post" action="{{ BASE }}product/add" class="row"
     style="gap:.5rem; align-items:center;">
     <input name="name" id="create_name" placeholder="Nom du produit" required style="flex:2;">
     <input name="unit" id="create_unit" placeholder="Unité (pièce, g, kg, ml, L…)" style="flex:1;">
@@ -57,8 +57,8 @@
     <button type="button" id="create_reset" class="secondary" style="flex:0; background:#2b2f36;">Réinitialiser</button>
   </form>
   <p class="muted" style="margin:.4rem 0 0;">
-    Astuce : scanne/z saisissez le code‑barres ci‑dessus → “Rechercher” → “Préremplir le formulaire d’ajout”, puis
-    ajustez la conservation et validez.
+    Astuce : scanne/saisis un code‑barres ci‑dessus → “Rechercher” → “Préremplir le formulaire d’ajout”, puis ajuste la
+    conservation et valide.
   </p>
 </div>
 <!-- ====== /Formulaire d'AJOUT ====== -->
@@ -119,7 +119,7 @@
 </table>
 
 <script>
-  // ----------- Recherche locale dans le tableau -----------
+  // ----------- Recherche locale -----------
   const q = document.getElementById('q');
   const baseRows = Array.from(document.querySelectorAll('#tbl tbody tr')).filter((_, i) => i % 2 === 0);
   q.addEventListener('input', () => {
@@ -134,7 +134,7 @@
     });
   });
 
-  // ----------- Toggle des formulaires d'édition -----------
+  // ----------- Toggle édition -----------
   document.querySelectorAll('.edit-btn').forEach(btn => {
     btn.addEventListener('click', () => {
       const id = btn.dataset.id;
@@ -150,7 +150,7 @@
     });
   });
 
-  // ==================== Intégration Open Food Facts (front only) ====================
+  // ==================== Open Food Facts ====================
   const $ = (sel, root = document) => root.querySelector(sel);
 
   const elBarcode = $('#off_barcode');
@@ -187,7 +187,6 @@
     elName.textContent = normalized.name || 'Nom inconnu';
     elBrand.textContent = normalized.brand ? ('Marque : ' + normalized.brand) : 'Marque inconnue';
     elQty.textContent = normalized.quantity_hint || '—';
-    // stocke pour le bouton
     elFillCreate.dataset.payload = JSON.stringify(normalized);
   }
 
@@ -200,15 +199,14 @@
     return { name, brand, image_url, quantity_hint, source: 'Open Food Facts' };
   }
 
-  function inferUnitAndQty(hint) {
-    if (!hint) return { unit: null, qty: null };
+  function inferUnit(hint) {
+    if (!hint) return null;
     const q = hint.trim().toLowerCase();
-    const num = parseFloat((q.match(/[\d,.]+/) || [''])[0].replace(',', '.')) || null;
-    if (q.includes('kg')) return { unit: 'kg', qty: num };
-    if (q.includes(' g')) return { unit: 'g', qty: num };
-    if (q.includes(' ml')) return { unit: 'ml', qty: num };
-    if (q.includes(' l')) return { unit: 'L', qty: num };
-    return { unit: null, qty: null };
+    if (q.includes('kg')) return 'kg';
+    if (q.includes(' g')) return 'g';
+    if (q.includes(' ml')) return 'ml';
+    if (q.includes(' l')) return 'L';
+    return null;
   }
 
   async function doLookup() {
@@ -222,13 +220,11 @@
       const data = await res.json();
       if (!data || data.status !== 1) {
         showError('Produit introuvable sur Open Food Facts. Tu peux l’ajouter manuellement (le code‑barres sera conservé).');
-        // même si introuvable, on recopie le code vers le formulaire d’ajout
         cfBarcode.value = code;
         return;
       }
       const normalized = normalizeOFF(data);
       showResult(normalized);
-      // copie le code‑barres dans le formulaire d’ajout
       cfBarcode.value = code;
     } catch (e) {
       console.error(e);
@@ -238,17 +234,13 @@
     }
   }
 
-  // Préremplir le formulaire d’AJOUT depuis OFF
+  // Préremplir le formulaire d’AJOUT
   elFillCreate.addEventListener('click', () => {
     const payload = elFillCreate.dataset.payload ? JSON.parse(elFillCreate.dataset.payload) : null;
     if (!payload) { showError('Aucun résultat à insérer.'); return; }
     if (payload.name) cfName.value = payload.name;
-
-    // Déduire unité/qté quand possible
-    const iu = inferUnitAndQty(payload.quantity_hint);
-    if (iu.unit) cfUnit.value = iu.unit;
-
-    // Focus sur le bouton Ajouter
+    const u = inferUnit(payload.quantity_hint);
+    if (u) cfUnit.value = u;
     const addBtn = document.querySelector('#create_form button[type="submit"], #create_form button:not([type])');
     if (addBtn) addBtn.focus();
   });
