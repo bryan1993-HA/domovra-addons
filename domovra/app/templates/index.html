@@ -1,33 +1,13 @@
-<!doctype html>
-<html lang="fr">
-<head>
-  <meta charset="utf-8">
-  <title>Domovra</title>
-  <meta name="viewport" content="width=device-width,initial-scale=1">
-  <meta http-equiv="Cache-Control" content="no-store" />
-  <style>
-    :root{ color-scheme: dark; }
-    body { font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; margin: 1rem 1.25rem; }
-    h1 { margin: 0 0 .5rem; }
-    .muted { color:#9aa0a6; }
-    .grid { display:grid; gap:1rem; grid-template-columns: repeat(auto-fit,minmax(260px,1fr)); margin: .75rem 0 1rem; }
-    .card { border:1px solid #2f3237; border-radius:12px; padding:1rem; }
-    input, select { width:100%; padding:.55rem .6rem; border-radius:8px; border:1px solid #3a3d43; background:#1f2125; color:#e8eaed; }
-    button { padding:.55rem .9rem; border-radius:8px; border:1px solid #3a3d43; background:#2b2f36; color:#e8eaed; cursor:pointer; }
-    table { width:100%; border-collapse: collapse; margin-top:.5rem; }
-    th, td { padding:.5rem .6rem; border-bottom:1px solid #2f3237; text-align:left; }
-    .tag { padding:.2rem .5rem; border-radius:.5rem; font-size:.85rem; }
-    .green{ background:#134e19; } .yellow{ background:#6a5b0a; } .red{ background:#6a1a1a; } .unknown{ background:#374151; }
-    .row { display:flex; gap:.5rem; }
-  </style>
-</head>
-<body>
-  <h1>Domovra</h1>
-  <p class="muted">Gestion de stock domestique — ajout rapide d’emplacements, produits et lots.</p>
+{% extends "base.html" %}
+{% block title %}Domovra — Accueil{% endblock %}
+
+{% block content %}
+  <h1>Accueil</h1>
+  <p class="muted">Ajoute rapidement des emplacements, produits et lots. Utilise le menu pour parcourir toutes les données.</p>
 
   <div class="grid">
     <div class="card">
-      <h3>🏷️ Emplacement</h3>
+      <h2>🏷️ Emplacement</h2>
       <form method="post" action="{{ BASE }}location/add">
         <input name="name" placeholder="ex. Bac 1, Frigo, Placard haut" required>
         <div style="margin-top:.5rem"><button>Ajouter</button></div>
@@ -38,7 +18,7 @@
     </div>
 
     <div class="card">
-      <h3>📦 Produit</h3>
+      <h2>📦 Produit</h2>
       <form method="post" action="{{ BASE }}product/add">
         <input name="name" placeholder="ex. Rôti de porc" required>
         <div class="row" style="margin-top:.5rem">
@@ -51,7 +31,7 @@
     </div>
 
     <div class="card">
-      <h3>➕ Entrée de stock</h3>
+      <h2>➕ Entrée de stock</h2>
       <form method="post" action="{{ BASE }}lot/add">
         <select name="product_id" required>
           <option value="" disabled selected>Produit…</option>
@@ -78,7 +58,7 @@
   </div>
 
   <div class="card">
-    <h3>⏳ À consommer en priorité</h3>
+    <h2>⏳ À consommer en priorité</h2>
     <table>
       <thead>
         <tr><th>Produit</th><th>Emplacement</th><th>Qté</th><th>Congelé le</th><th>À consommer avant</th><th>État</th><th>Action</th></tr>
@@ -105,7 +85,5 @@
         {% endfor %}
       </tbody>
     </table>
-    <p class="muted">Codes couleur : <span class="tag green">OK</span> <span class="tag yellow">Bientôt</span> <span class="tag red">Urgent</span></p>
   </div>
-</body>
-</html>
+{% endblock %}
