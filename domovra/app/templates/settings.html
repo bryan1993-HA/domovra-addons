@@ -1,0 +1,110 @@
+{% extends "base.html" %}
+{% block title %}Domovra — Paramètres{% endblock %}
+
+{% block head %}
+<style>
+    .settings-form {
+        display: grid;
+        gap: 16px;
+        grid-template-columns: repeat(12, 1fr);
+    }
+
+    .settings-card {
+        grid-column: 1 / -1;
+    }
+
+    @media (min-width: 900px) {
+        .settings-card {
+            grid-column: span 6;
+        }
+    }
+
+    .form-row {
+        display: flex;
+        gap: 12px;
+        align-items: center;
+    }
+
+    .form-row>span {
+        flex: 0 0 240px;
+    }
+
+    .hint {
+        font-size: .9rem;
+        opacity: .7;
+    }
+</style>
+
+<script>
+    /* Applique le thème au chargement selon SETTINGS.theme */
+    (function () {
+        const pref = "{{ SETTINGS.theme }}";
+        if (pref === "light" || pref === "dark") {
+            document.body.setAttribute("data-theme", pref);
+            document.documentElement.style.colorScheme = pref;
+            try { localStorage.setItem("domovra_theme", pref); } catch (e) { }
+        } else {
+            const saved = localStorage.getItem("domovra_theme");
+            if (saved === "light" || saved === "dark") {
+                document.body.setAttribute("data-theme", saved);
+                document.documentElement.style.colorScheme = saved;
+            }
+        }
+    })();
+</script>
+{% endblock %}
+
+{% block content %}
+<h1>Paramètres</h1>
+<p class="muted">Ces réglages sont enregistrés dans <code>/data/settings.json</code> et persistent aux redémarrages.</p>
+
+<form class="settings-form" method="post" action="{{ BASE }}settings/save">
+    <div class="card settings-card">
+        <h2>🎨 Apparence</h2>
+
+        <label class="form-row">
+            <span>Thème préféré</span>
+            <select name="theme">
+                <option value="auto" {{ 'selected' if SETTINGS.theme=='auto' }}>Automatique</option>
+                <option value="light" {{ 'selected' if SETTINGS.theme=='light' }}>Clair forcé</option>
+                <option value="dark" {{ 'selected' if SETTINGS.theme=='dark' }}>Sombre forcé</option>
+            </select>
+        </label>
+        <div class="hint">“Clair/Sombre forcé” écrase le choix du bouton ☀️/🌙. “Automatique” laisse le bouton et/ou le
+            navigateur décider.</div>
+
+        <label class="form-row" style="margin-top:12px;">
+            <span>Menu compact au démarrage</span>
+            <input type="checkbox" name="sidebar_compact" {{ 'checked' if SETTINGS.sidebar_compact }}>
+        </label>
+    </div>
+
+    <div class="card settings-card">
+        <h2>📊 Tableaux & valeurs par défaut</h2>
+
+        <label class="form-row">
+            <span>Affichage des tableaux</span>
+            <select name="table_mode">
+                <option value="scroll" {{ 'selected' if SETTINGS.table_mode=='scroll' }}>Défilement horizontal</option>
+                <option value="stacked" {{ 'selected' if SETTINGS.table_mode=='stacked' }}>Empilé (mobile)</option>
+            </select>
+        </label>
+        <div class="hint">Le mode “Empilé” masque l’en-tête et affiche chaque ligne comme une carte.</div>
+
+        <label class="form-row" style="margin-top:12px;">
+            <span>Jours de conservation par défaut</span>
+            <input type="number" min="1" name="default_shelf_days" value="{{ SETTINGS.default_shelf_days }}">
+        </label>
+
+        <label class="form-row">
+            <span>Seuil stock faible (par défaut)</span>
+            <input type="number" min="0" name="low_stock_default" value="{{ SETTINGS.low_stock_default }}">
+        </label>
+    </div>
+
+    <div style="grid-column:1/-1; display:flex; gap:12px;">
+        <button type="submit">💾 Enregistrer</button>
+        <a class="button" href="{{ BASE }}">← Retour</a>
+    </div>
+</form>
+{% endblock %}

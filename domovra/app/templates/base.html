@@ -1,84 +1,271 @@
 <!doctype html>
 <html lang="fr">
+
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>{% block title %}Domovra{% endblock %}</title>
 
   <style>
-    :root{ color-scheme: dark; }
-    body[data-theme="dark"]{ background:#0f1115; color:#e5e7eb; }
-    a{ color:inherit; text-decoration:none; }
-    *{ box-sizing: border-box; }
-    img{ max-width:100%; display:block; }
+    :root {
+      color-scheme: dark;
+    }
+
+    body[data-theme="dark"] {
+      background: #0f1115;
+      color: #e5e7eb;
+    }
+
+    a {
+      color: inherit;
+      text-decoration: none;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    img {
+      max-width: 100%;
+      display: block;
+    }
 
     /* Layout principal */
-    .layout{ display:grid; grid-template-columns: 260px 1fr; min-height: 100dvh; }
-    aside{ background:#111315; border-right:1px solid #2a2f36; padding:12px; position:relative; z-index:45; }
-    main{ display:flex; flex-direction:column; min-width:0; }
-    header{
-      display:grid; grid-template-columns:auto 1fr auto; align-items:center; gap:8px;
-      padding:10px 16px; border-bottom:1px solid #2a2f36; position:sticky; top:0; z-index:40; background:inherit;
+    .layout {
+      display: grid;
+      grid-template-columns: 260px 1fr;
+      min-height: 100dvh;
     }
-    .app-title{ margin:0; font-size:1.1rem; opacity:.9; }
+
+    aside {
+      background: #111315;
+      border-right: 1px solid #2a2f36;
+      padding: 12px;
+      position: relative;
+      z-index: 45;
+    }
+
+    main {
+      display: flex;
+      flex-direction: column;
+      min-width: 0;
+    }
+
+    header {
+      display: grid;
+      grid-template-columns: auto 1fr auto;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 16px;
+      border-bottom: 1px solid #2a2f36;
+      position: sticky;
+      top: 0;
+      z-index: 40;
+      background: inherit;
+    }
+
+    .app-title {
+      margin: 0;
+      font-size: 1.1rem;
+      opacity: .9;
+    }
 
     /* Menu (icônes + liens cliquables) */
-    .menu{ display:grid; gap:8px; }
-    .menu a{
-      display:flex; align-items:center; gap:10px;
-      padding:10px 12px; border:1px solid #242932;
-      background:#151922; border-radius:10px; cursor:pointer;
+    .menu {
+      display: grid;
+      gap: 8px;
     }
-    .menu a:hover{ filter:brightness(1.05); }
-    .menu a.active{ border-color:#4f46e5; box-shadow:0 0 0 1px #4f46e5 inset; }
-    .menu .ico{ width:22px; display:inline-grid; place-items:center; opacity:.9; }
+
+    .menu a {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 12px;
+      border: 1px solid #242932;
+      background: #151922;
+      border-radius: 10px;
+      cursor: pointer;
+    }
+
+    .menu a:hover {
+      filter: brightness(1.05);
+    }
+
+    .menu a.active {
+      border-color: #4f46e5;
+      box-shadow: 0 0 0 1px #4f46e5 inset;
+    }
+
+    .menu .ico {
+      width: 22px;
+      display: inline-grid;
+      place-items: center;
+      opacity: .9;
+    }
 
     /* Cartes / grille / formulaires / tables */
-    .page{ padding:16px; }
-    .card{ background:#151922; border:1px solid #242932; border-radius:12px; padding:12px; }
-    .muted{ opacity:.7; }
-    input, select, button{ width:100%; min-height:44px; border-radius:10px; border:1px solid #2d3340; background:#0f1320; color:#e5e7eb; padding:8px 10px; }
-    button{ cursor:pointer; }
-    table{ width:100%; border-collapse:collapse; }
-    th, td{ border:1px solid #242932; padding:8px 10px; }
-    th{ background:#121520; }
-    tbody tr:nth-child(even){ background:#121620; }
+    .page {
+      padding: 16px;
+    }
+
+    .card {
+      background: #151922;
+      border: 1px solid #242932;
+      border-radius: 12px;
+      padding: 12px;
+    }
+
+    .muted {
+      opacity: .7;
+    }
+
+    input,
+    select,
+    button {
+      width: 100%;
+      min-height: 44px;
+      border-radius: 10px;
+      border: 1px solid #2d3340;
+      background: #0f1320;
+      color: #e5e7eb;
+      padding: 8px 10px;
+    }
+
+    button {
+      cursor: pointer;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    th,
+    td {
+      border: 1px solid #242932;
+      padding: 8px 10px;
+    }
+
+    th {
+      background: #121520;
+    }
+
+    tbody tr:nth-child(even) {
+      background: #121620;
+    }
 
     /* Responsive */
-    .grid{ display:grid; grid-template-columns:repeat(12,1fr); gap:16px; }
-    .card{ grid-column: span 4; }
-    @media (max-width:1200px){ .card{ grid-column: span 6; } }
-    @media (max-width:768px){ .card{ grid-column: 1 / -1; } }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(12, 1fr);
+      gap: 16px;
+    }
 
-    .row{ display:flex; gap:16px; }
-    .row > *{ flex:1 1 0; min-width:0; }
-    @media (max-width:768px){ .row{ flex-direction:column; } }
+    .card {
+      grid-column: span 4;
+    }
 
-    .table-responsive{ overflow-x:auto; -webkit-overflow-scrolling:touch; }
-    .table-responsive table{ min-width:720px; }
+    @media (max-width:1200px) {
+      .card {
+        grid-column: span 6;
+      }
+    }
+
+    @media (max-width:768px) {
+      .card {
+        grid-column: 1 / -1;
+      }
+    }
+
+    .row {
+      display: flex;
+      gap: 16px;
+    }
+
+    .row>* {
+      flex: 1 1 0;
+      min-width: 0;
+    }
+
+    @media (max-width:768px) {
+      .row {
+        flex-direction: column;
+      }
+    }
+
+    .table-responsive {
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    .table-responsive table {
+      min-width: 720px;
+    }
 
     /* Sidebar off‑canvas <= 1024px */
-    @media (max-width:1024px){
-      .layout{ grid-template-columns: 1fr; }
-      aside{
-        position: fixed; inset: 0 auto 0 0; width: 260px;
-        transform: translateX(-100%); transition: transform .25s ease; z-index:70;
+    @media (max-width:1024px) {
+      .layout {
+        grid-template-columns: 1fr;
       }
-      body.sidebar-open aside{ transform: translateX(0); box-shadow:0 10px 30px rgba(0,0,0,.45); }
+
+      aside {
+        position: fixed;
+        inset: 0 auto 0 0;
+        width: 260px;
+        transform: translateX(-100%);
+        transition: transform .25s ease;
+        z-index: 70;
+      }
+
+      body.sidebar-open aside {
+        transform: translateX(0);
+        box-shadow: 0 10px 30px rgba(0, 0, 0, .45);
+      }
     }
 
     /* Hamburger (mobile seulement) */
-    .hamburger{ display:inline-grid; place-content:center; gap:4px; width:40px; height:40px; border:0; background:transparent; cursor:pointer; border-radius:10px; }
-    .hamburger span{ display:block; width:22px; height:2px; background: currentColor; }
-    @media (min-width:1025px){ .hamburger{ display:none; } }
+    .hamburger {
+      display: inline-grid;
+      place-content: center;
+      gap: 4px;
+      width: 40px;
+      height: 40px;
+      border: 0;
+      background: transparent;
+      cursor: pointer;
+      border-radius: 10px;
+    }
+
+    .hamburger span {
+      display: block;
+      width: 22px;
+      height: 2px;
+      background: currentColor;
+    }
+
+    @media (min-width:1025px) {
+      .hamburger {
+        display: none;
+      }
+    }
 
     /* Espace avec le switch thème (placé dans les pages) */
-    #theme-toggle.theme-switch{ top:10px; right:56px; }
-    @media (max-width:480px){ #theme-toggle.theme-switch{ right:10px; top:56px; } }
+    #theme-toggle.theme-switch {
+      top: 10px;
+      right: 56px;
+    }
+
+    @media (max-width:480px) {
+      #theme-toggle.theme-switch {
+        right: 10px;
+        top: 56px;
+      }
+    }
   </style>
 
   {% block head %}{% endblock %}
 </head>
+
 <body data-theme="dark">
   <div class="layout">
     <aside>
@@ -96,6 +283,10 @@
         <a href="{{ BASE }}lots" class="{% if request.path.startswith(BASE ~ 'lots') %}active{% endif %}">
           <span class="ico">🧮</span> <span>Lots</span>
         </a>
+        <a href="{{ BASE }}settings" class="{% if request.path.startswith(BASE ~ 'settings') %}active{% endif %}">
+          <span class="ico">⚙️</span> <span>Paramètres</span>
+        </a>
+
       </nav>
     </aside>
 
@@ -116,26 +307,24 @@
 
   <!-- JS : sidebar mobile -->
   <script>
-    (function(){
-      const btn = document.getElementById('hamburger');
-      if(!btn) return;
-
-      const isMobile = () => window.matchMedia('(max-width:1024px)').matches;
-      function open(){ document.body.classList.add('sidebar-open'); btn.setAttribute('aria-expanded','true'); }
-      function close(){ document.body.classList.remove('sidebar-open'); btn.setAttribute('aria-expanded','false'); }
-
-      btn.addEventListener('click', () => {
-        const opened = document.body.classList.contains('sidebar-open');
-        opened ? close() : open();
-      });
-
-      window.addEventListener('resize', () => { if (!isMobile()) close(); });
-      document.querySelector('aside')?.addEventListener('click', (e) => {
-        const a = e.target.closest('a'); if (a && isMobile()) close();
-      });
+    (function () {
+      const pref = "{{ SETTINGS.theme if SETTINGS else 'auto' }}";
+      if (pref === "light" || pref === "dark") {
+        document.body.setAttribute("data-theme", pref);
+        document.documentElement.style.colorScheme = pref;
+        try { localStorage.setItem("domovra_theme", pref); } catch (e) { }
+      } else {
+        const saved = localStorage.getItem("domovra_theme");
+        if (saved === "light" || saved === "dark") {
+          document.body.setAttribute("data-theme", saved);
+          document.documentElement.style.colorScheme = saved;
+        }
+      }
     })();
   </script>
 
+
   {% block scripts %}{% endblock %}
 </body>
+
 </html>

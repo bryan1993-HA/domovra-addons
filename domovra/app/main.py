@@ -2,6 +2,7 @@ import os, logging, sqlite3
 from fastapi import FastAPI, Request, Form, Query
 from fastapi.responses import HTMLResponse, RedirectResponse, JSONResponse, PlainTextResponse, Response
 from jinja2 import Environment, FileSystemLoader, select_autoescape
+
 from db import (
     init_db,
     # Locations
@@ -20,6 +21,24 @@ try:
     from db import list_products_with_stats  # type: ignore
 except Exception:
     _DB_HAS_STATS = False
+
+# ===== Paramètres persistants (/data/settings.json) =====
+# Place le fichier settings_store.py au même niveau que ce main.py
+# (sinon change l'import en conséquence)
+try:
+    from settings_store import load_settings, save_settings  # type: ignore
+except Exception:
+    # garde l'app fonctionnelle même si le store n'est pas encore créé
+    def load_settings():
+        return {
+            "theme": "auto",
+            "table_mode": "scroll",
+            "sidebar_compact": False,
+            "default_shelf_days": 90,
+            "low_stock_default": 1,
+        }
+    def save_settings(new_values: dict):
+        return {**load_settings(), **(new_values or {})}
 
 logger = logging.getLogger("domovra")
 logging.basicConfig(level=logging.INFO)
@@ -42,6 +61,9 @@ def nocache_html(html: str) -> Response:
     })
 
 def render(name: str, **ctx):
+    # Injecter SETTINGS dans tous les templates par défaut
+    if "SETTINGS" not in ctx:
+        ctx["SETTINGS"] = load_settings()
     tpl = templates.get_template(name)
     return nocache_html(tpl.render(**ctx))
 
@@ -144,6 +166,38 @@ def lots_page(request: Request,
                   request=request,
                   items=items, locations=locations)
 
+# ---------------- Page Paramètres (NEW)
+@app.get("/settings", response_class=HTMLResponse)
+def settings_page(request: Request):
+    settings = load_settings()
+    return render("settings.html",
+                  BASE=ingress_base(request),
+                  page="settings",
+                  request=request,
+                  SETTINGS=settings)
+
+# ---------------- Sauvegarde Paramètres (NEW)
+@app.post("/settings/save")
+def settings_save(
+    request: Request,
+    theme: str = Form("auto"),
+    table_mode: str = Form("scroll"),
+    sidebar_compact: str = Form(None),
+    default_shelf_days: int = Form(90),
+    low_stock_default: int = Form(1),
+):
+    new_vals = {
+        "theme": theme if theme in ("auto","light","dark") else "auto",
+        "table_mode": table_mode if table_mode in ("scroll","stacked") else "scroll",
+        "sidebar_compact": (sidebar_compact == "on"),
+        "default_shelf_days": int(default_shelf_days or 90),
+        "low_stock_default": int(low_stock_default or 1),
+    }
+    save_settings(new_vals)
+    return RedirectResponse(ingress_base(request) + "settings",
+                            status_code=303,
+                            headers={"Cache-Control":"no-store"})
+
 # ---------------- Actions Produits
 @app.post("/product/add")
 def product_add(request: Request, name: str = Form(...), unit: str = Form("pièce"), shelf: int = Form(90)):
@@ -220,8 +274,10 @@ def lot_delete_action(request: Request, lot_id: int = Form(...)):
 # ---------------- API debug
 @app.get("/api/locations")
 def api_locations(): return JSONResponse(list_locations())
+
 @app.get("/api/products")
 def api_products(): return JSONResponse(list_products())
+
 @app.get("/api/lots")
 def api_lots(): return JSONResponse(list_lots())
 
