@@ -6,39 +6,54 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>{% block title %}Domovra{% endblock %}</title>
 
-  <!-- Injection SAFE (pas d'expressions Jinja dans le JS) -->
+  <!-- Source de vérité côté UI -->
   <meta name="domovra:theme" content="{{ SETTINGS.theme|default('auto') }}">
   <meta name="domovra:sidebar" content="{{ '1' if SETTINGS.sidebar_compact else '0' }}">
 
-  <!-- Applique immédiatement thème + sidebar compacte -->
+  <!-- Applique immédiatement thème + sidebar (ingress-friendly) -->
   <script>
     (function () {
       const mTheme = document.querySelector('meta[name="domovra:theme"]');
       const mSide = document.querySelector('meta[name="domovra:sidebar"]');
-      const PREF_THEME = (mTheme && mTheme.content) || 'auto';
-      const SIDEBAR_MINI = (mSide && mSide.content === '1');
+      const pref = (mTheme && mTheme.content) || 'auto';
+      const html = document.documentElement;
 
-      try {
-        if (PREF_THEME === 'light' || PREF_THEME === 'dark') {
-          document.body && document.body.setAttribute('data-theme', PREF_THEME);
-          document.documentElement.style.colorScheme = PREF_THEME;
-          localStorage.setItem('domovra_theme', PREF_THEME);
+      function setTheme(mode) {
+        if (!html) return;
+        if (mode === 'light' || mode === 'dark') {
+          html.setAttribute('data-theme', mode);
+          html.style.colorScheme = mode;
+          try { localStorage.setItem('domovra_theme', mode); } catch (e) { }
         } else {
-          const saved = localStorage.getItem('domovra_theme');
-          if (saved === 'light' || saved === 'dark') {
-            document.body && document.body.setAttribute('data-theme', saved);
-            document.documentElement.style.colorScheme = saved;
-          }
+          // auto : suit le système/navigateur
+          const isDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+          html.setAttribute('data-theme', isDark ? 'dark' : 'light');
+          html.style.colorScheme = isDark ? 'dark' : 'light';
         }
+      }
+
+      // Thème initial
+      if (pref === 'light' || pref === 'dark') {
+        setTheme(pref);
+      } else {
+        // auto : valeur mémorisée si elle existe, sinon matchMedia
+        let saved = null;
+        try { saved = localStorage.getItem('domovra_theme'); } catch (e) { }
+        setTheme((saved === 'light' || saved === 'dark') ? saved : 'auto');
+      }
+
+      // Si "auto", se mettre à jour quand l’OS change
+      try {
+        const mq = window.matchMedia('(prefers-color-scheme: dark)');
+        mq.addEventListener?.('change', () => {
+          const now = (mTheme && mTheme.content) || 'auto';
+          if (now === 'auto') setTheme('auto');
+        });
       } catch (e) { }
 
-      if (SIDEBAR_MINI) {
-        document.documentElement.classList.add('sidebar-mini');
-        document.body && document.body.classList.add('sidebar-mini');
-      } else {
-        document.documentElement.classList.remove('sidebar-mini');
-        document.body && document.body.classList.remove('sidebar-mini');
-      }
+      // Sidebar compacte (classe sur <html> uniquement)
+      const mini = (mSide && mSide.content === '1');
+      if (mini) html.classList.add('sidebar-mini'); else html.classList.remove('sidebar-mini');
     })();
   </script>
 
@@ -47,9 +62,15 @@
       color-scheme: dark;
     }
 
-    body[data-theme="dark"] {
+    /* --- Thème sombre/clair (piloté par <html data-theme>) --- */
+    html[data-theme="dark"] body {
       background: #0f1115;
       color: #e5e7eb;
+    }
+
+    html[data-theme="light"] body {
+      color: #1f2328;
+      background: #ffffff;
     }
 
     a {
@@ -305,54 +326,96 @@
       }
     }
 
-    /* Espace avec le switch thème (placé dans les pages) */
-    #theme-toggle.theme-switch {
-      top: 10px;
-      right: 56px;
+    /* Variantes CLAIR automatiques pour certains blocs (hérite de html[data-theme]) */
+    html[data-theme="light"] aside {
+      background: #f7f7f8;
+      border-right: 1px solid #e5e7eb;
     }
 
-    @media (max-width:480px) {
-      #theme-toggle.theme-switch {
-        right: 10px;
-        top: 56px;
-      }
+    html[data-theme="light"] header {
+      background: #ffffff;
+      border-bottom: 1px solid #e5e7eb;
+    }
+
+    html[data-theme="light"] .muted {
+      color: #6b7280;
+    }
+
+    html[data-theme="light"] .menu a {
+      background: #ffffff;
+      border: 1px solid #e5e7eb;
+      color: #1f2328;
+    }
+
+    html[data-theme="light"] .menu a.active {
+      background: #eef2ff;
+      border-color: #c7d2fe;
+    }
+
+    html[data-theme="light"] .card {
+      background: #ffffff;
+      border: 1px solid #e5e7eb;
+    }
+
+    html[data-theme="light"] input,
+    html[data-theme="light"] select {
+      background: #ffffff;
+      color: #111827;
+      border: 1px solid #d1d5db;
+    }
+
+    html[data-theme="light"] button {
+      background: #f3f4f6;
+      color: #111827;
+      border: 1px solid #d1d5db;
+    }
+
+    html[data-theme="light"] button:hover {
+      filter: brightness(0.98);
+    }
+
+    html[data-theme="light"] th,
+    html[data-theme="light"] td {
+      border: 1px solid #e5e7eb;
+    }
+
+    html[data-theme="light"] th {
+      background: #f8fafc;
+      color: #111827;
+    }
+
+    html[data-theme="light"] tbody tr:nth-child(even) {
+      background: #f9fafb;
     }
   </style>
 
   {% block head %}{% endblock %}
 </head>
 
-<body data-theme="dark">
+<body>
   <div class="layout">
     <aside>
       <nav class="menu">
-        <a href="{{ BASE }}" class="{% if request.path == BASE %}active{% endif %}">
-          <span class="ico">🏠</span> <span>Accueil</span>
-        </a>
-        <a href="{{ BASE }}locations" class="{% if request.path.startswith(BASE ~ 'locations') %}active{% endif %}">
-          <span class="ico">📍</span> <span>Emplacements</span>
-        </a>
-        <a href="{{ BASE }}products" class="{% if request.path.startswith(BASE ~ 'products') %}active{% endif %}">
-          <span class="ico">📦</span> <span>Produits</span>
-        </a>
-        <a href="{{ BASE }}lots" class="{% if request.path.startswith(BASE ~ 'lots') %}active{% endif %}">
-          <span class="ico">🧮</span> <span>Lots</span>
-        </a>
-        <a href="{{ BASE }}settings" class="{% if request.path.startswith(BASE ~ 'settings') %}active{% endif %}">
-          <span class="ico">⚙️</span> <span>Paramètres</span>
-        </a>
-        <a href="{{ BASE }}journal" class="{% if request.path.startswith(BASE ~ 'journal') %}active{% endif %}">
-          <span class="ico">📝</span> <span>Journal</span>
-        </a>
-
+        <a href="{{ BASE }}" class="{% if request.path == BASE %}active{% endif %}"><span
+            class="ico">🏠</span><span>Accueil</span></a>
+        <a href="{{ BASE }}locations"
+          class="{% if request.path.startswith(BASE ~ 'locations') %}active{% endif %}"><span
+            class="ico">📍</span><span>Emplacements</span></a>
+        <a href="{{ BASE }}products" class="{% if request.path.startswith(BASE ~ 'products') %}active{% endif %}"><span
+            class="ico">📦</span><span>Produits</span></a>
+        <a href="{{ BASE }}lots" class="{% if request.path.startswith(BASE ~ 'lots') %}active{% endif %}"><span
+            class="ico">🧮</span><span>Lots</span></a>
+        <a href="{{ BASE }}settings" class="{% if request.path.startswith(BASE ~ 'settings') %}active{% endif %}"><span
+            class="ico">⚙️</span><span>Paramètres</span></a>
+        <a href="{{ BASE }}journal" class="{% if request.path.startswith(BASE ~ 'journal') %}active{% endif %}"><span
+            class="ico">📝</span><span>Journal</span></a>
       </nav>
     </aside>
 
     <main>
       <header>
-        <button class="hamburger" id="hamburger" aria-label="Ouvrir le menu" aria-expanded="false">
-          <span></span><span></span><span></span>
-        </button>
+        <button class="hamburger" id="hamburger" aria-label="Ouvrir le menu"
+          aria-expanded="false"><span></span><span></span><span></span></button>
         <h1 class="app-title">Domovra</h1>
         {% block header_right %}{% endblock %}
       </header>
