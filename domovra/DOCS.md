@@ -61,7 +61,7 @@ Nombre de jours avant la DLC pour afficher une alerte critique.
 ## 📸 Captures d’écran
 
 **Vue d’ensemble**
-![Dashboard](./images/EcranPrincipal.png)
+![Dashboard](/images/EcranPrincipal.png)
 
 ---
 
