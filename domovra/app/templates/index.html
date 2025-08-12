@@ -4,6 +4,15 @@
 {% block head %}
 <style>
   /* Spécifiques de la page si besoin — (le thème est géré par base.html) */
+  .inline-help {
+    font-size: .9rem;
+    opacity: .7;
+    margin-top: .25rem;
+  }
+
+  .row .unit-custom {
+    display: none;
+  }
 </style>
 {% endblock %}
 
@@ -13,6 +22,7 @@
   données.</p>
 
 <div class="grid">
+  <!-- Emplacements -->
   <div class="card">
     <h2>🏷️ Emplacement</h2>
     <form method="post" action="{{ BASE }}location/add">
@@ -24,19 +34,57 @@
     </p>
   </div>
 
+  <!-- Produits -->
   <div class="card">
     <h2>📦 Produit</h2>
-    <form method="post" action="{{ BASE }}product/add">
+    <form id="product-form" method="post" action="{{ BASE }}product/add">
       <input name="name" placeholder="ex. Rôti de porc" required>
+
       <div class="row" style="margin-top:.5rem">
-        <input name="unit" placeholder="unité (pièce, g, tranches)" value="pièce">
+        <!-- Sélecteur d'unité logique -->
+        <select id="unit-choice" name="unit_choice" required>
+          <option value="pièce" selected>pièce</option>
+          <optgroup label="Poids">
+            <option value="g">g</option>
+            <option value="kg">kg</option>
+          </optgroup>
+          <optgroup label="Volume">
+            <option value="mL">mL</option>
+            <option value="L">L</option>
+          </optgroup>
+          <optgroup label="Portions / emballages">
+            <option value="tranche">tranche</option>
+            <option value="tranches">tranches</option>
+            <option value="paquet">paquet</option>
+            <option value="paquets">paquets</option>
+            <option value="boîte">boîte</option>
+            <option value="boîtes">boîtes</option>
+            <option value="bouteille">bouteille</option>
+            <option value="bouteilles">bouteilles</option>
+            <option value="pot">pot</option>
+            <option value="pots">pots</option>
+          </optgroup>
+          <option value="__other">Autre…</option>
+        </select>
+
+        <!-- Champ unité personnalisée (révélé si "Autre…") -->
+        <input id="unit-custom" class="unit-custom" type="text" placeholder="Saisis une unité (ex. sachet)">
+        <!-- Valeur réellement envoyée au backend (inchangé) -->
+        <input id="unit" name="unit" type="hidden" value="pièce">
+
         <input name="shelf" type="number" placeholder="Jours de conservation par défaut" value="90" min="1">
       </div>
+
+      <div class="inline-help">Astuce : choisis une unité logique (poids, volume, paquet…). “Autre…” permet une unité
+        personnalisée.</div>
+
       <div class="row" style="margin-top:.5rem"><button>Ajouter</button></div>
     </form>
+
     <p class="muted" style="margin-top:.5rem">Produits : {{ products|length }}</p>
   </div>
 
+  <!-- Entrée de stock -->
   <div class="card">
     <h2>➕ Entrée de stock</h2>
     <form method="post" action="{{ BASE }}lot/add">
@@ -64,6 +112,7 @@
   </div>
 </div>
 
+<!-- Tableau priorités -->
 <div class="card table-responsive" style="margin-top:16px">
   <h2>⏳ À consommer en priorité</h2>
   <table>
@@ -108,4 +157,51 @@
     </tbody>
   </table>
 </div>
+
+{% block scripts %}{% endblock %}
+<script>
+  // Gestion sélecteur d'unité + champ "Autre…"
+  (function () {
+    const sel = document.getElementById('unit-choice');
+    const custom = document.getElementById('unit-custom');
+    const hidden = document.getElementById('unit');
+    const form = document.getElementById('product-form');
+
+    function sync() {
+      const v = sel.value;
+      if (v === '__other') {
+        custom.style.display = '';
+        custom.required = true;
+        // On n’écrase pas hidden tant que l’utilisateur n’a pas tapé
+        if (custom.value.trim()) hidden.value = custom.value.trim();
+      } else {
+        custom.style.display = 'none';
+        custom.required = false;
+        hidden.value = v; // valeur logique choisie
+      }
+    }
+
+    sel.addEventListener('change', sync);
+    custom.addEventListener('input', () => {
+      if (sel.value === '__other') hidden.value = custom.value.trim();
+    });
+
+    // Sécurité : avant envoi, assure que "unit" est cohérent
+    form.addEventListener('submit', (e) => {
+      if (sel.value === '__other') {
+        if (!custom.value.trim()) {
+          e.preventDefault();
+          custom.focus();
+          return;
+        }
+        hidden.value = custom.value.trim();
+      } else {
+        hidden.value = sel.value;
+      }
+    });
+
+    // init
+    sync();
+  })();
+</script>
 {% endblock %}
