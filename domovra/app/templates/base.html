@@ -9,24 +9,43 @@
     :root{ color-scheme: dark; }
     * { box-sizing: border-box; }
     body { margin:0; font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; color:#e8eaed; background:#111317; }
-    .layout { display:grid; grid-template-columns: 240px 1fr; min-height:100vh; }
-    aside { background:#0d0f12; border-right:1px solid #23252a; padding:1rem; position:sticky; top:0; height:100vh; }
-    .brand { font-weight:800; font-size:1.4rem; margin-bottom:1rem; letter-spacing:.3px; }
-    .menu a { display:block; padding:.55rem .7rem; margin:.2rem 0; text-decoration:none; color:#e8eaed; border-radius:10px; border:1px solid #23252a; background:#14171c; }
+
+    /* ===== Layout */
+    .layout { display:grid; grid-template-columns: 240px 1fr; min-height:100vh; transition: grid-template-columns .18s ease; }
+    body[data-mini="1"] .layout { grid-template-columns: 72px 1fr; }
+
+    aside { background:#0d0f12; border-right:1px solid #23252a; padding:1rem; position:sticky; top:0; height:100vh; display:flex; flex-direction:column; gap:.75rem; }
+    .brand { font-weight:800; font-size:1.4rem; letter-spacing:.3px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; transition: opacity .15s ease; }
+    body[data-mini="1"] .brand { opacity:0; height:0; padding:0; margin:0; overflow:hidden; }
+
+    .menu { display:flex; flex-direction:column; gap:.35rem; flex:1; }
+    .menu a { display:flex; align-items:center; gap:.65rem; padding:.55rem .7rem; text-decoration:none; color:#e8eaed; border-radius:10px; border:1px solid #23252a; background:#14171c; }
     .menu a.active { background:#1e232a; border-color:#2f333a; }
+    .menu .ico { width:24px; text-align:center; flex:0 0 24px; }
+    .menu .lbl { white-space:nowrap; overflow:hidden; text-overflow:ellipsis; transition: opacity .15s ease; }
+
+    /* Mini mode: cache les labels, garde les icônes */
+    body[data-mini="1"] .menu .lbl { display:none; }
+    body[data-mini="1"] .menu a { justify-content:center; padding:.55rem 0; }
+
     header { display:flex; align-items:center; gap:1rem; border-bottom:1px solid #23252a; padding: .75rem 1rem; position:sticky; top:0; background:#111317; z-index:1; }
     main { padding:1rem 1.25rem; }
     h1 { margin:.2rem 0 1rem; }
     .muted { color:#9aa0a6; }
+
     .grid { display:grid; gap:1rem; grid-template-columns: repeat(auto-fit,minmax(260px,1fr)); margin: .75rem 0 1rem; }
     .card { border:1px solid #2f3237; border-radius:12px; padding:1rem; background:#121419;}
     input, select { width:100%; padding:.55rem .6rem; border-radius:8px; border:1px solid #3a3d43; background:#1f2125; color:#e8eaed; }
     button { padding:.55rem .9rem; border-radius:8px; border:1px solid #3a3d43; background:#2b2f36; color:#e8eaed; cursor:pointer; }
-    table { width:100%; border-collapse: collapse; margin-top:.5rem; }
-    th, td { padding:.55rem .6rem; border-bottom:1px solid #2f3237; text-align:left; }
-    .tag { padding:.2rem .5rem; border-radius:.5rem; font-size:.85rem; }
-    .green{ background:#134e19; } .yellow{ background:#6a5b0a; } .red{ background:#6a1a1a; } .unknown{ background:#374151; }
-    .row { display:flex; gap:.5rem; }
+
+    /* Bouton de collapse en bas */
+    .collapse { margin-top:auto; }
+    .collapse button{
+      width:100%; display:flex; align-items:center; justify-content:center;
+      gap:.5rem; padding:.55rem .7rem; border-radius:10px; border:1px solid #23252a; background:#14171c; color:#e8eaed; cursor:pointer;
+    }
+    .collapse .lbl { white-space:nowrap; }
+    body[data-mini="1"] .collapse .lbl { display:none; }
   </style>
   {% block head %}{% endblock %}
 </head>
@@ -34,13 +53,30 @@
   <div class="layout">
     <aside>
       <div class="brand">Domovra</div>
+
       <nav class="menu">
-        <a href="{{ BASE }}" class="{% if page=='home' %}active{% endif %}">🏠 Accueil</a>
-        <a href="{{ BASE }}products" class="{% if page=='products' %}active{% endif %}">📦 Produits</a>
-        <a href="{{ BASE }}locations" class="{% if page=='locations' %}active{% endif %}">🏷️ Emplacements</a>
-        <a href="{{ BASE }}lots" class="{% if page=='lots' %}active{% endif %}">🧊 Lots</a>
+        <a href="{{ BASE }}" class="{% if page=='home' %}active{% endif %}" title="Accueil" aria-label="Accueil">
+          <span class="ico">🏠</span><span class="lbl">Accueil</span>
+        </a>
+        <a href="{{ BASE }}products" class="{% if page=='products' %}active{% endif %}" title="Produits" aria-label="Produits">
+          <span class="ico">📦</span><span class="lbl">Produits</span>
+        </a>
+        <a href="{{ BASE }}locations" class="{% if page=='locations' %}active{% endif %}" title="Emplacements" aria-label="Emplacements">
+          <span class="ico">🏷️</span><span class="lbl">Emplacements</span>
+        </a>
+        <a href="{{ BASE }}lots" class="{% if page=='lots' %}active{% endif %}" title="Lots" aria-label="Lots">
+          <span class="ico">🧊</span><span class="lbl">Lots</span>
+        </a>
       </nav>
+
+      <div class="collapse">
+        <button id="toggle-mini" aria-pressed="false" aria-label="Réduire le menu">
+          <span class="ico" id="mini-ico">«</span>
+          <span class="lbl" id="mini-lbl">Réduire</span>
+        </button>
+      </div>
     </aside>
+
     <div>
       <header>
         <div class="muted">Gestion de stock domestique</div>
@@ -50,5 +86,31 @@
       </main>
     </div>
   </div>
+
+  <script>
+    // ----- Mini sidebar state (persisté)
+    (function(){
+      const KEY = 'domovra_sidebar_collapsed';
+      const btn = document.getElementById('toggle-mini');
+      const ico = document.getElementById('mini-ico');
+      const lbl = document.getElementById('mini-lbl');
+
+      function apply(mini) {
+        document.body.dataset.mini = mini ? '1' : '0';
+        btn.setAttribute('aria-pressed', mini ? 'true' : 'false');
+        ico.textContent = mini ? '»' : '«';
+        lbl.textContent = mini ? 'Agrandir' : 'Réduire';
+      }
+
+      const initial = localStorage.getItem(KEY) === '1';
+      apply(initial);
+
+      btn.addEventListener('click', () => {
+        const mini = document.body.dataset.mini !== '1' ? true : false;
+        localStorage.setItem(KEY, mini ? '1' : '0');
+        apply(mini);
+      });
+    })();
+  </script>
 </body>
 </html>
