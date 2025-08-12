@@ -43,13 +43,15 @@ def index(request: Request):
     lots      = list_lots()
     for it in lots:
         it["status"] = status_for(it.get("best_before"), WARNING_DAYS, CRITICAL_DAYS)
+
     return render(
         "index.html",
         locations=locations,
         products=products,
         lots=lots,
         WARNING_DAYS=WARNING_DAYS,
-        CRITICAL_DAYS=CRITICAL_DAYS
+        CRITICAL_DAYS=CRITICAL_DAYS,
+        BASE=ingress_home(request)  # <<< on injecte le chemin Ingress
     )
 
 # ----- Locations
@@ -60,7 +62,6 @@ def location_add(request: Request, name: str = Form(...)):
 
 @app.get("/location/add", include_in_schema=False)
 def location_add_get(request: Request):
-    # Si un GET arrive par erreur → retour à l'accueil
     return RedirectResponse(ingress_home(request), status_code=303)
 
 # ----- Products
