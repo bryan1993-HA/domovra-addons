@@ -3,7 +3,7 @@
 
 {% block content %}
   <h1>Emplacements</h1>
-  <p class="muted">Tous les emplacements disponibles pour ranger vos produits.</p>
+  <p class="muted">Ajouter, renommer ou supprimer des emplacements. Supprimer enlève aussi les lots présents à cet endroit.</p>
 
   <div class="card">
     <form method="post" action="{{ BASE }}location/add" style="display:flex; gap:.5rem;">
@@ -13,13 +13,49 @@
   </div>
 
   <table>
-    <thead><tr><th>Nom</th></tr></thead>
+    <thead><tr><th>Nom</th><th>Actions</th></tr></thead>
     <tbody>
       {% for l in items %}
-      <tr><td>{{ l.name }}</td></tr>
+      <tr>
+        <td>{{ l.name }}</td>
+        <td>
+          <button class="edit-btn" data-id="{{ l.id }}" style="padding:.35rem .6rem;">✏️ Modifier</button>
+          <form method="post" action="{{ BASE }}location/delete" onsubmit="return confirm('Supprimer l\\'emplacement « {{ l.name }} » ?\\nTous les lots à cet emplacement seront supprimés.');" style="display:inline">
+            <input type="hidden" name="location_id" value="{{ l.id }}">
+            <button title="Supprimer" aria-label="Supprimer" style="padding:.35rem .6rem; border:1px solid #5a1b1b; background:#3a0f0f; color:#ffb4b4; border-radius:8px;">🗑️</button>
+          </form>
+        </td>
+      </tr>
+      <tr class="edit-row" id="edit-{{ l.id }}" style="display:none;">
+        <td colspan="2">
+          <form method="post" action="{{ BASE }}location/update" class="row" style="gap:.5rem; align-items:center;">
+            <input type="hidden" name="location_id" value="{{ l.id }}">
+            <input name="name" value="{{ l.name }}" required style="flex:1;">
+            <button style="flex:0;">💾 Enregistrer</button>
+            <button type="button" class="cancel-btn" data-id="{{ l.id }}" style="flex:0; background:#2b2f36;">Annuler</button>
+          </form>
+        </td>
+      </tr>
       {% else %}
-      <tr><td class="muted">Aucun emplacement pour l’instant.</td></tr>
+      <tr><td colspan="2" class="muted">Aucun emplacement pour l’instant.</td></tr>
       {% endfor %}
     </tbody>
   </table>
+
+  <script>
+    document.querySelectorAll('.edit-btn').forEach(btn=>{
+      btn.addEventListener('click', ()=>{
+        const id = btn.dataset.id;
+        const row = document.getElementById('edit-'+id);
+        row.style.display = (row.style.display==='none'||!row.style.display)?'table-row':'none';
+      });
+    });
+    document.querySelectorAll('.cancel-btn').forEach(btn=>{
+      btn.addEventListener('click', ()=>{
+        const id = btn.dataset.id;
+        const row = document.getElementById('edit-'+id);
+        if(row) row.style.display='none';
+      });
+    });
+  </script>
 {% endblock %}
