@@ -104,6 +104,20 @@ def consume_lot(lot_id:int, qty:float):
             c.execute("""INSERT INTO movements(lot_id,type,qty,ts,note)
                          VALUES(?,?,?,DATE('now'),?)""",(lot_id,'OUT',qty,None))
 
+def delete_product(product_id:int):
+    """Supprime un produit + tous ses lots et mouvements associés (en transaction)."""
+    with _conn() as c:
+        # Récupérer les lots du produit
+        lot_ids = [r["id"] for r in c.execute("SELECT id FROM stock_lots WHERE product_id=?", (product_id,))]
+        if lot_ids:
+            # Supprimer mouvements liés aux lots
+            placeholders = ",".join("?"*len(lot_ids))
+            c.execute(f"DELETE FROM movements WHERE lot_id IN ({placeholders})", lot_ids)
+            # Supprimer les lots
+            c.execute(f"DELETE FROM stock_lots WHERE id IN ({placeholders})", lot_ids)
+        # Supprimer le produit
+        c.execute("DELETE FROM products WHERE id=?", (product_id,))
+
 def status_for(best_before:str|None, warn_days:int, crit_days:int):
     if not best_before: return "unknown"
     try:
