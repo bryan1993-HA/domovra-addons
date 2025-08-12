@@ -31,7 +31,7 @@ def render(name: str, **ctx):
     return HTMLResponse(tpl.render(**ctx))
 
 def ingress_home(request: Request) -> str:
-    # Exemple: "/api/hassio_ingress/XYZ..." ou "/b2af315d_domovra/ingress"
+    # Ex: "/api/hassio_ingress/XYZ..." ou "/b2af315d_domovra/ingress"
     return request.headers.get("X-Ingress-Path") or "/"
 
 # Racines possibles (Ingress peut appeler //)
@@ -53,18 +53,18 @@ def index(request: Request):
     )
 
 # ----- Locations
-@app.post("location/add")
+@app.post("/location/add")
 def location_add(request: Request, name: str = Form(...)):
     add_location(name)
     return RedirectResponse(ingress_home(request), status_code=303)
 
-@app.get("location/add", include_in_schema=False)
+@app.get("/location/add", include_in_schema=False)
 def location_add_get(request: Request):
     # Si un GET arrive par erreur → retour à l'accueil
     return RedirectResponse(ingress_home(request), status_code=303)
 
 # ----- Products
-@app.post("product/add")
+@app.post("/product/add")
 def product_add(
     request: Request,
     name: str = Form(...),
@@ -78,12 +78,12 @@ def product_add(
     add_product(name, unit or "pièce", shelf)
     return RedirectResponse(ingress_home(request), status_code=303)
 
-@app.get("product/add", include_in_schema=False)
+@app.get("/product/add", include_in_schema=False)
 def product_add_get(request: Request):
     return RedirectResponse(ingress_home(request), status_code=303)
 
 # ----- Lots (stock entries)
-@app.post("lot/add")
+@app.post("/lot/add")
 def lot_add(
     request: Request,
     product_id: int = Form(...),
@@ -95,16 +95,16 @@ def lot_add(
     add_lot(product_id, location_id, float(qty), frozen_on or None, best_before or None)
     return RedirectResponse(ingress_home(request), status_code=303)
 
-@app.get("lot/add", include_in_schema=False)
+@app.get("/lot/add", include_in_schema=False)
 def lot_add_get(request: Request):
     return RedirectResponse(ingress_home(request), status_code=303)
 
-@app.post("lot/consume")
+@app.post("/lot/consume")
 def lot_consume(request: Request, lot_id: int = Form(...), qty: float = Form(...)):
     consume_lot(lot_id, float(qty))
     return RedirectResponse(ingress_home(request), status_code=303)
 
-@app.get("lot/consume", include_in_schema=False)
+@app.get("/lot/consume", include_in_schema=False)
 def lot_consume_get(request: Request):
     return RedirectResponse(ingress_home(request), status_code=303)
 
@@ -119,7 +119,7 @@ def api_soon():
             data.append(it)
     return JSONResponse(data)
 
-# ----- Fallback: toute autre route → Ingress home
+# ----- Fallback
 @app.get("/{path:path}", include_in_schema=False)
 def fallback(request: Request, path: str):
     return RedirectResponse(ingress_home(request))
