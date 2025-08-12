@@ -1,4 +1,5 @@
 import os
+import logging
 from fastapi import FastAPI, Request, Form
 from fastapi.responses import HTMLResponse, RedirectResponse, JSONResponse, PlainTextResponse
 from jinja2 import Environment, FileSystemLoader, select_autoescape
@@ -8,8 +9,13 @@ from db import (
     add_lot, list_lots, consume_lot, status_for
 )
 
+# ----- Logs
+logger = logging.getLogger("domovra")
+logging.basicConfig(level=logging.INFO)
+
 WARNING_DAYS = int(os.environ.get("WARNING_DAYS", "30"))
 CRITICAL_DAYS = int(os.environ.get("CRITICAL_DAYS", "14"))
+DB_PATH = os.environ.get("DB_PATH", "/data/domovra.sqlite3")
 
 app = FastAPI()
 
@@ -20,6 +26,8 @@ templates = Environment(
 
 @app.on_event("startup")
 def _startup():
+    logger.info("Domovra starting. DB_PATH=%s", DB_PATH)
+    logger.info("WARNING_DAYS=%s CRITICAL_DAYS=%s", WARNING_DAYS, CRITICAL_DAYS)
     init_db()
 
 @app.get("/ping", response_class=PlainTextResponse)
@@ -31,8 +39,9 @@ def render(name: str, **ctx):
     return HTMLResponse(tpl.render(**ctx))
 
 def ingress_home(request: Request) -> str:
-    # Ex: "/api/hassio_ingress/XYZ..." ou "/b2af315d_domovra/ingress"
-    return request.headers.get("X-Ingress-Path") or "/"
+    # Ex: "/api/hassio_ingress/XYZ..." ou "/<slug>_domovra/ingress"
+    path = request.headers.get("X-Ingress-Path") or "/"
+    return path
 
 # Racines possibles (Ingress peut appeler //)
 @app.get("/", response_class=HTMLResponse)
@@ -43,7 +52,7 @@ def index(request: Request):
     lots      = list_lots()
     for it in lots:
         it["status"] = status_for(it.get("best_before"), WARNING_DAYS, CRITICAL_DAYS)
-
+    logger.info("Index: %d locations, %d products, %d lots", len(locations), len(products), len(lots))
     return render(
         "index.html",
         locations=locations,
@@ -51,13 +60,16 @@ def index(request: Request):
         lots=lots,
         WARNING_DAYS=WARNING_DAYS,
         CRITICAL_DAYS=CRITICAL_DAYS,
-        BASE=ingress_home(request)  # <<< on injecte le chemin Ingress
+        BASE=ingress_home(request)
     )
 
 # ----- Locations
 @app.post("/location/add")
 def location_add(request: Request, name: str = Form(...)):
+    logger.info("POST /location/add name=%r", name)
     add_location(name)
+    locations = list_locations()
+    logger.info("Locations now: %s", [l["name"] for l in locations])
     return RedirectResponse(ingress_home(request), status_code=303)
 
 @app.get("/location/add", include_in_schema=False)
@@ -72,11 +84,14 @@ def product_add(
     unit: str = Form("pièce"),
     shelf: int = Form(90)
 ):
+    logger.info("POST /product/add name=%r unit=%r shelf=%r", name, unit, shelf)
     try:
         shelf = int(shelf)
     except Exception:
         shelf = 90
     add_product(name, unit or "pièce", shelf)
+    products = list_products()
+    logger.info("Products now: %s", [p["name"] for p in products])
     return RedirectResponse(ingress_home(request), status_code=303)
 
 @app.get("/product/add", include_in_schema=False)
@@ -93,7 +108,11 @@ def lot_add(
     frozen_on: str = Form(""),
     best_before: str = Form("")
 ):
+    logger.info("POST /lot/add product_id=%s location_id=%s qty=%s frozen_on=%r best_before=%r",
+                product_id, location_id, qty, frozen_on, best_before)
     add_lot(product_id, location_id, float(qty), frozen_on or None, best_before or None)
+    lots = list_lots()
+    logger.info("Lots now: %d", len(lots))
     return RedirectResponse(ingress_home(request), status_code=303)
 
 @app.get("/lot/add", include_in_schema=False)
@@ -102,14 +121,17 @@ def lot_add_get(request: Request):
 
 @app.post("/lot/consume")
 def lot_consume(request: Request, lot_id: int = Form(...), qty: float = Form(...)):
+    logger.info("POST /lot/consume lot_id=%s qty=%s", lot_id, qty)
     consume_lot(lot_id, float(qty))
+    lots = list_lots()
+    logger.info("Lots after consume: %d", len(lots))
     return RedirectResponse(ingress_home(request), status_code=303)
 
 @app.get("/lot/consume", include_in_schema=False)
 def lot_consume_get(request: Request):
     return RedirectResponse(ingress_home(request), status_code=303)
 
-# ----- API for HA (soon/urgent)
+# ----- API debug & HA
 @app.get("/api/soon")
 def api_soon():
     data = []
@@ -119,6 +141,18 @@ def api_soon():
             it["status"] = st
             data.append(it)
     return JSONResponse(data)
+
+@app.get("/api/locations")
+def api_locations():
+    return JSONResponse(list_locations())
+
+@app.get("/api/products")
+def api_products():
+    return JSONResponse(list_products())
+
+@app.get("/api/lots")
+def api_lots():
+    return JSONResponse(list_lots())
 
 # ----- Fallback
 @app.get("/{path:path}", include_in_schema=False)
