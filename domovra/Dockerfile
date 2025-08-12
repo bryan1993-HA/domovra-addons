@@ -8,18 +8,16 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     VENV_PATH=/opt/venv \
     PATH=/opt/venv/bin:$PATH
 
-# Dépendances système + venv
 RUN apk add --no-cache python3 py3-pip
 
-# App
 WORKDIR ${APP_HOME}
 COPY app ${APP_HOME}/
 
-# Créer un virtualenv et y installer les deps Python
+# ⬇️ ICI : on installe aussi python-multipart
 RUN python3 -m venv ${VENV_PATH} \
- && ${VENV_PATH}/bin/pip install --no-cache-dir "fastapi" "uvicorn[standard]" "jinja2"
+ && ${VENV_PATH}/bin/pip install --no-cache-dir \
+    fastapi "uvicorn[standard]" jinja2 python-multipart
 
-# Script de démarrage
 COPY run.sh /run.sh
 RUN chmod +x /run.sh
 
