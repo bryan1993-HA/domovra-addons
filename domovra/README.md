@@ -1,4 +1,4 @@
-# Domovra — Gestion de stock
+# Domovra — Gestion de stock —
 
 ![logo](/images/Logo.png)
 
