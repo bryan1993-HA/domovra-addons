@@ -1,6 +1,6 @@
 # Domovra – Gestion de stock domestique
 
-![Logo](./images/logo.png)
+![Logo](https://raw.githubusercontent.com/bryan1993-HA/domovra-addons/main/domovra/icon.png)
 
 **Domovra** est un module complémentaire Home Assistant permettant de gérer vos stocks alimentaires (frigo, congélateur, placards) avec suivi des dates limites de consommation (DLC), recherche et filtres.  
 Il fonctionne directement dans l’interface Home Assistant grâce à **Ingress**, sans configuration réseau supplémentaire.
@@ -61,7 +61,7 @@ Nombre de jours avant la DLC pour afficher une alerte critique.
 ## 📸 Captures d’écran
 
 **Vue d’ensemble**
-![Dashboard](./images/EcranPrincipal.png)
+![Dashboard](https://raw.githubusercontent.com/bryan1993-HA/domovra-addons/main/domovra/images/mmmlogo.png)
 
 ---
 
