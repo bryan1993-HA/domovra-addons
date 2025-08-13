@@ -1,6 +1,6 @@
 # Domovra — Gestion de stock
 
-![logo](images/logo.png)
+![logo](/images/Logo.png)
 
 > Mini gestionnaire de stock (frigo, congélateur, placards) intégré à Home Assistant via **Ingress**.
 
@@ -22,4 +22,4 @@
 > La base SQLite est stockée dans `/data/domovra.sqlite3`.
 
 ## 🖼️ Captures
-![Accueil](images/EcranPrincipal.png)
+![Accueil](/images/images/EcranPrincipal.png)
