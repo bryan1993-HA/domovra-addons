@@ -12,14 +12,15 @@
     <input id="off_barcode" type="text" inputmode="numeric" placeholder="Scanner / saisir un code‑barres (EAN/GTIN)…"
       style="flex:1; min-width:220px; padding:.55rem .6rem; border-radius:8px; border:1px solid #3a3d43; background:#1f2125; color:#e8eaed;">
     <button id="off_search" style="padding:.45rem .75rem;">🔎 Rechercher</button>
+    <button id="off_scan" type="button" style="padding:.45rem .75rem;">📷 Scanner</button>
     <button id="off_paste" class="secondary" type="button"
       style="padding:.45rem .75rem; background:#2b2f36; border:1px solid #3a3d43;">📋 Coller</button>
     <button id="off_clear" class="secondary" type="button"
       style="padding:.45rem .75rem; background:#2b2f36; border:1px solid #3a3d43;">✖ Effacer</button>
   </div>
 
-  <div id="off_hint" class="muted" style="margin-top:.4rem;">Astuce : essaie <b>5449000000996</b> (Coca‑Cola 1,5 L).
-  </div>
+  <div id="off_hint" class="muted" style="margin-top:.4rem;">Astuce : essaie <b>5449000000996</b> (Coca‑Cola 1,5 L). Sur
+    mobile, appuie sur <b>📷 Scanner</b>.</div>
   <div id="off_error" style="display:none; color:#ffb4b4; margin-top:.35rem;">Erreur</div>
 
   <div id="off_result"
@@ -57,8 +58,8 @@
     <button type="button" id="create_reset" class="secondary" style="flex:0; background:#2b2f36;">Réinitialiser</button>
   </form>
   <p class="muted" style="margin:.4rem 0 0;">
-    Astuce : scanne/saisis un code‑barres ci‑dessus → “Rechercher” → “Préremplir le formulaire d’ajout”, puis ajuste la
-    conservation et valide.
+    Scanne/saisis un code‑barres → “Rechercher” → “Préremplir le formulaire d’ajout”, puis ajuste la conservation et
+    valide.
   </p>
 </div>
 <!-- ====== /Formulaire d'AJOUT ====== -->
@@ -118,6 +119,30 @@
   </tbody>
 </table>
 
+<!-- ====== Modale Scanner Caméra ====== -->
+<div id="scan_modal"
+  style="display:none; position:fixed; inset:0; background:rgba(0,0,0,.7); backdrop-filter:saturate(120%) blur(2px); z-index:9999;">
+  <div
+    style="position:absolute; inset:auto 0 0 0; margin:auto; max-width:680px; width:100%; background:#0f1115; border-top-left-radius:12px; border-top-right-radius:12px; border:1px solid #2a2d33;">
+    <div
+      style="display:flex; align-items:center; justify-content:space-between; padding:.6rem .8rem; border-bottom:1px solid #2a2d33;">
+      <strong>Scanner le code‑barres</strong>
+      <button id="scan_close"
+        style="background:#2b2f36; border:1px solid #3a3d43; border-radius:8px; padding:.35rem .6rem;">Fermer</button>
+    </div>
+    <div style="position:relative; padding:.6rem; display:flex; flex-direction:column; gap:.6rem;">
+      <video id="scan_video" autoplay playsinline
+        style="width:100%; max-height:70vh; background:#000; border-radius:10px;"></video>
+      <canvas id="scan_canvas" style="display:none;"></canvas>
+      <div class="muted" style="font-size:.9rem;">
+        Astuce : oriente l’appareil vers le **code‑barres** avec une bonne lumière.
+        L’appareil photo arrière est utilisé si disponible.
+      </div>
+    </div>
+  </div>
+</div>
+<!-- ====== /Modale Scanner Caméra ====== -->
+
 <script>
   // ----------- Recherche locale -----------
   const q = document.getElementById('q');
@@ -155,6 +180,7 @@
 
   const elBarcode = $('#off_barcode');
   const elSearch = $('#off_search');
+  const elScan = $('#off_scan');
   const elPaste = $('#off_paste');
   const elClear = $('#off_clear');
   const elError = $('#off_error');
@@ -176,9 +202,7 @@
     elError.style.display = 'block';
     elBoxRes.style.display = 'none';
   }
-  function clearError() {
-    elError.style.display = 'none';
-  }
+  function clearError() { elError.style.display = 'none'; }
   function showResult(normalized) {
     clearError();
     elBoxRes.style.display = 'block';
@@ -247,21 +271,121 @@
 
   elSearch.addEventListener('click', doLookup);
   elBarcode.addEventListener('keydown', e => { if (e.key === 'Enter') doLookup(); });
-  elClear.addEventListener('click', () => {
-    elBarcode.value = ''; clearError(); elBoxRes.style.display = 'none';
-  });
+  elClear.addEventListener('click', () => { elBarcode.value = ''; clearError(); elBoxRes.style.display = 'none'; });
   elPaste.addEventListener('click', async () => {
     try { elBarcode.value = (await navigator.clipboard.readText()).replace(/\D+/g, ''); }
     catch { showError("Impossible de lire le presse‑papiers (autorise l’accès ou colle manuellement)."); }
   });
 
+  // ==================== Scanner Caméra (BarcodeDetector natif + fallback ZXing) ====================
+  const scanModal = $('#scan_modal');
+  const scanVideo = $('#scan_video');
+  const scanCanvas = $('#scan_canvas');
+  const scanClose = $('#scan_close');
+
+  let scanStream = null;
+  let zxingReader = null; // pour le fallback
+  let scanning = false;
+
+  function openScanModal() {
+    scanModal.style.display = 'block';
+    startScanner();
+  }
+  async function closeScanModal() {
+    scanning = false;
+    if (scanStream) {
+      scanStream.getTracks().forEach(t => t.stop());
+      scanStream = null;
+    }
+    scanModal.style.display = 'none';
+  }
+  scanClose.addEventListener('click', closeScanModal);
+  elScan.addEventListener('click', openScanModal);
+
+  async function startScanner() {
+    // Demande la caméra arrière si possible
+    try {
+      scanStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: 'environment' } }, audio: false });
+    } catch (e) {
+      showError("Accès caméra refusé. Autorise l'accès caméra pour scanner.");
+      return;
+    }
+    scanVideo.srcObject = scanStream;
+
+    // 1) Essai avec l'API native
+    if ('BarcodeDetector' in window) {
+      try {
+        const detector = new window.BarcodeDetector({ formats: ['ean_13', 'ean_8', 'upc_a', 'upc_e', 'code_128', 'code_39'] });
+        scanning = true;
+        requestAnimationFrame(async function tick() {
+          if (!scanning) return;
+          try {
+            const codes = await detector.detect(scanVideo);
+            if (codes && codes.length) {
+              const code = (codes[0].rawValue || '').replace(/\D+/g, '');
+              if (code) {
+                await onBarcodeDetected(code);
+                return;
+              }
+            }
+          } catch (_) { }
+          requestAnimationFrame(tick);
+        });
+        return;
+      } catch (e) {
+        console.warn('BarcodeDetector non utilisable:', e);
+      }
+    }
+    // 2) Fallback ZXing (WASM) chargé dynamiquement
+    try {
+      if (!zxingReader) {
+        await loadZXing();
+        zxingReader = new ZXing.BrowserMultiFormatReader();
+      }
+      scanning = true;
+      zxingReader.decodeFromVideoDevice(
+        undefined, // device auto
+        scanVideo,
+        async (result, err) => {
+          if (!scanning) return;
+          if (result && result.getText) {
+            const code = (result.getText() || '').replace(/\D+/g, '');
+            if (code) {
+              await onBarcodeDetected(code);
+            }
+          }
+        }
+      );
+    } catch (e) {
+      console.error(e);
+      showError("Impossible de démarrer le scanner. Essaie la saisie manuelle.");
+    }
+  }
+
+  async function loadZXing() {
+    if (window.ZXing) return;
+    // Charge ZXing via CDN (léger, fallback pour navigateurs sans BarcodeDetector)
+    await new Promise((resolve, reject) => {
+      const s = document.createElement('script');
+      s.src = "https://cdn.jsdelivr.net/npm/@zxing/library@0.20.0/umd/index.min.js";
+      s.onload = resolve; s.onerror = () => reject(new Error('CDN ZXing indisponible'));
+      document.head.appendChild(s);
+    });
+  }
+
+  async function onBarcodeDetected(code) {
+    scanning = false;
+    elBarcode.value = code;
+    cfBarcode.value = code;
+    await closeScanModal();
+    // Lance automatiquement la recherche OFF
+    doLookup();
+  }
+  // ==================== /Scanner Caméra ====================
+
   // Réinit du formulaire d’ajout
   cfReset.addEventListener('click', () => {
-    cfName.value = '';
-    cfUnit.value = '';
-    cfShelf.value = '';
-    cfBarcode.value = '';
+    cfName.value = ''; cfUnit.value = ''; cfShelf.value = ''; cfBarcode.value = '';
   });
-  // ==================== /OFF ====================
 </script>
 {% endblock %}
