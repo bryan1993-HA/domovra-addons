@@ -1,6 +1,6 @@
 # Domovra — Gestion de stock
 
-![logo](/domovra/images/Logo.png)
+![logo](/domovra/images/EcranPrincipal.png)
 
 > Mini gestionnaire de stock (frigo, congélateur, placards) intégré à Home Assistant via **Ingress**.
 
