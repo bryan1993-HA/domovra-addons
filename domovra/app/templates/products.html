@@ -12,15 +12,20 @@
     <input id="off_barcode" type="text" inputmode="numeric" placeholder="Scanner / saisir un code‑barres (EAN/GTIN)…"
       style="flex:1; min-width:220px; padding:.55rem .6rem; border-radius:8px; border:1px solid #3a3d43; background:#1f2125; color:#e8eaed;">
     <button id="off_search" style="padding:.45rem .75rem;">🔎 Rechercher</button>
-    <button id="off_scan" type="button" style="padding:.45rem .75rem;">📷 Scanner</button>
+    <button id="off_scan" type="button" style="padding:.45rem .75rem;">📷 Scanner (live)</button>
+    <button id="off_capture" type="button" class="secondary"
+      style="padding:.45rem .75rem; background:#2b2f36; border:1px solid #3a3d43;">📸 Prendre une photo</button>
+    <input id="off_file" type="file" accept="image/*" capture="environment" style="display:none;">
     <button id="off_paste" class="secondary" type="button"
       style="padding:.45rem .75rem; background:#2b2f36; border:1px solid #3a3d43;">📋 Coller</button>
     <button id="off_clear" class="secondary" type="button"
       style="padding:.45rem .75rem; background:#2b2f36; border:1px solid #3a3d43;">✖ Effacer</button>
   </div>
 
-  <div id="off_hint" class="muted" style="margin-top:.4rem;">Astuce : essaie <b>5449000000996</b> (Coca‑Cola 1,5 L). Sur
-    mobile, appuie sur <b>📷 Scanner</b>.</div>
+  <div id="off_hint" class="muted" style="margin-top:.4rem;">
+    Astuce : essaie <b>5449000000996</b> (Coca‑Cola 1,5 L).
+    Si le flux <b>📷 Scanner (live)</b> ne démarre pas dans l’app HA, utilise <b>📸 Prendre une photo</b>.
+  </div>
   <div id="off_error" style="display:none; color:#ffb4b4; margin-top:.35rem;">Erreur</div>
 
   <div id="off_result"
@@ -131,11 +136,12 @@
         style="background:#2b2f36; border:1px solid #3a3d43; border-radius:8px; padding:.35rem .6rem;">Fermer</button>
     </div>
     <div style="position:relative; padding:.6rem; display:flex; flex-direction:column; gap:.6rem;">
-      <video id="scan_video" autoplay playsinline
+      <video id="scan_video" autoplay playsinline muted
         style="width:100%; max-height:70vh; background:#000; border-radius:10px;"></video>
       <canvas id="scan_canvas" style="display:none;"></canvas>
       <div class="muted" style="font-size:.9rem;">
-        Astuce : oriente l’appareil vers le **code‑barres** avec une bonne lumière.
+        Autorise l’accès caméra si Android le demande (Paramètres → Applications → Home Assistant → Autorisations →
+        Caméra).
         L’appareil photo arrière est utilisé si disponible.
       </div>
     </div>
@@ -181,6 +187,8 @@
   const elBarcode = $('#off_barcode');
   const elSearch = $('#off_search');
   const elScan = $('#off_scan');
+  const elCapture = $('#off_capture');
+  const elFile = $('#off_file');
   const elPaste = $('#off_paste');
   const elClear = $('#off_clear');
   const elError = $('#off_error');
@@ -277,22 +285,24 @@
     catch { showError("Impossible de lire le presse‑papiers (autorise l’accès ou colle manuellement)."); }
   });
 
-  // ==================== Scanner Caméra (BarcodeDetector natif + fallback ZXing) ====================
-  const scanModal = $('#scan_modal');
-  const scanVideo = $('#scan_video');
-  const scanCanvas = $('#scan_canvas');
-  const scanClose = $('#scan_close');
+  // ==================== Scanner Caméra (live) + Fallback capture photo ====================
+  const scanModal = document.getElementById('scan_modal');
+  const scanVideo = document.getElementById('scan_video');
+  const scanCanvas = document.getElementById('scan_canvas');
+  const scanClose = document.getElementById('scan_close');
 
   let scanStream = null;
-  let zxingReader = null; // pour le fallback
+  let zxingReader = null; // fallback pour live ou photo
   let scanning = false;
+  let zxingLiveActive = false;
 
-  function openScanModal() {
-    scanModal.style.display = 'block';
-    startScanner();
-  }
+  function openScanModal() { scanModal.style.display = 'block'; startScannerLive(); }
   async function closeScanModal() {
     scanning = false;
+    if (zxingReader && zxingLiveActive) {
+      try { zxingReader.reset(); } catch (_) { }
+      zxingLiveActive = false;
+    }
     if (scanStream) {
       scanStream.getTracks().forEach(t => t.stop());
       scanStream = null;
@@ -302,46 +312,49 @@
   scanClose.addEventListener('click', closeScanModal);
   elScan.addEventListener('click', openScanModal);
 
-  async function startScanner() {
+  async function startScannerLive() {
     // Demande la caméra arrière si possible
     try {
-      scanStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: 'environment' } }, audio: false });
+      scanStream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: { ideal: 'environment' } },
+        audio: false
+      });
     } catch (e) {
-      showError("Accès caméra refusé. Autorise l'accès caméra pour scanner.");
+      showError("Accès caméra refusé. Essaie le bouton « Prendre une photo » ci-dessous.");
       return;
     }
-    scanVideo.srcObject = scanStream;
 
-    // 1) Essai avec l'API native
+    scanVideo.srcObject = scanStream;
+    try { await scanVideo.play(); } catch (_) { }
+
+    // 1) API native
     if ('BarcodeDetector' in window) {
       try {
         const detector = new window.BarcodeDetector({ formats: ['ean_13', 'ean_8', 'upc_a', 'upc_e', 'code_128', 'code_39'] });
         scanning = true;
-        requestAnimationFrame(async function tick() {
+        const tick = async () => {
           if (!scanning) return;
           try {
             const codes = await detector.detect(scanVideo);
             if (codes && codes.length) {
               const code = (codes[0].rawValue || '').replace(/\D+/g, '');
-              if (code) {
-                await onBarcodeDetected(code);
-                return;
-              }
+              if (code) { await onBarcodeDetected(code); return; }
             }
           } catch (_) { }
           requestAnimationFrame(tick);
-        });
+        };
+        requestAnimationFrame(tick);
         return;
       } catch (e) {
         console.warn('BarcodeDetector non utilisable:', e);
       }
     }
-    // 2) Fallback ZXing (WASM) chargé dynamiquement
+
+    // 2) Fallback ZXing en live
     try {
-      if (!zxingReader) {
-        await loadZXing();
-        zxingReader = new ZXing.BrowserMultiFormatReader();
-      }
+      if (!window.ZXing) await loadZXing();
+      if (!zxingReader) zxingReader = new ZXing.BrowserMultiFormatReader();
+      zxingLiveActive = true;
       scanning = true;
       zxingReader.decodeFromVideoDevice(
         undefined, // device auto
@@ -350,21 +363,49 @@
           if (!scanning) return;
           if (result && result.getText) {
             const code = (result.getText() || '').replace(/\D+/g, '');
-            if (code) {
-              await onBarcodeDetected(code);
-            }
+            if (code) { await onBarcodeDetected(code); }
           }
         }
       );
     } catch (e) {
       console.error(e);
-      showError("Impossible de démarrer le scanner. Essaie la saisie manuelle.");
+      showError("Impossible de démarrer le flux live. Utilise « Prendre une photo ».");
     }
   }
 
+  // Fallback photo (ouvre la caméra de l’appareil et scanne l’image)
+  elCapture.addEventListener('click', () => elFile.click());
+  elFile.addEventListener('change', async (ev) => {
+    const file = ev.target.files && ev.target.files[0];
+    if (!file) return;
+    try {
+      if (!window.ZXing) await loadZXing();
+      if (!zxingReader) zxingReader = new ZXing.BrowserMultiFormatReader();
+      const imgURL = URL.createObjectURL(file);
+      const img = new Image();
+      img.onload = async () => {
+        try {
+          const luminance = await zxingReader.decodeFromImage(img);
+          const text = luminance && luminance.text || luminance && luminance.getText && luminance.getText();
+          const code = (text || '').replace(/\D+/g, '');
+          if (code) { await onBarcodeDetected(code); }
+          else showError("Aucun code‑barres détecté sur la photo. Réessaie en rapprochant.");
+        } catch (e) {
+          showError("Impossible de lire le code‑barres sur la photo. Réessaie.");
+        } finally {
+          URL.revokeObjectURL(imgURL);
+        }
+      };
+      img.onerror = () => { showError("Image invalide."); URL.revokeObjectURL(imgURL); };
+      img.src = imgURL;
+    } catch (e) {
+      console.error(e);
+      showError("Erreur lors du chargement du décodeur. Réessaie.");
+    }
+  });
+
   async function loadZXing() {
     if (window.ZXing) return;
-    // Charge ZXing via CDN (léger, fallback pour navigateurs sans BarcodeDetector)
     await new Promise((resolve, reject) => {
       const s = document.createElement('script');
       s.src = "https://cdn.jsdelivr.net/npm/@zxing/library@0.20.0/umd/index.min.js";
@@ -378,10 +419,9 @@
     elBarcode.value = code;
     cfBarcode.value = code;
     await closeScanModal();
-    // Lance automatiquement la recherche OFF
-    doLookup();
+    doLookup(); // lance OFF et préremplit
   }
-  // ==================== /Scanner Caméra ====================
+  // ==================== /Scanner ====================
 
   // Réinit du formulaire d’ajout
   cfReset.addEventListener('click', () => {
