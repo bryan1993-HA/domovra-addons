@@ -4,19 +4,20 @@
 {% block head %}
 <style>
   :root {
-    --gap: 12px;
-    --radius: 14px;
-    --border: #263043;
-    --chip: #1a2230;
+    --gap: 10px;
+    --r: 12px;
+    --bd: #283246;
+    --chip: #1b2331;
     --muted: #8ea0b7;
-    --accent: #00bcd4;
     --ok: #4caf50;
     --warn: #ffb300;
     --danger: #ef5350;
+    --primary: #1fa3ff;
+    /* bleu HA-ish, plus doux */
   }
 
   .wrap {
-    max-width: 1100px;
+    max-width: 1080px;
     margin: 0 auto;
     padding: 0 12px
   }
@@ -24,60 +25,78 @@
   .row {
     display: flex;
     gap: var(--gap);
-    flex-wrap: wrap
+    flex-wrap: wrap;
+    align-items: center
   }
 
   .chips {
     display: flex;
-    gap: 8px;
+    gap: 6px;
     flex-wrap: wrap
   }
 
   .chip {
     background: var(--chip);
-    border: 1px solid var(--border);
+    border: 1px solid var(--bd);
     border-radius: 999px;
     padding: 6px 10px;
-    color: var(--muted)
+    color: var(--muted);
+    display: inline-flex;
+    align-items: center;
+    gap: 6px
   }
 
   .card {
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    padding: 12px;
-    margin-bottom: 12px
+    border: 1px solid var(--bd);
+    border-radius: var(--r);
+    padding: 10px;
+    margin-bottom: 10px
   }
 
-  .title {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    margin: 10px 0 8px
+  .muted {
+    color: var(--muted)
   }
 
-  .title h2 {
-    font-size: 16px;
-    margin: 0
+  h1 {
+    margin: 6px 0 4px 0;
+    font-size: 18px;
+    font-weight: 600;
+    opacity: .9
   }
 
+  /* Inputs */
   input,
   select,
   button {
-    border: 1px solid var(--border);
+    border: 1px solid var(--bd);
     border-radius: 10px;
-    padding: 10px;
+    padding: 9px 10px;
     background: transparent;
     color: inherit
   }
 
-  button.primary {
-    background: var(--accent);
-    border: 0;
-    color: #02222a;
-    font-weight: 600;
+  input::placeholder {
+    opacity: .75
+  }
+
+  .btn {
     cursor: pointer
   }
 
+  .btn.primary {
+    background: var(--primary);
+    border-color: transparent;
+    color: #08131f;
+    font-weight: 600
+  }
+
+  .btn.ghost {
+    border-style: dashed;
+    color: var(--muted);
+    background: transparent
+  }
+
+  /* Table compact */
   table {
     width: 100%;
     border-collapse: collapse
@@ -88,46 +107,67 @@
     color: var(--muted);
     text-align: left;
     padding: 6px 8px;
-    border-bottom: 1px solid var(--border)
+    border-bottom: 1px solid var(--bd)
   }
 
   tbody td {
-    padding: 10px 8px;
-    border-bottom: 1px solid var(--border)
+    padding: 8px 8px;
+    border-bottom: 1px solid var(--bd);
+    vertical-align: middle
+  }
+
+  .qty {
+    white-space: nowrap
+  }
+
+  .date.ok {
+    color: var(--ok)
+  }
+
+  .date.warn {
+    color: var(--warn)
+  }
+
+  .date.danger {
+    color: var(--danger)
   }
 
   .pill {
     padding: 2px 8px;
     border-radius: 999px;
     font-size: 12px;
-    font-weight: 600;
-    border: 1px solid transparent
+    border: 1px solid transparent;
+    white-space: nowrap
   }
 
-  .ok {
+  .pill.ok {
     color: var(--ok);
     border-color: rgba(76, 175, 80, .35)
   }
 
-  .warn {
+  .pill.warn {
     color: var(--warn);
     border-color: rgba(255, 179, 0, .35)
   }
 
-  .danger {
+  .pill.danger {
     color: var(--danger);
     border-color: rgba(239, 83, 80, .35)
   }
 
-  .muted {
-    color: var(--muted)
-  }
+  /* Layout respo */
+  @media (max-width:880px) {
+    .row.stack-on-mobile {
+      flex-direction: column;
+      align-items: stretch
+    }
 
-  @media (max-width:900px) {
+    .row.stack-on-mobile>* {
+      width: 100%
+    }
 
-    .row>*,
-    .row button {
-      flex: 1
+    .hide-sm {
+      display: none
     }
   }
 </style>
@@ -136,65 +176,64 @@
 {% block content %}
 <div class="wrap">
 
-  <!-- Bandeau minimal -->
-  <div class="row" style="align-items:center;margin:10px 0 6px">
-    <h1 style="margin:0;font-size:22px">Domovra</h1>
-    <div style="flex:1"></div>
+  <!-- Bandeau stats -->
+  {% set soon = lots|selectattr('status','equalto','yellow')|list %}
+  {% set urg = lots|selectattr('status','equalto','red')|list %}
+  <div class="row" style="justify-content:space-between;margin-top:6px">
+    <h1>Domovra</h1>
     <div class="chips">
-      <span class="chip">📦 Produits : <b>{{ products|length }}</b></span>
-      <span class="chip">🧊 Lots : <b>{{ lots|length }}</b></span>
-      {% set soon = lots|selectattr('status','equalto','yellow')|list %}
-      {% set urg = lots|selectattr('status','equalto','red')|list %}
-      <span class="chip">⏰ Bientôt : <b>{{ soon|length }}</b></span>
-      <span class="chip">⚠️ Urgents : <b>{{ urg|length }}</b></span>
+      <span class="chip">📦 Produits :<b>{{ products|length }}</b></span>
+      <span class="chip">🧊 Lots :<b>{{ lots|length }}</b></span>
+      <span class="chip">⏰ Bientôt :<b>{{ soon|length }}</b></span>
+      <span class="chip">⚠️ Urgents :<b>{{ urg|length }}</b></span>
     </div>
   </div>
 
-  <!-- Barre de recherche + scan -->
+  <!-- Recherche + Ajout express fusionnés -->
   <div class="card">
-    <div class="row">
-      <form class="row" method="get" action="{{ BASE }}lots" style="flex:1">
-        <input name="q" placeholder="Rechercher produit, lot ou emplacement" style="flex:1;min-width:220px">
-        <button class="primary" style="flex:0 0 140px">🔎 Rechercher</button>
+    <div class="row stack-on-mobile" style="gap:8px">
+      <!-- Recherche -->
+      <form method="get" action="{{ BASE }}lots" class="row" style="flex:1;min-width:260px">
+        <span class="chip hide-sm">🔎</span>
+        <input name="q" placeholder="Rechercher produit, lot ou emplacement" style="flex:1;min-width:160px">
+        <button class="btn primary" style="flex:0 0 120px">Rechercher</button>
+        <a href="{{ BASE }}#scan" class="chip" title="Scanner un code‑barres" style="text-decoration:none">📷 Scan</a>
       </form>
-      <a href="{{ BASE }}#scan" class="chip" style="display:flex;align-items:center;text-decoration:none">📷 Scan</a>
-    </div>
-  </div>
 
-  <!-- Ajout express (une seule ligne) -->
-  <div class="card">
-    <div class="title">
-      <h2>Ajout express</h2><span class="muted">produit existant → lot</span>
-    </div>
-    <form method="post" action="{{ BASE }}lot/add" class="row">
-      <select name="product_id" required style="min-width:180px">
-        <option value="">Produit…</option>
-        {% for p in products %}<option value="{{ p.id }}">{{ p.name }}</option>{% endfor %}
-      </select>
-      <select name="location_id" required style="min-width:160px">
-        <option value="">Emplacement…</option>
-        {% for l in locations %}<option value="{{ l.id }}">{{ l.name }}</option>{% endfor %}
-      </select>
-      <input type="number" name="qty" value="1" min="0.1" step="0.1" placeholder="Qté" style="max-width:110px">
-      <input type="date" name="best_before" title="À consommer avant" style="max-width:170px">
-      <button class="primary" style="flex:0 0 160px">＋ Ajouter au stock</button>
-    </form>
-    <div class="row" style="margin-top:8px">
-      <a class="chip" href="{{ BASE }}products">+ Nouveau produit</a>
-      <a class="chip" href="{{ BASE }}locations">+ Nouvel emplacement</a>
+      <!-- Séparateur discret -->
+      <div class="hide-sm" style="width:1px;height:32px;background:var(--bd);opacity:.6"></div>
+
+      <!-- Ajout express (produit existant → lot) -->
+      <form method="post" action="{{ BASE }}lot/add" class="row" style="flex:1;min-width:420px">
+        <select name="product_id" required style="min-width:160px">
+          <option value="">Produit…</option>
+          {% for p in products %}<option value="{{ p.id }}">{{ p.name }}</option>{% endfor %}
+        </select>
+        <select name="location_id" required style="min-width:140px">
+          <option value="">Emplacement…</option>
+          {% for l in locations %}<option value="{{ l.id }}">{{ l.name }}</option>{% endfor %}
+        </select>
+        <input type="number" name="qty" value="1" min="0.1" step="0.1" class="qty" style="max-width:90px">
+        <input type="date" name="best_before" title="À consommer avant" style="max-width:160px">
+        <button class="btn primary" style="flex:0 0 140px">＋ Stock</button>
+        <a href="{{ BASE }}products" class="chip" title="Créer un produit">＋ Prod</a>
+        <a href="{{ BASE }}locations" class="chip" title="Créer un emplacement">＋ Emp</a>
+      </form>
     </div>
   </div>
 
   <!-- À consommer (Top 8) -->
   <div class="card">
-    <div class="title">
-      <h2>À consommer (Top 8)</h2>
+    <div class="row" style="justify-content:space-between">
+      <div class="muted">À consommer <b>(Top 8)</b></div>
+      <a href="{{ BASE }}lots" class="chip" style="text-decoration:none">Voir tout</a>
     </div>
+
     <table>
       <thead>
         <tr>
           <th>Produit</th>
-          <th>Emp.</th>
+          <th class="hide-sm">Empl.</th>
           <th>Qté</th>
           <th>Avant</th>
           <th>État</th>
@@ -203,25 +242,25 @@
       </thead>
       <tbody>
         {% if lots %}
-        {# on montre d'abord urgents puis bientôt, puis le reste, limité à 8 #}
         {% set sorted = lots|sort(attribute='best_before') %}
         {% set shown = 0 %}
         {% for it in sorted %}
-        {% if shown < 8 %} <tr>
+        {% if shown < 8 %} {% set cls='ok' %} {% if it.status=='red' %}{% set cls='danger' %} {% elif
+          it.status=='yellow' %}{% set cls='warn' %}{% endif %} <tr>
           <td>{{ it.product }}</td>
-          <td class="muted">{{ it.location }}</td>
-          <td>{{ '%.2f'|format(it.qty)|trim('0')|trim('.') }} {{ it.unit }}</td>
-          <td>{{ it.best_before or '—' }}</td>
+          <td class="muted hide-sm">{{ it.location }}</td>
+          <td class="qty">{{ '%.2f'|format(it.qty)|trim('0')|trim('.') }} {{ it.unit }}</td>
+          <td class="date {{ cls }}">{{ it.best_before or '—' }}</td>
           <td>
             {% if it.status == 'red' %}<span class="pill danger">Urgent</span>
             {% elif it.status == 'yellow' %}<span class="pill warn">Bientôt</span>
             {% else %}<span class="pill ok">OK</span>{% endif %}
           </td>
           <td style="text-align:right">
-            <form method="post" action="{{ BASE }}lot/consume" class="row" style="justify-content:flex-end;gap:8px">
+            <form method="post" action="{{ BASE }}lot/consume" class="row" style="justify-content:flex-end;gap:6px">
               <input type="hidden" name="lot_id" value="{{ it.id }}">
-              <input type="number" name="qty" value="1" min="0.1" step="0.1" style="max-width:90px">
-              <button class="primary" style="flex:0 0 120px">Consommer</button>
+              <input type="number" name="qty" value="1" min="0.1" step="0.1" style="max-width:82px">
+              <button class="btn primary" style="flex:0 0 120px">🍽 Consommer</button>
             </form>
           </td>
           </tr>
@@ -235,9 +274,6 @@
           {% endif %}
       </tbody>
     </table>
-    <div class="row" style="margin-top:8px;justify-content:flex-end">
-      <a class="chip" href="{{ BASE }}lots">Voir tout</a>
-    </div>
   </div>
 
 </div>
