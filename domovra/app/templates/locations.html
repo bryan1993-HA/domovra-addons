@@ -12,7 +12,7 @@
 
 <!-- Barre d’outils: Ajout + Recherche -->
 <div class="toolbar">
-  <form id="add-form" class="add-form" method="post" action="{{ url_add or '/locations/add' }}" autocomplete="off">
+  <form id="add-form" class="add-form" method="post" action="{{ BASE }}location/add" autocomplete="off">
     <input id="add-name" name="name" type="text" required placeholder="ex. Bac 1, Frigo, Placard haut"
       aria-label="Nom de l’emplacement" />
     <button class="btn primary" type="submit">Ajouter</button>
@@ -34,10 +34,9 @@
       </tr>
     </thead>
     <tbody id="locations-body">
-      {% for loc in locations %}
+      {% for loc in items %}
       <tr class="location-row" data-id="{{ loc.id }}" data-name="{{ loc.name }}"
-        data-rename-url="{{ loc.rename_url or ('/locations/' ~ loc.id ~ '/rename') }}"
-        data-delete-url="{{ loc.delete_url or ('/locations/' ~ loc.id ~ '/delete') }}">
+        data-rename-url="{{ BASE }}location/update" data-delete-url="{{ BASE }}location/delete">
         <td class="name-cell">
           <span class="name">{{ loc.name }}</span>
           {% if loc.lot_count is defined %}
@@ -59,10 +58,9 @@
 
   <!-- CARTES (mobile) -->
   <div class="cards mobcards" id="locations-cards" aria-label="Liste des emplacements (cartes)">
-    {% for loc in locations %}
+    {% for loc in items %}
     <article class="card location-card" data-id="{{ loc.id }}" data-name="{{ loc.name }}"
-      data-rename-url="{{ loc.rename_url or ('/locations/' ~ loc.id ~ '/rename') }}"
-      data-delete-url="{{ loc.delete_url or ('/locations/' ~ loc.id ~ '/delete') }}">
+      data-rename-url="{{ BASE }}location/update" data-delete-url="{{ BASE }}location/delete">
       <div class="card-main">
         <div class="title">
           <span class="name">{{ loc.name }}</span>
@@ -86,12 +84,12 @@
 
 <!-- Modale renommage -->
 <dialog id="rename-dialog" class="modal">
-  <form id="rename-form" method="post">
+  <form id="rename-form" method="post" action="{{ BASE }}location/update">
     <h3>Renommer l’emplacement</h3>
     <div class="field">
       <label for="rename-input">Nouveau nom</label>
       <input id="rename-input" name="name" type="text" required />
-      <input id="rename-hidden" name="id" type="hidden" />
+      <input id="rename-hidden" name="location_id" type="hidden" />
     </div>
     <div class="modal-actions">
       <button class="btn" type="button" id="rename-cancel">Annuler</button>
@@ -102,22 +100,19 @@
 
 <!-- Modale suppression -->
 <dialog id="delete-dialog" class="modal">
-  <form id="delete-form" method="post">
+  <form id="delete-form" method="post" action="{{ BASE }}location/delete">
     <h3>Confirmer la suppression</h3>
     <p>
       Supprimer <strong id="delete-name"></strong> ?<br />
       <small class="hint">Les lots présents à cet emplacement seront également supprimés.</small>
     </p>
-    <input id="delete-hidden" name="id" type="hidden" />
+    <input id="delete-hidden" name="location_id" type="hidden" />
     <div class="modal-actions">
       <button class="btn" type="button" id="delete-cancel">Annuler</button>
       <button class="btn danger" type="submit">Supprimer</button>
     </div>
   </form>
 </dialog>
-
-<link rel="stylesheet" href="{{ url_for('static', path='/css/locations.css') }}">
-<script defer src="{{ url_for('static', path='/js/locations.js') }}"></script>
 
 <style>
   /* Styles légers, respect thème HA */
@@ -309,4 +304,93 @@
     justify-content: flex-end;
   }
 </style>
+
+<script>
+  // Recherche, modales de renommage et suppression — vanilla JS
+  (function () {
+    const $ = (s, p = document) => p.querySelector(s);
+    const $$ = (s, p = document) => Array.from(p.querySelectorAll(s));
+
+    // Recherche live sur table + cartes
+    const searchInput = $('#search-input');
+    function applyFilter(q) {
+      const norm = (t) => t && t.normalize('NFD').replace(/\p{Diacritic}/gu, '').toLowerCase();
+      const query = norm(q || '');
+      const rows = $$('#locations-body .location-row');
+      const cards = $$('#locations-cards .location-card');
+      [...rows, ...cards].forEach(el => {
+        const name = norm(el.dataset.name || '');
+        el.style.display = name && name.includes(query) ? '' : 'none';
+      });
+    }
+    if (searchInput) {
+      searchInput.addEventListener('input', (e) => applyFilter(e.target.value));
+    }
+
+    // Renommage
+    const renameDialog = $('#rename-dialog');
+    const renameForm = $('#rename-form');
+    const renameInput = $('#rename-input');
+    const renameHidden = $('#rename-hidden');
+    const renameCancel = $('#rename-cancel');
+
+    function openRename(el) {
+      const name = el.dataset.name;
+      const id = el.dataset.id;
+      const url = el.dataset.renameUrl || '{{ BASE }}location/update';
+      renameInput.value = name || '';
+      renameHidden.value = id || '';
+      renameForm.setAttribute('action', url);
+      renameDialog.showModal();
+      setTimeout(() => renameInput.focus(), 50);
+    }
+
+    $$('.btn-rename').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        const host = e.target.closest('[data-id]');
+        if (host) openRename(host);
+      });
+    });
+
+    renameCancel && renameCancel.addEventListener('click', () => renameDialog.close());
+
+    // Suppression
+    const deleteDialog = $('#delete-dialog');
+    const deleteForm = $('#delete-form');
+    const deleteName = $('#delete-name');
+    const deleteHidden = $('#delete-hidden');
+    const deleteCancel = $('#delete-cancel');
+
+    function openDelete(el) {
+      const name = el.dataset.name;
+      const id = el.dataset.id;
+      const url = el.dataset.deleteUrl || '{{ BASE }}location/delete';
+      deleteName.textContent = name || '';
+      deleteHidden.value = id || '';
+      deleteForm.setAttribute('action', url);
+      deleteDialog.showModal();
+    }
+
+    $$('.btn-delete').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        const host = e.target.closest('[data-id]');
+        if (host) openDelete(host);
+      });
+    });
+
+    deleteCancel && deleteCancel.addEventListener('click', () => deleteDialog.close());
+
+    // Soumissions: petit “anti double-clic”
+    [renameForm, deleteForm, $('#add-form')].forEach(form => {
+      if (!form) return;
+      form.addEventListener('submit', () => {
+        const submit = form.querySelector('button[type="submit"]');
+        if (submit) {
+          submit.disabled = true;
+          submit.textContent = submit.textContent + '…';
+        }
+      });
+    });
+  })();
+</script>
 {% endblock %}
