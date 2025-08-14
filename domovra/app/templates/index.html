@@ -137,16 +137,15 @@
 <div class="wrap">
 
   <!-- Bandeau minimal -->
-  <div class="row" style="align-items:center;margin:10px 0 6px">
-    <h1 style="margin:0;font-size:22px">Domovra</h1>
-    <div style="flex:1"></div>
-    <div class="chips">
-      <span class="chip">📦 Produits : <b>{{ products|length }}</b></span>
-      <span class="chip">🧊 Lots : <b>{{ lots|length }}</b></span>
+  <div class="row" style="align-items:flex-start;margin:10px 0 6px">
+    <h1 style="margin:0;font-size:22px;flex:1">Domovra - Accueil</h1>
+    <div style="display:flex;flex-direction:column;gap:6px;align-items:flex-end">
+      <span class="chip">📦 Produits : <b>{{ products|length }}</b></span>
+      <span class="chip">🧊 Lots : <b>{{ lots|length }}</b></span>
       {% set soon = lots|selectattr('status','equalto','yellow')|list %}
       {% set urg = lots|selectattr('status','equalto','red')|list %}
-      <span class="chip">⏰ Bientôt : <b>{{ soon|length }}</b></span>
-      <span class="chip">⚠️ Urgents : <b>{{ urg|length }}</b></span>
+      <span class="chip">⏰ Bientôt : <b>{{ soon|length }}</b></span>
+      <span class="chip">⚠️ Urgents : <b>{{ urg|length }}</b></span>
     </div>
   </div>
 
