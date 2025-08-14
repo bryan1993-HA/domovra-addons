@@ -1,40 +1,188 @@
 {% extends "base.html" %}
 {% block title %}Support · Domovra{% endblock %}
 
+{% block head %}
+<style>
+    /* Mise en beauté locale à la page Support (pas d'impact ailleurs) */
+    .support-wrap {
+        max-width: 880px;
+        margin: 0 auto;
+        padding: 1.25rem;
+    }
+
+    .support-hero {
+        position: relative;
+        border-radius: 16px;
+        padding: 28px;
+        overflow: hidden;
+        border: 1px solid rgba(255, 255, 255, .08);
+    }
+
+    /* Dégradés adaptés aux modes clair/sombre */
+    html[data-theme="dark"] .support-hero {
+        background:
+            radial-gradient(1000px 400px at -10% -10%, rgba(79, 70, 229, .28), transparent 50%),
+            radial-gradient(900px 360px at 110% 0%, rgba(16, 185, 129, .22), transparent 50%),
+            linear-gradient(180deg, #141824, #0f1115 40%);
+    }
+
+    html[data-theme="light"] .support-hero {
+        border-color: #e5e7eb;
+        background:
+            radial-gradient(900px 360px at -10% -10%, rgba(99, 102, 241, .15), transparent 50%),
+            radial-gradient(800px 320px at 110% 0%, rgba(16, 185, 129, .12), transparent 50%),
+            linear-gradient(180deg, #ffffff, #f8fafc 60%);
+    }
+
+    .support-title {
+        font-size: 1.8rem;
+        margin: 0 0 .25rem 0;
+        display: flex;
+        align-items: center;
+        gap: .5rem;
+    }
+
+    .support-sub {
+        margin: 0;
+        opacity: .9;
+        line-height: 1.6;
+    }
+
+    .support-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: .75rem;
+        align-items: center;
+        margin: 1.1rem 0 0;
+    }
+
+    .kofi-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: .6rem;
+        padding: .75rem 1.1rem;
+        border-radius: 999px;
+        font-weight: 700;
+        text-decoration: none;
+        border: 1px solid transparent;
+        transition: transform .04s ease, filter .15s ease, border-color .15s ease;
+        will-change: transform;
+    }
+
+    .kofi-btn:active {
+        transform: translateY(1px);
+    }
+
+    /* primaire */
+    html[data-theme="dark"] .kofi-primary {
+        background: #29abe0;
+        /* bleu Ko‑fi */
+        color: #0b1016;
+    }
+
+    html[data-theme="light"] .kofi-primary {
+        background: #29abe0;
+        color: #0b1016;
+    }
+
+    /* secondaire (outline) */
+    html[data-theme="dark"] .kofi-outline {
+        border-color: #3b4252;
+        color: #e5e7eb;
+        background: transparent;
+    }
+
+    html[data-theme="light"] .kofi-outline {
+        border-color: #d1d5db;
+        color: #1f2328;
+        background: transparent;
+    }
+
+    .kofi-outline:hover {
+        filter: brightness(1.05);
+    }
+
+    .kofi-logo {
+        width: 22px;
+        height: 22px;
+        display: inline-block;
+    }
+
+    .support-note {
+        margin: 1.5rem 0 0;
+        font-size: .95rem;
+        opacity: .8;
+    }
+
+    .support-card {
+        margin-top: 1rem;
+        border-radius: 12px;
+        border: 1px solid rgba(255, 255, 255, .08);
+        padding: 14px 16px;
+    }
+
+    html[data-theme="light"] .support-card {
+        border-color: #e5e7eb;
+        background: #ffffff;
+    }
+
+    html[data-theme="dark"] .support-card {
+        background: #151922;
+    }
+
+    .support-list {
+        margin: .4rem 0 0 1.25rem;
+    }
+</style>
+{% endblock %}
+
 {% block content %}
-<div class="container" style="max-width:780px;margin:0 auto;padding:1.25rem;">
-    <h1 style="margin:0 0 0.5rem 0;">Support ❤️</h1>
-    <p style="opacity:0.9;line-height:1.6;">
-        Domovra est un add‑on open‑source pour Home Assistant qui simplifie la gestion de votre stock domestique.
-        Si vous appréciez le projet et souhaitez qu’il continue à évoluer, vous pouvez m’offrir un café ☕.
-    </p>
+<div class="support-wrap">
+    <div class="support-hero">
+        <h1 class="support-title">
+            Support <span aria-hidden="true">❤️</span>
+        </h1>
+        <p class="support-sub">
+            Domovra est un add‑on open‑source pour Home Assistant qui simplifie la gestion de votre stock domestique.
+            Si vous appréciez le projet et souhaitez qu’il continue à évoluer, vous pouvez me soutenir sur Ko‑fi.
+        </p>
 
-    <div style="display:flex;gap:1rem;align-items:center;margin:1rem 0 1.5rem 0;">
-        <!-- Bouton Ko-fi (image officielle) -->
-        <a href="https://ko-fi.com/domovra" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;text-decoration:none;border:1px solid var(--ha-card-border-color,#E0E0E0);
-              padding:0.6rem 0.9rem;border-radius:999px;font-weight:600;">
-            <img src="https://storage.ko-fi.com/cdn/kofi3.png?v=3" alt="Buy Me a Coffee at ko-fi.com"
-                style="height:24px;width:auto;margin-right:0.6rem;">
-            <span>Support on Ko‑fi</span>
-        </a>
+        <div class="support-actions">
+            <!-- Bouton principal Ko‑fi (sans image externe) -->
+            <a class="kofi-btn kofi-primary" href="https://ko-fi.com/domovra" target="_blank" rel="noopener">
+                <!-- Petit logo Ko‑fi en SVG (cup + cœur) -->
+                <svg class="kofi-logo" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                    <path
+                        d="M3 7a1 1 0 0 1 1-1h11.2c.9 0 1.8.6 2 .9.3.3.8 1 1.2 1.8.5 1 .6 2.2.1 3.2-.6 1.2-1.9 2.1-3.8 2.1H13v2.1c0 1.7-1.4 3.1-3.1 3.1H6.1A3.1 3.1 0 0 1 3 15.1V7z"
+                        fill="#fff" />
+                    <path d="M18.7 10.2c-.3.6-1 .9-2 .9H13V8h2.3c.9 0 1.7.6 2 1.3.2.4.2.7 0 .9z" fill="#0b1016" />
+                    <path
+                        d="M9.9 6.1c.9 0 1.7.5 2.1 1.2.4-.7 1.2-1.2 2.1-1.2 1.3 0 2.3 1 2.3 2.3 0 2.2-3.3 3.9-4.4 5.5C10.9 12.3 7.6 10.6 7.6 8.4c0-1.3 1-2.3 2.3-2.3z"
+                        fill="#ff5961" />
+                </svg>
+                <span>Support on Ko‑fi</span>
+            </a>
 
-        <!-- Lien simple en secours -->
-        <a href="https://ko-fi.com/domovra" target="_blank" rel="noopener"
-            style="text-decoration:underline;">ko-fi.com/domovra</a>
+            <!-- Lien secondaire (copiable) -->
+            <a class="kofi-btn kofi-outline" href="https://ko-fi.com/domovra" target="_blank" rel="noopener">
+                ko-fi.com/domovra
+            </a>
+        </div>
+
+        <div class="support-card">
+            <details open>
+                <summary style="cursor:pointer;font-weight:600;">À quoi servent les dons&nbsp;?</summary>
+                <ul class="support-list">
+                    <li>Hébergement de la doc &amp; outils</li>
+                    <li>Temps de dev (corrections &amp; nouvelles features)</li>
+                    <li>Matériel de test</li>
+                </ul>
+            </details>
+        </div>
+
+        <p class="support-note">
+            Merci pour votre soutien. Les dons sont facultatifs et n’ouvrent aucune contrepartie payante.
+        </p>
     </div>
-
-    <details>
-        <summary style="cursor:pointer;font-weight:600;">À quoi servent les dons&nbsp;?</summary>
-        <ul style="margin:0.6rem 0 0 1.25rem;">
-            <li>Hébergement de la doc & outils</li>
-            <li>Temps de dev (corrections & nouvelles features)</li>
-            <li>Matériel de test</li>
-        </ul>
-    </details>
-
-    <hr style="margin:1.5rem 0;opacity:0.2;">
-    <p style="font-size:0.95rem;opacity:0.8;">
-        Merci pour votre soutien. Les dons sont facultatifs et n’ouvrent aucune contrepartie payante.
-    </p>
 </div>
 {% endblock %}
