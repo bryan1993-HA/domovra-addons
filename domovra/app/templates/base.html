@@ -108,11 +108,12 @@
       min-width: 0;
     }
 
+    /* ===== Header ===== */
     header {
-      display: grid;
-      grid-template-columns: auto 1fr auto;
+      display: flex;
       align-items: center;
-      gap: 8px;
+      justify-content: space-between;
+      gap: 16px;
       padding: 10px 16px;
       border-bottom: 1px solid #2a2f36;
       position: sticky;
@@ -127,7 +128,7 @@
       opacity: .9;
     }
 
-    /* Chips du header (colonne à droite) */
+    /* Chips du header (horizontales à droite) */
     .header-chips {
       display: flex;
       flex-direction: row;
@@ -212,6 +213,19 @@
       cursor: pointer;
     }
 
+    /* >>> Correctif: couleurs du menu déroulant (liste des options) en sombre/clair */
+    option,
+    optgroup {
+      background: #0f1320;
+      color: #e5e7eb;
+    }
+
+    html[data-theme="light"] option,
+    html[data-theme="light"] optgroup {
+      background: #ffffff;
+      color: #111827;
+    }
+
     table {
       width: 100%;
       border-collapse: collapse;
@@ -279,7 +293,7 @@
       min-width: 720px;
     }
 
-    /* Sidebar off‑canvas <= 1024px */
+    /* Sidebar off-canvas <= 1024px */
     @media (max-width:1024px) {
       .layout {
         grid-template-columns: 1fr;
@@ -408,7 +422,6 @@
       background: #f9fafb;
     }
 
-    /* Chips header en clair */
     html[data-theme="light"] .chip {
       background: #ffffff;
       border: 1px solid #e5e7eb;
@@ -441,35 +454,35 @@
     </aside>
 
     <main>
-      <header
-        style="display:flex;align-items:center;justify-content:space-between;gap:16px;padding:10px 16px;border-bottom:1px solid #2a2f36;position:sticky;top:0;z-index:40;background:inherit">
+      <header>
         <div style="display:flex;align-items:center;gap:8px">
           <button class="hamburger" id="hamburger" aria-label="Ouvrir le menu"
             aria-expanded="false"><span></span><span></span><span></span></button>
-          {% set seg = request.path.replace(BASE, '').strip('/') %}
-          <h1 class="app-title" style="margin:0">
-            Domovra —
-            {% if seg == '' %}
-            Accueil
-            {% elif seg.startswith('products') %}
-            Produits
-            {% elif seg.startswith('locations') %}
-            Emplacements
-            {% elif seg.startswith('lots') %}
-            Stocks
-            {% elif seg.startswith('settings') %}
-            Paramètres
-            {% elif seg.startswith('journal') %}
-            Journal
-            {% elif seg.startswith('support') %}
-            Support
-            {% else %}
-            {{ seg|replace('-', ' ')|capitalize }}
-            {% endif %}
-          </h1>
+          {# Titre dynamique : Domovra — <Nom de page> #}
+            {% set seg = request.path.replace(BASE, '').strip('/') %}
+            <h1 class="app-title" style="margin:0">
+              Domovra —
+              {% if seg == '' %}
+              Accueil
+              {% elif seg.startswith('products') %}
+              Produits
+              {% elif seg.startswith('locations') %}
+              Emplacements
+              {% elif seg.startswith('lots') %}
+              Stocks
+              {% elif seg.startswith('settings') %}
+              Paramètres
+              {% elif seg.startswith('journal') %}
+              Journal
+              {% elif seg.startswith('support') %}
+              Support
+              {% else %}
+              {{ seg|replace('-', ' ')|capitalize }}
+              {% endif %}
+            </h1>
         </div>
 
-        <div class="header-chips" style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+        <div class="header-chips">
           {% if products is defined and lots is defined %}
           {% set soon = lots|selectattr('status','equalto','yellow')|list %}
           {% set urg = lots|selectattr('status','equalto','red')|list %}
@@ -481,7 +494,6 @@
           {% block header_right %}{% endblock %}
         </div>
       </header>
-
 
       <section class="page">
         {% block content %}{% endblock %}
