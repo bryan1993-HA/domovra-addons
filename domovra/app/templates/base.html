@@ -10,7 +10,7 @@
   <meta name="domovra:theme" content="{{ SETTINGS.theme|default('auto') }}">
   <meta name="domovra:sidebar" content="{{ '1' if SETTINGS.sidebar_compact else '0' }}">
 
-  <!-- Applique immédiatement thème + sidebar (ingress-friendly) -->
+  <!-- Thème + sidebar dès le chargement -->
   <script>
     (function () {
       const mTheme = document.querySelector('meta[name="domovra:theme"]');
@@ -25,24 +25,20 @@
           html.style.colorScheme = mode;
           try { localStorage.setItem('domovra_theme', mode); } catch (e) { }
         } else {
-          // auto : suit le système/navigateur
           const isDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
           html.setAttribute('data-theme', isDark ? 'dark' : 'light');
           html.style.colorScheme = isDark ? 'dark' : 'light';
         }
       }
 
-      // Thème initial
       if (pref === 'light' || pref === 'dark') {
         setTheme(pref);
       } else {
-        // auto : valeur mémorisée si elle existe, sinon matchMedia
         let saved = null;
         try { saved = localStorage.getItem('domovra_theme'); } catch (e) { }
         setTheme((saved === 'light' || saved === 'dark') ? saved : 'auto');
       }
 
-      // Si "auto", se mettre à jour quand l’OS change
       try {
         const mq = window.matchMedia('(prefers-color-scheme: dark)');
         mq.addEventListener?.('change', () => {
@@ -51,7 +47,6 @@
         });
       } catch (e) { }
 
-      // Sidebar compacte (classe sur <html> uniquement)
       const mini = (mSide && mSide.content === '1');
       if (mini) html.classList.add('sidebar-mini'); else html.classList.remove('sidebar-mini');
     })();
@@ -62,15 +57,29 @@
       color-scheme: dark;
     }
 
-    /* --- Thème sombre/clair (piloté par <html data-theme>) --- */
+    /* Variables de fond (pour header solide) */
+    html[data-theme="dark"] {
+      --bg-body: #0f1115;
+      --bg-card: #151922;
+      --line: #2a2f36;
+      --text-muted: #8ea0b7;
+    }
+
+    html[data-theme="light"] {
+      --bg-body: #ffffff;
+      --bg-card: #ffffff;
+      --line: #e5e7eb;
+      --text-muted: #6b7280;
+    }
+
     html[data-theme="dark"] body {
-      background: #0f1115;
+      background: var(--bg-body);
       color: #e5e7eb;
     }
 
     html[data-theme="light"] body {
+      background: var(--bg-body);
       color: #1f2328;
-      background: #ffffff;
     }
 
     a {
@@ -87,7 +96,6 @@
       display: block;
     }
 
-    /* Layout principal */
     .layout {
       display: grid;
       grid-template-columns: 260px 1fr;
@@ -96,7 +104,7 @@
 
     aside {
       background: #111315;
-      border-right: 1px solid #2a2f36;
+      border-right: 1px solid var(--line);
       padding: 12px;
       position: relative;
       z-index: 45;
@@ -108,7 +116,7 @@
       min-width: 0;
     }
 
-    /* ===== Header (corrigé mobile sticky + chips) ===== */
+    /* ===== Header collant, fond = fond page ===== */
     header {
       position: sticky;
       top: 0;
@@ -118,8 +126,9 @@
       justify-content: space-between;
       gap: 12px;
       padding: 10px 16px;
-      border-bottom: 1px solid #2a2f36;
-      background: inherit;
+      border-bottom: 1px solid var(--line);
+      background: var(--bg-body);
+      /* <— fond solide */
     }
 
     .header-left {
@@ -138,7 +147,6 @@
       text-overflow: ellipsis;
     }
 
-    /* Chips à droite */
     .header-right {
       display: flex;
       align-items: center;
@@ -164,7 +172,6 @@
       font-weight: 700;
     }
 
-    /* Menu gauche */
     .menu {
       display: grid;
       gap: 8px;
@@ -197,13 +204,12 @@
       opacity: .9;
     }
 
-    /* Cartes / tables */
     .page {
       padding: 16px;
     }
 
     .card {
-      background: #151922;
+      background: var(--bg-card);
       border: 1px solid #242932;
       border-radius: 12px;
       padding: 12px;
@@ -229,7 +235,6 @@
       cursor: pointer;
     }
 
-    /* Corrige la liste ouverte des <select> en sombre/clair */
     option,
     optgroup {
       background: #0f1320;
@@ -261,7 +266,6 @@
       background: #121620;
     }
 
-    /* Responsive grilles/rows */
     .grid {
       display: grid;
       grid-template-columns: repeat(12, 1fr);
@@ -309,7 +313,6 @@
       min-width: 720px;
     }
 
-    /* Sidebar off-canvas <= 1024px */
     @media (max-width:1024px) {
       .layout {
         grid-template-columns: 1fr;
@@ -330,7 +333,6 @@
       }
     }
 
-    /* Mode "sidebar compacte" (desktop) */
     @media (min-width:1025px) {
       .sidebar-mini .layout {
         grid-template-columns: 72px 1fr;
@@ -350,7 +352,6 @@
       }
     }
 
-    /* Hamburger */
     .hamburger {
       display: inline-grid;
       place-content: center;
@@ -379,21 +380,21 @@
     /* Variantes clair */
     html[data-theme="light"] aside {
       background: #f7f7f8;
-      border-right: 1px solid #e5e7eb;
+      border-right: 1px solid var(--line);
     }
 
     html[data-theme="light"] header {
       background: #ffffff;
-      border-bottom: 1px solid #e5e7eb;
+      border-bottom: 1px solid var(--line);
     }
 
     html[data-theme="light"] .muted {
-      color: #6b7280;
+      color: var(--text-muted);
     }
 
     html[data-theme="light"] .menu a {
       background: #ffffff;
-      border: 1px solid #e5e7eb;
+      border: 1px solid var(--line);
       color: #1f2328;
     }
 
@@ -404,7 +405,7 @@
 
     html[data-theme="light"] .card {
       background: #ffffff;
-      border: 1px solid #e5e7eb;
+      border: 1px solid var(--line);
     }
 
     html[data-theme="light"] input,
@@ -422,7 +423,7 @@
 
     html[data-theme="light"] th,
     html[data-theme="light"] td {
-      border: 1px solid #e5e7eb;
+      border: 1px solid var(--line);
     }
 
     html[data-theme="light"] th {
@@ -436,36 +437,13 @@
 
     html[data-theme="light"] .chip {
       background: #ffffff;
-      border: 1px solid #e5e7eb;
+      border: 1px solid var(--line);
     }
 
-    /* ===== Ajustements MOBILE ===== */
+    /* ===== Mobile : cacher les chips ===== */
     @media (max-width:640px) {
-      header {
-        flex-direction: column;
-        align-items: stretch;
-        gap: 6px;
-      }
-
-      .app-title {
-        font-size: 1rem;
-      }
-
       .header-right {
-        width: 100%;
-      }
-
-      .header-chips {
-        display: inline-flex;
-        flex-wrap: nowrap;
-        gap: 6px;
-        overflow-x: auto;
-        -webkit-overflow-scrolling: touch;
-        padding-bottom: 4px;
-      }
-
-      .chip {
-        padding: 6px 8px;
+        display: none;
       }
     }
   </style>
@@ -482,15 +460,16 @@
         <a href="{{ BASE }}locations"
           class="{% if request.path.startswith(BASE ~ 'locations') %}active{% endif %}"><span
             class="ico">📍</span><span>Emplacements</span></a>
-        <a href="{{ BASE }}products" class="{% if request.path.startswith(BASE ~ 'products') %}active{% endif %}"><span
+        <a href="{{ BASE }}products" class="{% if request.path.startswith(BASE ~ 'products')  %}active{% endif %}"><span
             class="ico">📦</span><span>Produits</span></a>
-        <a href="{{ BASE }}lots" class="{% if request.path.startswith(BASE ~ 'lots') %}active{% endif %}"><span
+        <a href="{{ BASE }}lots" class="{% if request.path.startswith(BASE ~ 'lots')       %}active{% endif %}"><span
             class="ico">🧮</span><span>Stocks</span></a>
-        <a href="{{ BASE }}settings" class="{% if request.path.startswith(BASE ~ 'settings') %}active{% endif %}"><span
+        <a href="{{ BASE }}settings"
+          class="{% if request.path.startswith(BASE ~ 'settings')   %}active{% endif %}"><span
             class="ico">⚙️</span><span>Paramètres</span></a>
-        <a href="{{ BASE }}journal" class="{% if request.path.startswith(BASE ~ 'journal') %}active{% endif %}"><span
+        <a href="{{ BASE }}journal" class="{% if request.path.startswith(BASE ~ 'journal')    %}active{% endif %}"><span
             class="ico">📝</span><span>Journal</span></a>
-        <a href="{{ BASE }}support" class="{% if request.path.startswith(BASE ~ 'support') %}active{% endif %}"><span
+        <a href="{{ BASE }}support" class="{% if request.path.startswith(BASE ~ 'support')    %}active{% endif %}"><span
             class="ico">☕</span><span>Support</span></a>
       </nav>
     </aside>
@@ -500,28 +479,27 @@
         <div class="header-left">
           <button class="hamburger" id="hamburger" aria-label="Ouvrir le menu"
             aria-expanded="false"><span></span><span></span><span></span></button>
-          {# Titre dynamique : Domovra — <Nom de page> #}
-            {% set seg = request.path.replace(BASE, '').strip('/') %}
-            <h1 class="app-title">
-              Domovra —
-              {% if seg == '' %}
-              Accueil
-              {% elif seg.startswith('products') %}
-              Produits
-              {% elif seg.startswith('locations') %}
-              Emplacements
-              {% elif seg.startswith('lots') %}
-              Stocks
-              {% elif seg.startswith('settings') %}
-              Paramètres
-              {% elif seg.startswith('journal') %}
-              Journal
-              {% elif seg.startswith('support') %}
-              Support
-              {% else %}
-              {{ seg|replace('-', ' ')|capitalize }}
-              {% endif %}
-            </h1>
+          {% set seg = request.path.replace(BASE, '').strip('/') %}
+          <h1 class="app-title">
+            Domovra —
+            {% if seg == '' %}
+            Accueil
+            {% elif seg.startswith('products') %}
+            Produits
+            {% elif seg.startswith('locations') %}
+            Emplacements
+            {% elif seg.startswith('lots') %}
+            Stocks
+            {% elif seg.startswith('settings') %}
+            Paramètres
+            {% elif seg.startswith('journal') %}
+            Journal
+            {% elif seg.startswith('support') %}
+            Support
+            {% else %}
+            {{ seg|replace('-', ' ')|capitalize }}
+            {% endif %}
+          </h1>
         </div>
 
         <div class="header-right">
