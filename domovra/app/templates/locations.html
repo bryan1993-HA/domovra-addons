@@ -2,53 +2,79 @@
 {% block title %}Domovra — Emplacements{% endblock %}
 
 {% block content %}
-<div class="page-header">
-  <h1>Emplacements</h1>
-  <p class="subtitle">
-    Ajouter, renommer ou supprimer des emplacements.
-    <span class="hint">Supprimer enlève aussi les lots présents à cet endroit.</span>
-  </p>
-</div>
-
-<!-- Barre d’outils: Ajout + Recherche -->
-<div class="toolbar">
-  <form id="add-form" class="add-form" method="post" action="{{ BASE }}location/add" autocomplete="off">
-    <input id="add-name" name="name" type="text" required placeholder="ex. Bac 1, Frigo, Placard haut"
-      aria-label="Nom de l’emplacement" />
-    <button class="btn primary" type="submit">Ajouter</button>
-  </form>
-
-  <div class="search">
-    <input id="search-input" type="search" placeholder="Rechercher un emplacement…" aria-label="Recherche" />
+<header class="page-header">
+  <h1 class="page-title">Emplacements</h1>
+  <div class="page-sub">
+    <p>Ajouter, renommer ou supprimer des emplacements.</p>
+    <p class="hint">Supprimer enlève aussi les lots présents à cet endroit.</p>
   </div>
-</div>
+</header>
 
-<!-- Liste: tableau desktop / cartes mobile -->
-<div class="list-wrapper">
-  <!-- TABLEAU (desktop) -->
+<!-- Panneau d’ajout express (layout Grid comme l’accueil) -->
+<section class="panel add-panel">
+  <form id="add-form" class="add-grid" method="post" action="{{ BASE }}location/add" autocomplete="off">
+    <div class="field">
+      <label for="add-name">Nom de l’emplacement</label>
+      <input id="add-name" name="name" type="text" required placeholder="ex. Frigo, Placard haut, Bac 1" />
+      <small class="help">Choisis un libellé simple. Tu pourras le renommer plus tard.</small>
+    </div>
+    <div class="actions">
+      <button class="btn btn-primary" type="submit">
+        <span class="i i-plus" aria-hidden="true"></span>
+        Ajouter au listing
+      </button>
+    </div>
+  </form>
+</section>
+
+<!-- Outils: recherche / résumé -->
+<section class="panel tools">
+  <div class="tools-grid">
+    <div class="tool">
+      <label for="search-input">Rechercher</label>
+      <input id="search-input" type="search" placeholder="Filtrer les emplacements…" />
+    </div>
+    <div class="tool stat">
+      <div class="chip">
+        <span class="dot"></span>
+        <strong>{{ items|length }}</strong> emplacements
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Liste: table desktop / cartes mobile -->
+<section class="panel list-wrapper">
+  <!-- TABLE (desktop) -->
   <table class="table desktable" aria-label="Liste des emplacements">
     <thead>
       <tr>
         <th class="col-name">Nom</th>
+        <th class="col-badges">Infos</th>
         <th class="col-actions">Actions</th>
       </tr>
     </thead>
     <tbody id="locations-body">
       {% for loc in items %}
-      <tr class="location-row" data-id="{{ loc.id }}" data-name="{{ loc.name }}"
-        data-rename-url="{{ BASE }}location/update" data-delete-url="{{ BASE }}location/delete">
-        <td class="name-cell">
-          <span class="name">{{ loc.name }}</span>
+      <tr class="row" data-id="{{ loc.id }}" data-name="{{ loc.name }}" data-rename-url="{{ BASE }}location/update"
+        data-delete-url="{{ BASE }}location/delete">
+        <td class="name">
+          <span class="label">{{ loc.name }}</span>
+        </td>
+        <td class="badges">
           {% if loc.lot_count is defined %}
-          <span class="badge" title="Nombre de lots">{{ loc.lot_count }}</span>
+          <span class="badge" title="Nombre de lots liés">{{ loc.lot_count }} lot{{ 1 if loc.lot_count == 1 else 's'
+            }}</span>
           {% endif %}
         </td>
         <td class="actions">
-          <button class="btn ghost btn-rename" type="button" aria-label="Renommer">
-            <span class="icon">✏️</span> Modifier
+          <button class="btn btn-soft btn-rename" type="button">
+            <span class="i i-edit" aria-hidden="true"></span>
+            Modifier
           </button>
-          <button class="btn danger btn-delete" type="button" aria-label="Supprimer">
-            <span class="icon">🗑️</span>
+          <button class="btn btn-danger btn-icon btn-delete" type="button" title="Supprimer">
+            <span class="i i-trash" aria-hidden="true"></span>
+            <span class="sr">Supprimer</span>
           </button>
         </td>
       </tr>
@@ -56,36 +82,38 @@
     </tbody>
   </table>
 
-  <!-- CARTES (mobile) -->
+  <!-- CARDS (mobile) -->
   <div class="cards mobcards" id="locations-cards" aria-label="Liste des emplacements (cartes)">
     {% for loc in items %}
-    <article class="card location-card" data-id="{{ loc.id }}" data-name="{{ loc.name }}"
-      data-rename-url="{{ BASE }}location/update" data-delete-url="{{ BASE }}location/delete">
-      <div class="card-main">
-        <div class="title">
-          <span class="name">{{ loc.name }}</span>
+    <article class="card" data-id="{{ loc.id }}" data-name="{{ loc.name }}" data-rename-url="{{ BASE }}location/update"
+      data-delete-url="{{ BASE }}location/delete">
+      <header class="card-top">
+        <h3 class="title">{{ loc.name }}</h3>
+        <div class="right">
           {% if loc.lot_count is defined %}
-          <span class="badge" title="Nombre de lots">{{ loc.lot_count }}</span>
+          <span class="badge">{{ loc.lot_count }} lot{{ 1 if loc.lot_count == 1 else 's' }}</span>
           {% endif %}
         </div>
-      </div>
-      <div class="card-actions">
-        <button class="btn ghost btn-rename" type="button" aria-label="Renommer">
-          <span class="icon">✏️</span> Modifier
+      </header>
+      <footer class="card-actions">
+        <button class="btn btn-soft btn-rename" type="button">
+          <span class="i i-edit" aria-hidden="true"></span>
+          Modifier
         </button>
-        <button class="btn danger btn-delete" type="button" aria-label="Supprimer">
-          <span class="icon">🗑️</span>
+        <button class="btn btn-danger btn-delete" type="button">
+          <span class="i i-trash" aria-hidden="true"></span>
+          Supprimer
         </button>
-      </div>
+      </footer>
     </article>
     {% endfor %}
   </div>
-</div>
+</section>
 
 <!-- Modale renommage -->
 <dialog id="rename-dialog" class="modal">
   <form id="rename-form" method="post" action="{{ BASE }}location/update">
-    <h3>Renommer l’emplacement</h3>
+    <h3 class="modal-title">Renommer l’emplacement</h3>
     <div class="field">
       <label for="rename-input">Nouveau nom</label>
       <input id="rename-input" name="name" type="text" required />
@@ -93,7 +121,7 @@
     </div>
     <div class="modal-actions">
       <button class="btn" type="button" id="rename-cancel">Annuler</button>
-      <button class="btn primary" type="submit">Enregistrer</button>
+      <button class="btn btn-primary" type="submit">Enregistrer</button>
     </div>
   </form>
 </dialog>
@@ -101,83 +129,165 @@
 <!-- Modale suppression -->
 <dialog id="delete-dialog" class="modal">
   <form id="delete-form" method="post" action="{{ BASE }}location/delete">
-    <h3>Confirmer la suppression</h3>
-    <p>
-      Supprimer <strong id="delete-name"></strong> ?<br />
-      <small class="hint">Les lots présents à cet emplacement seront également supprimés.</small>
-    </p>
+    <h3 class="modal-title">Confirmer la suppression</h3>
+    <p>Supprimer <strong id="delete-name"></strong> ?</p>
+    <p class="hint">Les lots présents à cet emplacement seront également supprimés.</p>
     <input id="delete-hidden" name="location_id" type="hidden" />
     <div class="modal-actions">
       <button class="btn" type="button" id="delete-cancel">Annuler</button>
-      <button class="btn danger" type="submit">Supprimer</button>
+      <button class="btn btn-danger" type="submit">Supprimer</button>
     </div>
   </form>
 </dialog>
 
 <style>
-  /* Styles légers, respect thème HA */
-  .page-header h1 {
-    margin: 0 0 .25rem 0;
+  /* ====== Base visuelle alignée index : cartes, panneaux, chips ====== */
+  :root {
+    --radius: 16px;
+    --gap: .75rem;
+    --pad: .9rem;
+    --border: 1px solid rgba(120, 120, 120, .25);
   }
 
-  .page-header .subtitle {
-    margin: 0 0 1rem 0;
-    opacity: .85;
+  .sr {
+    position: absolute;
+    left: -9999px;
+  }
+
+  .page-header {
+    margin-bottom: .75rem;
+  }
+
+  .page-title {
+    margin: 0;
+    font-weight: 700;
+  }
+
+  .page-sub {
+    margin-top: .25rem;
   }
 
   .hint {
     opacity: .7;
   }
 
-  .toolbar {
-    display: grid;
-    gap: .75rem;
-    grid-template-columns: 1fr minmax(220px, 360px);
-    align-items: center;
+  .panel {
+    border: var(--border);
+    border-radius: var(--radius);
+    padding: var(--pad);
+    background: rgba(255, 255, 255, .03);
     margin-bottom: .75rem;
   }
 
-  .add-form {
-    display: flex;
-    gap: .5rem;
+  /* Ajout express – grid comme l’accueil */
+  .add-grid {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: var(--gap);
+    align-items: end;
   }
 
-  .add-form input {
-    flex: 1;
+  .field {
+    display: grid;
+    gap: .35rem;
   }
 
-  .search input {
+  label {
+    font-size: .9rem;
+    opacity: .9;
+  }
+
+  input[type="text"],
+  input[type="search"] {
     width: 100%;
+    padding: .65rem .8rem;
+    border-radius: 12px;
+    border: var(--border);
+    background: rgba(255, 255, 255, .02);
+    color: inherit;
+  }
+
+  .help {
+    font-size: .8rem;
+    opacity: .7;
   }
 
   .btn {
-    padding: .5rem .8rem;
-    border-radius: .75rem;
-    border: 1px solid var(--divider-color, rgba(128, 128, 128, .25));
+    display: inline-flex;
+    align-items: center;
+    gap: .5rem;
+    padding: .6rem .9rem;
+    border-radius: 12px;
+    border: var(--border);
     background: transparent;
+    color: inherit;
     cursor: pointer;
   }
 
-  .btn.primary {
+  .btn-primary {
     background: var(--primary-color, #3b82f6);
     color: #fff;
     border-color: transparent;
   }
 
-  .btn.danger {
+  .btn-danger {
     background: #7f1d1d;
     color: #fff;
     border-color: transparent;
   }
 
-  .btn.ghost {
-    background: transparent;
+  .btn-soft {
+    background: rgba(255, 255, 255, .06);
   }
 
-  .list-wrapper {
-    width: 100%;
+  .btn-icon {
+    padding: .6rem .7rem;
   }
 
+  .i {
+    display: inline-block;
+    width: 1em;
+    text-align: center;
+  }
+
+  .i-plus::before {
+    content: "＋";
+  }
+
+  .i-edit::before {
+    content: "✏️";
+  }
+
+  .i-trash::before {
+    content: "🗑️";
+  }
+
+  /* Tools */
+  .tools-grid {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: var(--gap);
+    align-items: end;
+  }
+
+  .chip {
+    display: inline-flex;
+    align-items: center;
+    gap: .5rem;
+    padding: .4rem .7rem;
+    border-radius: 999px;
+    border: var(--border);
+    background: rgba(255, 255, 255, .06);
+  }
+
+  .chip .dot {
+    width: .5rem;
+    height: .5rem;
+    border-radius: 50%;
+    background: var(--primary-color, #3b82f6);
+  }
+
+  /* Table desktop */
   .table {
     width: 100%;
     border-collapse: separate;
@@ -188,41 +298,38 @@
     text-align: left;
     font-weight: 600;
     opacity: .9;
-    padding: .5rem .75rem;
+    padding: .5rem .7rem;
   }
 
   .table tbody tr {
-    background: rgba(255, 255, 255, .04);
+    background: rgba(255, 255, 255, .03);
   }
 
   .table tbody td {
-    padding: .6rem .75rem;
-    vertical-align: middle;
+    padding: .7rem .7rem;
   }
 
   .col-actions {
-    width: 260px;
+    width: 280px;
   }
 
   .actions {
     display: flex;
     gap: .5rem;
-    justify-content: flex-start;
-  }
-
-  .name-cell {
-    display: flex;
-    align-items: center;
-    gap: .5rem;
+    justify-content: flex-end;
   }
 
   .badge {
-    font-size: .75rem;
-    padding: .15rem .45rem;
+    display: inline-flex;
+    align-items: center;
+    gap: .35rem;
+    padding: .25rem .55rem;
     border-radius: 999px;
     background: rgba(127, 127, 127, .25);
+    font-size: .85rem;
   }
 
+  /* Cards mobile */
   .cards {
     display: grid;
     grid-template-columns: 1fr;
@@ -230,28 +337,38 @@
   }
 
   .card {
-    border: 1px solid var(--divider-color, rgba(128, 128, 128, .25));
-    border-radius: 1rem;
-    padding: .75rem;
+    border: var(--border);
+    border-radius: var(--radius);
+    padding: var(--pad);
     background: rgba(255, 255, 255, .03);
   }
 
-  .card .title {
+  .card-top {
     display: flex;
     align-items: center;
-    gap: .5rem;
-    font-weight: 600;
+    justify-content: space-between;
+    gap: .75rem;
+  }
+
+  .title {
+    margin: 0;
+    font-size: 1.05rem;
   }
 
   .card-actions {
+    margin-top: .6rem;
     display: flex;
     gap: .5rem;
-    margin-top: .5rem;
+    justify-content: flex-end;
   }
 
-  /* Responsive: cartes en < 900px */
+  /* Responsive */
   @media (max-width: 900px) {
-    .toolbar {
+    .add-grid {
+      grid-template-columns: 1fr;
+    }
+
+    .tools-grid {
       grid-template-columns: 1fr;
     }
 
@@ -274,122 +391,85 @@
     }
   }
 
-  /* Modales natives (<dialog>) */
+  /* Dialogs natifs */
   .modal::backdrop {
     background: rgba(0, 0, 0, .35);
   }
 
   .modal {
     border: none;
-    border-radius: 1rem;
+    border-radius: 20px;
     padding: 1rem;
-    width: min(520px, 90vw);
+    width: min(520px, 92vw);
     background: var(--card-background-color, #111827);
     color: inherit;
   }
 
-  .modal h3 {
-    margin: 0 0 .5rem 0;
-  }
-
-  .modal .field {
-    display: grid;
-    gap: .35rem;
-    margin: .5rem 0 1rem;
+  .modal-title {
+    margin: 0 0 .4rem;
   }
 
   .modal-actions {
     display: flex;
     gap: .5rem;
     justify-content: flex-end;
+    margin-top: .75rem;
   }
 </style>
 
 <script>
-  // Recherche, modales de renommage et suppression — vanilla JS
   (function () {
     const $ = (s, p = document) => p.querySelector(s);
     const $$ = (s, p = document) => Array.from(p.querySelectorAll(s));
 
-    // Recherche live sur table + cartes
-    const searchInput = $('#search-input');
-    function applyFilter(q) {
-      const norm = (t) => t && t.normalize('NFD').replace(/\p{Diacritic}/gu, '').toLowerCase();
-      const query = norm(q || '');
-      const rows = $$('#locations-body .location-row');
-      const cards = $$('#locations-cards .location-card');
+    // Recherche unifiée
+    const search = $('#search-input');
+    const norm = (t) => (t || '').normalize('NFD').replace(/\\p{Diacritic}/gu, '').toLowerCase();
+    function filter(q) {
+      const N = norm(q);
+      const rows = $$('#locations-body .row');
+      const cards = $$('#locations-cards .card');
       [...rows, ...cards].forEach(el => {
-        const name = norm(el.dataset.name || '');
-        el.style.display = name && name.includes(query) ? '' : 'none';
+        const name = norm(el.dataset.name);
+        el.style.display = name.includes(N) ? '' : 'none';
       });
     }
-    if (searchInput) {
-      searchInput.addEventListener('input', (e) => applyFilter(e.target.value));
-    }
+    search && search.addEventListener('input', e => filter(e.target.value));
 
     // Renommage
-    const renameDialog = $('#rename-dialog');
-    const renameForm = $('#rename-form');
-    const renameInput = $('#rename-input');
-    const renameHidden = $('#rename-hidden');
-    const renameCancel = $('#rename-cancel');
-
-    function openRename(el) {
-      const name = el.dataset.name;
-      const id = el.dataset.id;
-      const url = el.dataset.renameUrl || '{{ BASE }}location/update';
-      renameInput.value = name || '';
-      renameHidden.value = id || '';
-      renameForm.setAttribute('action', url);
-      renameDialog.showModal();
-      setTimeout(() => renameInput.focus(), 50);
+    const dlgR = $('#rename-dialog'), frmR = $('#rename-form');
+    const inpR = $('#rename-input'), hidR = $('#rename-hidden'), btnRC = $('#rename-cancel');
+    function openRename(host) {
+      inpR.value = host.dataset.name || '';
+      hidR.value = host.dataset.id || '';
+      frmR.setAttribute('action', host.dataset.renameUrl || '{{ BASE }}location/update');
+      dlgR.showModal(); setTimeout(() => inpR.focus(), 50);
     }
-
-    $$('.btn-rename').forEach(btn => {
-      btn.addEventListener('click', (e) => {
-        const host = e.target.closest('[data-id]');
-        if (host) openRename(host);
-      });
-    });
-
-    renameCancel && renameCancel.addEventListener('click', () => renameDialog.close());
+    $$('.btn-rename').forEach(b => b.addEventListener('click', e => {
+      const host = e.target.closest('[data-id]'); if (host) openRename(host);
+    }));
+    btnRC && btnRC.addEventListener('click', () => dlgR.close());
 
     // Suppression
-    const deleteDialog = $('#delete-dialog');
-    const deleteForm = $('#delete-form');
-    const deleteName = $('#delete-name');
-    const deleteHidden = $('#delete-hidden');
-    const deleteCancel = $('#delete-cancel');
-
-    function openDelete(el) {
-      const name = el.dataset.name;
-      const id = el.dataset.id;
-      const url = el.dataset.deleteUrl || '{{ BASE }}location/delete';
-      deleteName.textContent = name || '';
-      deleteHidden.value = id || '';
-      deleteForm.setAttribute('action', url);
-      deleteDialog.showModal();
+    const dlgD = $('#delete-dialog'), frmD = $('#delete-form');
+    const nameD = $('#delete-name'), hidD = $('#delete-hidden'), btnDC = $('#delete-cancel');
+    function openDelete(host) {
+      nameD.textContent = host.dataset.name || '';
+      hidD.value = host.dataset.id || '';
+      frmD.setAttribute('action', host.dataset.deleteUrl || '{{ BASE }}location/delete');
+      dlgD.showModal();
     }
+    $$('.btn-delete').forEach(b => b.addEventListener('click', e => {
+      const host = e.target.closest('[data-id]'); if (host) openDelete(host);
+    }));
+    btnDC && btnDC.addEventListener('click', () => dlgD.close());
 
-    $$('.btn-delete').forEach(btn => {
-      btn.addEventListener('click', (e) => {
-        const host = e.target.closest('[data-id]');
-        if (host) openDelete(host);
-      });
-    });
-
-    deleteCancel && deleteCancel.addEventListener('click', () => deleteDialog.close());
-
-    // Soumissions: petit “anti double-clic”
-    [renameForm, deleteForm, $('#add-form')].forEach(form => {
-      if (!form) return;
-      form.addEventListener('submit', () => {
-        const submit = form.querySelector('button[type="submit"]');
-        if (submit) {
-          submit.disabled = true;
-          submit.textContent = submit.textContent + '…';
-        }
-      });
+    // Anti double-submit
+    [frmR, frmD, $('#add-form')].forEach(f => {
+      if (!f) return;
+      f.addEventListener('submit', () => {
+        const s = f.querySelector('button[type="submit"]'); if (s) { s.disabled = true; s.textContent = s.textContent + '…'; }
+      })
     });
   })();
 </script>
