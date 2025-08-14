@@ -441,13 +441,13 @@
     </aside>
 
     <main>
-      <header>
-        <button class="hamburger" id="hamburger" aria-label="Ouvrir le menu"
-          aria-expanded="false"><span></span><span></span><span></span></button>
-
-        {# ===== Titre dynamique : Domovra — <Nom de page> ===== #}
+      <header
+        style="display:flex;align-items:center;justify-content:space-between;gap:16px;padding:10px 16px;border-bottom:1px solid #2a2f36;position:sticky;top:0;z-index:40;background:inherit">
+        <div style="display:flex;align-items:center;gap:8px">
+          <button class="hamburger" id="hamburger" aria-label="Ouvrir le menu"
+            aria-expanded="false"><span></span><span></span><span></span></button>
           {% set seg = request.path.replace(BASE, '').strip('/') %}
-          <h1 class="app-title">
+          <h1 class="app-title" style="margin:0">
             Domovra —
             {% if seg == '' %}
             Accueil
@@ -467,20 +467,21 @@
             {{ seg|replace('-', ' ')|capitalize }}
             {% endif %}
           </h1>
+        </div>
 
-          {# ===== Chips stats à droite (vertical) si les données sont disponibles ===== #}
-          <div class="header-chips">
-            {% if products is defined and lots is defined %}
-            {% set soon = lots|selectattr('status','equalto','yellow')|list %}
-            {% set urg = lots|selectattr('status','equalto','red')|list %}
-            <span class="chip">📦 Produits : <b>{{ products|length }}</b></span>
-            <span class="chip">🧊 Lots : <b>{{ lots|length }}</b></span>
-            <span class="chip">⏰ Bientôt : <b>{{ soon|length }}</b></span>
-            <span class="chip">⚠️ Urgents : <b>{{ urg|length }}</b></span>
-            {% endif %}
-            {% block header_right %}{% endblock %}
-          </div>
+        <div class="header-chips" style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+          {% if products is defined and lots is defined %}
+          {% set soon = lots|selectattr('status','equalto','yellow')|list %}
+          {% set urg = lots|selectattr('status','equalto','red')|list %}
+          <span class="chip">📦 Produits : <b>{{ products|length }}</b></span>
+          <span class="chip">🧊 Lots : <b>{{ lots|length }}</b></span>
+          <span class="chip">⏰ Bientôt : <b>{{ soon|length }}</b></span>
+          <span class="chip">⚠️ Urgents : <b>{{ urg|length }}</b></span>
+          {% endif %}
+          {% block header_right %}{% endblock %}
+        </div>
       </header>
+
 
       <section class="page">
         {% block content %}{% endblock %}
