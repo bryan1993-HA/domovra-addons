@@ -372,6 +372,16 @@ def lot_delete_action(request: Request, lot_id: int = Form(...)):
     log_event("lot.delete", {"lot_id": lot_id})
     return RedirectResponse(ingress_base(request)+"lots", status_code=303, headers={"Cache-Control":"no-store"})
 
+# ---------------- Page Support (Ko‑fi)
+@app.get("/support", response_class=HTMLResponse)
+def support_page(request: Request):
+    base = ingress_base(request)
+    logger.info("GET /support (BASE=%s)", base)
+    return render("support.html",
+                  BASE=base,
+                  page="support",
+                  request=request)
+
 # ---------------- Fallback
 @app.get("/{path:path}", include_in_schema=False)
 def fallback(request: Request, path: str):
