@@ -27,12 +27,6 @@
     flex-wrap: wrap;
   }
 
-  .chips {
-    display: flex;
-    gap: 8px;
-    flex-wrap: wrap;
-  }
-
   .chip {
     background: var(--chip);
     border: 1px solid var(--border);
@@ -76,6 +70,66 @@
     color: #02222a;
     font-weight: 600;
     cursor: pointer;
+  }
+
+  /* Champs + labels + aides */
+  .field {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    min-width: 160px;
+  }
+
+  .label {
+    font-size: 12px;
+    color: var(--muted);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .help {
+    display: inline-grid;
+    place-items: center;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    font-size: 12px;
+    cursor: help;
+    background: #1f2735;
+    border: 1px solid var(--border);
+    color: #cfe3ff;
+    position: relative;
+    line-height: 1;
+  }
+
+  .help::before {
+    content: "?";
+    font-weight: 700;
+  }
+
+  .help:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+
+  /* Infobulle (CSS only) */
+  .help:hover::after,
+  .help:focus-visible::after {
+    content: attr(data-tip);
+    position: absolute;
+    left: 50%;
+    bottom: 100%;
+    transform: translate(-50%, -8px);
+    background: #0f1320;
+    color: #e5e7eb;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 6px 8px;
+    white-space: normal;
+    width: max-content;
+    max-width: 280px;
+    z-index: 60;
   }
 
   table {
@@ -136,24 +190,63 @@
 {% block content %}
 <div class="wrap">
 
-  <!-- Ajout express (une seule ligne) -->
+  <!-- Ajout express (avec labels + bulles d'aide) -->
   <div class="card">
     <div class="title">
       <h2>Ajout express</h2><span class="muted">→ produit existant → ajout au stock</span>
     </div>
-    <form method="post" action="{{ BASE }}lot/add" class="row">
-      <select name="product_id" required style="min-width:180px">
-        <option value="">Produit…</option>
-        {% for p in products %}<option value="{{ p.id }}">{{ p.name }}</option>{% endfor %}
-      </select>
-      <select name="location_id" required style="min-width:160px">
-        <option value="">Emplacement…</option>
-        {% for l in locations %}<option value="{{ l.id }}">{{ l.name }}</option>{% endfor %}
-      </select>
-      <input type="number" name="qty" value="1" min="0.1" step="0.1" placeholder="Qté" style="max-width:110px">
-      <input type="date" name="best_before" title="À consommer avant" style="max-width:170px">
-      <button class="primary" style="flex:0 0 160px">＋ Ajouter au stock</button>
+
+    <form method="post" action="{{ BASE }}lot/add" class="row" style="align-items:flex-end">
+      <!-- Produit -->
+      <div class="field" style="flex:2 1 220px">
+        <div class="label">
+          Produit
+          <span class="help" tabindex="0"
+            data-tip="Choisis un produit déjà créé. Utilise « + Nouveau produit » s’il n’existe pas encore."></span>
+        </div>
+        <select name="product_id" required>
+          <option value="">Produit…</option>
+          {% for p in products %}<option value="{{ p.id }}">{{ p.name }}</option>{% endfor %}
+        </select>
+      </div>
+
+      <!-- Emplacement -->
+      <div class="field" style="flex:2 1 200px">
+        <div class="label">
+          Emplacement
+          <span class="help" tabindex="0"
+            data-tip="Où tu ranges cet article (ex. Frigo, Congélateur, Placard). Tu peux créer un nouvel emplacement."></span>
+        </div>
+        <select name="location_id" required>
+          <option value="">Emplacement…</option>
+          {% for l in locations %}<option value="{{ l.id }}">{{ l.name }}</option>{% endfor %}
+        </select>
+      </div>
+
+      <!-- Quantité -->
+      <div class="field" style="flex:0 1 120px; max-width:140px">
+        <div class="label">
+          Quantité
+          <span class="help" tabindex="0"
+            data-tip="Valeur par défaut : 1. Utilise des décimales pour des quantités partielles (ex. 0,5). L’unité suit celle du produit."></span>
+        </div>
+        <input type="number" name="qty" value="1" min="0.1" step="0.1">
+      </div>
+
+      <!-- Date de péremption / à consommer avant -->
+      <div class="field" style="flex:0 1 180px; max-width:200px">
+        <div class="label">
+          À consommer avant
+          <span class="help" tabindex="0"
+            data-tip="Date limite souhaitée. Optionnel. Sert à calculer les états OK / Bientôt / Urgent selon tes paramètres."></span>
+        </div>
+        <input type="date" name="best_before">
+      </div>
+
+      <!-- Bouton -->
+      <button class="primary" style="flex:0 0 180px; height:44px">＋ Ajouter au stock</button>
     </form>
+
     <div class="row" style="margin-top:8px">
       <a class="chip" href="{{ BASE }}products">+ Nouveau produit</a>
       <a class="chip" href="{{ BASE }}locations">+ Nouvel emplacement</a>
