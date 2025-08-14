@@ -108,31 +108,46 @@
       min-width: 0;
     }
 
-    /* ===== Header ===== */
+    /* ===== Header (corrigé mobile sticky + chips) ===== */
     header {
+      position: sticky;
+      top: 0;
+      z-index: 1000;
       display: flex;
       align-items: center;
       justify-content: space-between;
-      gap: 16px;
+      gap: 12px;
       padding: 10px 16px;
       border-bottom: 1px solid #2a2f36;
-      position: sticky;
-      top: 0;
-      z-index: 40;
       background: inherit;
+    }
+
+    .header-left {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      min-width: 0;
     }
 
     .app-title {
       margin: 0;
       font-size: 1.1rem;
       opacity: .9;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
     }
 
-    /* Chips du header (horizontales à droite) */
+    /* Chips à droite */
+    .header-right {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      min-width: 0;
+    }
+
     .header-chips {
       display: flex;
-      flex-direction: row;
-      align-items: center;
       gap: 8px;
       flex-wrap: wrap;
     }
@@ -142,13 +157,14 @@
       border: 1px solid #242932;
       border-radius: 999px;
       padding: 6px 10px;
+      white-space: nowrap;
     }
 
     .chip b {
       font-weight: 700;
     }
 
-    /* Menu */
+    /* Menu gauche */
     .menu {
       display: grid;
       gap: 8px;
@@ -181,7 +197,7 @@
       opacity: .9;
     }
 
-    /* Cartes / grille / formulaires / tables */
+    /* Cartes / tables */
     .page {
       padding: 16px;
     }
@@ -213,7 +229,7 @@
       cursor: pointer;
     }
 
-    /* >>> Correctif: couleurs du menu déroulant (liste des options) en sombre/clair */
+    /* Corrige la liste ouverte des <select> en sombre/clair */
     option,
     optgroup {
       background: #0f1320;
@@ -245,7 +261,7 @@
       background: #121620;
     }
 
-    /* Responsive */
+    /* Responsive grilles/rows */
     .grid {
       display: grid;
       grid-template-columns: repeat(12, 1fr);
@@ -264,7 +280,7 @@
 
     @media (max-width:768px) {
       .card {
-        grid-column: 1 / -1;
+        grid-column: 1/-1;
       }
     }
 
@@ -334,7 +350,7 @@
       }
     }
 
-    /* Hamburger (mobile seulement) */
+    /* Hamburger */
     .hamburger {
       display: inline-grid;
       place-content: center;
@@ -360,7 +376,7 @@
       }
     }
 
-    /* Variantes CLAIR */
+    /* Variantes clair */
     html[data-theme="light"] aside {
       background: #f7f7f8;
       border-right: 1px solid #e5e7eb;
@@ -404,10 +420,6 @@
       border: 1px solid #d1d5db;
     }
 
-    html[data-theme="light"] button:hover {
-      filter: brightness(0.98);
-    }
-
     html[data-theme="light"] th,
     html[data-theme="light"] td {
       border: 1px solid #e5e7eb;
@@ -425,6 +437,36 @@
     html[data-theme="light"] .chip {
       background: #ffffff;
       border: 1px solid #e5e7eb;
+    }
+
+    /* ===== Ajustements MOBILE ===== */
+    @media (max-width:640px) {
+      header {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 6px;
+      }
+
+      .app-title {
+        font-size: 1rem;
+      }
+
+      .header-right {
+        width: 100%;
+      }
+
+      .header-chips {
+        display: inline-flex;
+        flex-wrap: nowrap;
+        gap: 6px;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        padding-bottom: 4px;
+      }
+
+      .chip {
+        padding: 6px 8px;
+      }
     }
   </style>
 
@@ -455,12 +497,12 @@
 
     <main>
       <header>
-        <div style="display:flex;align-items:center;gap:8px">
+        <div class="header-left">
           <button class="hamburger" id="hamburger" aria-label="Ouvrir le menu"
             aria-expanded="false"><span></span><span></span><span></span></button>
           {# Titre dynamique : Domovra — <Nom de page> #}
             {% set seg = request.path.replace(BASE, '').strip('/') %}
-            <h1 class="app-title" style="margin:0">
+            <h1 class="app-title">
               Domovra —
               {% if seg == '' %}
               Accueil
@@ -482,16 +524,18 @@
             </h1>
         </div>
 
-        <div class="header-chips">
-          {% if products is defined and lots is defined %}
-          {% set soon = lots|selectattr('status','equalto','yellow')|list %}
-          {% set urg = lots|selectattr('status','equalto','red')|list %}
-          <span class="chip">📦 Produits : <b>{{ products|length }}</b></span>
-          <span class="chip">🧊 Stocks : <b>{{ lots|length }}</b></span>
-          <span class="chip">⏰ Bientôt : <b>{{ soon|length }}</b></span>
-          <span class="chip">⚠️ Urgents : <b>{{ urg|length }}</b></span>
-          {% endif %}
-          {% block header_right %}{% endblock %}
+        <div class="header-right">
+          <div class="header-chips">
+            {% if products is defined and lots is defined %}
+            {% set soon = lots|selectattr('status','equalto','yellow')|list %}
+            {% set urg = lots|selectattr('status','equalto','red')|list %}
+            <span class="chip">📦 Produits : <b>{{ products|length }}</b></span>
+            <span class="chip">🧊 Stocks : <b>{{ lots|length }}</b></span>
+            <span class="chip">⏰ Bientôt : <b>{{ soon|length }}</b></span>
+            <span class="chip">⚠️ Urgents : <b>{{ urg|length }}</b></span>
+            {% endif %}
+            {% block header_right %}{% endblock %}
+          </div>
         </div>
       </header>
 

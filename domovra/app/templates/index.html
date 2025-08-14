@@ -72,7 +72,7 @@
     cursor: pointer;
   }
 
-  /* Champs + labels + aides */
+  /* champs + labels + aides */
   .field {
     display: flex;
     flex-direction: column;
@@ -113,7 +113,6 @@
     outline-offset: 2px;
   }
 
-  /* Infobulle (CSS only) */
   .help:hover::after,
   .help:focus-visible::after {
     content: attr(data-tip);
@@ -177,11 +176,21 @@
     color: var(--muted);
   }
 
+  /* hover ligne table */
+  tbody tr:hover {
+    background-color: rgba(255, 255, 255, .03);
+  }
+
+  /* Mobile */
   @media (max-width:900px) {
 
     .row>*,
     .row button {
       flex: 1;
+    }
+
+    button.primary {
+      width: 100%;
     }
   }
 </style>
@@ -190,18 +199,15 @@
 {% block content %}
 <div class="wrap">
 
-  <!-- Ajout express (avec labels + bulles d'aide) -->
+  <!-- Ajout express -->
   <div class="card">
     <div class="title">
       <h2>Ajout express</h2><span class="muted">→ produit existant → ajout au stock</span>
     </div>
 
     <form method="post" action="{{ BASE }}lot/add" class="row" style="align-items:flex-end">
-      <!-- Produit -->
       <div class="field" style="flex:2 1 220px">
-        <div class="label">
-          Produit
-          <span class="help" tabindex="0"
+        <div class="label">Produit <span class="help" tabindex="0"
             data-tip="Choisis un produit déjà créé. Utilise « + Nouveau produit » s’il n’existe pas encore."></span>
         </div>
         <select name="product_id" required>
@@ -210,11 +216,8 @@
         </select>
       </div>
 
-      <!-- Emplacement -->
       <div class="field" style="flex:2 1 200px">
-        <div class="label">
-          Emplacement
-          <span class="help" tabindex="0"
+        <div class="label">Emplacement <span class="help" tabindex="0"
             data-tip="Où tu ranges cet article (ex. Frigo, Congélateur, Placard). Tu peux créer un nouvel emplacement."></span>
         </div>
         <select name="location_id" required>
@@ -223,27 +226,20 @@
         </select>
       </div>
 
-      <!-- Quantité -->
       <div class="field" style="flex:0 1 120px; max-width:140px">
-        <div class="label">
-          Quantité
-          <span class="help" tabindex="0"
+        <div class="label">Quantité <span class="help" tabindex="0"
             data-tip="Valeur par défaut : 1. Utilise des décimales pour des quantités partielles (ex. 0,5). L’unité suit celle du produit."></span>
         </div>
         <input type="number" name="qty" value="1" min="0.1" step="0.1">
       </div>
 
-      <!-- Date de péremption / à consommer avant -->
       <div class="field" style="flex:0 1 180px; max-width:200px">
-        <div class="label">
-          À consommer avant
-          <span class="help" tabindex="0"
+        <div class="label">À consommer avant <span class="help" tabindex="0"
             data-tip="Date limite souhaitée. Optionnel. Sert à calculer les états OK / Bientôt / Urgent selon tes paramètres."></span>
         </div>
         <input type="date" name="best_before">
       </div>
 
-      <!-- Bouton -->
       <button class="primary" style="flex:0 0 180px; height:44px">＋ Ajouter au stock</button>
     </form>
 
@@ -258,50 +254,52 @@
     <div class="title">
       <h2>À consommer (Top 8)</h2>
     </div>
-    <table>
-      <thead>
-        <tr>
-          <th>Produit</th>
-          <th>Emp.</th>
-          <th>Qté</th>
-          <th>Avant</th>
-          <th>État</th>
-          <th style="text-align:right">Action</th>
-        </tr>
-      </thead>
-      <tbody>
-        {% if lots %}
-        {% set sorted = lots|sort(attribute='best_before') %}
-        {% set shown = 0 %}
-        {% for it in sorted %}
-        {% if shown < 8 %} <tr>
-          <td>{{ it.product }}</td>
-          <td class="muted">{{ it.location }}</td>
-          <td>{{ '%.2f'|format(it.qty)|trim('0')|trim('.') }} {{ it.unit }}</td>
-          <td>{{ it.best_before or '—' }}</td>
-          <td>
-            {% if it.status == 'red' %}<span class="pill danger">Urgent</span>
-            {% elif it.status == 'yellow' %}<span class="pill warn">Bientôt</span>
-            {% else %}<span class="pill ok">OK</span>{% endif %}
-          </td>
-          <td style="text-align:right">
-            <form method="post" action="{{ BASE }}lot/consume" class="row" style="justify-content:flex-end;gap:8px">
-              <input type="hidden" name="lot_id" value="{{ it.id }}">
-              <input type="number" name="qty" value="1" min="0.1" step="0.1" style="max-width:90px">
-              <button class="primary" style="flex:0 0 120px">Consommer</button>
-            </form>
-          </td>
-          </tr>
-          {% set shown = shown + 1 %}
-          {% endif %}
-          {% endfor %}
-          {% else %}
+    <div class="table-responsive">
+      <table>
+        <thead>
           <tr>
-            <td colspan="6" class="muted">Aucun lot enregistré.</td>
+            <th>Produit</th>
+            <th>Emp.</th>
+            <th>Qté</th>
+            <th>Avant</th>
+            <th>État</th>
+            <th style="text-align:right">Action</th>
           </tr>
-          {% endif %}
-      </tbody>
-    </table>
+        </thead>
+        <tbody>
+          {% if lots %}
+          {% set sorted = lots|sort(attribute='best_before') %}
+          {% set shown = 0 %}
+          {% for it in sorted %}
+          {% if shown < 8 %} <tr>
+            <td>{{ it.product }}</td>
+            <td class="muted">{{ it.location }}</td>
+            <td>{{ '%.2f'|format(it.qty)|trim('0')|trim('.') }} {{ it.unit }}</td>
+            <td>{{ it.best_before or '—' }}</td>
+            <td>
+              {% if it.status == 'red' %}<span class="pill danger">Urgent</span>
+              {% elif it.status == 'yellow' %}<span class="pill warn">Bientôt</span>
+              {% else %}<span class="pill ok">OK</span>{% endif %}
+            </td>
+            <td style="text-align:right">
+              <form method="post" action="{{ BASE }}lot/consume" class="row" style="justify-content:flex-end;gap:8px">
+                <input type="hidden" name="lot_id" value="{{ it.id }}">
+                <input type="number" name="qty" value="1" min="0.1" step="0.1" style="max-width:90px">
+                <button class="primary" style="flex:0 0 120px">Consommer</button>
+              </form>
+            </td>
+            </tr>
+            {% set shown = shown + 1 %}
+            {% endif %}
+            {% endfor %}
+            {% else %}
+            <tr>
+              <td colspan="6" class="muted">Aucun lot enregistré.</td>
+            </tr>
+            {% endif %}
+        </tbody>
+      </table>
+    </div>
     <div class="row" style="margin-top:8px;justify-content:flex-end">
       <a class="chip" href="{{ BASE }}lots">Voir tout</a>
     </div>
