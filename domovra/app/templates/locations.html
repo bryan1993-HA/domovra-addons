@@ -2,60 +2,311 @@
 {% block title %}Domovra — Emplacements{% endblock %}
 
 {% block content %}
+<div class="page-header">
   <h1>Emplacements</h1>
-  <p class="muted">Ajouter, renommer ou supprimer des emplacements. Supprimer enlève aussi les lots présents à cet endroit.</p>
+  <p class="subtitle">
+    Ajouter, renommer ou supprimer des emplacements.
+    <span class="hint">Supprimer enlève aussi les lots présents à cet endroit.</span>
+  </p>
+</div>
 
-  <div class="card">
-    <form method="post" action="{{ BASE }}location/add" style="display:flex; gap:.5rem;">
-      <input name="name" placeholder="ex. Bac 1, Frigo, Placard haut" required>
-      <button>Ajouter</button>
-    </form>
+<!-- Barre d’outils: Ajout + Recherche -->
+<div class="toolbar">
+  <form id="add-form" class="add-form" method="post" action="{{ url_add or '/locations/add' }}" autocomplete="off">
+    <input id="add-name" name="name" type="text" required placeholder="ex. Bac 1, Frigo, Placard haut"
+      aria-label="Nom de l’emplacement" />
+    <button class="btn primary" type="submit">Ajouter</button>
+  </form>
+
+  <div class="search">
+    <input id="search-input" type="search" placeholder="Rechercher un emplacement…" aria-label="Recherche" />
   </div>
+</div>
 
-  <table>
-    <thead><tr><th>Nom</th><th>Actions</th></tr></thead>
-    <tbody>
-      {% for l in items %}
+<!-- Liste: tableau desktop / cartes mobile -->
+<div class="list-wrapper">
+  <!-- TABLEAU (desktop) -->
+  <table class="table desktable" aria-label="Liste des emplacements">
+    <thead>
       <tr>
-        <td>{{ l.name }}</td>
-        <td>
-          <button class="edit-btn" data-id="{{ l.id }}" style="padding:.35rem .6rem;">✏️ Modifier</button>
-          <form method="post" action="{{ BASE }}location/delete" onsubmit="return confirm('Supprimer l\\'emplacement « {{ l.name }} » ?\\nTous les lots à cet emplacement seront supprimés.');" style="display:inline">
-            <input type="hidden" name="location_id" value="{{ l.id }}">
-            <button title="Supprimer" aria-label="Supprimer" style="padding:.35rem .6rem; border:1px solid #5a1b1b; background:#3a0f0f; color:#ffb4b4; border-radius:8px;">🗑️</button>
-          </form>
+        <th class="col-name">Nom</th>
+        <th class="col-actions">Actions</th>
+      </tr>
+    </thead>
+    <tbody id="locations-body">
+      {% for loc in locations %}
+      <tr class="location-row" data-id="{{ loc.id }}" data-name="{{ loc.name }}"
+        data-rename-url="{{ loc.rename_url or ('/locations/' ~ loc.id ~ '/rename') }}"
+        data-delete-url="{{ loc.delete_url or ('/locations/' ~ loc.id ~ '/delete') }}">
+        <td class="name-cell">
+          <span class="name">{{ loc.name }}</span>
+          {% if loc.lot_count is defined %}
+          <span class="badge" title="Nombre de lots">{{ loc.lot_count }}</span>
+          {% endif %}
+        </td>
+        <td class="actions">
+          <button class="btn ghost btn-rename" type="button" aria-label="Renommer">
+            <span class="icon">✏️</span> Modifier
+          </button>
+          <button class="btn danger btn-delete" type="button" aria-label="Supprimer">
+            <span class="icon">🗑️</span>
+          </button>
         </td>
       </tr>
-      <tr class="edit-row" id="edit-{{ l.id }}" style="display:none;">
-        <td colspan="2">
-          <form method="post" action="{{ BASE }}location/update" class="row" style="gap:.5rem; align-items:center;">
-            <input type="hidden" name="location_id" value="{{ l.id }}">
-            <input name="name" value="{{ l.name }}" required style="flex:1;">
-            <button style="flex:0;">💾 Enregistrer</button>
-            <button type="button" class="cancel-btn" data-id="{{ l.id }}" style="flex:0; background:#2b2f36;">Annuler</button>
-          </form>
-        </td>
-      </tr>
-      {% else %}
-      <tr><td colspan="2" class="muted">Aucun emplacement pour l’instant.</td></tr>
       {% endfor %}
     </tbody>
   </table>
 
-  <script>
-    document.querySelectorAll('.edit-btn').forEach(btn=>{
-      btn.addEventListener('click', ()=>{
-        const id = btn.dataset.id;
-        const row = document.getElementById('edit-'+id);
-        row.style.display = (row.style.display==='none'||!row.style.display)?'table-row':'none';
-      });
-    });
-    document.querySelectorAll('.cancel-btn').forEach(btn=>{
-      btn.addEventListener('click', ()=>{
-        const id = btn.dataset.id;
-        const row = document.getElementById('edit-'+id);
-        if(row) row.style.display='none';
-      });
-    });
-  </script>
+  <!-- CARTES (mobile) -->
+  <div class="cards mobcards" id="locations-cards" aria-label="Liste des emplacements (cartes)">
+    {% for loc in locations %}
+    <article class="card location-card" data-id="{{ loc.id }}" data-name="{{ loc.name }}"
+      data-rename-url="{{ loc.rename_url or ('/locations/' ~ loc.id ~ '/rename') }}"
+      data-delete-url="{{ loc.delete_url or ('/locations/' ~ loc.id ~ '/delete') }}">
+      <div class="card-main">
+        <div class="title">
+          <span class="name">{{ loc.name }}</span>
+          {% if loc.lot_count is defined %}
+          <span class="badge" title="Nombre de lots">{{ loc.lot_count }}</span>
+          {% endif %}
+        </div>
+      </div>
+      <div class="card-actions">
+        <button class="btn ghost btn-rename" type="button" aria-label="Renommer">
+          <span class="icon">✏️</span> Modifier
+        </button>
+        <button class="btn danger btn-delete" type="button" aria-label="Supprimer">
+          <span class="icon">🗑️</span>
+        </button>
+      </div>
+    </article>
+    {% endfor %}
+  </div>
+</div>
+
+<!-- Modale renommage -->
+<dialog id="rename-dialog" class="modal">
+  <form id="rename-form" method="post">
+    <h3>Renommer l’emplacement</h3>
+    <div class="field">
+      <label for="rename-input">Nouveau nom</label>
+      <input id="rename-input" name="name" type="text" required />
+      <input id="rename-hidden" name="id" type="hidden" />
+    </div>
+    <div class="modal-actions">
+      <button class="btn" type="button" id="rename-cancel">Annuler</button>
+      <button class="btn primary" type="submit">Enregistrer</button>
+    </div>
+  </form>
+</dialog>
+
+<!-- Modale suppression -->
+<dialog id="delete-dialog" class="modal">
+  <form id="delete-form" method="post">
+    <h3>Confirmer la suppression</h3>
+    <p>
+      Supprimer <strong id="delete-name"></strong> ?<br />
+      <small class="hint">Les lots présents à cet emplacement seront également supprimés.</small>
+    </p>
+    <input id="delete-hidden" name="id" type="hidden" />
+    <div class="modal-actions">
+      <button class="btn" type="button" id="delete-cancel">Annuler</button>
+      <button class="btn danger" type="submit">Supprimer</button>
+    </div>
+  </form>
+</dialog>
+
+<link rel="stylesheet" href="{{ url_for('static', path='/css/locations.css') }}">
+<script defer src="{{ url_for('static', path='/js/locations.js') }}"></script>
+
+<style>
+  /* Styles légers, respect thème HA */
+  .page-header h1 {
+    margin: 0 0 .25rem 0;
+  }
+
+  .page-header .subtitle {
+    margin: 0 0 1rem 0;
+    opacity: .85;
+  }
+
+  .hint {
+    opacity: .7;
+  }
+
+  .toolbar {
+    display: grid;
+    gap: .75rem;
+    grid-template-columns: 1fr minmax(220px, 360px);
+    align-items: center;
+    margin-bottom: .75rem;
+  }
+
+  .add-form {
+    display: flex;
+    gap: .5rem;
+  }
+
+  .add-form input {
+    flex: 1;
+  }
+
+  .search input {
+    width: 100%;
+  }
+
+  .btn {
+    padding: .5rem .8rem;
+    border-radius: .75rem;
+    border: 1px solid var(--divider-color, rgba(128, 128, 128, .25));
+    background: transparent;
+    cursor: pointer;
+  }
+
+  .btn.primary {
+    background: var(--primary-color, #3b82f6);
+    color: #fff;
+    border-color: transparent;
+  }
+
+  .btn.danger {
+    background: #7f1d1d;
+    color: #fff;
+    border-color: transparent;
+  }
+
+  .btn.ghost {
+    background: transparent;
+  }
+
+  .list-wrapper {
+    width: 100%;
+  }
+
+  .table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0 8px;
+  }
+
+  .table thead th {
+    text-align: left;
+    font-weight: 600;
+    opacity: .9;
+    padding: .5rem .75rem;
+  }
+
+  .table tbody tr {
+    background: rgba(255, 255, 255, .04);
+  }
+
+  .table tbody td {
+    padding: .6rem .75rem;
+    vertical-align: middle;
+  }
+
+  .col-actions {
+    width: 260px;
+  }
+
+  .actions {
+    display: flex;
+    gap: .5rem;
+    justify-content: flex-start;
+  }
+
+  .name-cell {
+    display: flex;
+    align-items: center;
+    gap: .5rem;
+  }
+
+  .badge {
+    font-size: .75rem;
+    padding: .15rem .45rem;
+    border-radius: 999px;
+    background: rgba(127, 127, 127, .25);
+  }
+
+  .cards {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: .75rem;
+  }
+
+  .card {
+    border: 1px solid var(--divider-color, rgba(128, 128, 128, .25));
+    border-radius: 1rem;
+    padding: .75rem;
+    background: rgba(255, 255, 255, .03);
+  }
+
+  .card .title {
+    display: flex;
+    align-items: center;
+    gap: .5rem;
+    font-weight: 600;
+  }
+
+  .card-actions {
+    display: flex;
+    gap: .5rem;
+    margin-top: .5rem;
+  }
+
+  /* Responsive: cartes en < 900px */
+  @media (max-width: 900px) {
+    .toolbar {
+      grid-template-columns: 1fr;
+    }
+
+    .desktable {
+      display: none;
+    }
+
+    .mobcards {
+      display: grid;
+    }
+  }
+
+  @media (min-width: 901px) {
+    .desktable {
+      display: table;
+    }
+
+    .mobcards {
+      display: none;
+    }
+  }
+
+  /* Modales natives (<dialog>) */
+  .modal::backdrop {
+    background: rgba(0, 0, 0, .35);
+  }
+
+  .modal {
+    border: none;
+    border-radius: 1rem;
+    padding: 1rem;
+    width: min(520px, 90vw);
+    background: var(--card-background-color, #111827);
+    color: inherit;
+  }
+
+  .modal h3 {
+    margin: 0 0 .5rem 0;
+  }
+
+  .modal .field {
+    display: grid;
+    gap: .35rem;
+    margin: .5rem 0 1rem;
+  }
+
+  .modal-actions {
+    display: flex;
+    gap: .5rem;
+    justify-content: flex-end;
+  }
+</style>
 {% endblock %}
