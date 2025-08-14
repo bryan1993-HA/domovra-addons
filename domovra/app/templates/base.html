@@ -487,7 +487,7 @@
           {% set soon = lots|selectattr('status','equalto','yellow')|list %}
           {% set urg = lots|selectattr('status','equalto','red')|list %}
           <span class="chip">📦 Produits : <b>{{ products|length }}</b></span>
-          <span class="chip">🧊 Lots : <b>{{ lots|length }}</b></span>
+          <span class="chip">🧊 Stocks : <b>{{ lots|length }}</b></span>
           <span class="chip">⏰ Bientôt : <b>{{ soon|length }}</b></span>
           <span class="chip">⚠️ Urgents : <b>{{ urg|length }}</b></span>
           {% endif %}
