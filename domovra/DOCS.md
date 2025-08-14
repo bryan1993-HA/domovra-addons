@@ -61,7 +61,7 @@ Nombre de jours avant la DLC pour afficher une alerte critique.
 ## 📸 Captures d’écran
 
 **Vue d’ensemble**
-![Dashboard](https://raw.githubusercontent.com/bryan1993-HA/domovra-addons/main/domovra/images/mmmlogo.png)
+![Dashboard](https://raw.githubusercontent.com/bryan1993-HA/domovra-addons/main/domovra/images/EcranPrincipal.png)
 
 ---
 
