@@ -23,7 +23,7 @@
 
   .row {
     display: flex;
-    gap: var(--gap);
+    gap: 12px;
     flex-wrap: wrap;
   }
 
@@ -180,6 +180,36 @@
     color: var(--muted);
   }
 
+  /* Grille du formulaire */
+  .form-grid {
+    align-items: flex-end;
+  }
+
+  @media (max-width:700px) {
+    .row {
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .form-grid {
+      align-items: stretch;
+    }
+
+    /* champs bien alignés en pile */
+    .row button {
+      flex: 0 0 auto;
+    }
+
+    /* ne pas forcer pleine largeur */
+  }
+
+  .btn-add-stock {
+    flex: 0 0 180px;
+    height: 44px;
+  }
+
+  /* taille contrôlée, y compris mobile */
+
   /* ===== Mobile : cartes au lieu de table ===== */
   .top8-table {
     display: block;
@@ -190,16 +220,6 @@
   }
 
   @media (max-width:700px) {
-
-    .row>*,
-    .row button {
-      flex: 1;
-    }
-
-    button.primary {
-      width: 100%;
-    }
-
     .top8-table {
       display: none;
     }
@@ -260,7 +280,7 @@
       <h2>Ajout express</h2><span class="muted">→ produit existant → ajout au stock</span>
     </div>
 
-    <form method="post" action="{{ BASE }}lot/add" class="row" style="align-items:flex-end">
+    <form method="post" action="{{ BASE }}lot/add" class="row form-grid">
       <div class="field" style="flex:2 1 220px">
         <div class="label">Produit <span class="help" tabindex="0"
             data-tip="Choisis un produit déjà créé. Utilise « + Nouveau produit » s’il n’existe pas encore."></span>
@@ -293,7 +313,7 @@
         <input type="date" name="best_before">
       </div>
 
-      <button class="primary" style="flex:0 0 180px; height:44px">＋ Ajouter au stock</button>
+      <button class="primary btn-add-stock">＋ Ajouter au stock</button>
     </form>
 
     <div class="row" style="margin-top:8px">

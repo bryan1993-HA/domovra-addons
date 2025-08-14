@@ -128,7 +128,6 @@
       padding: 10px 16px;
       border-bottom: 1px solid var(--line);
       background: var(--bg-body);
-      /* <— fond solide */
     }
 
     .header-left {
@@ -313,6 +312,7 @@
       min-width: 720px;
     }
 
+    /* Off-canvas (mobile) */
     @media (max-width:1024px) {
       .layout {
         grid-template-columns: 1fr;
@@ -325,11 +325,15 @@
         transform: translateX(-100%);
         transition: transform .25s ease;
         z-index: 70;
+        /* par défaut */
       }
 
+      /* >>> Passe AU-DESSUS du header quand ouvert <<< */
       body.sidebar-open aside {
         transform: translateX(0);
         box-shadow: 0 10px 30px rgba(0, 0, 0, .45);
+        z-index: 2000;
+        /* <— plus haut que le header (1000) */
       }
     }
 
