@@ -180,35 +180,52 @@
     color: var(--muted);
   }
 
-  /* Grille du formulaire */
+  /* ===== Ajout express : CSS Grid pour supprimer les grands espaces ===== */
   .form-grid {
-    align-items: flex-end;
+    display: grid !important;
+    /* override .row (flex) */
+    grid-template-columns: 2fr 2fr 1fr 1fr auto;
+    gap: 12px;
+    align-items: end;
   }
 
-  @media (max-width:700px) {
-    .row {
-      flex-direction: column;
-      gap: 10px;
-    }
-
-    .form-grid {
-      align-items: stretch;
-    }
-
-    /* champs bien alignés en pile */
-    .row button {
-      flex: 0 0 auto;
-    }
-
-    /* ne pas forcer pleine largeur */
+  .form-grid .field {
+    margin: 0;
   }
 
   .btn-add-stock {
-    flex: 0 0 180px;
     height: 44px;
+    align-self: end;
   }
 
-  /* taille contrôlée, y compris mobile */
+  /* taille contrôlée */
+
+  @media (max-width:1100px) {
+    .form-grid {
+      grid-template-columns: 2fr 2fr 1fr auto;
+    }
+  }
+
+  @media (max-width:900px) {
+    .form-grid {
+      grid-template-columns: 1fr 1fr 1fr;
+    }
+
+    .btn-add-stock {
+      grid-column: 1 / -1;
+      justify-self: stretch;
+    }
+  }
+
+  @media (max-width:700px) {
+    .form-grid {
+      grid-template-columns: 1fr;
+    }
+
+    .btn-add-stock {
+      width: 100%;
+    }
+  }
 
   /* ===== Mobile : cartes au lieu de table ===== */
   .top8-table {
@@ -281,7 +298,7 @@
     </div>
 
     <form method="post" action="{{ BASE }}lot/add" class="row form-grid">
-      <div class="field" style="flex:2 1 220px">
+      <div class="field">
         <div class="label">Produit <span class="help" tabindex="0"
             data-tip="Choisis un produit déjà créé. Utilise « + Nouveau produit » s’il n’existe pas encore."></span>
         </div>
@@ -291,7 +308,7 @@
         </select>
       </div>
 
-      <div class="field" style="flex:2 1 200px">
+      <div class="field">
         <div class="label">Emplacement <span class="help" tabindex="0"
             data-tip="Où tu ranges cet article (ex. Frigo, Congélateur, Placard). Tu peux créer un nouvel emplacement."></span>
         </div>
@@ -301,13 +318,13 @@
         </select>
       </div>
 
-      <div class="field" style="flex:0 1 120px; max-width:140px">
+      <div class="field">
         <div class="label">Quantité <span class="help" tabindex="0"
             data-tip="Valeur par défaut : 1. Utilise des décimales (0,5) pour des quantités partielles."></span></div>
         <input type="number" name="qty" value="1" min="0.1" step="0.1">
       </div>
 
-      <div class="field" style="flex:0 1 180px; max-width:200px">
+      <div class="field">
         <div class="label">À consommer avant <span class="help" tabindex="0"
             data-tip="Optionnel. Sert à calculer les états OK / Bientôt / Urgent selon tes paramètres."></span></div>
         <input type="date" name="best_before">
