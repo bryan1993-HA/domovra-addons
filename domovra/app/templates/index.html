@@ -136,21 +136,10 @@
 {% block content %}
 <div class="wrap">
 
-  <!-- Barre de recherche + scan -->
-  <div class="card" style="margin-top:6px">
-    <div class="row">
-      <form class="row" method="get" action="{{ BASE }}lots" style="flex:1">
-        <input name="q" placeholder="Rechercher produit, lot ou emplacement" style="flex:1;min-width:220px">
-        <button class="primary" style="flex:0 0 140px">🔎 Rechercher</button>
-      </form>
-      <a href="{{ BASE }}#scan" class="chip" style="display:flex;align-items:center;text-decoration:none">📷 Scan</a>
-    </div>
-  </div>
-
   <!-- Ajout express (une seule ligne) -->
   <div class="card">
     <div class="title">
-      <h2>Ajout express</h2><span class="muted">produit existant → lot</span>
+      <h2>Ajout express</h2><span class="muted">→ produit existant → ajout au stock</span>
     </div>
     <form method="post" action="{{ BASE }}lot/add" class="row">
       <select name="product_id" required style="min-width:180px">

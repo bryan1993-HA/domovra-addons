@@ -430,7 +430,7 @@
         <a href="{{ BASE }}products" class="{% if request.path.startswith(BASE ~ 'products') %}active{% endif %}"><span
             class="ico">📦</span><span>Produits</span></a>
         <a href="{{ BASE }}lots" class="{% if request.path.startswith(BASE ~ 'lots') %}active{% endif %}"><span
-            class="ico">🧮</span><span>Lots</span></a>
+            class="ico">🧮</span><span>Stocks</span></a>
         <a href="{{ BASE }}settings" class="{% if request.path.startswith(BASE ~ 'settings') %}active{% endif %}"><span
             class="ico">⚙️</span><span>Paramètres</span></a>
         <a href="{{ BASE }}journal" class="{% if request.path.startswith(BASE ~ 'journal') %}active{% endif %}"><span
@@ -456,7 +456,7 @@
             {% elif seg.startswith('locations') %}
             Emplacements
             {% elif seg.startswith('lots') %}
-            Lots
+            Stocks
             {% elif seg.startswith('settings') %}
             Paramètres
             {% elif seg.startswith('journal') %}

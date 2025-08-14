@@ -3,13 +3,13 @@
 
 {% block content %}
 <h1>Produits</h1>
-<p class="muted">Ajouter, modifier ou supprimer vos produits. Supprimer enlève aussi les lots liés.</p>
+<p class="muted">Ajouter, modifier ou supprimer vos produits. Supprimer enlève aussi les stocks liés.</p>
 
-<!-- ====== Recherche par code‑barres (Open Food Facts) ====== -->
+<!-- ====== Recherche par code-barres (Open Food Facts) ====== -->
 <div id="off-box"
   style="margin:.75rem 0; padding:.8rem; border-radius:12px; border:1px solid #3a3d43; background:#1a1c20;">
   <div style="display:flex; gap:.5rem; align-items:center; flex-wrap:wrap;">
-    <input id="off_barcode" type="text" inputmode="numeric" placeholder="Scanner / saisir un code‑barres (EAN/GTIN)…"
+    <input id="off_barcode" type="text" inputmode="numeric" placeholder="Scanner / saisir un code-barres (EAN/GTIN)…"
       style="flex:1; min-width:220px; padding:.55rem .6rem; border-radius:8px; border:1px solid #3a3d43; background:#1f2125; color:#e8eaed;">
     <button id="off_search" style="padding:.45rem .75rem;">🔎 Rechercher</button>
     <button id="off_scan" type="button" style="padding:.45rem .75rem;">📷 Scanner (live)</button>
@@ -23,7 +23,7 @@
   </div>
 
   <div id="off_hint" class="muted" style="margin-top:.4rem;">
-    Astuce : essaie <b>5449000000996</b> (Coca‑Cola 1,5 L).
+    Astuce : essaie <b>5449000000996</b> (Coca-Cola 1,5 L).
     Si le flux <b>📷 Scanner (live)</b> ne démarre pas dans l’app HA, utilise <b>📸 Prendre une photo</b>.
   </div>
   <div id="off_error" style="display:none; color:#ffb4b4; margin-top:.35rem;">Erreur</div>
@@ -57,13 +57,13 @@
     <input name="name" id="create_name" placeholder="Nom du produit" required style="flex:2;">
     <input name="unit" id="create_unit" placeholder="Unité (pièce, g, kg, ml, L…)" style="flex:1;">
     <input name="shelf" id="create_shelf" type="number" min="1" placeholder="Conservation (jours)" style="flex:1;">
-    <input name="barcode" id="create_barcode" placeholder="Code‑barres (facultatif)" inputmode="numeric"
+    <input name="barcode" id="create_barcode" placeholder="Code-barres (facultatif)" inputmode="numeric"
       style="flex:1;">
     <button style="flex:0;">➕ Ajouter</button>
     <button type="button" id="create_reset" class="secondary" style="flex:0; background:#2b2f36;">Réinitialiser</button>
   </form>
   <p class="muted" style="margin:.4rem 0 0;">
-    Scanne/saisis un code‑barres → “Rechercher” → “Préremplir le formulaire d’ajout”, puis ajuste la conservation et
+    Scanne/saisis un code-barres → “Rechercher” → “Préremplir le formulaire d’ajout”, puis ajuste la conservation et
     valide.
   </p>
 </div>
@@ -79,7 +79,7 @@
       <th>Unité</th>
       <th>Conservation (jours)</th>
       <th>Quantité totale</th>
-      <th>Lots</th>
+      <th>Stocks</th>
       <th>Actions</th>
     </tr>
   </thead>
@@ -94,7 +94,7 @@
       <td>
         <button class="edit-btn" data-id="{{ p.id }}" style="padding:.35rem .6rem;">✏️ Modifier</button>
         <form method="post" action="{{ BASE }}product/delete"
-          onsubmit="return confirm('Supprimer le produit « {{ p.name }} » ?\nTous les lots liés seront supprimés.');"
+          onsubmit="return confirm('Supprimer le produit « {{ p.name }} » ?\nTous les stocks liés seront supprimés.');"
           style="display:inline">
           <input type="hidden" name="product_id" value="{{ p.id }}">
           <button title="Supprimer" aria-label="Supprimer"
@@ -131,7 +131,7 @@
     style="position:absolute; inset:auto 0 0 0; margin:auto; max-width:680px; width:100%; background:#0f1115; border-top-left-radius:12px; border-top-right-radius:12px; border:1px solid #2a2d33;">
     <div
       style="display:flex; align-items:center; justify-content:space-between; padding:.6rem .8rem; border-bottom:1px solid #2a2d33;">
-      <strong>Scanner le code‑barres</strong>
+      <strong>Scanner le code-barres</strong>
       <button id="scan_close"
         style="background:#2b2f36; border:1px solid #3a3d43; border-radius:8px; padding:.35rem .6rem;">Fermer</button>
     </div>
@@ -243,7 +243,7 @@
 
   async function doLookup() {
     const code = (elBarcode.value || '').replace(/\D+/g, '');
-    if (!code) { showError('Saisis un code‑barres valide.'); return; }
+    if (!code) { showError('Saisis un code-barres valide.'); return; }
     clearError();
     elSearch.disabled = true; elSearch.textContent = '…';
     try {
@@ -251,7 +251,7 @@
       if (!res.ok) throw new Error('Erreur réseau (' + res.status + ')');
       const data = await res.json();
       if (!data || data.status !== 1) {
-        showError('Produit introuvable sur Open Food Facts. Tu peux l’ajouter manuellement (le code‑barres sera conservé).');
+        showError('Produit introuvable sur Open Food Facts. Tu peux l’ajouter manuellement (le code-barres sera conservé).');
         cfBarcode.value = code;
         return;
       }
@@ -282,7 +282,7 @@
   elClear.addEventListener('click', () => { elBarcode.value = ''; clearError(); elBoxRes.style.display = 'none'; });
   elPaste.addEventListener('click', async () => {
     try { elBarcode.value = (await navigator.clipboard.readText()).replace(/\D+/g, ''); }
-    catch { showError("Impossible de lire le presse‑papiers (autorise l’accès ou colle manuellement)."); }
+    catch { showError("Impossible de lire le presse-papiers (autorise l’accès ou colle manuellement)."); }
   });
 
   // ==================== Scanner Caméra (live) + Fallback capture photo ====================
@@ -389,9 +389,9 @@
           const text = luminance && luminance.text || luminance && luminance.getText && luminance.getText();
           const code = (text || '').replace(/\D+/g, '');
           if (code) { await onBarcodeDetected(code); }
-          else showError("Aucun code‑barres détecté sur la photo. Réessaie en rapprochant.");
+          else showError("Aucun code-barres détecté sur la photo. Réessaie en rapprochant.");
         } catch (e) {
-          showError("Impossible de lire le code‑barres sur la photo. Réessaie.");
+          showError("Impossible de lire le code-barres sur la photo. Réessaie.");
         } finally {
           URL.revokeObjectURL(imgURL);
         }
@@ -424,8 +424,12 @@
   // ==================== /Scanner ====================
 
   // Réinit du formulaire d’ajout
-  cfReset.addEventListener('click', () => {
-    cfName.value = ''; cfUnit.value = ''; cfShelf.value = ''; cfBarcode.value = '';
+  const cfResetBtn = document.getElementById('create_reset');
+  cfResetBtn.addEventListener('click', () => {
+    document.getElementById('create_name').value = '';
+    document.getElementById('create_unit').value = '';
+    document.getElementById('create_shelf').value = '';
+    document.getElementById('create_barcode').value = '';
   });
 </script>
 {% endblock %}
