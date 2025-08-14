@@ -127,6 +127,25 @@
       opacity: .9;
     }
 
+    /* Chips du header (colonne à droite) */
+    .header-chips {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      gap: 6px;
+    }
+
+    .chip {
+      background: #151922;
+      border: 1px solid #242932;
+      border-radius: 999px;
+      padding: 6px 10px;
+    }
+
+    .chip b {
+      font-weight: 700;
+    }
+
     /* Menu */
     .menu {
       display: grid;
@@ -326,7 +345,7 @@
       }
     }
 
-    /* Variantes CLAIR automatiques pour certains blocs (hérite de html[data-theme]) */
+    /* Variantes CLAIR */
     html[data-theme="light"] aside {
       background: #f7f7f8;
       border-right: 1px solid #e5e7eb;
@@ -387,6 +406,12 @@
     html[data-theme="light"] tbody tr:nth-child(even) {
       background: #f9fafb;
     }
+
+    /* Chips header en clair */
+    html[data-theme="light"] .chip {
+      background: #ffffff;
+      border: 1px solid #e5e7eb;
+    }
   </style>
 
   {% block head %}{% endblock %}
@@ -418,8 +443,42 @@
       <header>
         <button class="hamburger" id="hamburger" aria-label="Ouvrir le menu"
           aria-expanded="false"><span></span><span></span><span></span></button>
-        <h1 class="app-title">Domovra</h1>
-        {% block header_right %}{% endblock %}
+
+        {# ===== Titre dynamique : Domovra — <Nom de page> ===== #}
+          {% set seg = request.path.replace(BASE, '').strip('/') %}
+          <h1 class="app-title">
+            Domovra —
+            {% if seg == '' %}
+            Accueil
+            {% elif seg.startswith('products') %}
+            Produits
+            {% elif seg.startswith('locations') %}
+            Emplacements
+            {% elif seg.startswith('lots') %}
+            Lots
+            {% elif seg.startswith('settings') %}
+            Paramètres
+            {% elif seg.startswith('journal') %}
+            Journal
+            {% elif seg.startswith('support') %}
+            Support
+            {% else %}
+            {{ seg|replace('-', ' ')|capitalize }}
+            {% endif %}
+          </h1>
+
+          {# ===== Chips stats à droite (vertical) si les données sont disponibles ===== #}
+          <div class="header-chips">
+            {% if products is defined and lots is defined %}
+            {% set soon = lots|selectattr('status','equalto','yellow')|list %}
+            {% set urg = lots|selectattr('status','equalto','red')|list %}
+            <span class="chip">📦 Produits : <b>{{ products|length }}</b></span>
+            <span class="chip">🧊 Lots : <b>{{ lots|length }}</b></span>
+            <span class="chip">⏰ Bientôt : <b>{{ soon|length }}</b></span>
+            <span class="chip">⚠️ Urgents : <b>{{ urg|length }}</b></span>
+            {% endif %}
+            {% block header_right %}{% endblock %}
+          </div>
       </header>
 
       <section class="page">

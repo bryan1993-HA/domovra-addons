@@ -18,19 +18,19 @@
   .wrap {
     max-width: 1100px;
     margin: 0 auto;
-    padding: 0 12px
+    padding: 0 12px;
   }
 
   .row {
     display: flex;
     gap: var(--gap);
-    flex-wrap: wrap
+    flex-wrap: wrap;
   }
 
   .chips {
     display: flex;
     gap: 8px;
-    flex-wrap: wrap
+    flex-wrap: wrap;
   }
 
   .chip {
@@ -38,26 +38,26 @@
     border: 1px solid var(--border);
     border-radius: 999px;
     padding: 6px 10px;
-    color: var(--muted)
+    color: var(--muted);
   }
 
   .card {
     border: 1px solid var(--border);
     border-radius: var(--radius);
     padding: 12px;
-    margin-bottom: 12px
+    margin-bottom: 12px;
   }
 
   .title {
     display: flex;
     align-items: center;
     gap: 10px;
-    margin: 10px 0 8px
+    margin: 6px 0 8px;
   }
 
   .title h2 {
     font-size: 16px;
-    margin: 0
+    margin: 0;
   }
 
   input,
@@ -67,7 +67,7 @@
     border-radius: 10px;
     padding: 10px;
     background: transparent;
-    color: inherit
+    color: inherit;
   }
 
   button.primary {
@@ -75,12 +75,12 @@
     border: 0;
     color: #02222a;
     font-weight: 600;
-    cursor: pointer
+    cursor: pointer;
   }
 
   table {
     width: 100%;
-    border-collapse: collapse
+    border-collapse: collapse;
   }
 
   thead th {
@@ -88,12 +88,12 @@
     color: var(--muted);
     text-align: left;
     padding: 6px 8px;
-    border-bottom: 1px solid var(--border)
+    border-bottom: 1px solid var(--border);
   }
 
   tbody td {
     padding: 10px 8px;
-    border-bottom: 1px solid var(--border)
+    border-bottom: 1px solid var(--border);
   }
 
   .pill {
@@ -101,33 +101,33 @@
     border-radius: 999px;
     font-size: 12px;
     font-weight: 600;
-    border: 1px solid transparent
+    border: 1px solid transparent;
   }
 
   .ok {
     color: var(--ok);
-    border-color: rgba(76, 175, 80, .35)
+    border-color: rgba(76, 175, 80, .35);
   }
 
   .warn {
     color: var(--warn);
-    border-color: rgba(255, 179, 0, .35)
+    border-color: rgba(255, 179, 0, .35);
   }
 
   .danger {
     color: var(--danger);
-    border-color: rgba(239, 83, 80, .35)
+    border-color: rgba(239, 83, 80, .35);
   }
 
   .muted {
-    color: var(--muted)
+    color: var(--muted);
   }
 
   @media (max-width:900px) {
 
     .row>*,
     .row button {
-      flex: 1
+      flex: 1;
     }
   }
 </style>
@@ -136,21 +136,8 @@
 {% block content %}
 <div class="wrap">
 
-  <!-- Bandeau minimal -->
-  <div class="row" style="align-items:flex-start;margin:10px 0 6px">
-    <h1 style="margin:0;font-size:22px;flex:1">Domovra - Accueil</h1>
-    <div style="display:flex;flex-direction:column;gap:6px;align-items:flex-end">
-      <span class="chip">📦 Produits : <b>{{ products|length }}</b></span>
-      <span class="chip">🧊 Lots : <b>{{ lots|length }}</b></span>
-      {% set soon = lots|selectattr('status','equalto','yellow')|list %}
-      {% set urg = lots|selectattr('status','equalto','red')|list %}
-      <span class="chip">⏰ Bientôt : <b>{{ soon|length }}</b></span>
-      <span class="chip">⚠️ Urgents : <b>{{ urg|length }}</b></span>
-    </div>
-  </div>
-
   <!-- Barre de recherche + scan -->
-  <div class="card">
+  <div class="card" style="margin-top:6px">
     <div class="row">
       <form class="row" method="get" action="{{ BASE }}lots" style="flex:1">
         <input name="q" placeholder="Rechercher produit, lot ou emplacement" style="flex:1;min-width:220px">
@@ -202,7 +189,6 @@
       </thead>
       <tbody>
         {% if lots %}
-        {# on montre d'abord urgents puis bientôt, puis le reste, limité à 8 #}
         {% set sorted = lots|sort(attribute='best_before') %}
         {% set shown = 0 %}
         {% for it in sorted %}
