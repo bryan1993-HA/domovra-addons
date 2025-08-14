@@ -3,181 +3,480 @@
 
 {% block head %}
 <style>
-  /* Aide inline */
-  .inline-help {
+  :root {
+    --panel-radius: 16px;
+    --chip-bg: var(--surface-chip, #1a2230);
+    --border: var(--surface-border, #283041);
+    --muted: var(--text-muted, #8ea0b7);
+    --accent: var(--accent, #00bcd4);
+    --ok: #4caf50;
+    --warn: #ffb300;
+    --danger: #ef5350;
+    --shadow: 0 6px 24px rgba(0, 0, 0, .35);
+  }
+
+  /* Layout */
+  .wrap {
+    max-width: 1250px;
+    margin: 0 auto;
+    padding: 0 12px;
+  }
+
+  .page-head {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin: 8px 0 16px;
+  }
+
+  .page-head h1 {
+    margin: 0;
+    font-size: 24px;
+  }
+
+  .badge {
+    background: var(--chip-bg);
+    border: 1px solid var(--border);
+    padding: 6px 10px;
+    border-radius: 999px;
+    color: var(--muted)
+  }
+
+  .chips {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap
+  }
+
+  .chip {
+    background: var(--chip-bg);
+    border: 1px solid var(--border);
+    padding: 6px 10px;
+    border-radius: 999px;
+    color: var(--muted);
+    display: inline-flex;
+    align-items: center;
+    gap: 6px
+  }
+
+  .grid {
+    display: grid;
+    grid-template-columns: 1.1fr 1.2fr;
+    gap: 16px
+  }
+
+  @media (max-width: 980px) {
+    .grid {
+      grid-template-columns: 1fr
+    }
+  }
+
+  .card {
+    border: 1px solid var(--border);
+    border-radius: var(--panel-radius);
+    box-shadow: var(--shadow);
+    overflow: hidden
+  }
+
+  .card .head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 16px;
+    border-bottom: 1px solid var(--border)
+  }
+
+  .card .content {
+    padding: 16px
+  }
+
+  .row {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap
+  }
+
+  .row>* {
+    flex: 1
+  }
+
+  input,
+  select,
+  button {
+    width: 100%;
+    padding: 12px 12px;
+    border-radius: 12px;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: inherit
+  }
+
+  input::placeholder {
+    opacity: .7
+  }
+
+  button.primary {
+    border: 0;
+    background: var(--accent);
+    color: #02222a;
+    font-weight: 600;
+    cursor: pointer
+  }
+
+  button.ghost {
+    background: transparent;
+    border: 1px dashed var(--border);
+    color: var(--muted);
+    cursor: pointer
+  }
+
+  .kpis {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 10px
+  }
+
+  @media (max-width:800px) {
+    .kpis {
+      grid-template-columns: repeat(2, 1fr)
+    }
+  }
+
+  .kpi {
+    background: var(--chip-bg);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 14px
+  }
+
+  .kpi .label {
+    color: var(--muted);
+    font-size: 12px
+  }
+
+  .kpi .value {
+    font-size: 20px;
+    font-weight: 700;
+    margin-top: 6px
+  }
+
+  table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0 8px
+  }
+
+  thead th {
+    font-size: 12px;
+    color: var(--muted);
+    text-align: left;
+    padding: 0 10px
+  }
+
+  tbody tr {
+    background: var(--chip-bg);
+    border: 1px solid var(--border)
+  }
+
+  tbody td {
+    padding: 12px 10px
+  }
+
+  .pill {
+    display: inline-flex;
+    align-items: center;
+    padding: 4px 10px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 600
+  }
+
+  .pill.ok {
+    background: rgba(76, 175, 80, .15);
+    color: var(--ok);
+    border: 1px solid rgba(76, 175, 80, .25)
+  }
+
+  .pill.warn {
+    background: rgba(255, 179, 0, .15);
+    color: var(--warn);
+    border: 1px solid rgba(255, 179, 0, .25)
+  }
+
+  .pill.danger {
+    background: rgba(239, 83, 80, .15);
+    color: var(--danger);
+    border: 1px solid rgba(239, 83, 80, .25)
+  }
+
+  .pill.unknown {
+    opacity: .7
+  }
+
+  .muted {
+    color: var(--muted)
+  }
+
+  .hint {
     font-size: .9rem;
-    opacity: .7;
-    margin-top: .25rem;
+    opacity: .8;
+    margin-top: 6px
   }
 
-  /* --- Mise en avant des lots urgents (ligne entière colorée) --- */
-  /* Mode sombre */
-  html[data-theme="dark"] .row-status-red {
-    background-color: #3b1a1a;
+  .fab {
+    position: fixed;
+    right: 22px;
+    bottom: 22px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px
   }
 
-  html[data-theme="dark"] .row-status-yellow {
-    background-color: #3a3517;
-  }
-
-  html[data-theme="dark"] .row-status-green {
-    background-color: #17361a;
-  }
-
-  /* Mode clair */
-  html[data-theme="light"] .row-status-red {
-    background-color: #fde8e8;
-  }
-
-  html[data-theme="light"] .row-status-yellow {
-    background-color: #fff4cc;
-  }
-
-  html[data-theme="light"] .row-status-green {
-    background-color: #e6f6ea;
-  }
-
-  /* Pour s’assurer que le texte reste lisible en sombre */
-  .row-status-red td,
-  .row-status-yellow td,
-  .row-status-green td {
-    color: inherit;
+  .fab button {
+    width: auto
   }
 </style>
 {% endblock %}
 
 {% block content %}
-<h1>Accueil</h1>
-<p class="muted">Ajoute rapidement des emplacements, produits et lots. Utilise le menu pour parcourir toutes les
-  données.</p>
 
-<div class="grid">
-  <!-- Emplacements -->
-  <div class="card">
-    <h2>🏷️ Emplacement</h2>
-    <form method="post" action="{{ BASE }}location/add">
-      <input name="name" placeholder="ex. Bac 1, Frigo, Placard haut" required>
-      <div class="row" style="margin-top:.5rem"><button>Ajouter</button></div>
-    </form>
-    <p class="muted" style="margin-top:.5rem">Emplacements :
-      {% for l in locations %}<span class="tag unknown">{{ l.name }}</span> {% endfor %}
-    </p>
+<div class="wrap">
+
+  <div class="page-head">
+    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path d="M3 11l9-7 9 7v8a2 2 0 0 1-2 2h-4v-6H9v6H5a2 2 0 0 1-2-2v-8z" stroke="currentColor" stroke-width="1.6" />
+    </svg>
+    <h1>Domovra</h1>
+    <span class="badge">Accueil</span>
+    <div style="flex:1"></div>
+    <div class="chips">
+      <span class="chip">📦 Produits: <strong>{{ products|length }}</strong></span>
+      <span class="chip">🧊 Lots: <strong>{{ lots|length }}</strong></span>
+      {# calcul simple #}
+      {% set soon = lots|selectattr('status','equalto','yellow')|list %}
+      {% set urg = lots|selectattr('status','equalto','red')|list %}
+      <span class="chip">⏰ Bientôt: <strong>{{ soon|length }}</strong></span>
+      <span class="chip">⚠️ Urgents: <strong>{{ urg|length }}</strong></span>
+    </div>
   </div>
 
-  <!-- Produits -->
-  <div class="card">
-    <h2>📦 Produit</h2>
-    <form method="post" action="{{ BASE }}product/add">
-      <input name="name" placeholder="ex. Rôti de porc" required>
+  <div class="grid">
+    <!-- Colonne gauche -->
+    <section>
 
-      <div class="row" style="margin-top:.5rem">
-        <!-- Sélecteur d'unité logique (sans "Autre…") -->
-        <select name="unit" required>
-          <optgroup label="Poids">
-            <option value="g">g</option>
-            <option value="kg">kg</option>
-          </optgroup>
-          <optgroup label="Volume">
-            <option value="mL">mL</option>
-            <option value="L">L</option>
-          </optgroup>
-          <optgroup label="Portions / emballages">
-            <option value="pièce">pièce</option>
-            <option value="tranche">tranche</option>
-            <option value="tranches">tranches</option>
-            <option value="paquet" selected>paquet</option>
-            <option value="paquets">paquets</option>
-            <option value="boîte">boîte</option>
-            <option value="boîtes">boîtes</option>
-            <option value="bouteille">bouteille</option>
-            <option value="bouteilles">bouteilles</option>
-            <option value="pot">pot</option>
-            <option value="pots">pots</option>
-          </optgroup>
-        </select>
+      <!-- Ajout rapide (produit + lot) -->
+      <div class="card">
+        <div class="head">
+          <h2>Ajout rapide</h2>
+          <div class="chips"><span class="chip">📷 Scanner</span><span class="chip">OFF</span></div>
+        </div>
+        <div class="content">
 
-        <input name="shelf" type="number" placeholder="Jours de conservation par défaut" value="90" min="1">
-      </div>
-
-      <div class="row" style="margin-top:.5rem"><button>Ajouter</button></div>
-    </form>
-
-    <p class="muted" style="margin-top:.5rem">Produits : {{ products|length }}</p>
-  </div>
-
-  <!-- Entrée de stock -->
-  <div class="card">
-    <h2>➕ Entrée de stock</h2>
-    <form method="post" action="{{ BASE }}lot/add">
-      <select name="product_id" required>
-        <option value="" disabled selected>Produit…</option>
-        {% for p in products %}<option value="{{ p.id }}">{{ p.name }} ({{ p.unit }})</option>{% endfor %}
-      </select>
-      <div class="row" style="margin-top:.5rem">
-        <select name="location_id" required>
-          <option value="" disabled selected>Emplacement…</option>
-          {% for l in locations %}<option value="{{ l.id }}">{{ l.name }}</option>{% endfor %}
-        </select>
-        <input name="qty" type="number" step="0.01" min="0.01" placeholder="Quantité" required>
-      </div>
-      <div class="row" style="margin-top:.5rem">
-        <label style="flex:1">Congelé le
-          <input type="date" name="frozen_on">
-        </label>
-        <label style="flex:1">À consommer avant
-          <input type="date" name="best_before">
-        </label>
-      </div>
-      <div class="row" style="margin-top:.5rem"><button>Ajouter au stock</button></div>
-    </form>
-  </div>
-</div>
-
-<!-- Tableau priorités -->
-<div class="card table-responsive" style="margin-top:16px">
-  <h2>⏳ À consommer en priorité</h2>
-  <table>
-    <thead>
-      <tr>
-        <th>Produit</th>
-        <th>Emplacement</th>
-        <th>Qté</th>
-        <th>Congelé le</th>
-        <th>À consommer avant</th>
-        <th>État</th>
-        <th>Action</th>
-      </tr>
-    </thead>
-    <tbody>
-      {% for it in lots %}
-      <tr class="row-status-{{ it.status }}">
-        <td>{{ it.product }}</td>
-        <td>{{ it.location }}</td>
-        <td>{{ it.qty }} {{ it.unit }}</td>
-        <td>{{ it.frozen_on or '' }}</td>
-        <td>{{ it.best_before or '' }}</td>
-        <td>
-          <span class="tag {{ it.status }}">
-            {{ "OK" if it.status=="green" else ("Bientôt" if it.status=="yellow" else ("Urgent" if it.status=="red" else
-            "—")) }}
-          </span>
-        </td>
-        <td>
-          <form method="post" action="{{ BASE }}lot/consume" class="row">
-            <input type="hidden" name="lot_id" value="{{ it.id }}">
-            <input type="number" step="0.01" min="0.01" name="qty" placeholder="Qté à consommer">
-            <button>Consommer</button>
+          <!-- 1) Créer rapidement un produit (si absent) -->
+          <form method="post" action="{{ BASE }}product/add" class="row" style="margin-bottom:8px">
+            <input type="text" name="name" placeholder="Nouveau produit… (ex: Rôti de porc)">
+            <select name="unit">
+              <option value="pièce">pièce</option>
+              <option value="paquet">paquet</option>
+              <option value="kg">kg</option>
+              <option value="g">g</option>
+              <option value="l">l</option>
+            </select>
+            <input type="number" name="default_shelf_life_days" value="{{ SETTINGS.default_shelf_days or 90 }}" min="0"
+              step="1" title="Durée de conservation par défaut (jours)">
+            <button class="primary" style="flex:0 0 220px">+ Créer le produit</button>
           </form>
-        </td>
-      </tr>
-      {% else %}
-      <tr>
-        <td colspan="7" class="muted">Aucun lot pour l’instant.</td>
-      </tr>
-      {% endfor %}
-    </tbody>
-  </table>
+          <div class="hint">Astuce : si le produit existe déjà, passe directement à “Ajouter au stock”.</div>
+
+          <!-- 2) Ajouter un lot au stock -->
+          <form method="post" action="{{ BASE }}lot/add" style="margin-top:12px">
+            <div class="row" style="margin-bottom:8px">
+              <select name="product_id" required>
+                <option value="">Produit…</option>
+                {% for p in products %}
+                <option value="{{ p.id }}">{{ p.name }}</option>
+                {% endfor %}
+              </select>
+              <select name="location_id" required>
+                <option value="">Emplacement…</option>
+                {% for l in locations %}
+                <option value="{{ l.id }}">{{ l.name }}</option>
+                {% endfor %}
+              </select>
+              <input type="number" name="qty" value="1" min="0" step="0.1" placeholder="Quantité" required>
+            </div>
+            <div class="row">
+              <label style="flex:1">Congelé le
+                <input type="date" name="frozen_on">
+              </label>
+              <label style="flex:1">À consommer avant
+                <input type="date" name="best_before">
+              </label>
+            </div>
+            <div class="row" style="margin-top:12px">
+              <button class="primary">Ajouter au stock</button>
+              <a href="{{ BASE }}products" class="ghost"
+                style="text-align:center; padding:12px 16px; border-radius:12px; text-decoration:none">Gérer les
+                produits</a>
+              <a href="{{ BASE }}locations" class="ghost"
+                style="text-align:center; padding:12px 16px; border-radius:12px; text-decoration:none">Gérer les
+                emplacements</a>
+            </div>
+          </form>
+        </div>
+      </div>
+
+      <!-- Recherche & scan -->
+      <div class="card" style="margin-top:16px">
+        <div class="head">
+          <h2>Recherche & scan</h2>
+        </div>
+        <div class="content">
+          <form method="get" action="{{ BASE }}lots">
+            <div class="row">
+              <input name="q" placeholder="Rechercher produit, lot ou emplacement">
+              <button class="primary" style="flex:0 0 180px">🔎 Rechercher</button>
+              <a href="{{ BASE }}#scan" class="ghost"
+                style="text-align:center; padding:12px 16px; border-radius:12px; text-decoration:none">📷 Scan</a>
+            </div>
+            <div class="chips" style="margin-top:12px">
+              <a class="chip" href="{{ BASE }}lots">Tous</a>
+              <a class="chip" href="{{ BASE }}lots?status=red">Urgent</a>
+              <a class="chip" href="{{ BASE }}lots?status=yellow">Bientôt</a>
+              <a class="chip" href="{{ BASE }}lots?status=green">OK</a>
+            </div>
+          </form>
+        </div>
+      </div>
+
+      <!-- Résumé du stock -->
+      <div class="card" style="margin-top:16px">
+        <div class="head">
+          <h2>Résumé du stock</h2>
+        </div>
+        <div class="content">
+          {% set ok = lots|selectattr('status','equalto','green')|list %}
+          <div class="kpis">
+            <div class="kpi">
+              <div class="label">Produits</div>
+              <div class="value">{{ products|length }}</div>
+            </div>
+            <div class="kpi">
+              <div class="label">Lots</div>
+              <div class="value">{{ lots|length }}</div>
+            </div>
+            <div class="kpi">
+              <div class="label">À consommer bientôt</div>
+              <div class="value" style="color:var(--warn)">{{ soon|length }}</div>
+            </div>
+            <div class="kpi">
+              <div class="label">Urgents</div>
+              <div class="value" style="color:var(--danger)">{{ urg|length }}</div>
+            </div>
+          </div>
+          <div class="hint" style="margin-top:8px">Seuils actuels : <strong>Bientôt</strong> ≤ {{ WARNING_DAYS }} j,
+            <strong>Urgent</strong> ≤ {{ CRITICAL_DAYS }} j.</div>
+        </div>
+      </div>
+
+    </section>
+
+    <!-- Colonne droite -->
+    <section>
+
+      <!-- À consommer en priorité -->
+      <div class="card">
+        <div class="head">
+          <h2>À consommer en priorité</h2>
+          <div class="chips">
+            <span class="chip">Trier: date</span>
+            <span class="chip">Vue: compacte</span>
+          </div>
+        </div>
+        <div class="content">
+          <table>
+            <thead>
+              <tr>
+                <th>Produit</th>
+                <th>Emplacement</th>
+                <th>Qté</th>
+                <th>À consommer avant</th>
+                <th>État</th>
+                <th style="text-align:right">Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% if lots %}
+              {% for it in lots %}
+              <tr>
+                <td>{{ it.product }}</td>
+                <td>{{ it.location }}</td>
+                <td>{{ '%.2f'|format(it.qty)|trim('0')|trim('.') }} {{ it.unit }}</td>
+                <td>{{ it.best_before or '—' }}</td>
+                <td>
+                  {% if it.status == 'red' %}
+                  <span class="pill danger">Urgent</span>
+                  {% elif it.status == 'yellow' %}
+                  <span class="pill warn">Bientôt</span>
+                  {% elif it.status == 'green' %}
+                  <span class="pill ok">OK</span>
+                  {% else %}
+                  <span class="pill unknown">—</span>
+                  {% endif %}
+                </td>
+                <td style="text-align:right">
+                  <form method="post" action="{{ BASE }}lot/consume"
+                    style="display:inline-flex; gap:8px; align-items:center">
+                    <input type="hidden" name="lot_id" value="{{ it.id }}">
+                    <input type="number" name="qty" value="1" min="0.1" step="0.1" style="max-width:110px">
+                    <button class="primary">Consommer</button>
+                  </form>
+                </td>
+              </tr>
+              {% endfor %}
+              {% else %}
+              <tr>
+                <td colspan="6" class="muted">Aucun lot pour l’instant.</td>
+              </tr>
+              {% endif %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Dernières actions (journal) -->
+      <div class="card" style="margin-top:16px">
+        <div class="head">
+          <h2>Dernières actions</h2><span class="muted">journal</span>
+        </div>
+        <div class="content">
+          <p class="muted" style="margin:0">
+            Voir le <a href="{{ BASE }}journal">journal complet</a>.
+          </p>
+        </div>
+      </div>
+
+    </section>
+  </div>
 </div>
+
+<!-- Boutons d’action flottants -->
+<div class="fab">
+  <a href="{{ BASE }}products"><button class="primary">＋ Ajouter produit</button></a>
+  <a href="{{ BASE }}lots"><button class="primary">＋ Ajouter stock</button></a>
+</div>
+
+<script>
+  // Petit toggle pour options avancées (si on en ajoute plus tard)
+  document.querySelectorAll('[data-toggle]').forEach(el => {
+    el.addEventListener('click', () => {
+      const id = el.getAttribute('data-toggle');
+      const t = document.getElementById(id);
+      if (!t) return;
+      t.style.display = t.style.display === 'none' ? 'block' : 'none';
+    });
+  });
+</script>
 {% endblock %}
 
 {% block scripts %}{% endblock %}
