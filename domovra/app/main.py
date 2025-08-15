@@ -8,7 +8,7 @@ from jinja2 import Environment, FileSystemLoader, select_autoescape
 from db import (
     init_db,
     # Locations
-    add_location, list_locations, update_location, delete_location,
+    add_location, list_locations, list_locations_with_counts, update_location, delete_location,
     # Products
     add_product, list_products, update_product, delete_product,
     # Lots
@@ -168,7 +168,8 @@ def products_page(request: Request):
 def locations_page(request: Request):
     base = ingress_base(request)
     logger.info("GET /locations (BASE=%s)", base)
-    items = list_locations()
+    # Utilise les compteurs de lots par emplacement
+    items = list_locations_with_counts()
     return render("locations.html",
                   BASE=base,
                   page="locations",
@@ -372,7 +373,7 @@ def lot_delete_action(request: Request, lot_id: int = Form(...)):
     log_event("lot.delete", {"lot_id": lot_id})
     return RedirectResponse(ingress_base(request)+"lots", status_code=303, headers={"Cache-Control":"no-store"})
 
-# ---------------- Page Support (Ko‑fi)
+# ---------------- Page Support (Ko-fi)
 @app.get("/support", response_class=HTMLResponse)
 def support_page(request: Request):
     base = ingress_base(request)
