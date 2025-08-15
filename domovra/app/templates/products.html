@@ -149,25 +149,26 @@
     color: var(--muted)
   }
 
-  /* Input avec bouton intégré (scan) */
+  /* Input + bouton intégré (scan) */
   .infield {
     position: relative;
     display: flex;
     align-items: center
   }
 
+  /* >>> le texte ne passe pas sous l’icône : padding-right suffisant */
   .infield input {
     width: 100%;
-    padding-right: 48px
+    padding-right: 60px
   }
 
   .infield-btn {
     position: absolute;
-    right: 6px;
+    right: 8px;
     display: inline-grid;
     place-items: center;
-    width: 36px;
-    height: 36px;
+    width: 40px;
+    height: 40px;
     border-radius: 10px;
     border: 1px solid var(--border);
     background: #1a2230;
@@ -178,7 +179,7 @@
     transform: scale(.98)
   }
 
-  /* Tooltips “?” (même style que index) */
+  /* Tooltips “?” (style index) */
   .qmark {
     display: inline-flex;
     align-items: center;
@@ -270,48 +271,29 @@
     }
   }
 
-  /* OFF box */
-  #off-box input,
-  #off-box .infield-btn {
-    background: transparent !important;
-    border: none !important;
-    color: #e6eef9 !important;
-    /* texte clair */
+  /* OFF box — totalement transparent (pas de fond/bordure) */
+  #off-box {
+    background: transparent;
+    border: none;
+    border-radius: 0;
+    padding: 10px
   }
 
-  #off-box input::placeholder {
-    color: rgba(230, 238, 249, 0.6);
-    /* placeholder plus lisible */
-  }
-
-  #off-box .infield-btn {
-    display: inline-grid;
-    place-items: center;
-    padding: 0;
-    width: 36px;
-    height: 36px;
-  }
-
-  #off-box .infield-btn img,
-  #off-box .infield-btn svg {
-    filter: brightness(1.2);
-    /* éclaircir icône caméra */
-  }
-
-
-  #off_result {
-    display: none;
-    margin-top: 8px;
+  /* L’input du scanner reprend EXACTEMENT le style des autres inputs */
+  #off-box .infield input {
+    background: #121a2f;
     border: 1px solid var(--border);
-    border-radius: 10px;
-    padding: 8px;
-    background: #10182d
+    color: #e6eef9
   }
 
-  #off_error {
-    display: none;
-    color: #ffb4b4;
-    margin-top: .35rem
+  #off-box .infield input::placeholder {
+    color: rgba(230, 238, 249, .72)
+  }
+
+  /* Bouton caméra assorti */
+  #off-box .infield-btn {
+    background: #1a2230;
+    border: 1px solid var(--border)
   }
 </style>
 {% endblock %}
@@ -599,93 +581,60 @@
 
 {% block scripts %}
 <script>
-  // --- Recherche live (table + cartes) ---
-  const q = document.getElementById('q');
-  const tbody = document.getElementById('tbody');
-  const cards = document.getElementById('cards');
-  const rows = Array.from(tbody ? tbody.children : []);
-  const cardsItems = Array.from(cards ? cards.children : []);
+  // --- Recherche live ---
+  const q = document.getElementById('q'); const tbody = document.getElementById('tbody'); const cards = document.getElementById('cards');
+  const rows = Array.from(tbody ? tbody.children : []); const cardsItems = Array.from(cards ? cards.children : []);
   function applyFilter(s) {
-    const t = s.toLowerCase().trim();
-    let shown = 0;
+    const t = s.toLowerCase().trim(); let shown = 0;
     rows.forEach(tr => {
-      const txt = tr.dataset.name + ' ' + tr.dataset.unit + ' ' + (tr.dataset.barcode || '');
-      const match = txt.includes(t);
-      tr.style.display = match ? '' : 'none';
-      if (match) shown++;
+      const txt = tr.dataset.name + ' ' + tr.dataset.unit + ' ' + (tr.dataset.barcode || ''); const match = txt.includes(t);
+      tr.style.display = match ? '' : 'none'; if (match) shown++;
     });
     cardsItems.forEach(c => {
-      const txt = c.dataset.name + ' ' + c.dataset.unit + ' ' + (c.dataset.barcode || '');
-      const match = txt.includes(t);
+      const txt = c.dataset.name + ' ' + c.dataset.unit + ' ' + (c.dataset.barcode || ''); const match = txt.includes(t);
       c.style.display = match ? '' : 'none';
     });
     const pc = document.getElementById('prod-count'); if (pc) pc.textContent = t ? shown : rows.length;
   }
   if (q) { q.addEventListener('input', e => applyFilter(e.target.value)); }
 
-  // --- Modales Modifier / Supprimer ---
-  const $ = (s) => document.querySelector(s);
+  // --- Modales ---
+  const $ = s => document.querySelector(s);
   document.addEventListener('click', function (e) {
-    const edit = e.target.closest('.js-edit-open');
-    const del = e.target.closest('.js-delete-open');
+    const edit = e.target.closest('.js-edit-open'); const del = e.target.closest('.js-delete-open');
     if (edit) {
-      $('#dlg-product-id').value = edit.dataset.id;
-      $('#dlg-name').value = edit.dataset.name || '';
-      $('#dlg-unit').value = edit.dataset.unit || '';
-      $('#dlg-shelf').value = edit.dataset.shelf || 90;
-      $('#dlg-edit').showModal();
-      return;
+      $('#dlg-product-id').value = edit.dataset.id; $('#dlg-name').value = edit.dataset.name || '';
+      $('#dlg-unit').value = edit.dataset.unit || ''; $('#dlg-shelf').value = edit.dataset.shelf || 90; $('#dlg-edit').showModal(); return;
     }
     if (del) {
-      $('#del-product-id').value = del.dataset.id;
-      const name = del.dataset.name || '';
-      const lots = parseInt(del.dataset.lots || '0', 10);
-      const msg = lots > 0
-        ? `La suppression retirera aussi les ${lots} stock(s) lié(s) à « ${name} ».`
-        : `Supprimer « ${name} » ?`;
-      $('#del-msg').textContent = msg;
-      $('#dlg-delete').showModal();
-      return;
+      $('#del-product-id').value = del.dataset.id; const name = del.dataset.name || ''; const lots = parseInt(del.dataset.lots || '0', 10);
+      const msg = lots > 0 ? `La suppression retirera aussi les ${lots} stock(s) lié(s) à « ${name} ».` : `Supprimer « ${name} » ?`;
+      $('#del-msg').textContent = msg; $('#dlg-delete').showModal(); return;
     }
   });
 
-  // --- Réinit formulaire d’ajout ---
+  // --- Réinit ---
   (function () {
-    const r = document.getElementById('create_reset');
-    if (!r) return;
+    const r = document.getElementById('create_reset'); if (!r) return;
     r.addEventListener('click', () => {
       ['create_name', 'create_shelf', 'create_barcode', 'off_barcode'].forEach(id => {
         const el = document.getElementById(id); if (el) el.value = '';
-      });
-      const unit = document.getElementById('create_unit'); if (unit) unit.value = 'pièce';
+      }); const unit = document.getElementById('create_unit'); if (unit) unit.value = 'pièce';
     });
   })();
 
-  // --- TOASTS via query params (ajout) ---
-  (function () {
-    const p = new URLSearchParams(location.search);
-    if (p.get('added') === '1') window.showToast('Produit ajouté.', 'ok');
-  })();
+  // Toasts
+  (function () { const p = new URLSearchParams(location.search); if (p.get('added') === '1') window.showToast('Produit ajouté.', 'ok'); })();
 
-  // ==================== Open Food Facts + Scanner ====================
-  const elCode = document.getElementById('off_barcode');
-  const elSearch = document.getElementById('off_search');
-  const elScan = document.getElementById('off_scan');
-  const elCapture = document.getElementById('off_capture');
-  const elFile = document.getElementById('off_file');
-  const elPaste = document.getElementById('off_paste');
-  const elClear = document.getElementById('off_clear');
-  const elError = document.getElementById('off_error');
-  const elRes = document.getElementById('off_result');
-  const elImg = document.getElementById('off_img');
-  const elName = document.getElementById('off_name');
-  const elBrand = document.getElementById('off_brand');
-  const elQty = document.getElementById('off_qty');
+  // --- OFF + Scanner ---
+  const elCode = document.getElementById('off_barcode'); const elSearch = document.getElementById('off_search');
+  const elScan = document.getElementById('off_scan'); const elCapture = document.getElementById('off_capture');
+  const elFile = document.getElementById('off_file'); const elPaste = document.getElementById('off_paste'); const elClear = document.getElementById('off_clear');
+  const elError = document.getElementById('off_error'); const elRes = document.getElementById('off_result');
+  const elImg = document.getElementById('off_img'); const elName = document.getElementById('off_name'); const elBrand = document.getElementById('off_brand'); const elQty = document.getElementById('off_qty');
   const elFillCreate = document.getElementById('off_fill_create');
 
-  const cfName = document.getElementById('create_name');
-  const cfUnitSel = document.getElementById('create_unit');
-  const cfBarcode = document.getElementById('create_barcode');
+  const cfName = document.getElementById('create_name'); const cfUnitSel = document.getElementById('create_unit'); const cfBarcode = document.getElementById('create_barcode');
 
   function showError(msg) { if (!elError) return; elError.textContent = msg; elError.style.display = 'block'; }
   function clearError() { if (!elError) return; elError.style.display = 'none'; }
@@ -693,41 +642,24 @@
 
   function normalizeOFF(data) {
     const p = (data && data.product) || {};
-    const nm = p.product_name || p.generic_name || p.brands_tags?.[0] || '';
-    const brand = p.brands || (p.brands_tags && p.brands_tags.join(', ')) || '';
-    const img = p.image_small_url || p.image_front_url || p.image_url || '';
-    const qty = p.quantity || p.serving_quantity || p.serving_size || '';
+    const nm = p.product_name || p.generic_name || p.brands_tags?.[0] || ''; const brand = p.brands || (p.brands_tags && p.brands_tags.join(', ')) || '';
+    const img = p.image_small_url || p.image_front_url || p.image_url || ''; const qty = p.quantity || p.serving_quantity || p.serving_size || '';
     return { name: nm, brand, img, quantity_hint: qty };
   }
   function showResult(obj) {
-    if (!obj) return;
-    elImg.src = obj.img || '';
-    elName.textContent = obj.name || '—';
-    elBrand.textContent = obj.brand || '—';
-    elQty.textContent = obj.quantity_hint || '—';
-    elRes.style.display = 'block';
-    elFillCreate.dataset.payload = JSON.stringify(obj);
+    if (!obj) return; elImg.src = obj.img || ''; elName.textContent = obj.name || '—'; elBrand.textContent = obj.brand || '—';
+    elQty.textContent = obj.quantity_hint || '—'; elRes.style.display = 'block'; elFillCreate.dataset.payload = JSON.stringify(obj);
   }
   function inferUnit(qty) {
-    if (!qty) return '';
-    const s = (qty + '').toLowerCase();
-    if (/\b(kg|kilogram|kilo)/.test(s)) return 'kg';
-    if (/\bg\b/.test(s)) return 'g';
-    if (/\bl\b/.test(s)) return 'L'; // on mappe sur "L" majuscule
-    if (/\bml\b/.test(s)) return 'ml';
-    if (/\bpi[eè]ce/.test(s) || /\bpcs?\b/.test(s)) return 'pièce';
-    return '';
+    if (!qty) return ''; const s = (qty + '').toLowerCase();
+    if (/\b(kg|kilogram|kilo)/.test(s)) return 'kg'; if (/\bg\b/.test(s)) return 'g'; if (/\bl\b/.test(s)) return 'L'; if (/\bml\b/.test(s)) return 'ml';
+    if (/\bpi[eè]ce/.test(s) || /\bpcs?\b/.test(s)) return 'pièce'; return '';
   }
-  function setUnitIfExists(u) {
-    if (!u) return;
-    const opts = Array.from(cfUnitSel.options).map(o => o.value);
-    if (opts.includes(u)) cfUnitSel.value = u;
-  }
+  function setUnitIfExists(u) { if (!u) return; const opts = Array.from(cfUnitSel.options).map(o => o.value); if (opts.includes(u)) cfUnitSel.value = u; }
 
   async function doLookup() {
     clearError(); clearResult();
-    const code = (elCode.value || '').replace(/\D+/g, '');
-    if (!code) { showError('Renseigne un code‑barres valide.'); return; }
+    const code = (elCode.value || '').replace(/\D+/g, ''); if (!code) { showError('Renseigne un code‑barres valide.'); return; }
     elSearch.disabled = true; elSearch.textContent = '…';
     try {
       const res = await fetch(`https://world.openfoodfacts.org/api/v0/product/${code}.json`);
@@ -735,109 +667,61 @@
       const data = await res.json();
       if (!data || data.status !== 1) {
         showError('Produit introuvable sur Open Food Facts. Tu peux l’ajouter manuellement (le code-barres sera conservé).');
-        if (cfBarcode) cfBarcode.value = code;
-        return;
+        if (cfBarcode) cfBarcode.value = code; return;
       }
-      const normalized = normalizeOFF(data);
-      showResult(normalized);
-      if (cfBarcode) cfBarcode.value = code;
-    } catch (e) {
-      console.error(e); showError('Erreur lors de la recherche. Réessaie.');
-    } finally {
-      elSearch.disabled = false; elSearch.textContent = '🔎 Rechercher';
-    }
+      const normalized = normalizeOFF(data); showResult(normalized); if (cfBarcode) cfBarcode.value = code;
+    } catch (e) { console.error(e); showError('Erreur lors de la recherche. Réessaie.'); }
+    finally { elSearch.disabled = false; elSearch.textContent = '🔎 Rechercher'; }
   }
 
   elSearch.addEventListener('click', doLookup);
-  elCode.addEventListener('keydown', (ev) => { if (ev.key === 'Enter') { ev.preventDefault(); doLookup(); } });
-  elClear.addEventListener('click', () => {
-    elCode.value = ''; clearError(); clearResult();
-  });
-  elPaste.addEventListener('click', async () => {
-    try {
-      const t = await navigator.clipboard.readText();
-      elCode.value = (t || '').replace(/\D+/g, '');
-      doLookup();
-    } catch (e) { showError('Impossible de lire le presse‑papiers.'); }
-  });
+  elCode.addEventListener('keydown', ev => { if (ev.key === 'Enter') { ev.preventDefault(); doLookup(); } });
+  elClear.addEventListener('click', () => { elCode.value = ''; clearError(); clearResult(); });
+  elPaste.addEventListener('click', async () => { try { const t = await navigator.clipboard.readText(); elCode.value = (t || '').replace(/\D+/g, ''); doLookup(); } catch (e) { showError('Impossible de lire le presse‑papiers.'); } });
 
-  // Préremplir formulaire d’ajout depuis OFF
   elFillCreate.addEventListener('click', () => {
     const payload = elFillCreate.dataset.payload ? JSON.parse(elFillCreate.dataset.payload) : null;
-    if (!payload) { showError('Aucun résultat à insérer.'); return; }
-    if (payload.name) cfName.value = payload.name;
-    const u = inferUnit(payload.quantity_hint);
-    setUnitIfExists(u);
-    const addBtn = document.querySelector('#create_form .primary'); if (addBtn) addBtn.focus();
+    if (!payload) { showError('Aucun résultat à insérer.'); return; } if (payload.name) cfName.value = payload.name;
+    const u = inferUnit(payload.quantity_hint); setUnitIfExists(u); const addBtn = document.querySelector('#create_form .primary'); if (addBtn) addBtn.focus();
   });
 
-  // --- Scanner (BarcodeDetector + ZXing fallback) ---
-  const dlgScan = document.getElementById('scan-modal');
-  const scanVideo = document.getElementById('scan-video');
-  const btnScanClose = document.getElementById('scan-close');
+  // Scanner live (BarcodeDetector + ZXing fallback)
+  const dlgScan = document.getElementById('scan-modal'); const scanVideo = document.getElementById('scan-video'); const btnScanClose = document.getElementById('scan-close');
   let scanning = false, zxingReader = null, zxingLiveActive = false;
 
-  async function onBarcodeDetected(code) {
-    if (!code) return;
-    elCode.value = code.replace(/\D+/g, '');
-    await closeScanModal();
-    doLookup();
-  }
-
+  async function onBarcodeDetected(code) { if (!code) return; elCode.value = code.replace(/\D+/g, ''); await closeScanModal(); doLookup(); }
   async function openScanModal() {
-    if (!dlgScan) return;
-    dlgScan.showModal();
-    scanning = true;
+    if (!dlgScan) return; dlgScan.showModal(); scanning = true;
     if ('BarcodeDetector' in window) {
       try {
         const detector = new BarcodeDetector({ formats: ['ean_13', 'ean_8', 'upc_a', 'upc_e'] });
-        const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
-        scanVideo.srcObject = stream;
-        const tick = async () => {
-          if (!scanning) return;
-          try {
-            const bm = await detector.detect(scanVideo);
-            if (bm && bm[0] && bm[0].rawValue) { await onBarcodeDetected(bm[0].rawValue); return; }
-          } catch { }
-          requestAnimationFrame(tick);
-        };
+        const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } }); scanVideo.srcObject = stream;
+        const tick = async () => { if (!scanning) return; try { const bm = await detector.detect(scanVideo); if (bm && bm[0] && bm[0].rawValue) { await onBarcodeDetected(bm[0].rawValue); return; } } catch { } requestAnimationFrame(tick); };
         tick(); return;
       } catch (e) { console.warn('BarcodeDetector indisponible, fallback ZXing.', e); }
     }
     startZXingLive();
   }
   async function closeScanModal() {
-    scanning = false;
-    if (dlgScan && dlgScan.open) dlgScan.close();
-    const s = scanVideo && scanVideo.srcObject;
-    if (s && s.getTracks) s.getTracks().forEach(t => t.stop());
+    scanning = false; if (dlgScan && dlgScan.open) dlgScan.close();
+    const s = scanVideo && scanVideo.srcObject; if (s && s.getTracks) s.getTracks().forEach(t => t.stop());
     if (zxingReader && zxingLiveActive) { try { await zxingReader.reset(); } catch { } zxingLiveActive = false; }
   }
   async function loadZXing() {
     return new Promise((resolve, reject) => {
       if (window.ZXing) return resolve(window.ZXing);
-      const s = document.createElement('script');
-      s.src = 'https://unpkg.com/@zxing/library@latest';
-      s.onload = () => resolve(window.ZXing);
-      s.onerror = () => reject(new Error('ZXing indisponible'));
-      document.head.appendChild(s);
+      const s = document.createElement('script'); s.src = 'https://unpkg.com/@zxing/library@latest';
+      s.onload = () => resolve(window.ZXing); s.onerror = () => reject(new Error('ZXing indisponible')); document.head.appendChild(s);
     });
   }
   async function startZXingLive() {
     try {
-      if (!window.ZXing) await loadZXing();
-      if (!zxingReader) zxingReader = new ZXing.BrowserMultiFormatReader();
-      zxingLiveActive = true; scanning = true;
-      zxingReader.decodeFromVideoDevice(undefined, scanVideo, async (result, err) => {
+      if (!window.ZXing) await loadZXing(); if (!zxingReader) zxingReader = new ZXing.BrowserMultiFormatReader();
+      zxingLiveActive = true; scanning = true; zxingReader.decodeFromVideoDevice(undefined, scanVideo, async (result, err) => {
         if (!scanning) return;
-        if (result && result.getText) {
-          const code = (result.getText() || '').replace(/\D+/g, '');
-          if (code) { await onBarcodeDetected(code); }
-        }
+        if (result && result.getText) { const code = (result.getText() || '').replace(/\D+/g, ''); if (code) { await onBarcodeDetected(code); } }
       });
-    } catch (e) {
-      console.error(e); showError("Impossible de démarrer le flux live. Utilise « Prendre une photo ».");
-    }
+    } catch (e) { console.error(e); showError("Impossible de démarrer le flux live. Utilise « Prendre une photo »."); }
   }
 
   document.getElementById('off_scan').addEventListener('click', openScanModal);
@@ -848,17 +732,12 @@
   elFile.addEventListener('change', async (ev) => {
     const file = ev.target.files && ev.target.files[0]; if (!file) return;
     try {
-      if (!window.ZXing) await loadZXing();
-      if (!zxingReader) zxingReader = new ZXing.BrowserMultiFormatReader();
-      const imgURL = URL.createObjectURL(file);
-      const img = document.createElement('img'); img.src = imgURL; await img.decode();
-      const res = await zxingReader.decodeFromImageElement(img);
-      const code = res && res.getText ? (res.getText() || '').replace(/\D+/g, '') : '';
-      if (code) await onBarcodeDetected(code);
-      else showError('Aucun code détecté sur la photo.');
+      if (!window.ZXing) await loadZXing(); if (!zxingReader) zxingReader = new ZXing.BrowserMultiFormatReader();
+      const imgURL = URL.createObjectURL(file); const img = document.createElement('img'); img.src = imgURL; await img.decode();
+      const res = await zxingReader.decodeFromImageElement(img); const code = res && res.getText ? (res.getText() || '').replace(/\D+/g, '') : '';
+      if (code) await onBarcodeDetected(code); else showError('Aucun code détecté sur la photo.');
     } catch (e) { console.error(e); showError('Erreur lecture de la photo.'); }
     finally { elFile.value = ''; }
   });
-  // ==================== /Open Food Facts + Scanner ====================
 </script>
 {% endblock %}
