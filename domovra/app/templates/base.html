@@ -450,6 +450,64 @@
         display: none;
       }
     }
+
+    /* ======= TOASTS ======= */
+    .toast-stack {
+      position: fixed;
+      top: 12px;
+      right: 12px;
+      display: grid;
+      gap: 8px;
+      z-index: 3000;
+    }
+
+    .toast {
+      background: #151922;
+      border: 1px solid #242932;
+      border-radius: 10px;
+      padding: 10px 12px;
+      box-shadow: 0 6px 16px rgba(0, 0, 0, .25);
+      animation: toast-in .2s ease both;
+    }
+
+    .toast.ok {
+      border-color: rgba(76, 175, 80, .35);
+    }
+
+    .toast.warn {
+      border-color: rgba(255, 179, 0, .35);
+    }
+
+    .toast.error {
+      border-color: rgba(239, 83, 80, .35);
+    }
+
+    @keyframes toast-in {
+      from {
+        opacity: 0;
+        transform: translateY(-8px)
+      }
+
+      to {
+        opacity: 1;
+        transform: none
+      }
+    }
+
+    @media (max-width:700px) {
+      .toast-stack {
+        top: auto;
+        right: auto;
+        left: 0;
+        bottom: 12px;
+        width: 100%;
+        padding: 0 12px;
+      }
+
+      .toast {
+        width: 100%;
+      }
+    }
   </style>
 
   {% block head %}{% endblock %}
@@ -527,7 +585,10 @@
     </main>
   </div>
 
-  <!-- JS : sidebar mobile -->
+  <!-- TOASTS -->
+  <div id="toast-stack" class="toast-stack" aria-live="polite"></div>
+
+  <!-- JS : sidebar mobile + toasts -->
   <script>
     (function () {
       const btn = document.getElementById('hamburger');
@@ -540,6 +601,27 @@
       document.querySelector('aside')?.addEventListener('click', (e) => {
         const a = e.target.closest('a'); if (a && isMobile()) close();
       });
+    })();
+
+    // Toast API
+    (function () {
+      const stack = document.getElementById('toast-stack');
+      function showToast(msg, type = 'ok', timeout = 3000) {
+        if (!stack) return;
+        const el = document.createElement('div');
+        el.className = `toast ${type}`;
+        el.textContent = msg;
+        stack.appendChild(el);
+        const hide = () => {
+          el.style.transition = '200ms ease';
+          el.style.opacity = '0';
+          el.style.transform = 'translateY(-4px)';
+          setTimeout(() => el.remove(), 200);
+        };
+        const t = setTimeout(hide, timeout);
+        el.addEventListener('click', () => { clearTimeout(t); hide(); });
+      }
+      window.showToast = showToast;
     })();
   </script>
 
