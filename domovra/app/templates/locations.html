@@ -3,7 +3,7 @@
 
 {% block content %}
 
-<!-- Panneau d’ajout express (layout Grid) -->
+<!-- Ajout express -->
 <section class="panel add-panel">
   <form id="add-form" class="add-grid" method="post" action="{{ BASE }}location/add" autocomplete="off">
     <div class="field">
@@ -20,7 +20,7 @@
   </form>
 </section>
 
-<!-- Outils: recherche / compteur -->
+<!-- Outils -->
 <section class="panel tools">
   <div class="tools-grid">
     <div class="tool">
@@ -36,10 +36,16 @@
   </div>
 </section>
 
-<!-- Liste: table desktop / cartes mobile -->
+<!-- Liste -->
 <section class="panel list-wrapper">
-  <!-- TABLE (desktop) -->
+  <!-- TABLE desktop -->
   <table class="table desktable" aria-label="Liste des emplacements">
+    <!-- Fige les 3 colonnes pour un alignement parfait -->
+    <colgroup>
+      <col style="width: 48%">
+      <col style="width: 24%">
+      <col style="width: 28%">
+    </colgroup>
     <thead>
       <tr>
         <th class="col-name">Nom</th>
@@ -62,22 +68,24 @@
           <span class="muted">—</span>
           {% endif %}
         </td>
-        <td class="actions">
-          <button class="btn btn-soft btn-rename" type="button" title="Renommer">
-            <span class="i i-edit" aria-hidden="true"></span>
-            <span class="hide-sm">Modifier</span>
-          </button>
-          <button class="btn btn-danger btn-icon btn-delete" type="button" title="Supprimer">
-            <span class="i i-trash" aria-hidden="true"></span>
-            <span class="sr">Supprimer</span>
-          </button>
+        <td class="actions-td">
+          <div class="actions">
+            <button class="btn btn-soft btn-rename" type="button" title="Renommer">
+              <span class="i i-edit" aria-hidden="true"></span>
+              <span class="hide-sm">Modifier</span>
+            </button>
+            <button class="btn btn-danger btn-icon btn-delete" type="button" title="Supprimer">
+              <span class="i i-trash" aria-hidden="true"></span>
+              <span class="sr">Supprimer</span>
+            </button>
+          </div>
         </td>
       </tr>
       {% endfor %}
     </tbody>
   </table>
 
-  <!-- CARDS (mobile) -->
+  <!-- CARTES mobile -->
   <div class="cards mobcards" id="locations-cards" aria-label="Liste des emplacements (cartes)">
     {% for loc in items %}
     <article class="card" data-id="{{ loc.id }}" data-name="{{ loc.name }}" data-rename-url="{{ BASE }}location/update"
@@ -105,7 +113,7 @@
   </div>
 </section>
 
-<!-- Modale renommage -->
+<!-- Modales -->
 <dialog id="rename-dialog" class="modal">
   <form id="rename-form" method="post" action="{{ BASE }}location/update">
     <h3 class="modal-title">Renommer l’emplacement</h3>
@@ -121,7 +129,6 @@
   </form>
 </dialog>
 
-<!-- Modale suppression -->
 <dialog id="delete-dialog" class="modal">
   <form id="delete-form" method="post" action="{{ BASE }}location/delete">
     <h3 class="modal-title">Confirmer la suppression</h3>
@@ -136,7 +143,6 @@
 </dialog>
 
 <style>
-  /* ====== Base visuelle ====== */
   :root {
     --radius: 16px;
     --gap: .75rem;
@@ -161,7 +167,6 @@
     margin-bottom: .75rem;
   }
 
-  /* Ajout express – grid */
   .add-grid {
     display: grid;
     grid-template-columns: 1fr auto;
@@ -244,7 +249,6 @@
     content: "🗑️";
   }
 
-  /* Tools */
   .tools-grid {
     display: grid;
     grid-template-columns: 1fr auto;
@@ -269,9 +273,10 @@
     background: var(--primary-color, #3b82f6);
   }
 
-  /* Table desktop (compacte) */
+  /* === Table desktop — alignement rigoureux === */
   .table {
     width: 100%;
+    table-layout: fixed;
     border-collapse: separate;
     border-spacing: 0 6px;
   }
@@ -297,22 +302,12 @@
     vertical-align: middle;
   }
 
-  .col-name {
-    width: 40%;
-  }
-
-  .col-infos {
-    width: 25%;
-  }
-
-  .col-actions {
-    width: 35%;
-  }
-
-  .actions {
-    display: flex;
-    gap: .4rem;
-    justify-content: flex-end;
+  .name .label {
+    display: inline-block;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 
   .badge {
@@ -325,8 +320,13 @@
     font-size: .85rem;
   }
 
-  .hide-sm {
-    display: inline;
+  .actions-td {
+    text-align: right;
+  }
+
+  .actions {
+    display: inline-flex;
+    gap: .4rem;
   }
 
   /* Cards mobile */
@@ -362,7 +362,6 @@
     justify-content: flex-end;
   }
 
-  /* Responsive */
   @media (max-width: 900px) {
     .add-grid {
       grid-template-columns: 1fr;
@@ -395,7 +394,6 @@
     }
   }
 
-  /* Dialogs */
   .modal::backdrop {
     background: rgba(0, 0, 0, .35);
   }
@@ -426,7 +424,6 @@
     const $ = (s, p = document) => p.querySelector(s);
     const $$ = (s, p = document) => Array.from(p.querySelectorAll(s));
 
-    // Recherche unifiée
     const search = $('#search-input');
     const norm = (t) => (t || '').normalize('NFD').replace(/\p{Diacritic}/gu, '').toLowerCase();
     function filter(q) {
