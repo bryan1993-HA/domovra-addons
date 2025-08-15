@@ -17,6 +17,7 @@
       const mSide = document.querySelector('meta[name="domovra:sidebar"]');
       const pref = (mTheme && mTheme.content) || 'auto';
       const html = document.documentElement;
+
       function setTheme(mode) {
         if (!html) return;
         if (mode === 'light' || mode === 'dark') {
@@ -29,6 +30,7 @@
           html.style.colorScheme = isDark ? 'dark' : 'light';
         }
       }
+
       if (pref === 'light' || pref === 'dark') {
         setTheme(pref);
       } else {
@@ -36,6 +38,7 @@
         try { saved = localStorage.getItem('domovra_theme'); } catch (e) { }
         setTheme((saved === 'light' || saved === 'dark') ? saved : 'auto');
       }
+
       try {
         const mq = window.matchMedia('(prefers-color-scheme: dark)');
         mq.addEventListener?.('change', () => {
@@ -43,6 +46,7 @@
           if (now === 'auto') setTheme('auto');
         });
       } catch (e) { }
+
       const mini = (mSide && mSide.content === '1');
       if (mini) html.classList.add('sidebar-mini'); else html.classList.remove('sidebar-mini');
     })();
@@ -52,7 +56,7 @@
     :root {
       color-scheme: dark;
 
-      /* couleurs toasts depuis Paramètres */
+      /* couleurs toasts depuis Paramètres (Jinja propre) */
       --toast-ok: {
           {
           SETTINGS.toast_ok|default('#4caf50')
@@ -77,7 +81,7 @@
 
       ;
 
-      /* fonds translucides pour toasts */
+      /* fonds translucides — fallback CSS (sera écrasé par JS pour compat universelle) */
       --toast-ok-bg: color-mix(in srgb, var(--toast-ok) 16%, transparent);
       --toast-warn-bg: color-mix(in srgb, var(--toast-warn) 16%, transparent);
       --toast-err-bg: color-mix(in srgb, var(--toast-error) 16%, transparent);
@@ -624,17 +628,61 @@
       const stack = document.getElementById('toast-stack');
       const mDur = document.querySelector('meta[name="domovra:toastDuration"]');
       const defaultDuration = mDur ? parseInt(mDur.content || '3000', 10) || 3000 : 3000;
+
       function showToast(msg, type = 'ok', timeout) {
         if (!stack) return;
         const el = document.createElement('div');
         el.className = `toast ${type}`;
         el.textContent = msg;
         stack.appendChild(el);
-        const hide = () => { el.style.transition = '200ms ease'; el.style.opacity = '0'; el.style.transform = 'translateY(-4px)'; setTimeout(() => el.remove(), 200); };
+        const hide = () => {
+          el.style.transition = '200ms ease';
+          el.style.opacity = '0';
+          el.style.transform = 'translateY(-4px)';
+          setTimeout(() => el.remove(), 200);
+        };
         const t = setTimeout(hide, timeout ?? defaultDuration);
         el.addEventListener('click', () => { clearTimeout(t); hide(); });
       }
       window.showToast = showToast;
+    })();
+
+    /* Derive translucent backgrounds from configured colors (works in all browsers) */
+    (function () {
+      const root = document.documentElement;
+
+      function toRGBA(input, a) {
+        const ctx = document.createElement('canvas').getContext('2d');
+        if (!ctx) return null;
+        ctx.fillStyle = '#000';
+        ctx.fillStyle = (input || '').trim();
+        const norm = ctx.fillStyle; // normalized css color
+        const m = norm.match(/\d+/g);
+        if (m && m.length >= 3) return `rgba(${m[0]}, ${m[1]}, ${m[2]}, ${a})`;
+        const hex = norm.replace('#', '');
+        if (hex.length === 3) {
+          const r = parseInt(hex[0] + hex[0], 16), g = parseInt(hex[1] + hex[1], 16), b = parseInt(hex[2] + hex[2], 16);
+          return `rgba(${r}, ${g}, ${b}, ${a})`;
+        }
+        if (hex.length === 6) {
+          const r = parseInt(hex.slice(0, 2), 16), g = parseInt(hex.slice(2, 4), 16), b = parseInt(hex.slice(4, 6), 16);
+          return `rgba(${r}, ${g}, ${b}, ${a})`;
+        }
+        return null;
+      }
+
+      const cs = getComputedStyle(root);
+      const ok = cs.getPropertyValue('--toast-ok').trim() || '#4caf50';
+      const warn = cs.getPropertyValue('--toast-warn').trim() || '#ffb300';
+      const err = cs.getPropertyValue('--toast-error').trim() || '#ef5350';
+
+      const okBg = toRGBA(ok, 0.16) || 'rgba(76,175,80,0.16)';
+      const warnBg = toRGBA(warn, 0.16) || 'rgba(255,179,0,0.16)';
+      const errBg = toRGBA(err, 0.16) || 'rgba(239,83,80,0.16)';
+
+      root.style.setProperty('--toast-ok-bg', okBg);
+      root.style.setProperty('--toast-warn-bg', warnBg);
+      root.style.setProperty('--toast-err-bg', errBg);
     })();
   </script>
 
