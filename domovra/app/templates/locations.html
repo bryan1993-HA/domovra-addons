@@ -39,7 +39,7 @@
 <!-- Liste -->
 <section class="panel list-wrapper">
   <table class="table desktable" aria-label="Liste des emplacements">
-    <!-- 3 colonnes strictes comme le Top 8 -->
+    <!-- 3 colonnes strictes -->
     <colgroup>
       <col style="width: 52%">
       <col style="width: 20%">
@@ -69,7 +69,7 @@
         <td class="t-actions">
           <button class="btn btn-soft btn-rename" type="button" title="Renommer">
             <span class="i i-edit" aria-hidden="true"></span>
-            <span class="hide-sm">Modifier</span>
+            <span class="btn-txt">Modifier</span>
           </button>
           <button class="btn btn-danger btn-icon btn-delete" type="button" title="Supprimer">
             <span class="i i-trash" aria-hidden="true"></span>
@@ -199,7 +199,7 @@
     display: inline-flex;
     align-items: center;
     gap: .45rem;
-    padding: .5rem .7rem;
+    padding: .45rem .6rem;
     border-radius: 10px;
     border: var(--border);
     background: transparent;
@@ -224,7 +224,7 @@
   }
 
   .btn-icon {
-    padding: .5rem .6rem;
+    padding: .45rem .55rem;
   }
 
   .i {
@@ -269,7 +269,7 @@
     background: var(--primary-color, #3b82f6);
   }
 
-  /* === Table desktop : identique en principe au Top 8 (aucun wrapper dans les TD) === */
+  /* === Table desktop === */
   .table {
     width: 100%;
     border-collapse: separate;
@@ -315,12 +315,27 @@
     font-size: .85rem;
   }
 
+  /* Actions : wrap si nécessaire (évite tout dépassement) */
   .t-actions {
-    text-align: right;
-    white-space: nowrap;
+    display: flex;
+    flex-wrap: wrap;
+    /* << wrap auto sur 2 lignes si besoin */
+    gap: .4rem;
+    justify-content: flex-end;
+    align-items: center;
   }
 
-  /* boutons sous la colonne “Actions” */
+  .t-actions .btn {
+    flex: 0 0 auto;
+    max-width: 100%;
+  }
+
+  /* Sur écrans un peu étroits, cacher le texte “Modifier” (on garde l’icône) */
+  @media (max-width: 1280px) {
+    .t-actions .btn-txt {
+      display: none;
+    }
+  }
 
   /* Cards mobile */
   .cards {
@@ -370,10 +385,6 @@
 
     .mobcards {
       display: grid;
-    }
-
-    .hide-sm {
-      display: none;
     }
   }
 
