@@ -133,11 +133,29 @@
     gap: 8px
   }
 
-  .pill {
-    padding: 2px 8px;
+  /* Stats chips (comme sur l'accueil) */
+  .stats {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px
+  }
+
+  .stat {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 10px;
     border-radius: 999px;
     border: 1px solid var(--border);
     background: #0f1524
+  }
+
+  .stat .k {
+    color: var(--muted)
+  }
+
+  .stat .v {
+    font-weight: 600
   }
 
   .cards {
@@ -160,8 +178,6 @@
     width: 100%;
     padding-right: 60px
   }
-
-  /* le texte ne passe pas sous l’icône */
 
   .infield-btn {
     position: absolute;
@@ -260,7 +276,7 @@
     .card-info {
       display: flex;
       flex-wrap: wrap;
-      gap: 6px;
+      gap: 8px;
       margin-top: 6px
     }
 
@@ -272,7 +288,7 @@
     }
   }
 
-  /* OFF box — totalement transparent (pas de fond/bordure) */
+  /* OFF box transparent, input/bouton style homogène */
   #off-box {
     background: transparent;
     border: none;
@@ -280,7 +296,6 @@
     padding: 10px
   }
 
-  /* L’input du scanner garde le style des autres inputs */
   #off-box .infield input {
     background: #121a2f;
     border: 1px solid var(--border);
@@ -291,13 +306,12 @@
     color: rgba(230, 238, 249, .72)
   }
 
-  /* Bouton caméra assorti */
   #off-box .infield-btn {
     background: #1a2230;
     border: 1px solid var(--border)
   }
 
-  /* Sécurité: cache explicite au cas où */
+  /* Sécurité d'affichage */
   #off_result[hidden],
   #off_error[hidden] {
     display: none !important;
@@ -318,7 +332,7 @@
       <h2>Open Food Facts & Scanner</h2>
       <span class="muted">→ préremplir le formulaire</span>
       <span class="qmark"
-        data-tip="Saisis ou scanne un code‑barres (EAN/GTIN). On interroge Open Food Facts pour proposer un nom et une unité indicative.">?</span>
+        data-tip="Saisis ou scanne un code-barres (EAN/GTIN). On interroge Open Food Facts pour proposer un nom et une unité indicative.">?</span>
     </div>
 
     <div id="off-box">
@@ -335,11 +349,9 @@
         <button id="off_clear" class="secondary" type="button">✖ Effacer</button>
       </div>
 
-      <div id="off_hint" class="muted" style="margin-top:.4rem">
-        Astuce : essaie <b>5449000000996</b> (Coca‑Cola 1,5 L).
+      <div id="off_hint" class="muted" style="margin-top:.4rem">Astuce : essaie <b>5449000000996</b> (Coca-Cola 1,5 L).
       </div>
 
-      <!-- Erreur et résultat cachés par défaut -->
       <div id="off_error" hidden></div>
 
       <div id="off_result" hidden>
@@ -353,8 +365,8 @@
                 data-tip="Nom et marque récupérés d’Open Food Facts. Tu peux les modifier avant d’ajouter le produit.">?</span>
             </div>
             <div id="off_brand" class="muted">Marque</div>
-            <div class="muted" style="margin-top:.25rem">Quantité indiquée : <span id="off_qty">—</span></div>
-            <div class="muted">Source : Open Food Facts</div>
+            <div class="muted" style="margin-top:.25rem">Quantité indiquée : <span id="off_qty">—</span></div>
+            <div class="muted">Source : Open Food Facts</div>
             <div style="margin-top:.5rem;display:flex;gap:.5rem;flex-wrap:wrap">
               <button id="off_fill_create" type="button" class="secondary">➕ Préremplir le formulaire d’ajout</button>
             </div>
@@ -363,7 +375,7 @@
       </div>
 
       <p class="product-note" style="margin:.4rem 0 0">
-        Scanne/saisis un code‑barres → « Rechercher » → « Préremplir le formulaire », puis ajuste l’unité/la
+        Scanne/saisis un code-barres → « Rechercher » → « Préremplir le formulaire », puis ajuste l’unité/la
         conservation et valide.
       </p>
     </div>
@@ -380,7 +392,7 @@
     <form id="create_form" method="post" action="{{ BASE }}product/add" class="form-grid">
       <div>
         <div class="label">Nom du produit
-          <span class="qmark" data-tip="Nom court et explicite. Exemple : « Lait demi‑écrémé », « Pâtes ».">?</span>
+          <span class="qmark" data-tip="Nom court et explicite. Exemple : « Lait demi-écrémé », « Pâtes ».">?</span>
         </div>
         <input name="name" id="create_name" type="text" required placeholder="ex. Pâtes, Lait demi-écrémé">
       </div>
@@ -417,7 +429,7 @@
       <div>
         <div class="label">Conservation (jours)
           <span class="qmark"
-            data-tip="Nombre de jours de conservation par défaut (utile pour les états : OK / Bientôt / Urgent). Tu peux laisser vide si non pertinent.">?</span>
+            data-tip="Nombre de jours de conservation par défaut (utile pour les états : OK / Bientôt / Urgent). Tu peux laisser vide si non pertinent.">?</span>
         </div>
         <input name="shelf" id="create_shelf" type="number" min="1" placeholder="ex. 90">
       </div>
@@ -425,7 +437,7 @@
       <div>
         <div class="label">Code-barres (facultatif)
           <span class="qmark"
-            data-tip="EAN/GTIN du produit. Rempli automatiquement si tu utilises le scanner ci‑dessus.">?</span>
+            data-tip="EAN/GTIN du produit. Rempli automatiquement si tu utilises le scanner ci-dessus.">?</span>
         </div>
         <input name="barcode" id="create_barcode" type="text" inputmode="numeric" placeholder="EAN/GTIN">
       </div>
@@ -442,11 +454,11 @@
     <div class="title">
       <h2>Outils</h2><span class="muted">Recherche & compteur</span>
       <span class="qmark"
-        data-tip="Filtre instantané sur le nom, l’unité et le code‑barres. Le compteur se met à jour sur les résultats visibles.">?</span>
+        data-tip="Filtre instantané sur le nom, l’unité et le code-barres. Le compteur se met à jour sur les résultats visibles.">?</span>
     </div>
     <div class="tools-row">
       <input id="q" class="tools-search" type="search" placeholder="Rechercher un produit…">
-      <div class="tools-count">📦 Produits : <b id="prod-count">{{ items|length }}</b></div>
+      <div class="tools-count">📦 Produits : <b id="prod-count">{{ items|length }}</b></div>
     </div>
   </div>
 
@@ -456,6 +468,7 @@
       <h2>Liste</h2><span class="muted">Table (bureau) / Cartes (mobile)</span>
     </div>
 
+    <!-- Table desktop -->
     <table id="tbl">
       <colgroup>
         <col style="width:37%">
@@ -477,15 +490,18 @@
           <td>
             <div style="font-weight:600;display:flex;gap:6px;align-items:center">
               <span>{{ it.name }}</span>
-              {% if it.barcode %}<span class="muted">EAN : {{ it.barcode }}</span>{% endif %}
+              {% if it.barcode %}<span class="muted">EAN : {{ it.barcode }}</span>{% endif %}
             </div>
           </td>
           <td>
-            <div class="row" style="flex-wrap:wrap">
-              <span class="pill">Unité : <b>{{ it.unit }}</b></span>
-              <span class="pill">Conservation : <b>{{ it.default_shelf_life_days }} j</b></span>
-              <span class="pill">Stocks : <b>{{ it.lots_count }}</b></span>
-              <span class="pill">Qté totale : <b>{{ '%.2f'|format(it.qty_total) }}</b></span>
+            <div class="stats">
+              <span class="stat"><span class="k">Unité</span><span>:</span><span class="v">{{ it.unit }}</span></span>
+              <span class="stat"><span class="k">Conservation</span><span>:</span><span class="v">{{
+                  it.default_shelf_life_days }} j</span></span>
+              <span class="stat"><span class="k">Stocks</span><span>:</span><span class="v">{{ it.lots_count
+                  }}</span></span>
+              <span class="stat"><span class="k">Qté totale</span><span>:</span><span class="v">{{
+                  '%.2f'|format(it.qty_total) }}</span></span>
             </div>
           </td>
           <td>
@@ -515,11 +531,15 @@
           <div class="card-name">{{ it.name }}</div>
         </div>
         <div class="card-info">
-          {% if it.barcode %}<span class="pill">EAN : <b>{{ it.barcode }}</b></span>{% endif %}
-          <span class="pill">Unité : <b>{{ it.unit }}</b></span>
-          <span class="pill">Conservation : <b>{{ it.default_shelf_life_days }} j</b></span>
-          <span class="pill">Stocks : <b>{{ it.lots_count }}</b></span>
-          <span class="pill">Qté : <b>{{ '%.2f'|format(it.qty_total) }}</b></span>
+          {% if it.barcode %}<span class="stat"><span class="k">EAN</span><span>:</span><span class="v">{{ it.barcode
+              }}</span></span>{% endif %}
+          <span class="stat"><span class="k">Unité</span><span>:</span><span class="v">{{ it.unit }}</span></span>
+          <span class="stat"><span class="k">Conservation</span><span>:</span><span class="v">{{
+              it.default_shelf_life_days }} j</span></span>
+          <span class="stat"><span class="k">Stocks</span><span>:</span><span class="v">{{ it.lots_count
+              }}</span></span>
+          <span class="stat"><span class="k">Qté</span><span>:</span><span class="v">{{ '%.2f'|format(it.qty_total)
+              }}</span></span>
         </div>
         <div class="card-actions">
           <button class="secondary js-edit-open" data-id="{{ it.id }}" data-name="{{ it.name }}"
@@ -533,7 +553,7 @@
   </div>
 </div>
 
-<!-- Dialogs -->
+<!-- Dialogs (inchangés) -->
 <dialog id="dlg-edit">
   <form method="post" action="{{ BASE }}product/update" style="display:grid;gap:10px;min-width:min(420px,92vw)">
     <h3 style="margin:0">Modifier le produit</h3>
@@ -573,7 +593,7 @@
 
 <dialog id="scan-modal">
   <div style="display:grid;gap:10px;min-width:min(520px,96vw)">
-    <h3 style="margin:0">Scanner un code‑barres</h3>
+    <h3 style="margin:0">Scanner un code-barres</h3>
     <video id="scan-video" autoplay playsinline
       style="width:100%;border-radius:12px;border:1px solid var(--border)"></video>
     <div class="row" style="justify-content:flex-end;gap:8px">
@@ -586,7 +606,7 @@
 
 {% block scripts %}
 <script>
-  // --- Recherche live ---
+  // Recherche live
   const q = document.getElementById('q'); const tbody = document.getElementById('tbody'); const cards = document.getElementById('cards');
   const rows = Array.from(tbody ? tbody.children : []); const cardsItems = Array.from(cards ? cards.children : []);
   function applyFilter(s) {
@@ -603,14 +623,11 @@
   }
   if (q) { q.addEventListener('input', e => applyFilter(e.target.value)); }
 
-  // --- Modales ---
+  // Modales
   const $ = s => document.querySelector(s);
   document.addEventListener('click', function (e) {
     const edit = e.target.closest('.js-edit-open'); const del = e.target.closest('.js-delete-open');
-    if (edit) {
-      $('#dlg-product-id').value = edit.dataset.id; $('#dlg-name').value = edit.dataset.name || '';
-      $('#dlg-unit').value = edit.dataset.unit || ''; $('#dlg-shelf').value = edit.dataset.shelf || 90; $('#dlg-edit').showModal(); return;
-    }
+    if (edit) { $('#dlg-product-id').value = edit.dataset.id; $('#dlg-name').value = edit.dataset.name || ''; $('#dlg-unit').value = edit.dataset.unit || ''; $('#dlg-shelf').value = edit.dataset.shelf || 90; $('#dlg-edit').showModal(); return; }
     if (del) {
       $('#del-product-id').value = del.dataset.id; const name = del.dataset.name || ''; const lots = parseInt(del.dataset.lots || '0', 10);
       const msg = lots > 0 ? `La suppression retirera aussi les ${lots} stock(s) lié(s) à « ${name} ».` : `Supprimer « ${name} » ?`;
@@ -618,79 +635,41 @@
     }
   });
 
-  // --- Réinit ---
+  // Réinit
   (function () {
     const r = document.getElementById('create_reset'); if (!r) return;
     r.addEventListener('click', () => {
-      ['create_name', 'create_shelf', 'create_barcode', 'off_barcode'].forEach(id => {
-        const el = document.getElementById(id); if (el) el.value = '';
-      }); const unit = document.getElementById('create_unit'); if (unit) unit.value = 'pièce';
+      ['create_name', 'create_shelf', 'create_barcode', 'off_barcode'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+      const unit = document.getElementById('create_unit'); if (unit) unit.value = 'pièce';
     });
   })();
 
   // Toasts
   (function () { const p = new URLSearchParams(location.search); if (p.get('added') === '1') window.showToast('Produit ajouté.', 'ok'); })();
 
-  // --- OFF + Scanner ---
-  const elCode = document.getElementById('off_barcode');
-  const elSearch = document.getElementById('off_search');
-  const elScan = document.getElementById('off_scan');
-  const elCapture = document.getElementById('off_capture');
-  const elFile = document.getElementById('off_file');
-  const elPaste = document.getElementById('off_paste');
-  const elClear = document.getElementById('off_clear');
-  const elError = document.getElementById('off_error');
-  const elRes = document.getElementById('off_result');
-  const elImg = document.getElementById('off_img');
-  const elName = document.getElementById('off_name');
-  const elBrand = document.getElementById('off_brand');
-  const elQty = document.getElementById('off_qty');
-  const elFillCreate = document.getElementById('off_fill_create');
+  // OFF + Scanner
+  const elCode = document.getElementById('off_barcode'), elSearch = document.getElementById('off_search'), elScan = document.getElementById('off_scan'),
+    elCapture = document.getElementById('off_capture'), elFile = document.getElementById('off_file'), elPaste = document.getElementById('off_paste'), elClear = document.getElementById('off_clear'),
+    elError = document.getElementById('off_error'), elRes = document.getElementById('off_result'),
+    elImg = document.getElementById('off_img'), elName = document.getElementById('off_name'), elBrand = document.getElementById('off_brand'), elQty = document.getElementById('off_qty'),
+    elFillCreate = document.getElementById('off_fill_create');
 
-  const cfName = document.getElementById('create_name');
-  const cfUnitSel = document.getElementById('create_unit');
-  const cfBarcode = document.getElementById('create_barcode');
+  const cfName = document.getElementById('create_name'), cfUnitSel = document.getElementById('create_unit'), cfBarcode = document.getElementById('create_barcode');
 
-  // Cache dur à l'init (au cas où)
   document.addEventListener('DOMContentLoaded', () => { if (elError) { elError.hidden = true; elError.textContent = ''; } if (elRes) { elRes.hidden = true; } });
 
   function showError(msg) { if (!elError) return; elError.textContent = msg || 'Erreur'; elError.hidden = false; }
   function clearError() { if (!elError) return; elError.hidden = true; elError.textContent = ''; }
   function clearResult() { if (!elRes) return; elRes.hidden = true; elFillCreate.dataset.payload = ''; }
 
-  function normalizeOFF(data) {
-    const p = (data && data.product) || {};
-    const nm = p.product_name || p.generic_name || p.brands_tags?.[0] || '';
-    const brand = p.brands || (p.brands_tags && p.brands_tags.join(', ')) || '';
-    const img = p.image_small_url || p.image_front_url || p.image_url || '';
-    const qty = p.quantity || p.serving_quantity || p.serving_size || '';
-    return { name: nm, brand, img, quantity_hint: qty };
-  }
-  function showResult(obj) {
-    if (!obj) return;
-    elImg.src = obj.img || '';
-    elName.textContent = obj.name || '—';
-    elBrand.textContent = obj.brand || '—';
-    elQty.textContent = obj.quantity_hint || '—';
-    elRes.hidden = false;
-    elFillCreate.dataset.payload = JSON.stringify(obj);
-  }
-  function inferUnit(qty) {
-    if (!qty) return '';
-    const s = (qty + '').toLowerCase();
-    if (/\b(kg|kilogram|kilo)/.test(s)) return 'kg';
-    if (/\bg\b/.test(s)) return 'g';
-    if (/\bl\b/.test(s)) return 'L';
-    if (/\bml\b/.test(s)) return 'ml';
-    if (/\bpi[eè]ce/.test(s) || /\bpcs?\b/.test(s)) return 'pièce';
-    return '';
-  }
+  function normalizeOFF(data) { const p = (data && data.product) || {}; const nm = p.product_name || p.generic_name || p.brands_tags?.[0] || ''; const brand = p.brands || (p.brands_tags && p.brands_tags.join(', ')) || ''; const img = p.image_small_url || p.image_front_url || p.image_url || ''; const qty = p.quantity || p.serving_quantity || p.serving_size || ''; return { name: nm, brand, img, quantity_hint: qty }; }
+  function showResult(obj) { if (!obj) return; elImg.src = obj.img || ''; elName.textContent = obj.name || '—'; elBrand.textContent = obj.brand || '—'; elQty.textContent = obj.quantity_hint || '—'; elRes.hidden = false; elFillCreate.dataset.payload = JSON.stringify(obj); }
+  function inferUnit(qty) { if (!qty) return ''; const s = (qty + '').toLowerCase(); if (/\b(kg|kilogram|kilo)/.test(s)) return 'kg'; if (/\bg\b/.test(s)) return 'g'; if (/\bl\b/.test(s)) return 'L'; if (/\bml\b/.test(s)) return 'ml'; if (/\bpi[eè]ce/.test(s) || /\bpcs?\b/.test(s)) return 'pièce'; return ''; }
   function setUnitIfExists(u) { if (!u) return; const opts = Array.from(cfUnitSel.options).map(o => o.value); if (opts.includes(u)) cfUnitSel.value = u; }
 
   async function doLookup() {
     clearError(); clearResult();
-    const code = (elCode.value || '').replace(/\D+/g, '');
-    if (!code) { showError('Renseigne un code‑barres valide.'); return; }
+    const code = (elCode.value || '').replace(/\D+/g, ''); if (!code) { showError('Renseigne un code-barres valide.'); return; }
     elSearch.disabled = true; elSearch.textContent = '…';
     try {
       const res = await fetch(`https://world.openfoodfacts.org/api/v0/product/${code}.json`);
@@ -698,27 +677,19 @@
       const data = await res.json();
       if (!data || data.status !== 1) {
         showError('Produit introuvable sur Open Food Facts. Tu peux l’ajouter manuellement (le code-barres sera conservé).');
-        if (cfBarcode) cfBarcode.value = code;
-        return;
+        if (cfBarcode) cfBarcode.value = code; return;
       }
       const normalized = normalizeOFF(data);
       showResult(normalized);
       if (cfBarcode) cfBarcode.value = code;
-    } catch (e) {
-      console.error(e); showError('Erreur lors de la recherche. Réessaie.');
-    } finally {
-      elSearch.disabled = false; elSearch.textContent = '🔎 Rechercher';
-    }
+    } catch (e) { console.error(e); showError('Erreur lors de la recherche. Réessaie.'); }
+    finally { elSearch.disabled = false; elSearch.textContent = '🔎 Rechercher'; }
   }
 
   elSearch.addEventListener('click', doLookup);
   elCode.addEventListener('keydown', ev => { if (ev.key === 'Enter') { ev.preventDefault(); doLookup(); } });
   elClear.addEventListener('click', () => { elCode.value = ''; clearError(); clearResult(); });
-  elPaste.addEventListener('click', async () => {
-    try {
-      const t = await navigator.clipboard.readText(); elCode.value = (t || '').replace(/\D+/g, ''); doLookup();
-    } catch (e) { showError('Impossible de lire le presse‑papiers.'); }
-  });
+  elPaste.addEventListener('click', async () => { try { const t = await navigator.clipboard.readText(); elCode.value = (t || '').replace(/\D+/g, ''); doLookup(); } catch (e) { showError('Impossible de lire le presse-papiers.'); } });
 
   elFillCreate.addEventListener('click', () => {
     const payload = elFillCreate.dataset.payload ? JSON.parse(elFillCreate.dataset.payload) : null;
@@ -728,7 +699,7 @@
     const addBtn = document.querySelector('#create_form .primary'); if (addBtn) addBtn.focus();
   });
 
-  // Scanner live (BarcodeDetector + ZXing fallback)
+  // Scanner live
   const dlgScan = document.getElementById('scan-modal'); const scanVideo = document.getElementById('scan-video'); const btnScanClose = document.getElementById('scan-close');
   let scanning = false, zxingReader = null, zxingLiveActive = false;
 
@@ -739,12 +710,7 @@
       try {
         const detector = new BarcodeDetector({ formats: ['ean_13', 'ean_8', 'upc_a', 'upc_e'] });
         const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } }); scanVideo.srcObject = stream;
-        const tick = async () => {
-          if (!scanning) return; try {
-            const bm = await detector.detect(scanVideo);
-            if (bm && bm[0] && bm[0].rawValue) { await onBarcodeDetected(bm[0].rawValue); return; }
-          } catch { } requestAnimationFrame(tick);
-        };
+        const tick = async () => { if (!scanning) return; try { const bm = await detector.detect(scanVideo); if (bm && bm[0] && bm[0].rawValue) { await onBarcodeDetected(bm[0].rawValue); return; } } catch { } requestAnimationFrame(tick); };
         tick(); return;
       } catch (e) { console.warn('BarcodeDetector indisponible, fallback ZXing.', e); }
     }
@@ -758,20 +724,17 @@
   async function loadZXing() {
     return new Promise((resolve, reject) => {
       if (window.ZXing) return resolve(window.ZXing);
-      const s = document.createElement('script'); s.src = 'https://unpkg.com/@zxing/library@latest';
-      s.onload = () => resolve(window.ZXing); s.onerror = () => reject(new Error('ZXing indisponible')); document.head.appendChild(s);
+      const s = document.createElement('script'); s.src = 'https://unpkg.com/@zxing/library@latest'; s.onload = () => resolve(window.ZXing); s.onerror = () => reject(new Error('ZXing indisponible')); document.head.appendChild(s);
     });
   }
   async function startZXingLive() {
     try {
-      if (!window.ZXing) await loadZXing();
-      if (!zxingReader) zxingReader = new ZXing.BrowserMultiFormatReader();
-      zxingLiveActive = true; scanning = true;
-      zxingReader.decodeFromVideoDevice(undefined, scanVideo, async (result, err) => {
+      if (!window.ZXing) await loadZXing(); if (!zxingReader) zxingReader = new ZXing.BrowserMultiFormatReader();
+      zxingLiveActive = true; scanning = true; zxingReader.decodeFromVideoDevice(undefined, scanVideo, async (result, err) => {
         if (!scanning) return;
         if (result && result.getText) { const code = (result.getText() || '').replace(/\D+/g, ''); if (code) { await onBarcodeDetected(code); } }
       });
-    } catch (e) { console.error(e); showError("Impossible de démarrer le flux live. Utilise « Prendre une photo »."); }
+    } catch (e) { console.error(e); showError("Impossible de démarrer le flux live. Utilise « Prendre une photo »."); }
   }
 
   document.getElementById('off_scan').addEventListener('click', openScanModal);
@@ -782,12 +745,9 @@
   elFile.addEventListener('change', async (ev) => {
     const file = ev.target.files && ev.target.files[0]; if (!file) return;
     try {
-      if (!window.ZXing) await loadZXing();
-      if (!zxingReader) zxingReader = new ZXing.BrowserMultiFormatReader();
-      const imgURL = URL.createObjectURL(file);
-      const img = document.createElement('img'); img.src = imgURL; await img.decode();
-      const res = await zxingReader.decodeFromImageElement(img);
-      const code = res && res.getText ? (res.getText() || '').replace(/\D+/g, '') : '';
+      if (!window.ZXing) await loadZXing(); if (!zxingReader) zxingReader = new ZXing.BrowserMultiFormatReader();
+      const imgURL = URL.createObjectURL(file); const img = document.createElement('img'); img.src = imgURL; await img.decode();
+      const res = await zxingReader.decodeFromImageElement(img); const code = res && res.getText ? (res.getText() || '').replace(/\D+/g, '') : '';
       if (code) await onBarcodeDetected(code); else showError('Aucun code détecté sur la photo.');
     } catch (e) { console.error(e); showError('Erreur lecture de la photo.'); }
     finally { elFile.value = ''; }
