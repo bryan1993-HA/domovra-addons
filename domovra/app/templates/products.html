@@ -156,11 +156,12 @@
     align-items: center
   }
 
-  /* >>> le texte ne passe pas sous l’icône : padding-right suffisant */
   .infield input {
     width: 100%;
     padding-right: 60px
   }
+
+  /* le texte ne passe pas sous l’icône */
 
   .infield-btn {
     position: absolute;
@@ -179,7 +180,7 @@
     transform: scale(.98)
   }
 
-  /* Tooltips “?” (style index) */
+  /* Tooltips style index */
   .qmark {
     display: inline-flex;
     align-items: center;
@@ -279,7 +280,7 @@
     padding: 10px
   }
 
-  /* L’input du scanner reprend EXACTEMENT le style des autres inputs */
+  /* L’input du scanner garde le style des autres inputs */
   #off-box .infield input {
     background: #121a2f;
     border: 1px solid var(--border);
@@ -295,6 +296,12 @@
     background: #1a2230;
     border: 1px solid var(--border)
   }
+
+  /* Sécurité: cache explicite au cas où */
+  #off_result[hidden],
+  #off_error[hidden] {
+    display: none !important;
+  }
 </style>
 {% endblock %}
 
@@ -305,7 +312,7 @@
 {% block content %}
 <div class="wrap">
 
-  <!-- Open Food Facts & Scanner (en haut) -->
+  <!-- Open Food Facts & Scanner -->
   <div class="card">
     <div class="title" style="margin:0 0 6px 0">
       <h2>Open Food Facts & Scanner</h2>
@@ -331,9 +338,11 @@
       <div id="off_hint" class="muted" style="margin-top:.4rem">
         Astuce : essaie <b>5449000000996</b> (Coca‑Cola 1,5 L).
       </div>
-      <div id="off_error">Erreur</div>
 
-      <div id="off_result">
+      <!-- Erreur et résultat cachés par défaut -->
+      <div id="off_error" hidden></div>
+
+      <div id="off_result" hidden>
         <div style="display:grid;grid-template-columns:80px 1fr;gap:10px;align-items:start">
           <img id="off_img" alt="photo produit"
             style="width:80px;height:80px;object-fit:cover;border-radius:8px;border:1px solid var(--border)">
@@ -376,7 +385,6 @@
         <input name="name" id="create_name" type="text" required placeholder="ex. Pâtes, Lait demi-écrémé">
       </div>
 
-      <!-- Unité : liste déroulante catégorisée -->
       <div>
         <div class="label">Unité
           <span class="qmark" data-tip="Choisis une unité adaptée (comptage, poids, volume).">?</span>
@@ -442,13 +450,12 @@
     </div>
   </div>
 
-  <!-- Liste (table desktop / cartes mobile) -->
+  <!-- Liste -->
   <div class="card">
     <div class="title">
       <h2>Liste</h2><span class="muted">Table (bureau) / Cartes (mobile)</span>
     </div>
 
-    <!-- Table desktop -->
     <table id="tbl">
       <colgroup>
         <col style="width:37%">
@@ -526,7 +533,7 @@
   </div>
 </div>
 
-<!-- Dialog Modifier -->
+<!-- Dialogs -->
 <dialog id="dlg-edit">
   <form method="post" action="{{ BASE }}product/update" style="display:grid;gap:10px;min-width:min(420px,92vw)">
     <h3 style="margin:0">Modifier le produit</h3>
@@ -552,7 +559,6 @@
   </form>
 </dialog>
 
-<!-- Dialog Supprimer -->
 <dialog id="dlg-delete">
   <form method="post" action="{{ BASE }}product/delete" style="display:grid;gap:10px;min-width:min(420px,92vw)">
     <h3 style="margin:0">Supprimer le produit</h3>
@@ -565,7 +571,6 @@
   </form>
 </dialog>
 
-<!-- Modale Scanner caméra -->
 <dialog id="scan-modal">
   <div style="display:grid;gap:10px;min-width:min(520px,96vw)">
     <h3 style="margin:0">Scanner un code‑barres</h3>
@@ -627,39 +632,65 @@
   (function () { const p = new URLSearchParams(location.search); if (p.get('added') === '1') window.showToast('Produit ajouté.', 'ok'); })();
 
   // --- OFF + Scanner ---
-  const elCode = document.getElementById('off_barcode'); const elSearch = document.getElementById('off_search');
-  const elScan = document.getElementById('off_scan'); const elCapture = document.getElementById('off_capture');
-  const elFile = document.getElementById('off_file'); const elPaste = document.getElementById('off_paste'); const elClear = document.getElementById('off_clear');
-  const elError = document.getElementById('off_error'); const elRes = document.getElementById('off_result');
-  const elImg = document.getElementById('off_img'); const elName = document.getElementById('off_name'); const elBrand = document.getElementById('off_brand'); const elQty = document.getElementById('off_qty');
+  const elCode = document.getElementById('off_barcode');
+  const elSearch = document.getElementById('off_search');
+  const elScan = document.getElementById('off_scan');
+  const elCapture = document.getElementById('off_capture');
+  const elFile = document.getElementById('off_file');
+  const elPaste = document.getElementById('off_paste');
+  const elClear = document.getElementById('off_clear');
+  const elError = document.getElementById('off_error');
+  const elRes = document.getElementById('off_result');
+  const elImg = document.getElementById('off_img');
+  const elName = document.getElementById('off_name');
+  const elBrand = document.getElementById('off_brand');
+  const elQty = document.getElementById('off_qty');
   const elFillCreate = document.getElementById('off_fill_create');
 
-  const cfName = document.getElementById('create_name'); const cfUnitSel = document.getElementById('create_unit'); const cfBarcode = document.getElementById('create_barcode');
+  const cfName = document.getElementById('create_name');
+  const cfUnitSel = document.getElementById('create_unit');
+  const cfBarcode = document.getElementById('create_barcode');
 
-  function showError(msg) { if (!elError) return; elError.textContent = msg; elError.style.display = 'block'; }
-  function clearError() { if (!elError) return; elError.style.display = 'none'; }
-  function clearResult() { if (!elRes) return; elRes.style.display = 'none'; elFillCreate.dataset.payload = ''; }
+  // Cache dur à l'init (au cas où)
+  document.addEventListener('DOMContentLoaded', () => { if (elError) { elError.hidden = true; elError.textContent = ''; } if (elRes) { elRes.hidden = true; } });
+
+  function showError(msg) { if (!elError) return; elError.textContent = msg || 'Erreur'; elError.hidden = false; }
+  function clearError() { if (!elError) return; elError.hidden = true; elError.textContent = ''; }
+  function clearResult() { if (!elRes) return; elRes.hidden = true; elFillCreate.dataset.payload = ''; }
 
   function normalizeOFF(data) {
     const p = (data && data.product) || {};
-    const nm = p.product_name || p.generic_name || p.brands_tags?.[0] || ''; const brand = p.brands || (p.brands_tags && p.brands_tags.join(', ')) || '';
-    const img = p.image_small_url || p.image_front_url || p.image_url || ''; const qty = p.quantity || p.serving_quantity || p.serving_size || '';
+    const nm = p.product_name || p.generic_name || p.brands_tags?.[0] || '';
+    const brand = p.brands || (p.brands_tags && p.brands_tags.join(', ')) || '';
+    const img = p.image_small_url || p.image_front_url || p.image_url || '';
+    const qty = p.quantity || p.serving_quantity || p.serving_size || '';
     return { name: nm, brand, img, quantity_hint: qty };
   }
   function showResult(obj) {
-    if (!obj) return; elImg.src = obj.img || ''; elName.textContent = obj.name || '—'; elBrand.textContent = obj.brand || '—';
-    elQty.textContent = obj.quantity_hint || '—'; elRes.style.display = 'block'; elFillCreate.dataset.payload = JSON.stringify(obj);
+    if (!obj) return;
+    elImg.src = obj.img || '';
+    elName.textContent = obj.name || '—';
+    elBrand.textContent = obj.brand || '—';
+    elQty.textContent = obj.quantity_hint || '—';
+    elRes.hidden = false;
+    elFillCreate.dataset.payload = JSON.stringify(obj);
   }
   function inferUnit(qty) {
-    if (!qty) return ''; const s = (qty + '').toLowerCase();
-    if (/\b(kg|kilogram|kilo)/.test(s)) return 'kg'; if (/\bg\b/.test(s)) return 'g'; if (/\bl\b/.test(s)) return 'L'; if (/\bml\b/.test(s)) return 'ml';
-    if (/\bpi[eè]ce/.test(s) || /\bpcs?\b/.test(s)) return 'pièce'; return '';
+    if (!qty) return '';
+    const s = (qty + '').toLowerCase();
+    if (/\b(kg|kilogram|kilo)/.test(s)) return 'kg';
+    if (/\bg\b/.test(s)) return 'g';
+    if (/\bl\b/.test(s)) return 'L';
+    if (/\bml\b/.test(s)) return 'ml';
+    if (/\bpi[eè]ce/.test(s) || /\bpcs?\b/.test(s)) return 'pièce';
+    return '';
   }
   function setUnitIfExists(u) { if (!u) return; const opts = Array.from(cfUnitSel.options).map(o => o.value); if (opts.includes(u)) cfUnitSel.value = u; }
 
   async function doLookup() {
     clearError(); clearResult();
-    const code = (elCode.value || '').replace(/\D+/g, ''); if (!code) { showError('Renseigne un code‑barres valide.'); return; }
+    const code = (elCode.value || '').replace(/\D+/g, '');
+    if (!code) { showError('Renseigne un code‑barres valide.'); return; }
     elSearch.disabled = true; elSearch.textContent = '…';
     try {
       const res = await fetch(`https://world.openfoodfacts.org/api/v0/product/${code}.json`);
@@ -667,22 +698,34 @@
       const data = await res.json();
       if (!data || data.status !== 1) {
         showError('Produit introuvable sur Open Food Facts. Tu peux l’ajouter manuellement (le code-barres sera conservé).');
-        if (cfBarcode) cfBarcode.value = code; return;
+        if (cfBarcode) cfBarcode.value = code;
+        return;
       }
-      const normalized = normalizeOFF(data); showResult(normalized); if (cfBarcode) cfBarcode.value = code;
-    } catch (e) { console.error(e); showError('Erreur lors de la recherche. Réessaie.'); }
-    finally { elSearch.disabled = false; elSearch.textContent = '🔎 Rechercher'; }
+      const normalized = normalizeOFF(data);
+      showResult(normalized);
+      if (cfBarcode) cfBarcode.value = code;
+    } catch (e) {
+      console.error(e); showError('Erreur lors de la recherche. Réessaie.');
+    } finally {
+      elSearch.disabled = false; elSearch.textContent = '🔎 Rechercher';
+    }
   }
 
   elSearch.addEventListener('click', doLookup);
   elCode.addEventListener('keydown', ev => { if (ev.key === 'Enter') { ev.preventDefault(); doLookup(); } });
   elClear.addEventListener('click', () => { elCode.value = ''; clearError(); clearResult(); });
-  elPaste.addEventListener('click', async () => { try { const t = await navigator.clipboard.readText(); elCode.value = (t || '').replace(/\D+/g, ''); doLookup(); } catch (e) { showError('Impossible de lire le presse‑papiers.'); } });
+  elPaste.addEventListener('click', async () => {
+    try {
+      const t = await navigator.clipboard.readText(); elCode.value = (t || '').replace(/\D+/g, ''); doLookup();
+    } catch (e) { showError('Impossible de lire le presse‑papiers.'); }
+  });
 
   elFillCreate.addEventListener('click', () => {
     const payload = elFillCreate.dataset.payload ? JSON.parse(elFillCreate.dataset.payload) : null;
-    if (!payload) { showError('Aucun résultat à insérer.'); return; } if (payload.name) cfName.value = payload.name;
-    const u = inferUnit(payload.quantity_hint); setUnitIfExists(u); const addBtn = document.querySelector('#create_form .primary'); if (addBtn) addBtn.focus();
+    if (!payload) { showError('Aucun résultat à insérer.'); return; }
+    if (payload.name) cfName.value = payload.name;
+    const u = inferUnit(payload.quantity_hint); setUnitIfExists(u);
+    const addBtn = document.querySelector('#create_form .primary'); if (addBtn) addBtn.focus();
   });
 
   // Scanner live (BarcodeDetector + ZXing fallback)
@@ -696,7 +739,12 @@
       try {
         const detector = new BarcodeDetector({ formats: ['ean_13', 'ean_8', 'upc_a', 'upc_e'] });
         const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } }); scanVideo.srcObject = stream;
-        const tick = async () => { if (!scanning) return; try { const bm = await detector.detect(scanVideo); if (bm && bm[0] && bm[0].rawValue) { await onBarcodeDetected(bm[0].rawValue); return; } } catch { } requestAnimationFrame(tick); };
+        const tick = async () => {
+          if (!scanning) return; try {
+            const bm = await detector.detect(scanVideo);
+            if (bm && bm[0] && bm[0].rawValue) { await onBarcodeDetected(bm[0].rawValue); return; }
+          } catch { } requestAnimationFrame(tick);
+        };
         tick(); return;
       } catch (e) { console.warn('BarcodeDetector indisponible, fallback ZXing.', e); }
     }
@@ -716,8 +764,10 @@
   }
   async function startZXingLive() {
     try {
-      if (!window.ZXing) await loadZXing(); if (!zxingReader) zxingReader = new ZXing.BrowserMultiFormatReader();
-      zxingLiveActive = true; scanning = true; zxingReader.decodeFromVideoDevice(undefined, scanVideo, async (result, err) => {
+      if (!window.ZXing) await loadZXing();
+      if (!zxingReader) zxingReader = new ZXing.BrowserMultiFormatReader();
+      zxingLiveActive = true; scanning = true;
+      zxingReader.decodeFromVideoDevice(undefined, scanVideo, async (result, err) => {
         if (!scanning) return;
         if (result && result.getText) { const code = (result.getText() || '').replace(/\D+/g, ''); if (code) { await onBarcodeDetected(code); } }
       });
@@ -732,9 +782,12 @@
   elFile.addEventListener('change', async (ev) => {
     const file = ev.target.files && ev.target.files[0]; if (!file) return;
     try {
-      if (!window.ZXing) await loadZXing(); if (!zxingReader) zxingReader = new ZXing.BrowserMultiFormatReader();
-      const imgURL = URL.createObjectURL(file); const img = document.createElement('img'); img.src = imgURL; await img.decode();
-      const res = await zxingReader.decodeFromImageElement(img); const code = res && res.getText ? (res.getText() || '').replace(/\D+/g, '') : '';
+      if (!window.ZXing) await loadZXing();
+      if (!zxingReader) zxingReader = new ZXing.BrowserMultiFormatReader();
+      const imgURL = URL.createObjectURL(file);
+      const img = document.createElement('img'); img.src = imgURL; await img.decode();
+      const res = await zxingReader.decodeFromImageElement(img);
+      const code = res && res.getText ? (res.getText() || '').replace(/\D+/g, '') : '';
       if (code) await onBarcodeDetected(code); else showError('Aucun code détecté sur la photo.');
     } catch (e) { console.error(e); showError('Erreur lecture de la photo.'); }
     finally { elFile.value = ''; }
