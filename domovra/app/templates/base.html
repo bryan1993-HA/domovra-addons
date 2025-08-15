@@ -17,7 +17,6 @@
       const mSide = document.querySelector('meta[name="domovra:sidebar"]');
       const pref = (mTheme && mTheme.content) || 'auto';
       const html = document.documentElement;
-
       function setTheme(mode) {
         if (!html) return;
         if (mode === 'light' || mode === 'dark') {
@@ -25,28 +24,24 @@
           html.style.colorScheme = mode;
           try { localStorage.setItem('domovra_theme', mode); } catch (e) { }
         } else {
-          const isDark = matchMedia && matchMedia('(prefers-color-scheme: dark)').matches;
+          const isDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
           html.setAttribute('data-theme', isDark ? 'dark' : 'light');
           html.style.colorScheme = isDark ? 'dark' : 'light';
         }
       }
-
-      if (pref === 'light' || pref === 'dark') {
-        setTheme(pref);
-      } else {
+      if (pref === 'light' || pref === 'dark') setTheme(pref);
+      else {
         let saved = null;
         try { saved = localStorage.getItem('domovra_theme'); } catch (e) { }
         setTheme((saved === 'light' || saved === 'dark') ? saved : 'auto');
       }
-
       try {
-        const mq = matchMedia('(prefers-color-scheme: dark)');
+        const mq = window.matchMedia('(prefers-color-scheme: dark)');
         mq.addEventListener?.('change', () => {
           const now = (mTheme && mTheme.content) || 'auto';
           if (now === 'auto') setTheme('auto');
         });
       } catch (e) { }
-
       const mini = (mSide && mSide.content === '1');
       if (mini) html.classList.add('sidebar-mini'); else html.classList.remove('sidebar-mini');
     })();
@@ -56,7 +51,7 @@
     :root {
       color-scheme: dark;
 
-      /* Couleurs toasts depuis Paramètres */
+      /* Couleurs toasts depuis Paramètres (valeurs hex valides) */
       --toast-ok: {
           {
           SETTINGS.toast_ok | default('#4caf50')
@@ -266,7 +261,7 @@
 
     html[data-theme="light"] option,
     html[data-theme="light"] optgroup {
-      background: #fff;
+      background: #ffffff;
       color: #111827;
     }
 
@@ -483,41 +478,37 @@
     }
 
     .toast {
+      position: relative;
       border: 1px solid #242932;
       border-radius: 10px;
-      padding: 10px 12px;
+      padding: 10px 12px 10px 16px;
       box-shadow: 0 6px 16px rgba(0, 0, 0, .25);
       animation: toast-in .2s ease both;
-      border-left: 4px solid transparent;
+      background: rgba(20, 24, 32, .85);
+      /* fond neutre, on ajoute une teinte en inline JS */
       backdrop-filter: blur(2px);
-      background: #151922;
-      /* fallback si color-mix est absent */
+      color: inherit;
     }
 
-    .toast.ok {
-      border-left-color: var(--toast-ok);
-      background: var(--toast-ok-bg, #151922);
-    }
-
-    .toast.warn {
-      border-left-color: var(--toast-warn);
-      background: var(--toast-warn-bg, #151922);
-    }
-
-    .toast.error {
-      border-left-color: var(--toast-error);
-      background: var(--toast-err-bg, #151922);
+    /* Petite barre colorée collée à gauche (on la colore en inline JS) */
+    .toast .stripe {
+      position: absolute;
+      inset: -1px auto -1px -1px;
+      width: 6px;
+      border-radius: 10px 0 0 10px;
+      background: transparent;
+      pointer-events: none;
     }
 
     @keyframes toast-in {
       from {
         opacity: 0;
-        transform: translateY(-8px);
+        transform: translateY(-8px)
       }
 
       to {
         opacity: 1;
-        transform: none;
+        transform: none
       }
     }
 
@@ -626,10 +617,9 @@
       const mDur = document.querySelector('meta[name="domovra:toastDuration"]');
       const defaultDuration = mDur ? (parseInt(mDur.content || '3000', 10) || 3000) : 3000;
 
-      const cssVar = (name) => getComputedStyle(document.documentElement)
-        .getPropertyValue(name).trim();
+      const cssVar = (name) =>
+        getComputedStyle(document.documentElement).getPropertyValue(name).trim();
 
-      // hex -> rgba(a)
       function hexToRgba(hex, a) {
         if (!hex) return '';
         let h = hex.replace('#', '').trim();
@@ -640,22 +630,28 @@
         return `rgba(${r}, ${g}, ${b}, ${a})`;
       }
 
+      function colorFor(type) {
+        // lit la couleur choisie dans Paramètres via variables CSS
+        if (type === 'warn') return cssVar('--toast-warn') || '#ffb300';
+        if (type === 'error') return cssVar('--toast-error') || '#ef5350';
+        return cssVar('--toast-ok') || '#4caf50';
+      }
+
       function showToast(msg, type = 'ok', timeout) {
         if (!stack) return;
         const el = document.createElement('div');
-        el.className = `toast ${type}`;
+        el.className = 'toast ' + (type || 'ok');
         el.textContent = msg;
 
-        // Récupère la couleur choisie dans Paramètres
-        let col = cssVar('--toast-ok');
-        if (type === 'warn') col = cssVar('--toast-warn');
-        if (type === 'error') col = cssVar('--toast-error');
+        // Stripe colorée (toujours visible car inline)
+        const stripe = document.createElement('i');
+        stripe.className = 'stripe';
+        const col = colorFor(type);
+        stripe.style.backgroundColor = col;
+        el.appendChild(stripe);
 
-        // Force la bordure gauche en inline (largeur + couleur)
-        if (col) el.style.borderLeft = `4px solid ${col}`;
-
-        // Fond légèrement teinté (12% d’opacité)
-        if (col) el.style.backgroundColor = hexToRgba(col, 0.12);
+        // Légère teinte du fond (inline, compat assurée)
+        el.style.backgroundColor = hexToRgba(col, 0.10);
 
         stack.appendChild(el);
 
