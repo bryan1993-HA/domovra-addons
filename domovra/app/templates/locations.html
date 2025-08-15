@@ -391,19 +391,14 @@
     if (search) search.addEventListener('input', (e) => applyFilter(e.target.value));
   })();
 
-  // Modale Renommer
   function openRename(btn) {
     const id = btn.closest('[data-id]')?.dataset.id || btn.dataset.id;
     const name = btn.closest('[data-name]')?.dataset.name || btn.dataset.name || '';
     const dlg = $('#dlg-rename'), idInput = $('#dlg-location-id'), nameInput = $('#dlg-location-name');
     if (!dlg || !idInput || !nameInput) return;
-    idInput.value = id || '';
-    nameInput.value = name;
-    dlg.showModal();
-    setTimeout(() => nameInput.focus(), 50);
+    idInput.value = id || ''; nameInput.value = name;
+    dlg.showModal(); setTimeout(() => nameInput.focus(), 50);
   }
-
-  // Modale Supprimer
   function openDelete(btn) {
     const id = btn.closest('[data-id]')?.dataset.id || btn.dataset.id;
     const name = btn.closest('[data-name]')?.dataset.name || btn.dataset.name || '';
@@ -412,14 +407,12 @@
     text.textContent = `Supprimer « ${name} » ? Les lots liés seront également supprimés.`;
     dlg.showModal();
   }
-
-  // Délégation
   document.addEventListener('click', function (e) {
     const r = e.target.closest('.js-rename'); if (r) return openRename(r);
     const d = e.target.closest('.js-delete-open'); if (d) return openDelete(d);
   });
 
-  // TOASTS depuis les query params
+  // TOASTS via query params
   (function () {
     const p = new URLSearchParams(location.search);
     const n = p.get('name') || '';

@@ -19,34 +19,26 @@ from db import (
 
 # ===== Settings store (fallback si absent) =====
 try:
-    from settings_store import load_settings, save_settings  # settings_store.py à côté de main.py
+    from settings_store import load_settings, save_settings
 except Exception:
     def load_settings():
         return {"theme":"auto","table_mode":"scroll","sidebar_compact":False,"default_shelf_days":90,"low_stock_default":1}
     def save_settings(new_values: dict):
         cur = load_settings(); cur.update(new_values or {}); return cur
 
-# ---------------- Logging global (console + /data/domovra.log)
+# ---------------- Logging global
 def setup_logging():
     root = logging.getLogger()
     if root.handlers:
         for h in list(root.handlers):
             root.removeHandler(h)
     root.setLevel(logging.INFO)
-
     fmt = logging.Formatter("[%(asctime)s] %(name)s %(levelname)s: %(message)s")
-
-    ch = logging.StreamHandler()
-    ch.setLevel(logging.INFO)
-    ch.setFormatter(fmt)
-    root.addHandler(ch)
-
+    ch = logging.StreamHandler(); ch.setLevel(logging.INFO); ch.setFormatter(fmt); root.addHandler(ch)
     try:
         os.makedirs("/data", exist_ok=True)
         fh = RotatingFileHandler("/data/domovra.log", maxBytes=1_000_000, backupCount=3, encoding="utf-8")
-        fh.setLevel(logging.INFO)
-        fh.setFormatter(fmt)
-        root.addHandler(fh)
+        fh.setLevel(logging.INFO); fh.setFormatter(fmt); root.addHandler(fh)
     except Exception as e:
         logging.getLogger("domovra").warning("Impossible d'ouvrir /data/domovra.log: %s", e)
 
@@ -58,21 +50,13 @@ CRITICAL_DAYS = int(os.environ.get("CRITICAL_DAYS", "14"))
 DB_PATH       = os.environ.get("DB_PATH", "/data/domovra.sqlite3")
 
 app = FastAPI()
-
-templates = Environment(
-    loader=FileSystemLoader("templates"),
-    autoescape=select_autoescape()
-)
+templates = Environment(loader=FileSystemLoader("templates"), autoescape=select_autoescape())
 
 def nocache_html(html: str) -> Response:
-    return HTMLResponse(html, headers={
-        "Cache-Control":"no-store, no-cache, must-revalidate, max-age=0",
-        "Pragma":"no-cache","Expires":"0"
-    })
+    return HTMLResponse(html, headers={"Cache-Control":"no-store, no-cache, must-revalidate, max-age=0","Pragma":"no-cache","Expires":"0"})
 
 def render(name: str, **ctx):
-    if "SETTINGS" not in ctx:
-        ctx["SETTINGS"] = load_settings()
+    if "SETTINGS" not in ctx: ctx["SETTINGS"] = load_settings()
     tpl = templates.get_template(name)
     return nocache_html(tpl.render(**ctx))
 
@@ -82,9 +66,7 @@ def ingress_base(request: Request) -> str:
     return base
 
 def _conn():
-    c = sqlite3.connect(DB_PATH)
-    c.row_factory = sqlite3.Row
-    return c
+    c = sqlite3.connect(DB_PATH); c.row_factory = sqlite3.Row; return c
 
 # ---------------- Journal (events)
 def _ensure_events_table():
@@ -103,8 +85,7 @@ def log_event(kind: str, details: dict):
     created_at = datetime.now(timezone.utc).isoformat()
     payload = json.dumps(details or {}, ensure_ascii=False)
     with _conn() as c:
-        c.execute("INSERT INTO events(created_at,kind,details) VALUES (?,?,?)",
-                  (created_at, kind, payload))
+        c.execute("INSERT INTO events(created_at,kind,details) VALUES (?,?,?)", (created_at, kind, payload))
         c.commit()
 
 def list_events(limit: int = 200):
@@ -112,10 +93,8 @@ def list_events(limit: int = 200):
         rows = c.execute("SELECT id, created_at, kind, details FROM events ORDER BY id DESC LIMIT ?", (limit,)).fetchall()
         items = []
         for r in rows:
-            try:
-                det = json.loads(r["details"] or "{}")
-            except Exception:
-                det = {}
+            try: det = json.loads(r["details"] or "{}")
+            except Exception: det = {}
             items.append({"id": r["id"], "created_at": r["created_at"], "kind": r["kind"], "details": det})
         return items
 
@@ -124,8 +103,7 @@ def list_events(limit: int = 200):
 def _startup():
     logger.info("Domovra starting. DB_PATH=%s", DB_PATH)
     logger.info("WARNING_DAYS=%s CRITICAL_DAYS=%s", WARNING_DAYS, CRITICAL_DAYS)
-    init_db()
-    _ensure_events_table()
+    init_db(); _ensure_events_table()
     try:
         current = load_settings()
         logger.info("Settings au démarrage: %s", current)
@@ -147,9 +125,7 @@ def index(request: Request):
     for it in lots:
         it["status"] = status_for(it.get("best_before"), WARNING_DAYS, CRITICAL_DAYS)
     return render("index.html",
-                  BASE=base,
-                  page="home",
-                  request=request,
+                  BASE=base, page="home", request=request,
                   locations=locations, products=products, lots=lots,
                   WARNING_DAYS=WARNING_DAYS, CRITICAL_DAYS=CRITICAL_DAYS)
 
@@ -158,22 +134,20 @@ def products_page(request: Request):
     base = ingress_base(request)
     logger.info("GET /products (BASE=%s)", base)
     items = get_products_with_stats()
-    return render("products.html",
-                  BASE=base,
-                  page="products",
-                  request=request,
-                  items=items)
+    return render("products.html", BASE=base, page="products", request=request, items=items)
 
 @app.get("/locations", response_class=HTMLResponse)
 def locations_page(request: Request):
     base = ingress_base(request)
     logger.info("GET /locations (BASE=%s)", base)
     items = list_locations()
-    return render("locations.html",
-                  BASE=base,
-                  page="locations",
-                  request=request,
-                  items=items)
+    # enrichir avec nb de lots
+    with _conn() as c:
+        rows = c.execute("SELECT location_id, COUNT(*) AS cnt FROM stock_lots GROUP BY location_id").fetchall()
+        counts = { r["location_id"]: int(r["cnt"]) for r in rows }
+    for it in items:
+        it["lot_count"] = int(counts.get(it["id"], 0))
+    return render("locations.html", BASE=base, page="locations", request=request, items=items)
 
 @app.get("/lots", response_class=HTMLResponse)
 def lots_page(request: Request,
@@ -185,7 +159,6 @@ def lots_page(request: Request,
     items = list_lots()
     for it in items:
         it["status"] = status_for(it.get("best_before"), WARNING_DAYS, CRITICAL_DAYS)
-
     if product:
         needle = product.casefold()
         items = [i for i in items if needle in (i.get("product","").casefold())]
@@ -193,13 +166,8 @@ def lots_page(request: Request,
         items = [i for i in items if i.get("location") == location]
     if status:
         items = [i for i in items if i.get("status") == status]
-
     locations = list_locations()
-    return render("lots.html",
-                  BASE=base,
-                  page="lots",
-                  request=request,
-                  items=items, locations=locations)
+    return render("lots.html", BASE=base, page="lots", request=request, items=items, locations=locations)
 
 # --------- Journal page
 @app.get("/journal", response_class=HTMLResponse)
@@ -207,23 +175,16 @@ def journal_page(request: Request, limit: int = Query(200, ge=1, le=1000)):
     base = ingress_base(request)
     logger.info("GET /journal (BASE=%s limit=%s)", base, limit)
     events = list_events(limit)
-    return render("journal.html",
-                  BASE=base,
-                  page="journal",
-                  request=request,
-                  events=events, limit=limit)
+    return render("journal.html", BASE=base, page="journal", request=request, events=events, limit=limit)
 
 @app.post("/journal/clear")
 def journal_clear(request: Request):
     base = ingress_base(request)
     with _conn() as c:
-        c.execute("DELETE FROM events")
-        c.commit()
+        c.execute("DELETE FROM events"); c.commit()
     logger.info("POST /journal/clear -> journal vidé")
     log_event("journal.clear", {"by": "ui"})
-    return RedirectResponse(base + "journal?cleared=1",
-                            status_code=303,
-                            headers={"Cache-Control":"no-store"})
+    return RedirectResponse(base + "journal?cleared=1", status_code=303, headers={"Cache-Control":"no-store"})
 
 @app.get("/api/events")
 def api_events(limit: int = 200):
@@ -237,11 +198,7 @@ def settings_page(request: Request):
     try:
         settings = load_settings()
         logger.info("GET /settings (BASE=%s) -> %s", base, settings)
-        return render("settings.html",
-                      BASE=base,
-                      page="settings",
-                      request=request,
-                      SETTINGS=settings)
+        return render("settings.html", BASE=base, page="settings", request=request, SETTINGS=settings)
     except Exception as e:
         logger.exception("Erreur GET /settings: %s", e)
         return PlainTextResponse(f"Erreur chargement paramètres: {e}", status_code=500)
@@ -264,22 +221,19 @@ def settings_save(request: Request,
     logger.info("POST /settings/save (BASE=%s) RAW: theme=%s table_mode=%s sidebar_compact=%s default_shelf_days=%s low_stock_default=%s",
                 base, theme, table_mode, sidebar_compact, default_shelf_days, low_stock_default)
     logger.info("POST /settings/save NORMALIZED: %s", normalized)
-
     try:
         saved = save_settings(normalized)
         logger.info("POST /settings/save OK -> %s", saved)
         log_event("settings.update", saved)
-        return RedirectResponse(base + f"settings?ok=1&_={int(time.time())}",
-                                status_code=303,
-                                headers={"Cache-Control":"no-store"})
+        return RedirectResponse(base + f"settings?ok=1&_={int(time.time())}", status_code=303, headers={"Cache-Control":"no-store"})
     except Exception as e:
         logger.exception("POST /settings/save ERREUR: %s", e)
         log_event("settings.error", {"error": str(e), "payload": normalized})
-        return RedirectResponse(base + "settings?error=1",
-                                status_code=303,
-                                headers={"Cache-Control":"no-store"})
+        return RedirectResponse(base + "settings?error=1", status_code=303, headers={"Cache-Control":"no-store"})
 
 # ---------------- Actions Produits
+from urllib.parse import urlencode
+
 @app.post("/product/add")
 def product_add(request: Request,
                 name: str = Form(...),
@@ -290,7 +244,6 @@ def product_add(request: Request,
     except Exception: shelf = 90
     bid = barcode.strip() or None
     pid = add_product(name, unit or "pièce", shelf, bid)
-    from urllib.parse import urlencode
     params = urlencode({"added": 1, "pid": pid})
     log_event("product.add", {"id": pid, "name": name, "unit": unit, "shelf": shelf, "barcode": bid})
     return RedirectResponse(ingress_base(request) + f"products?{params}", status_code=303, headers={"Cache-Control":"no-store"})
@@ -313,45 +266,42 @@ def product_delete(request: Request, product_id: int = Form(...)):
     log_event("product.delete", {"id": product_id})
     return RedirectResponse(ingress_base(request)+"products", status_code=303, headers={"Cache-Control":"no-store"})
 
-# ---------------- Actions Emplacements
+# ---------------- Actions Emplacements (avec toasts)
 @app.post("/location/add")
 def location_add(request: Request, name: str = Form(...)):
-    """Ajoute un emplacement si non existant (insensible à la casse).
-       Redirige toujours vers /locations avec indicateurs de résultat.
-    """
     base = ingress_base(request)
     nm = (name or "").strip()
-    from urllib.parse import urlencode
-
-    # Doublon ?
-    with _conn() as c:
-        row = c.execute("SELECT id FROM locations WHERE lower(name)=lower(?)", (nm,)).fetchone()
-        if row:
-            lid = int(row["id"])
-            log_event("location.duplicate", {"id": lid, "name": nm})
-            params = urlencode({"duplicate": 1, "name": nm})
-            return RedirectResponse(base + f"locations?{params}",
-                                    status_code=303,
-                                    headers={"Cache-Control":"no-store"})
-
+    # Détecter doublon (insensible à la casse/espaces)
+    existing = [l["name"].strip().casefold() for l in list_locations()]
+    if nm.strip().casefold() in existing:
+        log_event("location.duplicate", {"name": nm})
+        params = urlencode({"duplicate": 1, "name": nm})
+        return RedirectResponse(base + f"locations?{params}", status_code=303, headers={"Cache-Control":"no-store"})
     lid = add_location(nm)
     log_event("location.add", {"id": lid, "name": nm})
     params = urlencode({"added": 1, "name": nm})
-    return RedirectResponse(base + f"locations?{params}",
-                            status_code=303,
-                            headers={"Cache-Control":"no-store"})
+    return RedirectResponse(base + f"locations?{params}", status_code=303, headers={"Cache-Control":"no-store"})
 
 @app.post("/location/update")
 def location_update(request: Request, location_id: int = Form(...), name: str = Form(...)):
-    update_location(location_id, name)
-    log_event("location.update", {"id": location_id, "name": name})
-    return RedirectResponse(ingress_base(request)+"locations", status_code=303, headers={"Cache-Control":"no-store"})
+    base = ingress_base(request)
+    nm = (name or "").strip()
+    update_location(location_id, nm)
+    log_event("location.update", {"id": location_id, "name": nm})
+    params = urlencode({"updated": 1, "name": nm})
+    return RedirectResponse(base + f"locations?{params}", status_code=303, headers={"Cache-Control":"no-store"})
 
 @app.post("/location/delete")
 def location_delete(request: Request, location_id: int = Form(...)):
+    base = ingress_base(request)
+    # Récupérer le nom avant suppression (pour le journal/toast si besoin)
+    with _conn() as c:
+        row = c.execute("SELECT name FROM locations WHERE id=?", (location_id,)).fetchone()
+        nm = row["name"] if row else ""
     delete_location(location_id)
-    log_event("location.delete", {"id": location_id})
-    return RedirectResponse(ingress_base(request)+"locations", status_code=303, headers={"Cache-Control":"no-store"})
+    log_event("location.delete", {"id": location_id, "name": nm})
+    params = urlencode({"deleted": 1})
+    return RedirectResponse(base + f"locations?{params}", status_code=303, headers={"Cache-Control":"no-store"})
 
 # ---------------- Actions Lots
 @app.post("/lot/add")
@@ -393,24 +343,18 @@ def lot_delete_action(request: Request, lot_id: int = Form(...)):
     log_event("lot.delete", {"lot_id": lot_id})
     return RedirectResponse(ingress_base(request)+"lots", status_code=303, headers={"Cache-Control":"no-store"})
 
-# ---------------- Page Support (Ko-fi)
 @app.get("/support", response_class=HTMLResponse)
 def support_page(request: Request):
     base = ingress_base(request)
     logger.info("GET /support (BASE=%s)", base)
-    return render("support.html",
-                  BASE=base,
-                  page="support",
-                  request=request)
+    return render("support.html", BASE=base, page="support", request=request)
 
-# ---------------- Fallback
 @app.get("/{path:path}", include_in_schema=False)
 def fallback(request: Request, path: str):
     base = ingress_base(request)
     logger.info("Fallback -> redirect %s", base)
     return RedirectResponse(base, status_code=303, headers={"Cache-Control":"no-store"})
 
-# --------- util pour produits avec stats (fallback)
 def get_products_with_stats():
     try:
         from db import list_products_with_stats  # type: ignore

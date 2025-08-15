@@ -5,24 +5,18 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>{% block title %}Domovra{% endblock %}</title>
-
-  <!-- Source de vérité côté UI -->
   <meta name="domovra:theme" content="{{ SETTINGS.theme|default('auto') }}">
   <meta name="domovra:sidebar" content="{{ '1' if SETTINGS.sidebar_compact else '0' }}">
-
-  <!-- Thème + sidebar dès le chargement -->
   <script>
     (function () {
       const mTheme = document.querySelector('meta[name="domovra:theme"]');
       const mSide = document.querySelector('meta[name="domovra:sidebar"]');
       const pref = (mTheme && mTheme.content) || 'auto';
       const html = document.documentElement;
-
       function setTheme(mode) {
         if (!html) return;
         if (mode === 'light' || mode === 'dark') {
-          html.setAttribute('data-theme', mode);
-          html.style.colorScheme = mode;
+          html.setAttribute('data-theme', mode); html.style.colorScheme = mode;
           try { localStorage.setItem('domovra_theme', mode); } catch (e) { }
         } else {
           const isDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
@@ -30,15 +24,11 @@
           html.style.colorScheme = isDark ? 'dark' : 'light';
         }
       }
-
-      if (pref === 'light' || pref === 'dark') {
-        setTheme(pref);
-      } else {
-        let saved = null;
-        try { saved = localStorage.getItem('domovra_theme'); } catch (e) { }
+      if (pref === 'light' || pref === 'dark') setTheme(pref);
+      else {
+        let saved = null; try { saved = localStorage.getItem('domovra_theme'); } catch (e) { }
         setTheme((saved === 'light' || saved === 'dark') ? saved : 'auto');
       }
-
       try {
         const mq = window.matchMedia('(prefers-color-scheme: dark)');
         mq.addEventListener?.('change', () => {
@@ -46,18 +36,15 @@
           if (now === 'auto') setTheme('auto');
         });
       } catch (e) { }
-
       const mini = (mSide && mSide.content === '1');
       if (mini) html.classList.add('sidebar-mini'); else html.classList.remove('sidebar-mini');
     })();
   </script>
-
   <style>
     :root {
       color-scheme: dark;
     }
 
-    /* Variables de fond (pour header solide) */
     html[data-theme="dark"] {
       --bg-body: #0f1115;
       --bg-card: #151922;
@@ -116,7 +103,6 @@
       min-width: 0;
     }
 
-    /* ===== Header collant, fond = fond page ===== */
     header {
       position: sticky;
       top: 0;
@@ -312,7 +298,6 @@
       min-width: 720px;
     }
 
-    /* Off-canvas (mobile) */
     @media (max-width:1024px) {
       .layout {
         grid-template-columns: 1fr;
@@ -325,15 +310,12 @@
         transform: translateX(-100%);
         transition: transform .25s ease;
         z-index: 70;
-        /* par défaut */
       }
 
-      /* >>> Passe AU-DESSUS du header quand ouvert <<< */
       body.sidebar-open aside {
         transform: translateX(0);
         box-shadow: 0 10px 30px rgba(0, 0, 0, .45);
         z-index: 2000;
-        /* <— plus haut que le header (1000) */
       }
     }
 
@@ -381,7 +363,6 @@
       }
     }
 
-    /* Variantes clair */
     html[data-theme="light"] aside {
       background: #f7f7f8;
       border-right: 1px solid var(--line);
@@ -444,14 +425,13 @@
       border: 1px solid var(--line);
     }
 
-    /* ===== Mobile : cacher les chips ===== */
     @media (max-width:640px) {
       .header-right {
         display: none;
       }
     }
 
-    /* ======= TOASTS ======= */
+    /* ===== TOASTS ===== */
     .toast-stack {
       position: fixed;
       top: 12px;
@@ -468,18 +448,19 @@
       padding: 10px 12px;
       box-shadow: 0 6px 16px rgba(0, 0, 0, .25);
       animation: toast-in .2s ease both;
+      border-left: 4px solid transparent;
     }
 
     .toast.ok {
-      border-color: rgba(76, 175, 80, .35);
+      border-left-color: #4caf50;
     }
 
     .toast.warn {
-      border-color: rgba(255, 179, 0, .35);
+      border-left-color: #ffb300;
     }
 
     .toast.error {
-      border-color: rgba(239, 83, 80, .35);
+      border-left-color: #ef5350;
     }
 
     @keyframes toast-in {
@@ -509,7 +490,6 @@
       }
     }
   </style>
-
   {% block head %}{% endblock %}
 </head>
 
@@ -535,35 +515,19 @@
             class="ico">☕</span><span>Support</span></a>
       </nav>
     </aside>
-
     <main>
       <header>
         <div class="header-left">
           <button class="hamburger" id="hamburger" aria-label="Ouvrir le menu"
             aria-expanded="false"><span></span><span></span><span></span></button>
           {% set seg = request.path.replace(BASE, '').strip('/') %}
-          <h1 class="app-title">
-            Domovra —
-            {% if seg == '' %}
-            Accueil
-            {% elif seg.startswith('products') %}
-            Produits
-            {% elif seg.startswith('locations') %}
-            Emplacements
-            {% elif seg.startswith('lots') %}
-            Stocks
-            {% elif seg.startswith('settings') %}
-            Paramètres
-            {% elif seg.startswith('journal') %}
-            Journal
-            {% elif seg.startswith('support') %}
-            Support
-            {% else %}
-            {{ seg|replace('-', ' ')|capitalize }}
-            {% endif %}
+          <h1 class="app-title">Domovra —
+            {% if seg == '' %}Accueil{% elif seg.startswith('products') %}Produits{% elif seg.startswith('locations')
+            %}Emplacements{% elif seg.startswith('lots') %}Stocks{% elif seg.startswith('settings') %}Paramètres{% elif
+            seg.startswith('journal') %}Journal{% elif seg.startswith('support') %}Support{% else %}{{ seg|replace('-',
+            ' ')|capitalize }}{% endif %}
           </h1>
         </div>
-
         <div class="header-right">
           <div class="header-chips">
             {% if products is defined and lots is defined %}
@@ -578,21 +542,17 @@
           </div>
         </div>
       </header>
-
-      <section class="page">
-        {% block content %}{% endblock %}
-      </section>
+      <section class="page">{% block content %}{% endblock %}</section>
     </main>
   </div>
 
   <!-- TOASTS -->
   <div id="toast-stack" class="toast-stack" aria-live="polite"></div>
 
-  <!-- JS : sidebar mobile + toasts -->
+  <!-- JS -->
   <script>
     (function () {
-      const btn = document.getElementById('hamburger');
-      if (!btn) return;
+      const btn = document.getElementById('hamburger'); if (!btn) return;
       const isMobile = () => matchMedia('(max-width:1024px)').matches;
       const open = () => { document.body.classList.add('sidebar-open'); btn.setAttribute('aria-expanded', 'true'); };
       const close = () => { document.body.classList.remove('sidebar-open'); btn.setAttribute('aria-expanded', 'false'); };
@@ -612,19 +572,13 @@
         el.className = `toast ${type}`;
         el.textContent = msg;
         stack.appendChild(el);
-        const hide = () => {
-          el.style.transition = '200ms ease';
-          el.style.opacity = '0';
-          el.style.transform = 'translateY(-4px)';
-          setTimeout(() => el.remove(), 200);
-        };
+        const hide = () => { el.style.transition = '200ms ease'; el.style.opacity = '0'; el.style.transform = 'translateY(-4px)'; setTimeout(() => el.remove(), 200); };
         const t = setTimeout(hide, timeout);
         el.addEventListener('click', () => { clearTimeout(t); hide(); });
       }
       window.showToast = showToast;
     })();
   </script>
-
   {% block scripts %}{% endblock %}
 </body>
 
