@@ -41,9 +41,9 @@
   <table class="table desktable" aria-label="Liste des emplacements">
     <!-- 3 colonnes strictes -->
     <colgroup>
-      <col style="width: 52%">
-      <col style="width: 20%">
-      <col style="width: 28%">
+      <col style="width: 25%">
+      <col style="width: 25%">
+      <col style="width: 50%">
     </colgroup>
     <thead>
       <tr>
@@ -318,17 +318,21 @@
   /* Actions : wrap si nécessaire (évite tout dépassement) */
   .t-actions {
     display: flex;
-    flex-wrap: wrap;
-    /* << wrap auto sur 2 lignes si besoin */
     gap: .4rem;
     justify-content: flex-end;
     align-items: center;
   }
 
   .t-actions .btn {
-    flex: 0 0 auto;
-    max-width: 100%;
+    flex: 1 1 auto;
+    /* s’adapte à l’espace dispo */
+    min-width: 0;
+    /* autorise à rétrécir */
+    padding: .45rem .5rem;
+    white-space: nowrap;
+    /* garde le texte sur une seule ligne */
   }
+
 
   /* Sur écrans un peu étroits, cacher le texte “Modifier” (on garde l’icône) */
   @media (max-width: 1280px) {
