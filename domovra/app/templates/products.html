@@ -271,26 +271,31 @@
   }
 
   /* OFF box */
-  #off-box {
-    background: transparent !important;
-    border: none !important;
-    border-radius: 0 !important;
-    padding: 10px;
-  }
-
   #off-box input,
-  #off-box button,
   #off-box .infield-btn {
     background: transparent !important;
-    border: 1px solid var(--border);
+    border: none !important;
+    color: #e6eef9 !important;
+    /* texte clair */
   }
 
-  #off-box input:focus,
-  #off-box button:focus,
-  #off-box .infield-btn:focus {
-    outline: none;
-    background: rgba(255, 255, 255, 0.05) !important;
-    /* léger effet au focus */
+  #off-box input::placeholder {
+    color: rgba(230, 238, 249, 0.6);
+    /* placeholder plus lisible */
+  }
+
+  #off-box .infield-btn {
+    display: inline-grid;
+    place-items: center;
+    padding: 0;
+    width: 36px;
+    height: 36px;
+  }
+
+  #off-box .infield-btn img,
+  #off-box .infield-btn svg {
+    filter: brightness(1.2);
+    /* éclaircir icône caméra */
   }
 
 
