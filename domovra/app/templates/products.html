@@ -3,147 +3,173 @@
 
 {% block head %}
 <style>
-  /* ========= Thème (variables) ========= */
   :root {
-    /* palette sombre (par défaut) */
-    --bg: #0b1020;
-    --surface: #0f1524;
-    --field: #121a2f;
-    --chip: #1a2230;
+    --gap: 12px;
+    --radius: 14px;
     --border: #263043;
-    --text: #e6eef9;
+    --chip: #1a2230;
     --muted: #8ea0b7;
-    --primary: #0f9ecf;
+    --accent: #00bcd4;
+    --ok: #4caf50;
+    --warn: #ffb300;
     --danger: #ef5350;
   }
 
-  /* Thème clair déclenché par préférence système */
-  @media (prefers-color-scheme: light) {
-    :root {
-      --bg: #f7f9fc;
-      --surface: #ffffff;
-      --field: #f3f6fb;
-      --chip: #eef3f9;
-      --border: #dde4ee;
-      --text: #0b1324;
-      --muted: #5e6b7d;
-      --primary: #00a9d6;
-      --danger: #e53935;
-    }
-  }
-
-  /* Thème clair forcé par l’appli (même variables) */
-  body[data-theme="light"] {
-    --bg: #f7f9fc;
-    --surface: #ffffff;
-    --field: #f3f6fb;
-    --chip: #eef3f9;
-    --border: #dde4ee;
-    --text: #0b1324;
-    --muted: #5e6b7d;
-    --primary: #00a9d6;
-    --danger: #e53935;
-  }
-
-  /* ========= Layout & composants ========= */
   .wrap {
-    display: grid;
-    gap: 12px;
-    grid-template-columns: 1fr;
-    max-width: 1200px;
+    max-width: 1100px;
     margin: 0 auto;
+    padding: 0 12px;
+  }
+
+  .row {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+
+  .chip {
+    background: var(--chip);
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    padding: 6px 10px;
+    color: var(--muted);
   }
 
   .card {
     border: 1px solid var(--border);
-    border-radius: 14px;
-    padding: 14px;
-    background: var(--surface);
-    color: var(--text);
+    border-radius: var(--radius);
+    padding: 12px;
+    margin-bottom: 12px;
   }
 
   .title {
     display: flex;
     align-items: center;
     gap: 10px;
-    margin-bottom: 8px
+    margin: 6px 0 8px;
   }
 
   .title h2 {
+    font-size: 16px;
     margin: 0;
-    font-size: 18px
   }
 
-  .muted {
-    color: var(--muted)
+  /* champs/btns comme index.html (fond transparent en clair) */
+  input,
+  select,
+  button {
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 10px;
+    background: transparent;
+    color: inherit
   }
 
-  .form-grid {
-    display: grid;
-    grid-template-columns: 2fr 1fr 1fr 1fr auto;
-    gap: 10px
+  input::placeholder {
+    color: rgba(200, 210, 225, .7)
+  }
+
+  button.primary {
+    background: var(--accent);
+    border: 0;
+    color: #02222a;
+    font-weight: 600;
+    cursor: pointer
+  }
+
+  button.secondary {
+    background: var(--chip);
+    border-color: var(--border);
   }
 
   .label {
     font-size: 12px;
     color: var(--muted);
-    margin-bottom: 4px;
     display: flex;
     align-items: center;
     gap: 6px
   }
 
-  .row {
-    display: flex;
-    gap: 10px;
-    align-items: center;
-    flex-wrap: wrap
-  }
-
-  input,
-  select,
-  button {
-    padding: 10px;
-    border-radius: 10px;
+  /* Aides “?” comme index.html (.help) */
+  .help {
+    display: inline-grid;
+    place-items: center;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    font-size: 12px;
+    cursor: help;
+    background: #1f2735;
     border: 1px solid var(--border);
-    background: var(--field);
-    color: var(--text)
+    color: #cfe3ff;
+    position: relative;
+    line-height: 1
   }
 
-  input::placeholder {
-    color: color-mix(in srgb, var(--text) 40%, transparent)
+  .help::before {
+    content: "?";
+    font-weight: 700
   }
 
-  button.primary {
-    background: var(--primary);
-    border-color: var(--primary);
-    color: #012028;
-    font-weight: 600
+  .help:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px
   }
 
-  button.secondary {
-    background: var(--chip)
+  .help:hover::after,
+  .help:focus-visible::after {
+    content: attr(data-tip);
+    position: absolute;
+    left: 50%;
+    bottom: 100%;
+    transform: translate(-50%, -8px);
+    background: #0f1320;
+    color: #e5e7eb;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 6px 8px;
+    white-space: normal;
+    width: max-content;
+    max-width: 280px;
+    z-index: 60
   }
 
-  .tools-row {
-    display: flex;
-    gap: 10px;
-    align-items: center;
-    flex-wrap: wrap
+  /* Grille “Ajout express” (produit) */
+  .form-grid {
+    display: grid;
+    grid-template-columns: 2fr 1fr 1fr 1fr auto;
+    gap: 12px;
+    align-items: end
   }
 
-  .tools-search {
-    flex: 1;
-    min-width: 220px
+  @media (max-width:1100px) {
+    .form-grid {
+      grid-template-columns: 2fr 1fr 1fr auto
+    }
   }
 
-  .tools-count {
-    padding: 8px 12px;
-    border-radius: 999px;
-    background: var(--chip);
-    border: 1px solid var(--border)
+  @media (max-width:900px) {
+    .form-grid {
+      grid-template-columns: 1fr 1fr 1fr
+    }
+
+    .form-grid .btn-submit {
+      grid-column: 1/-1;
+      justify-self: stretch
+    }
   }
 
+  @media (max-width:700px) {
+    .form-grid {
+      grid-template-columns: 1fr
+    }
+
+    .form-grid .btn-submit {
+      width: 100%
+    }
+  }
+
+  /* Tableau */
   table {
     width: 100%;
     border-collapse: collapse
@@ -164,16 +190,10 @@
   }
 
   tbody tr:hover {
-    background: color-mix(in srgb, var(--surface) 85%, var(--text) 15%)
+    background: rgba(255, 255, 255, .03)
   }
 
-  .actions {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 8px
-  }
-
-  /* Chips infos — une seule ligne */
+  /* Stats “chips” (une seule ligne) */
   .stats {
     display: flex;
     flex-wrap: nowrap;
@@ -189,7 +209,7 @@
     padding: 6px 10px;
     border-radius: 999px;
     border: 1px solid var(--border);
-    background: var(--surface);
+    background: transparent;
     flex: 0 0 auto
   }
 
@@ -201,93 +221,12 @@
     font-weight: 600
   }
 
+  /* Mobile : cartes */
   .cards {
     display: none
   }
 
-  .product-note {
-    font-size: 12px;
-    color: var(--muted)
-  }
-
-  /* Input avec bouton intégré (scan) */
-  .infield {
-    position: relative;
-    display: flex;
-    align-items: center
-  }
-
-  .infield input {
-    width: 100%;
-    padding-right: 60px
-  }
-
-  .infield-btn {
-    position: absolute;
-    right: 8px;
-    display: inline-grid;
-    place-items: center;
-    width: 40px;
-    height: 40px;
-    border-radius: 10px;
-    border: 1px solid var(--border);
-    background: var(--chip);
-    cursor: pointer
-  }
-
-  .infield-btn:active {
-    transform: scale(.98)
-  }
-
-  /* Tooltips style index */
-  .qmark {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 18px;
-    height: 18px;
-    border-radius: 999px;
-    font-size: 12px;
-    line-height: 1;
-    border: 1px solid var(--border);
-    background: color-mix(in srgb, var(--surface) 85%, var(--text) 15%);
-    color: color-mix(in srgb, var(--text) 85%, var(--surface) 15%);
-    cursor: help;
-    position: relative
-  }
-
-  .qmark[data-tip]::after {
-    content: attr(data-tip);
-    position: absolute;
-    left: 50%;
-    transform: translateX(-50%);
-    bottom: calc(100% + 8px);
-    background: var(--surface);
-    border: 1px solid var(--border);
-    color: var(--text);
-    padding: 8px 10px;
-    border-radius: 8px;
-    width: max-content;
-    max-width: min(420px, 88vw);
-    box-shadow: 0 6px 16px rgba(0, 0, 0, .15);
-    opacity: 0;
-    pointer-events: none;
-    transition: opacity .15s ease;
-    white-space: normal;
-    font-size: 12px;
-    z-index: 30;
-  }
-
-  .qmark:hover::after,
-  .qmark:active::after {
-    opacity: 1
-  }
-
-  /* Mobile */
   @media (max-width:700px) {
-    .form-grid {
-      grid-template-columns: 1fr
-    }
 
     thead,
     table {
@@ -303,7 +242,7 @@
       border: 1px solid var(--border);
       border-radius: 12px;
       padding: 10px;
-      background: var(--surface)
+      background: #121620
     }
 
     .card-head {
@@ -331,32 +270,38 @@
     }
   }
 
-  /* Block OFF (transparent) */
+  /* Bloc OFF (harmonisé : fond transparent comme fields) */
   #off-box {
-    background: transparent;
-    border: none;
-    border-radius: 0;
-    padding: 10px
+    padding: 8px 0
+  }
+
+  #off-box .infield {
+    position: relative;
+    display: flex;
+    align-items: center
   }
 
   #off-box .infield input {
-    background: var(--field);
-    border: 1px solid var(--border);
-    color: var(--text)
-  }
-
-  #off-box .infield input::placeholder {
-    color: color-mix(in srgb, var(--text) 45%, transparent)
+    width: 100%;
+    padding-right: 56px
   }
 
   #off-box .infield-btn {
+    position: absolute;
+    right: 6px;
+    display: inline-grid;
+    place-items: center;
+    width: 40px;
+    height: 40px;
+    border-radius: 10px;
+    border: 1px solid var(--border);
     background: var(--chip);
-    border: 1px solid var(--border)
+    cursor: pointer
   }
 
-  #off_result[hidden],
-  #off_error[hidden] {
-    display: none !important;
+  #off_error[hidden],
+  #off_result[hidden] {
+    display: none !important
   }
 </style>
 {% endblock %}
@@ -370,11 +315,11 @@
 
   <!-- Open Food Facts & Scanner -->
   <div class="card">
-    <div class="title" style="margin:0 0 6px 0">
+    <div class="title" style="margin:0 0 8px 0">
       <h2>Open Food Facts & Scanner</h2>
       <span class="muted">→ préremplir le formulaire</span>
-      <span class="qmark"
-        data-tip="Saisis ou scanne un code-barres (EAN/GTIN). On interroge Open Food Facts pour proposer un nom et une unité indicative.">?</span>
+      <span class="help" tabindex="0"
+        data-tip="Scanne/saisis un EAN/GTIN pour récupérer nom/marque et une indication d’unité."></span>
     </div>
 
     <div id="off-box">
@@ -391,9 +336,7 @@
         <button id="off_clear" class="secondary" type="button">✖ Effacer</button>
       </div>
 
-      <div id="off_hint" class="muted" style="margin-top:.5rem">
-        Astuce : essaie <b>5449000000996</b> (Coca-Cola 1,5 L).
-      </div>
+      <div class="muted" style="margin-top:.5rem">Astuce : essaie <b>5449000000996</b> (Coca-Cola 1,5 L).</div>
       <div id="off_error" hidden class="muted" style="color:#ff6b6b;margin-top:.35rem">Erreur</div>
 
       <div id="off_result" hidden style="margin-top:.6rem">
@@ -403,8 +346,7 @@
           <div>
             <div style="display:flex;align-items:center;gap:6px;">
               <b id="off_name">Nom</b>
-              <span class="qmark"
-                data-tip="Nom et marque récupérés d’Open Food Facts. Tu peux les modifier avant d’ajouter le produit.">?</span>
+              <span class="help" tabindex="0" data-tip="Tu peux modifier le nom avant l’ajout."></span>
             </div>
             <div id="off_brand" class="muted">Marque</div>
             <div class="muted" style="margin-top:.25rem">Quantité indiquée : <span id="off_qty">—</span></div>
@@ -415,7 +357,7 @@
             </div>
           </div>
         </div>
-        <p class="product-note" style="margin:.6rem 0 0">
+        <p class="muted" style="margin:.6rem 0 0">
           Scanne/saisis un code-barres → « Rechercher » → « Préremplir le formulaire », puis ajuste l’unité/la
           conservation et valide.
         </p>
@@ -423,25 +365,24 @@
     </div>
   </div>
 
-  <!-- Ajout express -->
+  <!-- Ajout express (création produit) -->
   <div class="card">
     <div class="title">
       <h2>Ajout express</h2><span class="muted">→ créer un nouveau produit</span>
-      <span class="qmark"
-        data-tip="Crée rapidement un produit utilisable dans les stocks. L’unité sert de repère et la conservation (jours) alimente les états Bientôt/Urgent.">?</span>
     </div>
 
     <form id="create_form" method="post" action="{{ BASE }}product/add" class="form-grid">
       <div>
         <div class="label">Nom du produit
-          <span class="qmark" data-tip="Nom court et explicite. Exemple : « Lait demi-écrémé », « Pâtes ».">?</span>
+          <span class="help" tabindex="0"
+            data-tip="Nom court et explicite (ex. « Lait demi-écrémé », « Pâtes »)."></span>
         </div>
         <input name="name" id="create_name" type="text" required placeholder="ex. Pâtes, Lait demi-écrémé">
       </div>
 
       <div>
         <div class="label">Unité
-          <span class="qmark" data-tip="Choisis une unité adaptée (comptage, poids, volume).">?</span>
+          <span class="help" tabindex="0" data-tip="Choisis une unité adaptée (comptage, poids, volume)."></span>
         </div>
         <select name="unit" id="create_unit">
           <optgroup label="Comptage">
@@ -470,24 +411,22 @@
 
       <div>
         <div class="label">Conservation (jours)
-          <span class="qmark"
-            data-tip="Nombre de jours de conservation par défaut (utile pour les états : OK / Bientôt / Urgent). Tu peux laisser vide si non pertinent.">?</span>
+          <span class="help" tabindex="0"
+            data-tip="Nombre de jours par défaut (sert aux états OK / Bientôt / Urgent)."></span>
         </div>
         <input name="shelf" id="create_shelf" type="number" min="1" placeholder="ex. 90">
       </div>
 
       <div>
         <div class="label">Code-barres (facultatif)
-          <span class="qmark"
-            data-tip="EAN/GTIN du produit. Rempli automatiquement si tu utilises le scanner ci-dessus.">?</span>
+          <span class="help" tabindex="0"
+            data-tip="EAN/GTIN du produit. Renseigné automatiquement depuis le scanner."></span>
         </div>
         <input name="barcode" id="create_barcode" type="text" inputmode="numeric" placeholder="EAN/GTIN">
       </div>
 
-      <div class="row" style="justify-content:flex-end">
-        <button class="primary">＋ Ajouter</button>
-        <button id="create_reset" type="button" class="secondary">Réinitialiser</button>
-      </div>
+      <button class="primary btn-submit">＋ Ajouter</button>
+      <button id="create_reset" type="button" class="secondary">Réinitialiser</button>
     </form>
   </div>
 
@@ -495,12 +434,10 @@
   <div class="card">
     <div class="title">
       <h2>Outils</h2><span class="muted">Recherche & compteur</span>
-      <span class="qmark"
-        data-tip="Filtre instantané sur le nom, l’unité et le code-barres. Le compteur se met à jour sur les résultats visibles.">?</span>
     </div>
-    <div class="tools-row">
-      <input id="q" class="tools-search" type="search" placeholder="Rechercher un produit…">
-      <div class="tools-count">📦 Produits : <b id="prod-count">{{ items|length }}</b></div>
+    <div class="row" style="align-items:center">
+      <input id="q" type="search" placeholder="Rechercher un produit…" style="flex:1;min-width:220px">
+      <span class="chip">📦 Produits : <b id="prod-count">{{ items|length }}</b></span>
     </div>
   </div>
 
@@ -536,17 +473,17 @@
           </td>
           <td>
             <div class="stats">
-              <span class="stat"><span class="k">Unité</span><span>:</span><span class="v">{{ it.unit }}</span></span>
-              <span class="stat"><span class="k">Conservation</span><span>:</span><span class="v">{{
+              <span class="stat"><span class="k">Unité</span><span> :</span><span class="v">{{ it.unit }}</span></span>
+              <span class="stat"><span class="k">Conservation</span><span> :</span><span class="v">{{
                   it.default_shelf_life_days }} j</span></span>
-              <span class="stat"><span class="k">Stocks</span><span>:</span><span class="v">{{ it.lots_count
+              <span class="stat"><span class="k">Stocks</span><span> :</span><span class="v">{{ it.lots_count
                   }}</span></span>
-              <span class="stat"><span class="k">Qté totale</span><span>:</span><span class="v">{{
+              <span class="stat"><span class="k">Qté totale</span><span> :</span><span class="v">{{
                   '%.2f'|format(it.qty_total) }}</span></span>
             </div>
           </td>
           <td>
-            <div class="actions">
+            <div class="row" style="gap:8px">
               <button class="secondary js-edit-open" data-id="{{ it.id }}" data-name="{{ it.name }}"
                 data-unit="{{ it.unit }}" data-shelf="{{ it.default_shelf_life_days }}">✏️ Modifier</button>
               <button class="secondary js-delete-open" data-id="{{ it.id }}" data-name="{{ it.name }}"
@@ -563,7 +500,7 @@
       </tbody>
     </table>
 
-    <!-- Cartes mobile -->
+    <!-- Mobile cards -->
     <div class="cards" id="cards">
       {% for it in items %}
       <div class="card-item" data-name="{{ it.name|lower }}" data-unit="{{ it.unit|lower }}"
@@ -572,14 +509,14 @@
           <div class="card-name">{{ it.name }}</div>
         </div>
         <div class="card-info">
-          {% if it.barcode %}<span class="stat"><span class="k">EAN</span><span>:</span><span class="v">{{ it.barcode
+          {% if it.barcode %}<span class="stat"><span class="k">EAN</span><span> :</span><span class="v">{{ it.barcode
               }}</span></span>{% endif %}
-          <span class="stat"><span class="k">Unité</span><span>:</span><span class="v">{{ it.unit }}</span></span>
-          <span class="stat"><span class="k">Conservation</span><span>:</span><span class="v">{{
+          <span class="stat"><span class="k">Unité</span><span> :</span><span class="v">{{ it.unit }}</span></span>
+          <span class="stat"><span class="k">Conservation</span><span> :</span><span class="v">{{
               it.default_shelf_life_days }} j</span></span>
-          <span class="stat"><span class="k">Stocks</span><span>:</span><span class="v">{{ it.lots_count
+          <span class="stat"><span class="k">Stocks</span><span> :</span><span class="v">{{ it.lots_count
               }}</span></span>
-          <span class="stat"><span class="k">Qté</span><span>:</span><span class="v">{{ '%.2f'|format(it.qty_total)
+          <span class="stat"><span class="k">Qté</span><span> :</span><span class="v">{{ '%.2f'|format(it.qty_total)
               }}</span></span>
         </div>
         <div class="card-actions">
@@ -653,13 +590,12 @@
     <div class="muted" id="del-msg">La suppression retirera aussi les stocks liés à ce produit.</div>
     <div class="row" style="justify-content:flex-end;gap:8px">
       <button type="button" onclick="document.getElementById('dlg-delete').close()">Annuler</button>
-      <button class="primary"
-        style="background:var(--danger);border-color:var(--danger);color:#1d0c0c">Supprimer</button>
+      <button class="primary" style="background:var(--danger);border:0;color:#1d0c0c">Supprimer</button>
     </div>
   </form>
 </dialog>
 
-<!-- Modale Scanner -->
+<!-- Scanner live -->
 <dialog id="scan-modal">
   <div style="display:grid;gap:10px;min-width:min(520px,96vw)">
     <h3 style="margin:0">Scanner un code-barres</h3>
@@ -674,7 +610,7 @@
 
 {% block scripts %}
 <script>
-  /* Recherche live */
+  /* --- Recherche live --- */
   const q = document.getElementById('q'), tbody = document.getElementById('tbody'), cards = document.getElementById('cards');
   const rows = Array.from(tbody ? tbody.children : []), cardsItems = Array.from(cards ? cards.children : []);
   function applyFilter(s) {
@@ -683,16 +619,16 @@
     cardsItems.forEach(c => { const txt = c.dataset.name + ' ' + c.dataset.unit + ' ' + (c.dataset.barcode || ''); const m = txt.includes(t); c.style.display = m ? '' : 'none'; });
     const pc = document.getElementById('prod-count'); if (pc) pc.textContent = t ? shown : rows.length;
   }
-  if (q) { q.addEventListener('input', e => applyFilter(e.target.value)); }
+  if (q) q.addEventListener('input', e => applyFilter(e.target.value));
 
   /* Helpers */
   const $ = s => document.querySelector(s);
-  function setSelectValue(sel, value) {
+  function setSelectValue(sel, val) {
     if (!sel) return;
     [...sel.querySelectorAll('option[data-temp="1"]')].forEach(o => o.remove());
     const opts = [...sel.options].map(o => o.value);
-    if (opts.includes(value)) sel.value = value;
-    else if (value) { const o = document.createElement('option'); o.value = value; o.textContent = value + ' (autre)'; o.dataset.temp = '1'; sel.insertBefore(o, sel.firstChild); sel.value = value; }
+    if (opts.includes(val)) sel.value = val;
+    else if (val) { const o = document.createElement('option'); o.value = val; o.textContent = val + ' (autre)'; o.dataset.temp = '1'; sel.insertBefore(o, sel.firstChild); sel.value = val; }
   }
 
   /* Modales Modifier / Supprimer */
@@ -708,25 +644,23 @@
     if (del) {
       $('#del-product-id').value = del.dataset.id;
       const name = del.dataset.name || ''; const lots = parseInt(del.dataset.lots || '0', 10);
-      const msg = lots > 0 ? `La suppression retirera aussi les ${lots} stock(s) lié(s) à « ${name} ».`
+      $('#del-msg').textContent = lots > 0
+        ? `La suppression retirera aussi les ${lots} stock(s) lié(s) à « ${name} ».`
         : `Supprimer « ${name} » ?`;
-      $('#del-msg').textContent = msg; $('#dlg-delete').showModal(); return;
+      $('#dlg-delete').showModal(); return;
     }
   });
 
-  /* Réinit ajout */
+  /* Réinit création */
   (function () {
     const r = document.getElementById('create_reset'); if (!r) return;
-    r.addEventListener('click', () => {
-      ['create_name', 'create_shelf', 'create_barcode', 'off_barcode'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
-      const unit = document.getElementById('create_unit'); if (unit) unit.value = 'pièce';
-    });
+    r.addEventListener('click', () => { ['create_name', 'create_shelf', 'create_barcode', 'off_barcode'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; }); const u = document.getElementById('create_unit'); if (u) u.value = 'pièce'; });
   })();
 
-  /* Toasts ?added=1 */
+  /* Toasts via ?added=1 */
   (function () { const p = new URLSearchParams(location.search); if (p.get('added') === '1') window.showToast('Produit ajouté.', 'ok'); })();
 
-  /* OFF + Scanner */
+  /* --- OFF + Scanner --- */
   const elCode = $('#off_barcode'), elSearch = $('#off_search'), elScan = $('#off_scan'),
     elCapture = $('#off_capture'), elFile = $('#off_file'), elPaste = $('#off_paste'), elClear = $('#off_clear'),
     elError = $('#off_error'), elRes = $('#off_result'), elImg = $('#off_img'),
@@ -736,7 +670,7 @@
 
   function showError(msg) { if (!elError) return; elError.textContent = msg || 'Erreur'; elError.hidden = false; }
   function clearError() { if (!elError) return; elError.hidden = true; elError.textContent = ''; }
-  function clearResult() { if (!elRes) return; elRes.hidden = true; elFillCreate && (elFillCreate.dataset.payload = ''); }
+  function clearResult() { if (!elRes) return; elRes.hidden = true; if (elFillCreate) elFillCreate.dataset.payload = ''; }
 
   function normalizeOFF(data) {
     const p = (data && data.product) || {};
@@ -746,16 +680,8 @@
     const qty = p.quantity || p.serving_quantity || p.serving_size || '';
     return { name: nm, brand, img, quantity_hint: qty };
   }
-  function showResult(obj) {
-    if (!obj) return;
-    elImg.src = obj.img || ''; elName.textContent = obj.name || '—'; elBrand.textContent = obj.brand || '—'; elQty.textContent = obj.quantity_hint || '—'; elRes.hidden = false;
-    if (elFillCreate) elFillCreate.dataset.payload = JSON.stringify(obj);
-  }
-  function inferUnit(q) {
-    if (!q) return ''; const s = (q + '').toLowerCase();
-    if (/\b(kg|kilogram|kilo)/.test(s)) return 'kg'; if (/\bg\b/.test(s)) return 'g';
-    if (/\bml\b/.test(s)) return 'ml'; if (/\bl\b/.test(s)) return 'L'; if (/\bpi[eè]ce|\bpcs?\b/.test(s)) return 'pièce'; return '';
-  }
+  function showResult(o) { elImg.src = o.img || ''; elName.textContent = o.name || '—'; elBrand.textContent = o.brand || '—'; elQty.textContent = o.quantity_hint || '—'; elRes.hidden = false; if (elFillCreate) elFillCreate.dataset.payload = JSON.stringify(o); }
+  function inferUnit(q) { if (!q) return ''; const s = (q + '').toLowerCase(); if (/\b(kg|kilogram|kilo)/.test(s)) return 'kg'; if (/\bg\b/.test(s)) return 'g'; if (/\bml\b/.test(s)) return 'ml'; if (/\bl\b/.test(s)) return 'L'; if (/\bpi[eè]ce|\bpcs?\b/.test(s)) return 'pièce'; return ''; }
   function setUnitIfExists(u) { if (!u) return; const opts = [...cfUnitSel.options].map(o => o.value); if (opts.includes(u)) cfUnitSel.value = u; }
 
   async function doLookup() {
@@ -770,9 +696,7 @@
         showError('Produit introuvable sur Open Food Facts. Tu peux l’ajouter manuellement (le code-barres sera conservé).');
         if (cfBarcode) cfBarcode.value = code; return;
       }
-      const obj = normalizeOFF(data);
-      showResult(obj);
-      if (cfBarcode) cfBarcode.value = code;
+      const obj = normalizeOFF(data); showResult(obj); if (cfBarcode) cfBarcode.value = code;
     } catch (e) { console.error(e); showError('Erreur lors de la recherche. Réessaie.'); }
     finally { elSearch.disabled = false; elSearch.textContent = '🔎 Rechercher'; }
   }
@@ -790,7 +714,7 @@
     const addBtn = document.querySelector('#create_form .primary'); if (addBtn) addBtn.focus();
   });
 
-  /* Scanner live */
+  /* Scanner (BarcodeDetector + ZXing) */
   const dlgScan = document.getElementById('scan-modal'), scanVideo = document.getElementById('scan-video'), btnScanClose = document.getElementById('scan-close');
   let scanning = false, zxingReader = null, zxingLiveActive = false;
 
@@ -820,17 +744,14 @@
   async function loadZXing() {
     return new Promise((resolve, reject) => {
       if (window.ZXing) return resolve(window.ZXing);
-      const s = document.createElement('script'); s.src = 'https://unpkg.com/@zxing/library@latest';
-      s.onload = () => resolve(window.ZXing); s.onerror = () => reject(new Error('ZXing indisponible')); document.head.appendChild(s);
+      const s = document.createElement('script'); s.src = 'https://unpkg.com/@zxing/library@latest'; s.onload = () => resolve(window.ZXing); s.onerror = () => reject(new Error('ZXing indisponible')); document.head.appendChild(s);
     });
   }
   async function startZXingLive() {
     try {
-      if (!window.ZXing) await loadZXing(); if (!zxingReader) zxingReader = new ZXing.BrowserMultiFormatReader();
-      zxingReader.decodeFromVideoDevice(undefined, scanVideo, async (result, err) => {
-        if (!scanning) return;
-        if (result && result.getText) { const code = (result.getText() || '').replace(/\D+/g, ''); if (code) { await onBarcodeDetected(code); } }
-      });
+      if (!window.ZXing) await loadZXing();
+      if (!zxingReader) zxingReader = new ZXing.BrowserMultiFormatReader();
+      zxingReader.decodeFromVideoDevice(undefined, scanVideo, async (result, err) => { if (!scanning) return; if (result && result.getText) { const code = (result.getText() || '').replace(/\D+/g, ''); if (code) await onBarcodeDetected(code); } });
       zxingLiveActive = true; scanning = true;
     } catch (e) { showError("Impossible de démarrer le flux live. Utilise « Prendre une photo »."); }
   }
@@ -838,12 +759,12 @@
   document.getElementById('off_scan').addEventListener('click', openScanModal);
   btnScanClose.addEventListener('click', closeScanModal);
 
-  /* Fallback photo */
   elCapture.addEventListener('click', () => elFile.click());
   elFile.addEventListener('change', async (ev) => {
     const file = ev.target.files && ev.target.files[0]; if (!file) return;
     try {
-      if (!window.ZXing) await loadZXing(); if (!zxingReader) zxingReader = new ZXing.BrowserMultiFormatReader();
+      if (!window.ZXing) await loadZXing();
+      if (!zxingReader) zxingReader = new ZXing.BrowserMultiFormatReader();
       const imgURL = URL.createObjectURL(file); const img = document.createElement('img'); img.src = imgURL; await img.decode();
       const res = await zxingReader.decodeFromImageElement(img);
       const code = res && res.getText ? (res.getText() || '').replace(/\D+/g, '') : '';
