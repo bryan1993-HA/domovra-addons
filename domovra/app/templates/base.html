@@ -30,18 +30,25 @@
           html.style.colorScheme = isDark ? 'dark' : 'light';
         }
       }
-      if (pref === 'light' || pref === 'dark') setTheme(pref);
-      else {
-        let saved = null; try { saved = localStorage.getItem('domovra_theme'); } catch (e) { }
+
+      if (pref === 'light' || pref === 'dark') {
+        setTheme(pref);
+      } else {
+        let saved = null;
+        try { saved = localStorage.getItem('domovra_theme'); } catch (e) { }
         setTheme((saved === 'light' || saved === 'dark') ? saved : 'auto');
       }
+
       try {
         const mq = matchMedia('(prefers-color-scheme: dark)');
-        mq.addEventListener?.('change', () => { if ((mTheme?.content || 'auto') === 'auto') setTheme('auto'); });
+        mq.addEventListener?.('change', () => {
+          const now = (mTheme && mTheme.content) || 'auto';
+          if (now === 'auto') setTheme('auto');
+        });
       } catch (e) { }
 
       const mini = (mSide && mSide.content === '1');
-      html.classList.toggle('sidebar-mini', !!mini);
+      if (mini) html.classList.add('sidebar-mini'); else html.classList.remove('sidebar-mini');
     })();
   </script>
 
@@ -49,10 +56,10 @@
     :root {
       color-scheme: dark;
 
-      /* Couleurs toasts (depuis Paramètres) */
+      /* --- Couleurs toasts depuis Paramètres --- */
       --toast-ok: {
           {
-          SETTINGS.toast_ok|default('#4caf50')
+          SETTINGS.toast_ok | default('#4caf50')
         }
       }
 
@@ -60,7 +67,7 @@
 
       --toast-warn: {
           {
-          SETTINGS.toast_warn|default('#ffb300')
+          SETTINGS.toast_warn | default('#ffb300')
         }
       }
 
@@ -68,56 +75,61 @@
 
       --toast-error: {
           {
-          SETTINGS.toast_error|default('#ef5350')
+          SETTINGS.toast_error| default('#ef5350')
         }
       }
 
       ;
+
+      /* Légers fonds translucides (si color-mix non supporté, le navigateur ignore) */
+      --toast-ok-bg: color-mix(in srgb, var(--toast-ok) 16%, transparent);
+      --toast-warn-bg: color-mix(in srgb, var(--toast-warn) 16%, transparent);
+      --toast-err-bg: color-mix(in srgb, var(--toast-error)16%, transparent);
     }
 
-    /* ===== Thème / layout (identique à ta version) ===== */
+    /* Variables de fond (pour header solide) */
     html[data-theme="dark"] {
       --bg-body: #0f1115;
       --bg-card: #151922;
       --line: #2a2f36;
-      --text-muted: #8ea0b7
+      --text-muted: #8ea0b7;
     }
 
     html[data-theme="light"] {
-      --bg-body: #fff;
-      --bg-card: #fff;
+      --bg-body: #ffffff;
+      --bg-card: #ffffff;
       --line: #e5e7eb;
-      --text-muted: #6b7280
+      --text-muted: #6b7280;
     }
 
     html[data-theme="dark"] body {
       background: var(--bg-body);
-      color: #e5e7eb
+      color: #e5e7eb;
     }
 
     html[data-theme="light"] body {
       background: var(--bg-body);
-      color: #1f2328
+      color: #1f2328;
     }
 
     a {
       color: inherit;
-      text-decoration: none
+      text-decoration: none;
     }
 
     * {
-      box-sizing: border-box
+      box-sizing: border-box;
     }
 
     img {
       max-width: 100%;
-      display: block
+      display: block;
     }
 
     .layout {
       display: grid;
       grid-template-columns: 260px 1fr;
-      min-height: 100dvh
+      min-height: 100dvh;
     }
 
     aside {
@@ -125,13 +137,13 @@
       border-right: 1px solid var(--line);
       padding: 12px;
       position: relative;
-      z-index: 45
+      z-index: 45;
     }
 
     main {
       display: flex;
       flex-direction: column;
-      min-width: 0
+      min-width: 0;
     }
 
     header {
@@ -144,14 +156,14 @@
       gap: 12px;
       padding: 10px 16px;
       border-bottom: 1px solid var(--line);
-      background: var(--bg-body)
+      background: var(--bg-body);
     }
 
     .header-left {
       display: flex;
       align-items: center;
       gap: 8px;
-      min-width: 0
+      min-width: 0;
     }
 
     .app-title {
@@ -160,20 +172,20 @@
       opacity: .9;
       white-space: nowrap;
       overflow: hidden;
-      text-overflow: ellipsis
+      text-overflow: ellipsis;
     }
 
     .header-right {
       display: flex;
       align-items: center;
       gap: 8px;
-      min-width: 0
+      min-width: 0;
     }
 
     .header-chips {
       display: flex;
       gap: 8px;
-      flex-wrap: wrap
+      flex-wrap: wrap;
     }
 
     .chip {
@@ -181,16 +193,16 @@
       border: 1px solid #242932;
       border-radius: 999px;
       padding: 6px 10px;
-      white-space: nowrap
+      white-space: nowrap;
     }
 
     .chip b {
-      font-weight: 700
+      font-weight: 700;
     }
 
     .menu {
       display: grid;
-      gap: 8px
+      gap: 8px;
     }
 
     .menu a {
@@ -201,38 +213,38 @@
       border: 1px solid #242932;
       background: #151922;
       border-radius: 10px;
-      cursor: pointer
+      cursor: pointer;
     }
 
     .menu a:hover {
-      filter: brightness(1.05)
+      filter: brightness(1.05);
     }
 
     .menu a.active {
       border-color: #4f46e5;
-      box-shadow: 0 0 0 1px #4f46e5 inset
+      box-shadow: 0 0 0 1px #4f46e5 inset;
     }
 
     .menu .ico {
       width: 22px;
       display: inline-grid;
       place-items: center;
-      opacity: .9
+      opacity: .9;
     }
 
     .page {
-      padding: 16px
+      padding: 16px;
     }
 
     .card {
       background: var(--bg-card);
       border: 1px solid #242932;
       border-radius: 12px;
-      padding: 12px
+      padding: 12px;
     }
 
     .muted {
-      opacity: .7
+      opacity: .7;
     }
 
     input,
@@ -244,94 +256,95 @@
       border: 1px solid #2d3340;
       background: #0f1320;
       color: #e5e7eb;
-      padding: 8px 10px
+      padding: 8px 10px;
     }
 
     button {
-      cursor: pointer
+      cursor: pointer;
     }
 
     option,
     optgroup {
       background: #0f1320;
-      color: #e5e7eb
+      color: #e5e7eb;
     }
 
     html[data-theme="light"] option,
     html[data-theme="light"] optgroup {
       background: #fff;
-      color: #111827
+      color: #111827;
     }
 
     table {
       width: 100%;
-      border-collapse: collapse
+      border-collapse: collapse;
     }
 
     th,
     td {
       border: 1px solid #242932;
-      padding: 8px 10px
+      padding: 8px 10px;
     }
 
     th {
-      background: #121520
+      background: #121520;
     }
 
     tbody tr:nth-child(even) {
-      background: #121620
+      background: #121620;
     }
 
     .grid {
       display: grid;
       grid-template-columns: repeat(12, 1fr);
-      gap: 16px
+      gap: 16px;
     }
 
     .card {
-      grid-column: span 4
+      grid-column: span 4;
     }
 
     @media (max-width:1200px) {
       .card {
-        grid-column: span 6
+        grid-column: span 6;
       }
     }
 
     @media (max-width:768px) {
       .card {
-        grid-column: 1/-1
+        grid-column: 1/-1;
       }
     }
 
     .row {
       display: flex;
-      gap: 16px
+      gap: 16px;
     }
 
     .row>* {
       flex: 1 1 0;
-      min-width: 0
+      min-width: 0;
     }
 
     @media (max-width:768px) {
       .row {
-        flex-direction: column
+        flex-direction: column;
       }
     }
 
     .table-responsive {
       overflow-x: auto;
-      -webkit-overflow-scrolling: touch
+      -webkit-overflow-scrolling: touch;
     }
 
     .table-responsive table {
-      min-width: 720px
+      min-width: 720px;
     }
 
+    /* Off-canvas (mobile) */
     @media (max-width:1024px) {
       .layout {
-        grid-template-columns: 1fr
+        grid-template-columns: 1fr;
       }
 
       aside {
@@ -340,32 +353,32 @@
         width: 260px;
         transform: translateX(-100%);
         transition: transform .25s ease;
-        z-index: 70
+        z-index: 70;
       }
 
       body.sidebar-open aside {
         transform: translateX(0);
         box-shadow: 0 10px 30px rgba(0, 0, 0, .45);
-        z-index: 2000
+        z-index: 2000;
       }
     }
 
     @media (min-width:1025px) {
       .sidebar-mini .layout {
-        grid-template-columns: 72px 1fr
+        grid-template-columns: 72px 1fr;
       }
 
       .sidebar-mini aside {
-        padding: 12px 8px
+        padding: 12px 8px;
       }
 
       .sidebar-mini .menu a {
         justify-content: center;
-        gap: 0
+        gap: 0;
       }
 
       .sidebar-mini .menu a span:not(.ico) {
-        display: none
+        display: none;
       }
     }
 
@@ -378,98 +391,100 @@
       border: 0;
       background: transparent;
       cursor: pointer;
-      border-radius: 10px
+      border-radius: 10px;
     }
 
     .hamburger span {
       display: block;
       width: 22px;
       height: 2px;
-      background: currentColor
+      background: currentColor;
     }
 
     @media (min-width:1025px) {
       .hamburger {
-        display: none
+        display: none;
       }
     }
 
+    /* Variantes clair */
     html[data-theme="light"] aside {
       background: #f7f7f8;
-      border-right: 1px solid var(--line)
+      border-right: 1px solid var(--line);
     }
 
     html[data-theme="light"] header {
-      background: #fff;
-      border-bottom: 1px solid var(--line)
+      background: #ffffff;
+      border-bottom: 1px solid var(--line);
     }
 
     html[data-theme="light"] .muted {
-      color: var(--text-muted)
+      color: var(--text-muted);
     }
 
     html[data-theme="light"] .menu a {
-      background: #fff;
+      background: #ffffff;
       border: 1px solid var(--line);
-      color: #1f2328
+      color: #1f2328;
     }
 
     html[data-theme="light"] .menu a.active {
       background: #eef2ff;
-      border-color: #c7d2fe
+      border-color: #c7d2fe;
     }
 
     html[data-theme="light"] .card {
-      background: #fff;
-      border: 1px solid var(--line)
+      background: #ffffff;
+      border: 1px solid var(--line);
     }
 
     html[data-theme="light"] input,
     html[data-theme="light"] select {
-      background: #fff;
+      background: #ffffff;
       color: #111827;
-      border: 1px solid #d1d5db
+      border: 1px solid #d1d5db;
     }
 
     html[data-theme="light"] button {
       background: #f3f4f6;
       color: #111827;
-      border: 1px solid #d1d5db
+      border: 1px solid #d1d5db;
     }
 
     html[data-theme="light"] th,
     html[data-theme="light"] td {
-      border: 1px solid var(--line)
+      border: 1px solid var(--line);
     }
 
     html[data-theme="light"] th {
       background: #f8fafc;
-      color: #111827
+      color: #111827;
     }
 
     html[data-theme="light"] tbody tr:nth-child(even) {
-      background: #f9fafb
+      background: #f9fafb;
     }
 
     html[data-theme="light"] .chip {
-      background: #fff;
-      border: 1px solid var(--line)
+      background: #ffffff;
+      border: 1px solid var(--line);
     }
 
+    /* Mobile : cacher les chips */
     @media (max-width:640px) {
       .header-right {
-        display: none
+        display: none;
       }
     }
 
-    /* ===== Toasts ===== */
+    /* ===== TOASTS ===== */
     .toast-stack {
       position: fixed;
       top: 12px;
       right: 12px;
       display: grid;
       gap: 8px;
-      z-index: 3000
+      z-index: 3000;
     }
 
     .toast {
@@ -480,27 +495,34 @@
       animation: toast-in .2s ease both;
       border-left: 4px solid transparent;
       backdrop-filter: blur(2px);
-      /* Fallback si JS ne passe pas : très léger fond sombre */
-      background: rgba(21, 25, 34, .85);
+      background: #151922;
+      /* fallback si color-mix est absent */
     }
 
     .toast.ok {
-      /* JS forcera les couleurs */
+      border-left-color: var(--toast-ok);
+      background: var(--toast-ok-bg, #151922);
     }
 
-    .toast.warn {}
+    .toast.warn {
+      border-left-color: var(--toast-warn);
+      background: var(--toast-warn-bg, #151922);
+    }
 
-    .toast.error {}
+    .toast.error {
+      border-left-color: var(--toast-error);
+      background: var(--toast-err-bg, #151922);
+    }
 
     @keyframes toast-in {
       from {
         opacity: 0;
-        transform: translateY(-8px)
+        transform: translateY(-8px);
       }
 
       to {
         opacity: 1;
-        transform: none
+        transform: none;
       }
     }
 
@@ -511,11 +533,11 @@
         left: 0;
         bottom: 12px;
         width: 100%;
-        padding: 0 12px
+        padding: 0 12px;
       }
 
       .toast {
-        width: 100%
+        width: 100%;
       }
     }
   </style>
@@ -564,6 +586,7 @@
             {% else %}{{ seg|replace('-', ' ')|capitalize }}{% endif %}
           </h1>
         </div>
+
         <div class="header-right">
           <div class="header-chips">
             {% if products is defined and lots is defined %}
@@ -598,60 +621,22 @@
       const close = () => { document.body.classList.remove('sidebar-open'); btn.setAttribute('aria-expanded', 'false'); };
       btn.addEventListener('click', () => (document.body.classList.contains('sidebar-open') ? close() : open()));
       addEventListener('resize', () => { if (!isMobile()) close(); });
-      document.querySelector('aside')?.addEventListener('click', e => { const a = e.target.closest('a'); if (a && isMobile()) close(); });
+      document.querySelector('aside')?.addEventListener('click', (e) => {
+        const a = e.target.closest('a'); if (a && isMobile()) close();
+      });
     })();
 
     (function () {
       const stack = document.getElementById('toast-stack');
       const mDur = document.querySelector('meta[name="domovra:toastDuration"]');
-      const defaultDuration = mDur ? parseInt(mDur.content || '3000', 10) || 3000 : 3000;
-
-      // Convertit n'importe quelle couleur CSS en rgba(alpha)
-      function rgbaFromCss(color, alpha) {
-        const ctx = document.createElement('canvas').getContext('2d');
-        if (!ctx) return null;
-        ctx.fillStyle = '#000';           // reset
-        ctx.fillStyle = (color || '').trim();
-        const norm = ctx.fillStyle;       // couleur normalisée
-        const m = norm.match(/\d+/g);
-        if (m && m.length >= 3) return `rgba(${m[0]}, ${m[1]}, ${m[2]}, ${alpha})`;
-        const hex = norm.replace('#', '');
-        if (hex.length === 3) {
-          const r = parseInt(hex[0] + hex[0], 16), g = parseInt(hex[1] + hex[1], 16), b = parseInt(hex[2] + hex[2], 16);
-          return `rgba(${r}, ${g}, ${b}, ${alpha})`;
-        }
-        if (hex.length === 6) {
-          const r = parseInt(hex.slice(0, 2), 16), g = parseInt(hex.slice(2, 4), 16), b = parseInt(hex.slice(4, 6), 16);
-          return `rgba(${r}, ${g}, ${b}, ${alpha})`;
-        }
-        return null;
-      }
-
-      function getToastBaseColors() {
-        const cs = getComputedStyle(document.documentElement);
-        const ok = cs.getPropertyValue('--toast-ok').trim() || '#4caf50';
-        const warn = cs.getPropertyValue('--toast-warn').trim() || '#ffb300';
-        const err = cs.getPropertyValue('--toast-error').trim() || '#ef5350';
-        return { ok, warn, error: err };
-      }
-
-      function applyToastColors(el, type) {
-        const base = getToastBaseColors();
-        const key = (type === 'warn' || type === 'error') ? type : 'ok';
-        const solid = base[key];
-        const bg = rgbaFromCss(solid, 0.16) || 'rgba(0,0,0,.08)';
-        el.style.borderLeftColor = solid;
-        el.style.background = bg;
-      }
+      const defaultDuration = mDur ? (parseInt(mDur.content || '3000', 10) || 3000) : 3000;
 
       function showToast(msg, type = 'ok', timeout) {
         if (!stack) return;
         const el = document.createElement('div');
         el.className = `toast ${type}`;
         el.textContent = msg;
-        applyToastColors(el, type);
         stack.appendChild(el);
-
         const hide = () => {
           el.style.transition = '200ms ease';
           el.style.opacity = '0';
@@ -661,7 +646,6 @@
         const t = setTimeout(hide, timeout ?? defaultDuration);
         el.addEventListener('click', () => { clearTimeout(t); hide(); });
       }
-
       window.showToast = showToast;
     })();
   </script>
