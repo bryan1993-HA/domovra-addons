@@ -3,17 +3,52 @@
 
 {% block head %}
 <style>
+  /* ========= Thème (variables) ========= */
   :root {
-    --gap: 12px;
-    --radius: 14px;
-    --border: #263043;
+    /* palette sombre (par défaut) */
+    --bg: #0b1020;
+    --surface: #0f1524;
+    --field: #121a2f;
     --chip: #1a2230;
+    --border: #263043;
+    --text: #e6eef9;
     --muted: #8ea0b7;
+    --primary: #0f9ecf;
+    --danger: #ef5350;
   }
 
+  /* Thème clair déclenché par préférence système */
+  @media (prefers-color-scheme: light) {
+    :root {
+      --bg: #f7f9fc;
+      --surface: #ffffff;
+      --field: #f3f6fb;
+      --chip: #eef3f9;
+      --border: #dde4ee;
+      --text: #0b1324;
+      --muted: #5e6b7d;
+      --primary: #00a9d6;
+      --danger: #e53935;
+    }
+  }
+
+  /* Thème clair forcé par l’appli (même variables) */
+  body[data-theme="light"] {
+    --bg: #f7f9fc;
+    --surface: #ffffff;
+    --field: #f3f6fb;
+    --chip: #eef3f9;
+    --border: #dde4ee;
+    --text: #0b1324;
+    --muted: #5e6b7d;
+    --primary: #00a9d6;
+    --danger: #e53935;
+  }
+
+  /* ========= Layout & composants ========= */
   .wrap {
     display: grid;
-    gap: var(--gap);
+    gap: 12px;
     grid-template-columns: 1fr;
     max-width: 1200px;
     margin: 0 auto;
@@ -21,9 +56,10 @@
 
   .card {
     border: 1px solid var(--border);
-    border-radius: var(--radius);
+    border-radius: 14px;
     padding: 14px;
-    background: #0f1524;
+    background: var(--surface);
+    color: var(--text);
   }
 
   .title {
@@ -70,19 +106,23 @@
     padding: 10px;
     border-radius: 10px;
     border: 1px solid var(--border);
-    background: #121a2f;
-    color: #e6eef9
+    background: var(--field);
+    color: var(--text)
+  }
+
+  input::placeholder {
+    color: color-mix(in srgb, var(--text) 40%, transparent)
   }
 
   button.primary {
-    background: #0f9ecf;
-    border-color: #0f9ecf;
-    color: #02222a;
+    background: var(--primary);
+    border-color: var(--primary);
+    color: #012028;
     font-weight: 600
   }
 
   button.secondary {
-    background: #1a2230
+    background: var(--chip)
   }
 
   .tools-row {
@@ -124,7 +164,7 @@
   }
 
   tbody tr:hover {
-    background: rgba(255, 255, 255, .03)
+    background: color-mix(in srgb, var(--surface) 85%, var(--text) 15%)
   }
 
   .actions {
@@ -133,7 +173,7 @@
     gap: 8px
   }
 
-  /* Stats chips (une seule ligne) */
+  /* Chips infos — une seule ligne */
   .stats {
     display: flex;
     flex-wrap: nowrap;
@@ -149,7 +189,7 @@
     padding: 6px 10px;
     border-radius: 999px;
     border: 1px solid var(--border);
-    background: #0f1524;
+    background: var(--surface);
     flex: 0 0 auto
   }
 
@@ -170,7 +210,7 @@
     color: var(--muted)
   }
 
-  /* Input + bouton intégré (scan) */
+  /* Input avec bouton intégré (scan) */
   .infield {
     position: relative;
     display: flex;
@@ -191,7 +231,7 @@
     height: 40px;
     border-radius: 10px;
     border: 1px solid var(--border);
-    background: #1a2230;
+    background: var(--chip);
     cursor: pointer
   }
 
@@ -210,8 +250,8 @@
     font-size: 12px;
     line-height: 1;
     border: 1px solid var(--border);
-    background: #101828;
-    color: #cfe3ff;
+    background: color-mix(in srgb, var(--surface) 85%, var(--text) 15%);
+    color: color-mix(in srgb, var(--text) 85%, var(--surface) 15%);
     cursor: help;
     position: relative
   }
@@ -222,14 +262,14 @@
     left: 50%;
     transform: translateX(-50%);
     bottom: calc(100% + 8px);
-    background: #0f1524;
+    background: var(--surface);
     border: 1px solid var(--border);
-    color: #e6eef9;
+    color: var(--text);
     padding: 8px 10px;
     border-radius: 8px;
     width: max-content;
     max-width: min(420px, 88vw);
-    box-shadow: 0 6px 16px rgba(0, 0, 0, .35);
+    box-shadow: 0 6px 16px rgba(0, 0, 0, .15);
     opacity: 0;
     pointer-events: none;
     transition: opacity .15s ease;
@@ -263,7 +303,7 @@
       border: 1px solid var(--border);
       border-radius: 12px;
       padding: 10px;
-      background: #0f1524
+      background: var(--surface)
     }
 
     .card-head {
@@ -291,7 +331,7 @@
     }
   }
 
-  /* OFF block transparent (réintégré) */
+  /* Block OFF (transparent) */
   #off-box {
     background: transparent;
     border: none;
@@ -300,17 +340,17 @@
   }
 
   #off-box .infield input {
-    background: #121a2f;
+    background: var(--field);
     border: 1px solid var(--border);
-    color: #e6eef9
+    color: var(--text)
   }
 
   #off-box .infield input::placeholder {
-    color: rgba(230, 238, 249, .72)
+    color: color-mix(in srgb, var(--text) 45%, transparent)
   }
 
   #off-box .infield-btn {
-    background: #1a2230;
+    background: var(--chip);
     border: 1px solid var(--border)
   }
 
@@ -328,7 +368,7 @@
 {% block content %}
 <div class="wrap">
 
-  <!-- Open Food Facts & Scanner (COMPLET) -->
+  <!-- Open Food Facts & Scanner -->
   <div class="card">
     <div class="title" style="margin:0 0 6px 0">
       <h2>Open Food Facts & Scanner</h2>
@@ -338,7 +378,6 @@
     </div>
 
     <div id="off-box">
-      <!-- Ligne : champ + boutons -->
       <div class="row">
         <div class="infield" style="flex:1;min-width:220px">
           <input id="off_barcode" type="text" inputmode="numeric"
@@ -352,13 +391,11 @@
         <button id="off_clear" class="secondary" type="button">✖ Effacer</button>
       </div>
 
-      <!-- Astuce + erreurs -->
       <div id="off_hint" class="muted" style="margin-top:.5rem">
         Astuce : essaie <b>5449000000996</b> (Coca-Cola 1,5 L).
       </div>
-      <div id="off_error" hidden class="muted" style="color:#ffb4b4;margin-top:.35rem">Erreur</div>
+      <div id="off_error" hidden class="muted" style="color:#ff6b6b;margin-top:.35rem">Erreur</div>
 
-      <!-- Résultat OFF -->
       <div id="off_result" hidden style="margin-top:.6rem">
         <div style="display:grid;grid-template-columns:80px 1fr;gap:10px;align-items:start">
           <img id="off_img" alt="photo produit"
@@ -378,7 +415,6 @@
             </div>
           </div>
         </div>
-        <!-- Ligne rappel procédure -->
         <p class="product-note" style="margin:.6rem 0 0">
           Scanne/saisis un code-barres → « Rechercher » → « Préremplir le formulaire », puis ajuste l’unité/la
           conservation et valide.
@@ -474,7 +510,6 @@
       <h2>Liste</h2><span class="muted">Table (bureau) / Cartes (mobile)</span>
     </div>
 
-    <!-- Table desktop -->
     <table id="tbl">
       <colgroup>
         <col style="width:30%">
@@ -618,7 +653,8 @@
     <div class="muted" id="del-msg">La suppression retirera aussi les stocks liés à ce produit.</div>
     <div class="row" style="justify-content:flex-end;gap:8px">
       <button type="button" onclick="document.getElementById('dlg-delete').close()">Annuler</button>
-      <button class="primary" style="background:#ef5350;border-color:#ef5350;color:#1d0c0c">Supprimer</button>
+      <button class="primary"
+        style="background:var(--danger);border-color:var(--danger);color:#1d0c0c">Supprimer</button>
     </div>
   </form>
 </dialog>
@@ -638,7 +674,7 @@
 
 {% block scripts %}
 <script>
-  // Recherche live
+  /* Recherche live */
   const q = document.getElementById('q'), tbody = document.getElementById('tbody'), cards = document.getElementById('cards');
   const rows = Array.from(tbody ? tbody.children : []), cardsItems = Array.from(cards ? cards.children : []);
   function applyFilter(s) {
@@ -649,7 +685,7 @@
   }
   if (q) { q.addEventListener('input', e => applyFilter(e.target.value)); }
 
-  // Helpers
+  /* Helpers */
   const $ = s => document.querySelector(s);
   function setSelectValue(sel, value) {
     if (!sel) return;
@@ -659,7 +695,7 @@
     else if (value) { const o = document.createElement('option'); o.value = value; o.textContent = value + ' (autre)'; o.dataset.temp = '1'; sel.insertBefore(o, sel.firstChild); sel.value = value; }
   }
 
-  // Modales Modifier / Supprimer
+  /* Modales Modifier / Supprimer */
   document.addEventListener('click', function (e) {
     const edit = e.target.closest('.js-edit-open'); const del = e.target.closest('.js-delete-open');
     if (edit) {
@@ -678,7 +714,7 @@
     }
   });
 
-  // Réinit ajout
+  /* Réinit ajout */
   (function () {
     const r = document.getElementById('create_reset'); if (!r) return;
     r.addEventListener('click', () => {
@@ -687,10 +723,10 @@
     });
   })();
 
-  // Toasts ?added=1
+  /* Toasts ?added=1 */
   (function () { const p = new URLSearchParams(location.search); if (p.get('added') === '1') window.showToast('Produit ajouté.', 'ok'); })();
 
-  // --- OFF + Scanner ---
+  /* OFF + Scanner */
   const elCode = $('#off_barcode'), elSearch = $('#off_search'), elScan = $('#off_scan'),
     elCapture = $('#off_capture'), elFile = $('#off_file'), elPaste = $('#off_paste'), elClear = $('#off_clear'),
     elError = $('#off_error'), elRes = $('#off_result'), elImg = $('#off_img'),
@@ -754,7 +790,7 @@
     const addBtn = document.querySelector('#create_form .primary'); if (addBtn) addBtn.focus();
   });
 
-  // Scanner live
+  /* Scanner live */
   const dlgScan = document.getElementById('scan-modal'), scanVideo = document.getElementById('scan-video'), btnScanClose = document.getElementById('scan-close');
   let scanning = false, zxingReader = null, zxingLiveActive = false;
 
@@ -772,7 +808,7 @@
           requestAnimationFrame(tick);
         };
         tick(); return;
-      } catch (e) { console.warn('BarcodeDetector indisponible, fallback ZXing.', e); }
+      } catch (e) { /* fallback */ }
     }
     startZXingLive();
   }
@@ -784,33 +820,35 @@
   async function loadZXing() {
     return new Promise((resolve, reject) => {
       if (window.ZXing) return resolve(window.ZXing);
-      const s = document.createElement('script'); s.src = 'https://unpkg.com/@zxing/library@latest'; s.onload = () => resolve(window.ZXing); s.onerror = () => reject(new Error('ZXing indisponible')); document.head.appendChild(s);
+      const s = document.createElement('script'); s.src = 'https://unpkg.com/@zxing/library@latest';
+      s.onload = () => resolve(window.ZXing); s.onerror = () => reject(new Error('ZXing indisponible')); document.head.appendChild(s);
     });
   }
   async function startZXingLive() {
     try {
       if (!window.ZXing) await loadZXing(); if (!zxingReader) zxingReader = new ZXing.BrowserMultiFormatReader();
-      zxingLiveActive = true; scanning = true;
       zxingReader.decodeFromVideoDevice(undefined, scanVideo, async (result, err) => {
         if (!scanning) return;
         if (result && result.getText) { const code = (result.getText() || '').replace(/\D+/g, ''); if (code) { await onBarcodeDetected(code); } }
       });
-    } catch (e) { console.error(e); showError("Impossible de démarrer le flux live. Utilise « Prendre une photo »."); }
+      zxingLiveActive = true; scanning = true;
+    } catch (e) { showError("Impossible de démarrer le flux live. Utilise « Prendre une photo »."); }
   }
 
   document.getElementById('off_scan').addEventListener('click', openScanModal);
   btnScanClose.addEventListener('click', closeScanModal);
 
-  // Fallback photo
+  /* Fallback photo */
   elCapture.addEventListener('click', () => elFile.click());
   elFile.addEventListener('change', async (ev) => {
     const file = ev.target.files && ev.target.files[0]; if (!file) return;
     try {
       if (!window.ZXing) await loadZXing(); if (!zxingReader) zxingReader = new ZXing.BrowserMultiFormatReader();
       const imgURL = URL.createObjectURL(file); const img = document.createElement('img'); img.src = imgURL; await img.decode();
-      const res = await zxingReader.decodeFromImageElement(img); const code = res && res.getText ? (res.getText() || '').replace(/\D+/g, '') : '';
+      const res = await zxingReader.decodeFromImageElement(img);
+      const code = res && res.getText ? (res.getText() || '').replace(/\D+/g, '') : '';
       if (code) await onBarcodeDetected(code); else showError('Aucun code détecté sur la photo.');
-    } catch (e) { console.error(e); showError('Erreur lecture de la photo.'); }
+    } catch (e) { showError('Erreur lecture de la photo.'); }
     finally { elFile.value = ''; }
   });
 </script>
