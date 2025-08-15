@@ -373,22 +373,34 @@
         <input name="name" id="create_name" type="text" required placeholder="ex. Pâtes, Lait demi-écrémé">
       </div>
 
-      <!-- Unité : liste déroulante + Autre… -->
+      <!-- Unité : liste déroulante catégorisée -->
       <div>
         <div class="label">Unité
-          <span class="qmark"
-            data-tip="Choisis parmi les unités courantes. Sélectionne « Autre… » pour saisir une unité personnalisée.">?</span>
+          <span class="qmark" data-tip="Choisis une unité adaptée (comptage, poids, volume).">?</span>
         </div>
-        <select id="create_unit_sel">
-          <option value="pièce">pièce</option>
-          <option value="g">g</option>
-          <option value="kg">kg</option>
-          <option value="ml">ml</option>
-          <option value="L">L</option>
-          <option value="__other__">Autre…</option>
+        <select name="unit" id="create_unit">
+          <optgroup label="Comptage">
+            <option value="pièce" selected>pièce</option>
+            <option value="tranche">tranche</option>
+            <option value="paquet">paquet</option>
+            <option value="boîte">boîte</option>
+            <option value="bocal">bocal</option>
+            <option value="bouteille">bouteille</option>
+            <option value="sachet">sachet</option>
+            <option value="lot">lot</option>
+            <option value="barquette">barquette</option>
+            <option value="rouleau">rouleau</option>
+            <option value="dosette">dosette</option>
+          </optgroup>
+          <optgroup label="Poids">
+            <option value="g">g</option>
+            <option value="kg">kg</option>
+          </optgroup>
+          <optgroup label="Volume">
+            <option value="ml">ml</option>
+            <option value="L">L</option>
+          </optgroup>
         </select>
-        <input name="unit" id="create_unit" type="hidden" value="pièce">
-        <input id="create_unit_other" type="text" placeholder="Saisir l’unité…" style="display:none;margin-top:8px">
       </div>
 
       <div>
@@ -621,14 +633,10 @@
     const r = document.getElementById('create_reset');
     if (!r) return;
     r.addEventListener('click', () => {
-      ['create_name', 'create_shelf', 'create_barcode', 'off_barcode', 'create_unit_other'].forEach(id => {
+      ['create_name', 'create_shelf', 'create_barcode', 'off_barcode'].forEach(id => {
         const el = document.getElementById(id); if (el) el.value = '';
       });
-      const sel = document.getElementById('create_unit_sel');
-      const hid = document.getElementById('create_unit');
-      const other = document.getElementById('create_unit_other');
-      if (sel && hid) { sel.value = 'pièce'; hid.value = 'pièce'; }
-      if (other) { other.style.display = 'none'; }
+      const unit = document.getElementById('create_unit'); if (unit) unit.value = 'pièce';
     });
   })();
 
@@ -636,30 +644,6 @@
   (function () {
     const p = new URLSearchParams(location.search);
     if (p.get('added') === '1') window.showToast('Produit ajouté.', 'ok');
-  })();
-
-  // --- Unité : synchro select / hidden / autre… ---
-  (function () {
-    const sel = document.getElementById('create_unit_sel');
-    const hid = document.getElementById('create_unit');
-    const other = document.getElementById('create_unit_other');
-    function sync() {
-      if (sel.value === '__other__') {
-        other.style.display = 'block';
-        other.focus();
-        hid.value = other.value.trim();
-      } else {
-        other.style.display = 'none';
-        hid.value = sel.value;
-      }
-    }
-    if (sel && hid) {
-      sel.addEventListener('change', sync);
-      if (other) {
-        other.addEventListener('input', () => { if (sel.value === '__other__') { hid.value = other.value.trim(); } });
-      }
-      sync();
-    }
   })();
 
   // ==================== Open Food Facts + Scanner ====================
@@ -679,9 +663,7 @@
   const elFillCreate = document.getElementById('off_fill_create');
 
   const cfName = document.getElementById('create_name');
-  const cfUnitHidden = document.getElementById('create_unit');
-  const cfUnitSel = document.getElementById('create_unit_sel');
-  const cfUnitOther = document.getElementById('create_unit_other');
+  const cfUnitSel = document.getElementById('create_unit');
   const cfBarcode = document.getElementById('create_barcode');
 
   function showError(msg) { if (!elError) return; elError.textContent = msg; elError.style.display = 'block'; }
@@ -710,10 +692,15 @@
     const s = (qty + '').toLowerCase();
     if (/\b(kg|kilogram|kilo)/.test(s)) return 'kg';
     if (/\bg\b/.test(s)) return 'g';
-    if (/\bl\b/.test(s)) return 'l';
+    if (/\bl\b/.test(s)) return 'L'; // on mappe sur "L" majuscule
     if (/\bml\b/.test(s)) return 'ml';
     if (/\bpi[eè]ce/.test(s) || /\bpcs?\b/.test(s)) return 'pièce';
     return '';
+  }
+  function setUnitIfExists(u) {
+    if (!u) return;
+    const opts = Array.from(cfUnitSel.options).map(o => o.value);
+    if (opts.includes(u)) cfUnitSel.value = u;
   }
 
   async function doLookup() {
@@ -759,13 +746,7 @@
     if (!payload) { showError('Aucun résultat à insérer.'); return; }
     if (payload.name) cfName.value = payload.name;
     const u = inferUnit(payload.quantity_hint);
-    if (u) {
-      // essaie de sélectionner l’unité correspondante
-      const opt = ['pièce', 'g', 'kg', 'ml', 'l'].includes(u) ? u.replace('l', 'L') : '__other__';
-      const sel = cfUnitSel; const hid = cfUnitHidden; const other = cfUnitOther;
-      if (opt !== '__other__') { sel.value = opt; hid.value = opt; if (other) { other.style.display = 'none'; } }
-      else { sel.value = '__other__'; if (other) { other.style.display = 'block'; other.value = u; hid.value = u; } }
-    }
+    setUnitIfExists(u);
     const addBtn = document.querySelector('#create_form .primary'); if (addBtn) addBtn.focus();
   });
 
