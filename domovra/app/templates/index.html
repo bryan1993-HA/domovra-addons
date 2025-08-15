@@ -360,10 +360,8 @@
         </thead>
         <tbody>
           {% if lots %}
-          {% set sorted = lots|sort(attribute='best_before') %}
-          {% set shown = 0 %}
-          {% for it in sorted %}
-          {% if shown < 8 %} <tr>
+          {% for it in lots %}
+          {% if loop.index0 < 8 %} <tr>
             <td>{{ it.product }}</td>
             <td class="muted">{{ it.location }}</td>
             <td>{{ '%.2f'|format(it.qty)|trim('0')|trim('.') }} {{ it.unit }}</td>
@@ -381,7 +379,6 @@
               </form>
             </td>
             </tr>
-            {% set shown = shown + 1 %}
             {% endif %}
             {% endfor %}
             {% else %}
@@ -396,10 +393,8 @@
     <!-- Version mobile : cartes -->
     <div class="top8-cards">
       {% if lots %}
-      {% set sorted = lots|sort(attribute='best_before') %}
-      {% set shown = 0 %}
-      {% for it in sorted %}
-      {% if shown < 8 %} <div class="lot-card">
+      {% for it in lots %}
+      {% if loop.index0 < 8 %} <div class="lot-card">
         <div class="lot-main">
           <div class="lot-title">{{ it.product }}</div>
           <div class="lot-meta">
@@ -419,7 +414,6 @@
           <button class="primary">Consommer</button>
         </form>
     </div>
-    {% set shown = shown + 1 %}
     {% endif %}
     {% endfor %}
     {% else %}
