@@ -1,250 +1,586 @@
 {% extends "base.html" %}
 {% block title %}Domovra — Produits{% endblock %}
 
+{% block head %}
+<style>
+  :root {
+    --gap: 12px;
+    --radius: 14px;
+    --border: #263043;
+    --chip: #1a2230;
+    --muted: #8ea0b7;
+    --accent: #00bcd4;
+  }
+
+  .wrap {
+    display: grid;
+    gap: var(--gap);
+    grid-template-columns: 1fr;
+    max-width: 1200px;
+    margin: 0 auto;
+  }
+
+  .card {
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 14px;
+    background: #0f1524;
+  }
+
+  .title {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 8px
+  }
+
+  .title h2 {
+    margin: 0;
+    font-size: 18px
+  }
+
+  .muted {
+    color: var(--muted)
+  }
+
+  .form-grid {
+    display: grid;
+    grid-template-columns: 2fr 1fr 1fr 1fr auto;
+    gap: 10px
+  }
+
+  .label {
+    font-size: 12px;
+    color: var(--muted);
+    margin-bottom: 4px
+  }
+
+  .row {
+    display: flex;
+    gap: 10px;
+    align-items: center
+  }
+
+  input,
+  select,
+  button {
+    padding: 10px;
+    border-radius: 10px;
+    border: 1px solid var(--border);
+    background: #121a2f;
+    color: #e6eef9
+  }
+
+  button.primary {
+    background: #0f9ecf;
+    border-color: #0f9ecf;
+    color: #02222a;
+    font-weight: 600
+  }
+
+  button.secondary {
+    background: #1a2230
+  }
+
+  button.icon {
+    width: 40px;
+    height: 40px;
+    display: inline-grid;
+    place-items: center
+  }
+
+  .tools-row {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    flex-wrap: wrap
+  }
+
+  .tools-search {
+    flex: 1;
+    min-width: 220px
+  }
+
+  .tools-count {
+    padding: 8px 12px;
+    border-radius: 999px;
+    background: var(--chip);
+    border: 1px solid var(--border)
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse
+  }
+
+  thead th {
+    font-size: 12px;
+    color: var(--muted);
+    text-align: left;
+    padding: 6px 8px;
+    border-bottom: 1px solid var(--border)
+  }
+
+  tbody td {
+    padding: 10px 8px;
+    border-bottom: 1px solid var(--border);
+    vertical-align: top
+  }
+
+  tbody tr:hover {
+    background: rgba(255, 255, 255, .03)
+  }
+
+  .actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px
+  }
+
+  .pill {
+    padding: 2px 8px;
+    border-radius: 999px;
+    border: 1px solid var(--border);
+    background: #0f1524
+  }
+
+  .cards {
+    display: none
+  }
+
+  .product-note {
+    font-size: 12px;
+    color: var(--muted)
+  }
+
+  /* Mobile cards */
+  @media (max-width:700px) {
+    .form-grid {
+      grid-template-columns: 1fr
+    }
+
+    thead,
+    table {
+      display: none
+    }
+
+    .cards {
+      display: grid;
+      gap: 10px
+    }
+
+    .card-item {
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 10px;
+      background: #0f1524
+    }
+
+    .card-head {
+      display: flex;
+      justify-content: space-between;
+      gap: 10px
+    }
+
+    .card-name {
+      font-weight: 600
+    }
+
+    .card-info {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-top: 6px
+    }
+
+    .card-actions {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      margin-top: 8px
+    }
+  }
+
+  /* OFF box */
+  #off-box {
+    margin-top: 10px;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 10px;
+    background: #111a31
+  }
+
+  #off_result {
+    display: none;
+    margin-top: 8px;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 8px;
+    background: #10182d
+  }
+
+  #off_error {
+    display: none;
+    color: #ffb4b4;
+    margin-top: .35rem
+  }
+</style>
+{% endblock %}
+
+{% block header_right %}
+<span class="chip">📦 Produits : <b>{{ items|length }}</b></span>
+{% endblock %}
+
 {% block content %}
-<h1>Produits</h1>
-<p class="muted">Ajouter, modifier ou supprimer vos produits. Supprimer enlève aussi les stocks liés.</p>
+<div class="wrap">
 
-<!-- ====== Recherche par code-barres (Open Food Facts) ====== -->
-<div id="off-box"
-  style="margin:.75rem 0; padding:.8rem; border-radius:12px; border:1px solid #3a3d43; background:#1a1c20;">
-  <div style="display:flex; gap:.5rem; align-items:center; flex-wrap:wrap;">
-    <input id="off_barcode" type="text" inputmode="numeric" placeholder="Scanner / saisir un code-barres (EAN/GTIN)…"
-      style="flex:1; min-width:220px; padding:.55rem .6rem; border-radius:8px; border:1px solid #3a3d43; background:#1f2125; color:#e8eaed;">
-    <button id="off_search" style="padding:.45rem .75rem;">🔎 Rechercher</button>
-    <button id="off_scan" type="button" style="padding:.45rem .75rem;">📷 Scanner (live)</button>
-    <button id="off_capture" type="button" class="secondary"
-      style="padding:.45rem .75rem; background:#2b2f36; border:1px solid #3a3d43;">📸 Prendre une photo</button>
-    <input id="off_file" type="file" accept="image/*" capture="environment" style="display:none;">
-    <button id="off_paste" class="secondary" type="button"
-      style="padding:.45rem .75rem; background:#2b2f36; border:1px solid #3a3d43;">📋 Coller</button>
-    <button id="off_clear" class="secondary" type="button"
-      style="padding:.45rem .75rem; background:#2b2f36; border:1px solid #3a3d43;">✖ Effacer</button>
-  </div>
-
-  <div id="off_hint" class="muted" style="margin-top:.4rem;">
-    Astuce : essaie <b>5449000000996</b> (Coca-Cola 1,5 L).
-    Si le flux <b>📷 Scanner (live)</b> ne démarre pas dans l’app HA, utilise <b>📸 Prendre une photo</b>.
-  </div>
-  <div id="off_error" style="display:none; color:#ffb4b4; margin-top:.35rem;">Erreur</div>
-
-  <div id="off_result"
-    style="display:none; margin-top:.6rem; padding:.6rem; border-radius:10px; border:1px solid #2e3137; background:#1f2125;">
-    <div style="display:grid; grid-template-columns:80px 1fr; gap:.6rem; align-items:start;">
-      <img id="off_img" alt="photo produit"
-        style="width:80px; height:80px; object-fit:cover; border-radius:8px; border:1px solid #3a3d43;">
+  <!-- Ajout express -->
+  <div class="card">
+    <div class="title">
+      <h2>Ajout express</h2><span class="muted">→ créer un nouveau produit</span>
+    </div>
+    <form id="create_form" method="post" action="{{ BASE }}product/add" class="form-grid">
       <div>
-        <div><b id="off_name">Nom</b></div>
-        <div id="off_brand" class="muted">Marque</div>
-        <div class="muted" style="margin-top:.25rem;">Quantité indiquée : <span id="off_qty">—</span></div>
-        <div class="muted">Source : Open Food Facts</div>
-        <div style="margin-top:.5rem; display:flex; gap:.5rem; flex-wrap:wrap;">
-          <button id="off_fill_create" type="button" style="padding:.35rem .6rem;">➕ Préremplir le formulaire
-            d’ajout</button>
+        <div class="label">Nom du produit</div>
+        <input name="name" id="create_name" type="text" required placeholder="ex. Pâtes, Lait demi-écrémé">
+      </div>
+      <div>
+        <div class="label">Unité</div>
+        <input name="unit" id="create_unit" type="text" placeholder="pièce, g, kg, ml, L…">
+      </div>
+      <div>
+        <div class="label">Conservation (jours)</div>
+        <input name="shelf" id="create_shelf" type="number" min="1" placeholder="ex. 90">
+      </div>
+      <div>
+        <div class="label">Code-barres (facultatif)</div>
+        <input name="barcode" id="create_barcode" type="text" inputmode="numeric" placeholder="EAN/GTIN">
+      </div>
+      <div class="row" style="justify-content:flex-end">
+        <button class="primary">＋ Ajouter</button>
+        <button id="create_reset" type="button" class="secondary">Réinitialiser</button>
+      </div>
+    </form>
+
+    <!-- OFF + Scanner intégré -->
+    <div id="off-box">
+      <div class="title" style="margin:0 0 6px 0">
+        <h2 style="font-size:16px">Open Food Facts & Scanner</h2>
+        <span class="muted">→ préremplir le formulaire</span>
+      </div>
+      <div class="row" style="flex-wrap:wrap">
+        <input id="off_barcode" type="text" inputmode="numeric"
+          placeholder="Scanner / saisir un code-barres (EAN/GTIN)…" style="flex:1;min-width:220px">
+        <button id="off_search">🔎 Rechercher</button>
+        <button id="off_scan" type="button">📷 Scanner (live)</button>
+        <button id="off_capture" type="button" class="secondary">📸 Prendre une photo</button>
+        <input id="off_file" type="file" accept="image/*" capture="environment" style="display:none">
+        <button id="off_paste" class="secondary" type="button">📋 Coller</button>
+        <button id="off_clear" class="secondary" type="button">✖ Effacer</button>
+      </div>
+      <div id="off_hint" class="muted" style="margin-top:.4rem">
+        Astuce : essaie <b>5449000000996</b> (Coca‑Cola 1,5 L). Si le flux <b>📷 Scanner (live)</b> ne démarre pas dans
+        l’app HA, utilise <b>📸 Prendre une photo</b>.
+      </div>
+      <div id="off_error">Erreur</div>
+
+      <div id="off_result">
+        <div style="display:grid;grid-template-columns:80px 1fr;gap:10px;align-items:start">
+          <img id="off_img" alt="photo produit"
+            style="width:80px;height:80px;object-fit:cover;border-radius:8px;border:1px solid var(--border)">
+          <div>
+            <div><b id="off_name">Nom</b></div>
+            <div id="off_brand" class="muted">Marque</div>
+            <div class="muted" style="margin-top:.25rem">Quantité indiquée : <span id="off_qty">—</span></div>
+            <div class="muted">Source : Open Food Facts</div>
+            <div style="margin-top:.5rem;display:flex;gap:.5rem;flex-wrap:wrap">
+              <button id="off_fill_create" type="button">➕ Préremplir le formulaire d’ajout</button>
+            </div>
+          </div>
         </div>
       </div>
+      <p class="product-note" style="margin:.4rem 0 0">
+        Scanne/saisis un code‑barres → « Rechercher » → « Préremplir le formulaire », puis ajuste l’unité/la
+        conservation et valide.
+      </p>
+    </div>
+  </div>
+
+  <!-- Outils -->
+  <div class="card">
+    <div class="title">
+      <h2>Outils</h2><span class="muted">Recherche & compteur</span>
+    </div>
+    <div class="tools-row">
+      <input id="q" class="tools-search" type="search" placeholder="Rechercher un produit…">
+      <div class="tools-count">📦 Produits : <b id="prod-count">{{ items|length }}</b></div>
+    </div>
+  </div>
+
+  <!-- Liste (table desktop / cartes mobile) -->
+  <div class="card">
+    <div class="title">
+      <h2>Liste</h2><span class="muted">Table (bureau) / Cartes (mobile)</span>
+    </div>
+
+    <!-- Table desktop -->
+    <table id="tbl">
+      <colgroup>
+        <col style="width:37%">
+        <col style="width:37%">
+        <col style="width:26%">
+      </colgroup>
+      <thead>
+        <tr>
+          <th>Nom</th>
+          <th>Infos</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody id="tbody">
+        {% if items %}
+        {% for it in items %}
+        <tr data-name="{{ it.name|lower }}" data-unit="{{ it.unit|lower }}"
+          data-barcode="{{ (it.barcode or '')|lower }}">
+          <td>
+            <div style="font-weight:600">{{ it.name }}</div>
+            {% if it.barcode %}<div class="muted">EAN : {{ it.barcode }}</div>{% endif %}
+          </td>
+          <td>
+            <div class="row" style="flex-wrap:wrap">
+              <span class="pill">Unité : <b>{{ it.unit }}</b></span>
+              <span class="pill">Conservation : <b>{{ it.default_shelf_life_days }} j</b></span>
+              <span class="pill">Lots : <b>{{ it.lots_count }}</b></span>
+              <span class="pill">Qté totale : <b>{{ '%.2f'|format(it.qty_total) }}</b></span>
+            </div>
+          </td>
+          <td>
+            <div class="actions">
+              <button class="secondary js-edit-open" data-id="{{ it.id }}" data-name="{{ it.name }}"
+                data-unit="{{ it.unit }}" data-shelf="{{ it.default_shelf_life_days }}">✏️ Modifier</button>
+              <button class="secondary js-delete-open" data-id="{{ it.id }}" data-name="{{ it.name }}"
+                data-lots="{{ it.lots_count|int }}">🗑️ Supprimer</button>
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+        {% else %}
+        <tr>
+          <td colspan="3" class="muted">Aucun produit.</td>
+        </tr>
+        {% endif %}
+      </tbody>
+    </table>
+
+    <!-- Cartes mobile -->
+    <div class="cards" id="cards">
+      {% for it in items %}
+      <div class="card-item" data-name="{{ it.name|lower }}" data-unit="{{ it.unit|lower }}"
+        data-barcode="{{ (it.barcode or '')|lower }}">
+        <div class="card-head">
+          <div class="card-name">{{ it.name }}</div>
+        </div>
+        <div class="card-info">
+          {% if it.barcode %}<span class="pill">EAN : <b>{{ it.barcode }}</b></span>{% endif %}
+          <span class="pill">Unité : <b>{{ it.unit }}</b></span>
+          <span class="pill">Conservation : <b>{{ it.default_shelf_life_days }} j</b></span>
+          <span class="pill">Lots : <b>{{ it.lots_count }}</b></span>
+          <span class="pill">Qté : <b>{{ '%.2f'|format(it.qty_total) }}</b></span>
+        </div>
+        <div class="card-actions">
+          <button class="secondary js-edit-open" data-id="{{ it.id }}" data-name="{{ it.name }}"
+            data-unit="{{ it.unit }}" data-shelf="{{ it.default_shelf_life_days }}">✏️ Modifier</button>
+          <button class="secondary js-delete-open" data-id="{{ it.id }}" data-name="{{ it.name }}"
+            data-lots="{{ it.lots_count|int }}">🗑️ Supprimer</button>
+        </div>
+      </div>
+      {% endfor %}
     </div>
   </div>
 </div>
-<!-- ====== /OFF ====== -->
 
-<!-- ====== Formulaire d'AJOUT de produit ====== -->
-<div class="card"
-  style="margin:.75rem 0; padding:.8rem; border-radius:12px; border:1px solid #3a3d43; background:#15171b;">
-  <h2 style="margin-top:0;">Créer un produit</h2>
-  <form id="create_form" method="post" action="{{ BASE }}product/add" class="row"
-    style="gap:.5rem; align-items:center;">
-    <input name="name" id="create_name" placeholder="Nom du produit" required style="flex:2;">
-    <input name="unit" id="create_unit" placeholder="Unité (pièce, g, kg, ml, L…)" style="flex:1;">
-    <input name="shelf" id="create_shelf" type="number" min="1" placeholder="Conservation (jours)" style="flex:1;">
-    <input name="barcode" id="create_barcode" placeholder="Code-barres (facultatif)" inputmode="numeric"
-      style="flex:1;">
-    <button style="flex:0;">➕ Ajouter</button>
-    <button type="button" id="create_reset" class="secondary" style="flex:0; background:#2b2f36;">Réinitialiser</button>
-  </form>
-  <p class="muted" style="margin:.4rem 0 0;">
-    Scanne/saisis un code-barres → “Rechercher” → “Préremplir le formulaire d’ajout”, puis ajuste la conservation et
-    valide.
-  </p>
-</div>
-<!-- ====== /Formulaire d'AJOUT ====== -->
-
-<input type="search" id="q" placeholder="Rechercher un produit…"
-  style="width:100%; margin:.5rem 0; padding:.55rem .6rem; border-radius:8px; border:1px solid #3a3d43; background:#1f2125; color:#e8eaed;">
-
-<table id="tbl">
-  <thead>
-    <tr>
-      <th>Produit</th>
-      <th>Unité</th>
-      <th>Conservation (jours)</th>
-      <th>Quantité totale</th>
-      <th>Stocks</th>
-      <th>Actions</th>
-    </tr>
-  </thead>
-  <tbody>
-    {% for p in items %}
-    <tr>
-      <td>{{ p.name }}</td>
-      <td>{{ p.unit }}</td>
-      <td>{{ p.default_shelf_life_days }}</td>
-      <td>{{ '%.2f'|format(p.qty_total|float) }}</td>
-      <td>{{ p.lots_count }}</td>
-      <td>
-        <button class="edit-btn" data-id="{{ p.id }}" style="padding:.35rem .6rem;">✏️ Modifier</button>
-        <form method="post" action="{{ BASE }}product/delete"
-          onsubmit="return confirm('Supprimer le produit « {{ p.name }} » ?\nTous les stocks liés seront supprimés.');"
-          style="display:inline">
-          <input type="hidden" name="product_id" value="{{ p.id }}">
-          <button title="Supprimer" aria-label="Supprimer"
-            style="padding:.35rem .6rem; border:1px solid #5a1b1b; background:#3a0f0f; color:#ffb4b4; border-radius:8px;">🗑️</button>
-        </form>
-      </td>
-    </tr>
-    <tr class="edit-row" id="edit-{{ p.id }}" style="display:none;">
-      <td colspan="6">
-        <form method="post" action="{{ BASE }}product/update" class="row" style="gap:.5rem; align-items:center;">
-          <input type="hidden" name="product_id" value="{{ p.id }}">
-          <input name="name" value="{{ p.name }}" required style="flex:2;" placeholder="Nom du produit">
-          <input name="unit" value="{{ p.unit }}" style="flex:1;" placeholder="Unité (pièce, g, kg, ml, L…)">
-          <input name="shelf" type="number" min="1" value="{{ p.default_shelf_life_days }}" style="flex:1;"
-            placeholder="Conservation (jours)">
-          <button style="flex:0;">💾 Enregistrer</button>
-          <button type="button" class="cancel-btn" data-id="{{ p.id }}"
-            style="flex:0; background:#2b2f36;">Annuler</button>
-        </form>
-      </td>
-    </tr>
-    {% else %}
-    <tr>
-      <td colspan="6" class="muted">Aucun produit pour l’instant.</td>
-    </tr>
-    {% endfor %}
-  </tbody>
-</table>
-
-<!-- ====== Modale Scanner Caméra ====== -->
-<div id="scan_modal"
-  style="display:none; position:fixed; inset:0; background:rgba(0,0,0,.7); backdrop-filter:saturate(120%) blur(2px); z-index:9999;">
-  <div
-    style="position:absolute; inset:auto 0 0 0; margin:auto; max-width:680px; width:100%; background:#0f1115; border-top-left-radius:12px; border-top-right-radius:12px; border:1px solid #2a2d33;">
-    <div
-      style="display:flex; align-items:center; justify-content:space-between; padding:.6rem .8rem; border-bottom:1px solid #2a2d33;">
-      <strong>Scanner le code-barres</strong>
-      <button id="scan_close"
-        style="background:#2b2f36; border:1px solid #3a3d43; border-radius:8px; padding:.35rem .6rem;">Fermer</button>
+<!-- Dialog Modifier -->
+<dialog id="dlg-edit">
+  <form method="post" action="{{ BASE }}product/update" style="display:grid;gap:10px;min-width:min(420px,92vw)">
+    <h3 style="margin:0">Modifier le produit</h3>
+    <input type="hidden" name="product_id" id="dlg-product-id">
+    <div>
+      <div class="label">Nom</div>
+      <input type="text" name="name" id="dlg-name" required>
     </div>
-    <div style="position:relative; padding:.6rem; display:flex; flex-direction:column; gap:.6rem;">
-      <video id="scan_video" autoplay playsinline muted
-        style="width:100%; max-height:70vh; background:#000; border-radius:10px;"></video>
-      <canvas id="scan_canvas" style="display:none;"></canvas>
-      <div class="muted" style="font-size:.9rem;">
-        Autorise l’accès caméra si Android le demande (Paramètres → Applications → Home Assistant → Autorisations →
-        Caméra).
-        L’appareil photo arrière est utilisé si disponible.
+    <div class="row" style="gap:10px">
+      <div style="flex:1">
+        <div class="label">Unité</div>
+        <input type="text" name="unit" id="dlg-unit">
+      </div>
+      <div style="flex:1">
+        <div class="label">Conservation (jours)</div>
+        <input type="number" name="shelf" id="dlg-shelf" min="1">
       </div>
     </div>
+    <div class="row" style="justify-content:flex-end;gap:8px">
+      <button type="button" onclick="document.getElementById('dlg-edit').close()">Annuler</button>
+      <button class="primary">Enregistrer</button>
+    </div>
+  </form>
+</dialog>
+
+<!-- Dialog Supprimer -->
+<dialog id="dlg-delete">
+  <form method="post" action="{{ BASE }}product/delete" style="display:grid;gap:10px;min-width:min(420px,92vw)">
+    <h3 style="margin:0">Supprimer le produit</h3>
+    <input type="hidden" name="product_id" id="del-product-id">
+    <div class="muted" id="del-msg">La suppression retirera aussi les lots liés à ce produit.</div>
+    <div class="row" style="justify-content:flex-end;gap:8px">
+      <button type="button" onclick="document.getElementById('dlg-delete').close()">Annuler</button>
+      <button class="primary" style="background:#ef5350;border-color:#ef5350;color:#1d0c0c">Supprimer</button>
+    </div>
+  </form>
+</dialog>
+
+<!-- Modale Scanner caméra -->
+<dialog id="scan-modal">
+  <div style="display:grid;gap:10px;min-width:min(520px,96vw)">
+    <h3 style="margin:0">Scanner un code‑barres</h3>
+    <video id="scan-video" autoplay playsinline
+      style="width:100%;border-radius:12px;border:1px solid var(--border)"></video>
+    <div class="row" style="justify-content:flex-end;gap:8px">
+      <button class="secondary" type="button" id="scan-close">Fermer</button>
+    </div>
+    <div class="muted" style="font-size:12px">
+      Autorise l’accès caméra si Android le demande (Paramètres → Applications → Home Assistant → Autorisations →
+      Caméra).
+    </div>
   </div>
-</div>
-<!-- ====== /Modale Scanner Caméra ====== -->
+</dialog>
 
+{% endblock %}
+
+{% block scripts %}
 <script>
-  // ----------- Recherche locale -----------
+  // --- Recherche live (table + cartes) ---
   const q = document.getElementById('q');
-  const baseRows = Array.from(document.querySelectorAll('#tbl tbody tr')).filter((_, i) => i % 2 === 0);
-  q.addEventListener('input', () => {
-    const s = q.value.toLowerCase().trim();
-    baseRows.forEach((tr) => {
-      const match = tr.innerText.toLowerCase().includes(s);
+  const tbody = document.getElementById('tbody');
+  const cards = document.getElementById('cards');
+  const rows = Array.from(tbody ? tbody.children : []);
+  const cardsItems = Array.from(cards ? cards.children : []);
+  function applyFilter(s) {
+    const t = s.toLowerCase().trim();
+    let shown = 0;
+    rows.forEach(tr => {
+      const txt = tr.dataset.name + ' ' + tr.dataset.unit + ' ' + (tr.dataset.barcode || '');
+      const match = txt.includes(t);
       tr.style.display = match ? '' : 'none';
-      const edit = tr.nextElementSibling;
-      if (edit && edit.classList.contains('edit-row')) {
-        if (!match) edit.style.display = 'none';
-      }
+      if (match) shown++;
     });
+    cardsItems.forEach(c => {
+      const txt = c.dataset.name + ' ' + c.dataset.unit + ' ' + (c.dataset.barcode || '');
+      const match = txt.includes(t);
+      c.style.display = match ? '' : 'none';
+    });
+    const pc = document.getElementById('prod-count'); if (pc) pc.textContent = shown || rows.length;
+  }
+  if (q) { q.addEventListener('input', e => applyFilter(e.target.value)); }
+
+  // --- Ouvrir modales Modifier / Supprimer ---
+  const $ = (s) => document.querySelector(s);
+  document.addEventListener('click', function (e) {
+    const edit = e.target.closest('.js-edit-open');
+    const del = e.target.closest('.js-delete-open');
+    if (edit) {
+      $('#dlg-product-id').value = edit.dataset.id;
+      $('#dlg-name').value = edit.dataset.name || '';
+      $('#dlg-unit').value = edit.dataset.unit || '';
+      $('#dlg-shelf').value = edit.dataset.shelf || 90;
+      $('#dlg-edit').showModal();
+      return;
+    }
+    if (del) {
+      $('#del-product-id').value = del.dataset.id;
+      const name = del.dataset.name || '';
+      const lots = parseInt(del.dataset.lots || '0', 10);
+      const msg = lots > 0
+        ? `La suppression retirera aussi les ${lots} lot(s) lié(s) à « ${name} ».`
+        : `Supprimer « ${name} » ?`;
+      $('#del-msg').textContent = msg;
+      $('#dlg-delete').showModal();
+      return;
+    }
   });
 
-  // ----------- Toggle édition -----------
-  document.querySelectorAll('.edit-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
-      const id = btn.dataset.id;
-      const row = document.getElementById('edit-' + id);
-      row.style.display = (row.style.display === 'none' || !row.style.display) ? 'table-row' : 'none';
+  // --- Réinit formulaire d’ajout ---
+  (function () {
+    const r = document.getElementById('create_reset');
+    if (!r) return;
+    r.addEventListener('click', () => {
+      ['create_name', 'create_unit', 'create_shelf', 'create_barcode'].forEach(id => {
+        const el = document.getElementById(id); if (el) el.value = '';
+      });
     });
-  });
-  document.querySelectorAll('.cancel-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
-      const id = btn.dataset.id;
-      const row = document.getElementById('edit-' + id);
-      if (row) row.style.display = 'none';
-    });
-  });
+  })();
 
-  // ==================== Open Food Facts ====================
-  const $ = (sel, root = document) => root.querySelector(sel);
+  // --- TOASTS via query params (ajout) ---
+  (function () {
+    const p = new URLSearchParams(location.search);
+    if (p.get('added') === '1') window.showToast('Produit ajouté.', 'ok');
+  })();
 
-  const elBarcode = $('#off_barcode');
-  const elSearch = $('#off_search');
-  const elScan = $('#off_scan');
-  const elCapture = $('#off_capture');
-  const elFile = $('#off_file');
-  const elPaste = $('#off_paste');
-  const elClear = $('#off_clear');
-  const elError = $('#off_error');
-  const elBoxRes = $('#off_result');
-  const elImg = $('#off_img');
-  const elName = $('#off_name');
-  const elBrand = $('#off_brand');
-  const elQty = $('#off_qty');
-  const elFillCreate = $('#off_fill_create');
+  // ==================== Open Food Facts + Scanner ====================
+  const elCode = document.getElementById('off_barcode');
+  const elSearch = document.getElementById('off_search');
+  const elScan = document.getElementById('off_scan');
+  const elCapture = document.getElementById('off_capture');
+  const elFile = document.getElementById('off_file');
+  const elPaste = document.getElementById('off_paste');
+  const elClear = document.getElementById('off_clear');
+  const elError = document.getElementById('off_error');
+  const elRes = document.getElementById('off_result');
+  const elImg = document.getElementById('off_img');
+  const elName = document.getElementById('off_name');
+  const elBrand = document.getElementById('off_brand');
+  const elQty = document.getElementById('off_qty');
+  const elFillCreate = document.getElementById('off_fill_create');
 
-  const cfName = $('#create_name');
-  const cfUnit = $('#create_unit');
-  const cfShelf = $('#create_shelf');
-  const cfBarcode = $('#create_barcode');
-  const cfReset = $('#create_reset');
+  const cfName = document.getElementById('create_name');
+  const cfUnit = document.getElementById('create_unit');
+  const cfBarcode = document.getElementById('create_barcode');
 
-  function showError(msg) {
-    elError.textContent = msg;
-    elError.style.display = 'block';
-    elBoxRes.style.display = 'none';
+  function showError(msg) { if (!elError) return; elError.textContent = msg; elError.style.display = 'block'; }
+  function clearError() { if (!elError) return; elError.style.display = 'none'; }
+  function clearResult() { if (!elRes) return; elRes.style.display = 'none'; elFillCreate.dataset.payload = ''; }
+
+  function normalizeOFF(data) {
+    const p = (data && data.product) || {};
+    const nm = p.product_name || p.generic_name || p.brands_tags?.[0] || '';
+    const brand = p.brands || (p.brands_tags && p.brands_tags.join(', ')) || '';
+    const img = p.image_small_url || p.image_front_url || p.image_url || '';
+    const qty = p.quantity || p.serving_quantity || p.serving_size || '';
+    return { name: nm, brand, img, quantity_hint: qty };
   }
-  function clearError() { elError.style.display = 'none'; }
-  function showResult(normalized) {
-    clearError();
-    elBoxRes.style.display = 'block';
-    elImg.src = normalized.image_url || '';
-    elImg.style.display = normalized.image_url ? 'block' : 'none';
-    elName.textContent = normalized.name || 'Nom inconnu';
-    elBrand.textContent = normalized.brand ? ('Marque : ' + normalized.brand) : 'Marque inconnue';
-    elQty.textContent = normalized.quantity_hint || '—';
-    elFillCreate.dataset.payload = JSON.stringify(normalized);
+  function showResult(obj) {
+    if (!obj) return;
+    elImg.src = obj.img || '';
+    elName.textContent = obj.name || '—';
+    elBrand.textContent = obj.brand || '—';
+    elQty.textContent = obj.quantity_hint || '—';
+    elRes.style.display = 'block';
+    elFillCreate.dataset.payload = JSON.stringify(obj);
   }
-
-  function normalizeOFF(json) {
-    const p = (json && json.product) || {};
-    const name = p.product_name || p.generic_name || '';
-    const brand = Array.isArray(p.brands_tags) && p.brands_tags.length ? p.brands_tags[0] : (p.brands || '');
-    const image_url = p.image_url || p.image_front_url || p.image_small_url || '';
-    const quantity_hint = p.quantity || '';
-    return { name, brand, image_url, quantity_hint, source: 'Open Food Facts' };
-  }
-
-  function inferUnit(hint) {
-    if (!hint) return null;
-    const q = hint.trim().toLowerCase();
-    if (q.includes('kg')) return 'kg';
-    if (q.includes(' g')) return 'g';
-    if (q.includes(' ml')) return 'ml';
-    if (q.includes(' l')) return 'L';
-    return null;
+  function inferUnit(qty) {
+    if (!qty) return '';
+    const s = (qty + '').toLowerCase();
+    if (/\b(kg|kilogram|kilo)/.test(s)) return 'kg';
+    if (/\bg\b/.test(s)) return 'g';
+    if (/\bl\b/.test(s)) return 'L';
+    if (/\bml\b/.test(s)) return 'ml';
+    if (/\bpi[eè]ce/.test(s) || /\bpcs?\b/.test(s)) return 'pièce';
+    return '';
   }
 
   async function doLookup() {
-    const code = (elBarcode.value || '').replace(/\D+/g, '');
-    if (!code) { showError('Saisis un code-barres valide.'); return; }
-    clearError();
+    clearError(); clearResult();
+    const code = (elCode.value || '').replace(/\D+/g, '');
+    if (!code) { showError('Renseigne un code‑barres valide.'); return; }
     elSearch.disabled = true; elSearch.textContent = '…';
     try {
       const res = await fetch(`https://world.openfoodfacts.org/api/v0/product/${code}.json`);
@@ -252,184 +588,127 @@
       const data = await res.json();
       if (!data || data.status !== 1) {
         showError('Produit introuvable sur Open Food Facts. Tu peux l’ajouter manuellement (le code-barres sera conservé).');
-        cfBarcode.value = code;
+        if (cfBarcode) cfBarcode.value = code;
         return;
       }
       const normalized = normalizeOFF(data);
       showResult(normalized);
-      cfBarcode.value = code;
+      if (cfBarcode) cfBarcode.value = code;
     } catch (e) {
-      console.error(e);
-      showError('Erreur lors de la recherche. Réessaie.');
+      console.error(e); showError('Erreur lors de la recherche. Réessaie.');
     } finally {
       elSearch.disabled = false; elSearch.textContent = '🔎 Rechercher';
     }
   }
 
-  // Préremplir le formulaire d’AJOUT
+  elSearch.addEventListener('click', doLookup);
+  elCode.addEventListener('keydown', (ev) => { if (ev.key === 'Enter') { ev.preventDefault(); doLookup(); } });
+  elClear.addEventListener('click', () => {
+    elCode.value = ''; clearError(); clearResult();
+  });
+  elPaste.addEventListener('click', async () => {
+    try {
+      const t = await navigator.clipboard.readText();
+      elCode.value = (t || '').replace(/\D+/g, '');
+      doLookup();
+    } catch (e) { showError('Impossible de lire le presse‑papiers.'); }
+  });
   elFillCreate.addEventListener('click', () => {
     const payload = elFillCreate.dataset.payload ? JSON.parse(elFillCreate.dataset.payload) : null;
     if (!payload) { showError('Aucun résultat à insérer.'); return; }
     if (payload.name) cfName.value = payload.name;
-    const u = inferUnit(payload.quantity_hint);
-    if (u) cfUnit.value = u;
-    const addBtn = document.querySelector('#create_form button[type="submit"], #create_form button:not([type])');
-    if (addBtn) addBtn.focus();
+    const u = inferUnit(payload.quantity_hint); if (u) cfUnit.value = u;
+    const addBtn = document.querySelector('#create_form .primary'); if (addBtn) addBtn.focus();
   });
 
-  elSearch.addEventListener('click', doLookup);
-  elBarcode.addEventListener('keydown', e => { if (e.key === 'Enter') doLookup(); });
-  elClear.addEventListener('click', () => { elBarcode.value = ''; clearError(); elBoxRes.style.display = 'none'; });
-  elPaste.addEventListener('click', async () => {
-    try { elBarcode.value = (await navigator.clipboard.readText()).replace(/\D+/g, ''); }
-    catch { showError("Impossible de lire le presse-papiers (autorise l’accès ou colle manuellement)."); }
-  });
+  // --- Scanner (BarcodeDetector + ZXing fallback) ---
+  const dlgScan = document.getElementById('scan-modal');
+  const scanVideo = document.getElementById('scan-video');
+  const btnScanClose = document.getElementById('scan-close');
+  let scanning = false, zxingReader = null, zxingLiveActive = false;
 
-  // ==================== Scanner Caméra (live) + Fallback capture photo ====================
-  const scanModal = document.getElementById('scan_modal');
-  const scanVideo = document.getElementById('scan_video');
-  const scanCanvas = document.getElementById('scan_canvas');
-  const scanClose = document.getElementById('scan_close');
-
-  let scanStream = null;
-  let zxingReader = null; // fallback pour live ou photo
-  let scanning = false;
-  let zxingLiveActive = false;
-
-  function openScanModal() { scanModal.style.display = 'block'; startScannerLive(); }
-  async function closeScanModal() {
-    scanning = false;
-    if (zxingReader && zxingLiveActive) {
-      try { zxingReader.reset(); } catch (_) { }
-      zxingLiveActive = false;
-    }
-    if (scanStream) {
-      scanStream.getTracks().forEach(t => t.stop());
-      scanStream = null;
-    }
-    scanModal.style.display = 'none';
+  async function onBarcodeDetected(code) {
+    if (!code) return;
+    elCode.value = code.replace(/\D+/g, '');
+    await closeScanModal();
+    doLookup();
   }
-  scanClose.addEventListener('click', closeScanModal);
-  elScan.addEventListener('click', openScanModal);
 
-  async function startScannerLive() {
-    // Demande la caméra arrière si possible
-    try {
-      scanStream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: { ideal: 'environment' } },
-        audio: false
-      });
-    } catch (e) {
-      showError("Accès caméra refusé. Essaie le bouton « Prendre une photo » ci-dessous.");
-      return;
-    }
-
-    scanVideo.srcObject = scanStream;
-    try { await scanVideo.play(); } catch (_) { }
-
-    // 1) API native
+  async function openScanModal() {
+    if (!dlgScan) return;
+    dlgScan.showModal();
+    scanning = true;
     if ('BarcodeDetector' in window) {
       try {
-        const detector = new window.BarcodeDetector({ formats: ['ean_13', 'ean_8', 'upc_a', 'upc_e', 'code_128', 'code_39'] });
-        scanning = true;
+        const detector = new BarcodeDetector({ formats: ['ean_13', 'ean_8', 'upc_a', 'upc_e'] });
+        const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+        scanVideo.srcObject = stream;
         const tick = async () => {
           if (!scanning) return;
           try {
-            const codes = await detector.detect(scanVideo);
-            if (codes && codes.length) {
-              const code = (codes[0].rawValue || '').replace(/\D+/g, '');
-              if (code) { await onBarcodeDetected(code); return; }
-            }
-          } catch (_) { }
+            const bm = await detector.detect(scanVideo);
+            if (bm && bm[0] && bm[0].rawValue) { await onBarcodeDetected(bm[0].rawValue); return; }
+          } catch { }
           requestAnimationFrame(tick);
         };
-        requestAnimationFrame(tick);
-        return;
-      } catch (e) {
-        console.warn('BarcodeDetector non utilisable:', e);
-      }
+        tick(); return;
+      } catch (e) { console.warn('BarcodeDetector indisponible, fallback ZXing.', e); }
     }
-
-    // 2) Fallback ZXing en live
+    startZXingLive();
+  }
+  async function closeScanModal() {
+    scanning = false;
+    if (dlgScan && dlgScan.open) dlgScan.close();
+    const s = scanVideo && scanVideo.srcObject;
+    if (s && s.getTracks) s.getTracks().forEach(t => t.stop());
+    if (zxingReader && zxingLiveActive) { try { await zxingReader.reset(); } catch { } zxingLiveActive = false; }
+  }
+  async function loadZXing() {
+    return new Promise((resolve, reject) => {
+      if (window.ZXing) return resolve(window.ZXing);
+      const s = document.createElement('script');
+      s.src = 'https://unpkg.com/@zxing/library@latest';
+      s.onload = () => resolve(window.ZXing);
+      s.onerror = () => reject(new Error('ZXing indisponible'));
+      document.head.appendChild(s);
+    });
+  }
+  async function startZXingLive() {
     try {
       if (!window.ZXing) await loadZXing();
       if (!zxingReader) zxingReader = new ZXing.BrowserMultiFormatReader();
-      zxingLiveActive = true;
-      scanning = true;
-      zxingReader.decodeFromVideoDevice(
-        undefined, // device auto
-        scanVideo,
-        async (result, err) => {
-          if (!scanning) return;
-          if (result && result.getText) {
-            const code = (result.getText() || '').replace(/\D+/g, '');
-            if (code) { await onBarcodeDetected(code); }
-          }
+      zxingLiveActive = true; scanning = true;
+      zxingReader.decodeFromVideoDevice(undefined, scanVideo, async (result, err) => {
+        if (!scanning) return;
+        if (result && result.getText) {
+          const code = (result.getText() || '').replace(/\D+/g, '');
+          if (code) { await onBarcodeDetected(code); }
         }
-      );
+      });
     } catch (e) {
-      console.error(e);
-      showError("Impossible de démarrer le flux live. Utilise « Prendre une photo ».");
+      console.error(e); showError("Impossible de démarrer le flux live. Utilise « Prendre une photo ».");
     }
   }
 
-  // Fallback photo (ouvre la caméra de l’appareil et scanne l’image)
+  elScan.addEventListener('click', openScanModal);
+  btnScanClose.addEventListener('click', closeScanModal);
+
+  // Fallback photo (ouvre la caméra et scanne l’image)
   elCapture.addEventListener('click', () => elFile.click());
   elFile.addEventListener('change', async (ev) => {
-    const file = ev.target.files && ev.target.files[0];
-    if (!file) return;
+    const file = ev.target.files && ev.target.files[0]; if (!file) return;
     try {
       if (!window.ZXing) await loadZXing();
       if (!zxingReader) zxingReader = new ZXing.BrowserMultiFormatReader();
       const imgURL = URL.createObjectURL(file);
-      const img = new Image();
-      img.onload = async () => {
-        try {
-          const luminance = await zxingReader.decodeFromImage(img);
-          const text = luminance && luminance.text || luminance && luminance.getText && luminance.getText();
-          const code = (text || '').replace(/\D+/g, '');
-          if (code) { await onBarcodeDetected(code); }
-          else showError("Aucun code-barres détecté sur la photo. Réessaie en rapprochant.");
-        } catch (e) {
-          showError("Impossible de lire le code-barres sur la photo. Réessaie.");
-        } finally {
-          URL.revokeObjectURL(imgURL);
-        }
-      };
-      img.onerror = () => { showError("Image invalide."); URL.revokeObjectURL(imgURL); };
-      img.src = imgURL;
-    } catch (e) {
-      console.error(e);
-      showError("Erreur lors du chargement du décodeur. Réessaie.");
-    }
+      const img = document.createElement('img'); img.src = imgURL; await img.decode();
+      const res = await zxingReader.decodeFromImageElement(img);
+      const code = res && res.getText ? (res.getText() || '').replace(/\D+/g, '') : '';
+      if (code) await onBarcodeDetected(code);
+      else showError('Aucun code détecté sur la photo.');
+    } catch (e) { console.error(e); showError('Erreur lecture de la photo.'); }
+    finally { elFile.value = ''; }
   });
-
-  async function loadZXing() {
-    if (window.ZXing) return;
-    await new Promise((resolve, reject) => {
-      const s = document.createElement('script');
-      s.src = "https://cdn.jsdelivr.net/npm/@zxing/library@0.20.0/umd/index.min.js";
-      s.onload = resolve; s.onerror = () => reject(new Error('CDN ZXing indisponible'));
-      document.head.appendChild(s);
-    });
-  }
-
-  async function onBarcodeDetected(code) {
-    scanning = false;
-    elBarcode.value = code;
-    cfBarcode.value = code;
-    await closeScanModal();
-    doLookup(); // lance OFF et préremplit
-  }
-  // ==================== /Scanner ====================
-
-  // Réinit du formulaire d’ajout
-  const cfResetBtn = document.getElementById('create_reset');
-  cfResetBtn.addEventListener('click', () => {
-    document.getElementById('create_name').value = '';
-    document.getElementById('create_unit').value = '';
-    document.getElementById('create_shelf').value = '';
-    document.getElementById('create_barcode').value = '';
-  });
+  // ==================== /Open Food Facts + Scanner ====================
 </script>
 {% endblock %}
