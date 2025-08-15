@@ -39,7 +39,6 @@
 <!-- Liste -->
 <section class="panel list-wrapper">
   <table class="table desktable" aria-label="Liste des emplacements">
-    <!-- 3 colonnes strictes -->
     <colgroup>
       <col style="width: 25%">
       <col style="width: 25%">
@@ -69,11 +68,11 @@
         <td class="t-actions">
           <button class="btn btn-soft btn-rename" type="button" title="Renommer">
             <span class="i i-edit" aria-hidden="true"></span>
-            <span class="btn-txt">Modifier</span>
+            <span class="btn-text">Modifier</span>
           </button>
           <button class="btn btn-danger btn-icon btn-delete" type="button" title="Supprimer">
             <span class="i i-trash" aria-hidden="true"></span>
-            <span class="sr">Supprimer</span>
+            <span class="btn-text">Supprimer</span>
           </button>
         </td>
       </tr>
@@ -81,7 +80,7 @@
     </tbody>
   </table>
 
-  <!-- CARTES mobile -->
+  <!-- CARDS mobile -->
   <div class="cards mobcards" id="locations-cards" aria-label="Liste des emplacements (cartes)">
     {% for loc in items %}
     <article class="card" data-id="{{ loc.id }}" data-name="{{ loc.name }}" data-rename-url="{{ BASE }}location/update"
@@ -95,13 +94,11 @@
         </div>
       </header>
       <footer class="card-actions">
-        <button class="btn btn-soft btn-rename" type="button">
+        <button class="btn btn-soft btn-rename" type="button" title="Renommer">
           <span class="i i-edit" aria-hidden="true"></span>
-          Modifier
         </button>
-        <button class="btn btn-danger btn-delete" type="button">
+        <button class="btn btn-danger btn-delete" type="button" title="Supprimer">
           <span class="i i-trash" aria-hidden="true"></span>
-          Supprimer
         </button>
       </footer>
     </article>
@@ -198,7 +195,7 @@
   .btn {
     display: inline-flex;
     align-items: center;
-    gap: .45rem;
+    gap: .4rem;
     padding: .45rem .6rem;
     border-radius: 10px;
     border: var(--border);
@@ -269,7 +266,7 @@
     background: var(--primary-color, #3b82f6);
   }
 
-  /* === Table desktop === */
+  /* Table desktop */
   .table {
     width: 100%;
     border-collapse: separate;
@@ -285,11 +282,6 @@
 
   .table tbody tr {
     background: rgba(255, 255, 255, .03);
-    transition: background .15s;
-  }
-
-  .table tbody tr:hover {
-    background: rgba(255, 255, 255, .06);
   }
 
   .table tbody td {
@@ -315,7 +307,6 @@
     font-size: .85rem;
   }
 
-  /* Actions : wrap si nécessaire (évite tout dépassement) */
   .t-actions {
     display: flex;
     gap: .4rem;
@@ -325,70 +316,22 @@
 
   .t-actions .btn {
     flex: 1 1 auto;
-    /* s’adapte à l’espace dispo */
     min-width: 0;
-    /* autorise à rétrécir */
-    padding: .45rem .5rem;
     white-space: nowrap;
-    /* garde le texte sur une seule ligne */
   }
 
-
-  /* Sur écrans un peu étroits, cacher le texte “Modifier” (on garde l’icône) */
-  @media (max-width: 1280px) {
-    .t-actions .btn-txt {
-      display: none;
-    }
-  }
-
-  /* Cards mobile */
-  .cards {
-    display: grid;
-    grid-template-columns: 1fr;
-    gap: .75rem;
-  }
-
-  .card {
-    border: var(--border);
-    border-radius: var(--radius);
-    padding: var(--pad);
-    background: rgba(255, 255, 255, .03);
-  }
-
-  .card-top {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: .75rem;
-  }
-
-  .title {
-    margin: 0;
-    font-size: 1.05rem;
-  }
-
-  .card-actions {
-    margin-top: .6rem;
-    display: flex;
-    gap: .5rem;
-    justify-content: flex-end;
-  }
-
+  /* Mobile : cacher le texte des boutons */
   @media (max-width:900px) {
-    .add-grid {
-      grid-template-columns: 1fr;
-    }
-
-    .tools-grid {
-      grid-template-columns: 1fr;
-    }
-
     .desktable {
       display: none;
     }
 
     .mobcards {
       display: grid;
+    }
+
+    .btn-text {
+      display: none;
     }
   }
 
@@ -432,7 +375,6 @@
     const $ = (s, p = document) => p.querySelector(s);
     const $$ = (s, p = document) => Array.from(p.querySelectorAll(s));
 
-    // Filtre live
     const search = $('#search-input');
     const norm = t => (t || '').normalize('NFD').replace(/\p{Diacritic}/gu, '').toLowerCase();
     function filter(q) {
@@ -446,7 +388,6 @@
     }
     search && search.addEventListener('input', e => filter(e.target.value));
 
-    // Renommage
     const dlgR = $('#rename-dialog'), frmR = $('#rename-form');
     const inpR = $('#rename-input'), hidR = $('#rename-hidden'), btnRC = $('#rename-cancel');
     function openRename(host) {
@@ -460,7 +401,6 @@
     }));
     btnRC && btnRC.addEventListener('click', () => dlgR.close());
 
-    // Suppression
     const dlgD = $('#delete-dialog'), frmD = $('#delete-form');
     const nameD = $('#delete-name'), hidD = $('#delete-hidden'), btnDC = $('#delete-cancel');
     function openDelete(host) {
@@ -474,7 +414,6 @@
     }));
     btnDC && btnDC.addEventListener('click', () => dlgD.close());
 
-    // Anti double-submit
     [frmR, frmD, $('#add-form')].forEach(f => {
       if (!f) return;
       f.addEventListener('submit', () => {
