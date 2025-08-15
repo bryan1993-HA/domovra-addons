@@ -230,7 +230,21 @@
 {% block content %}
 <div class="wrap">
 
-  <!-- Outils -->
+  <!-- Ajout express (en premier comme sur l’accueil) -->
+  <div class="card">
+    <div class="title">
+      <h2>Ajout express</h2><span class="muted">→ créer un nouvel emplacement</span>
+    </div>
+    <form method="post" action="{{ BASE }}location/add" class="form-grid">
+      <div>
+        <div class="label">Nom de l’emplacement</div>
+        <input name="name" type="text" required placeholder="ex. Frigo, Congélateur, Placard haut">
+      </div>
+      <button class="primary">＋ Ajouter</button>
+    </form>
+  </div>
+
+  <!-- Outils (recherche + compteur) -->
   <div class="card">
     <div class="title">
       <h2>Outils</h2><span class="muted">Recherche & compteur</span>
@@ -246,20 +260,6 @@
     </div>
   </div>
 
-  <!-- Ajout express -->
-  <div class="card">
-    <div class="title">
-      <h2>Ajout express</h2><span class="muted">→ créer un nouvel emplacement</span>
-    </div>
-    <form method="post" action="{{ BASE }}location/add" class="form-grid">
-      <div>
-        <div class="label">Nom de l’emplacement</div>
-        <input name="name" type="text" required placeholder="ex. Frigo, Congélateur, Placard haut">
-      </div>
-      <button class="primary">＋ Ajouter</button>
-    </form>
-  </div>
-
   <!-- Liste -->
   <div class="card">
     <div class="title">
@@ -270,9 +270,9 @@
     <div class="table-responsive">
       <table>
         <colgroup>
-          <col style="width:40%">
-          <col style="width:40%">
-          <col style="width:20%">
+          <col style="width:25%">
+          <col style="width:25%">
+          <col style="width:50%">
         </colgroup>
         <thead>
           <tr>
@@ -356,7 +356,7 @@
   </div>
 </div>
 
-<!-- Dialog Renommer (hors block scripts) -->
+<!-- Dialog Renommer -->
 <dialog id="dlg-rename">
   <form method="post" action="{{ BASE }}location/update" style="display:grid;gap:10px;min-width:min(420px,92vw)">
     <h3 style="margin:0">Renommer l’emplacement</h3>
