@@ -54,7 +54,15 @@
     margin: 0;
   }
 
-  /* champs/btns comme index.html (fond transparent en clair) */
+  .label {
+    font-size: 12px;
+    color: var(--muted);
+    display: flex;
+    align-items: center;
+    gap: 6px
+  }
+
+  /* Entrées & boutons – thème clair/sombre aligné Accueil */
   input,
   select,
   button {
@@ -82,15 +90,22 @@
     border-color: var(--border);
   }
 
-  .label {
-    font-size: 12px;
-    color: var(--muted);
-    display: flex;
-    align-items: center;
-    gap: 6px
+  /* Ghost/outline (Réinitialiser) */
+  .btn-ghost {
+    background: transparent;
+    border: 1px solid var(--border);
+    color: inherit
   }
 
-  /* Aides “?” comme index.html (.help) */
+  .btn-ghost:hover {
+    background: rgba(255, 255, 255, .06)
+  }
+
+  .btn-ghost .ico {
+    margin-right: .4rem
+  }
+
+  /* Aides “?” */
   .help {
     display: inline-grid;
     place-items: center;
@@ -134,17 +149,17 @@
     z-index: 60
   }
 
-  /* Grille “Ajout express” (produit) */
+  /* Grille du formulaire de création */
   .form-grid {
     display: grid;
-    grid-template-columns: 2fr 1fr 1fr 1fr auto;
+    grid-template-columns: 2fr 1fr 1fr 1fr auto auto;
     gap: 12px;
     align-items: end
   }
 
   @media (max-width:1100px) {
     .form-grid {
-      grid-template-columns: 2fr 1fr 1fr auto
+      grid-template-columns: 2fr 1fr 1fr auto auto
     }
   }
 
@@ -153,7 +168,7 @@
       grid-template-columns: 1fr 1fr 1fr
     }
 
-    .form-grid .btn-submit {
+    .form-grid .btn-wide {
       grid-column: 1/-1;
       justify-self: stretch
     }
@@ -164,7 +179,7 @@
       grid-template-columns: 1fr
     }
 
-    .form-grid .btn-submit {
+    .form-grid .btn-wide {
       width: 100%
     }
   }
@@ -193,7 +208,7 @@
     background: rgba(255, 255, 255, .03)
   }
 
-  /* Stats “chips” (une seule ligne) */
+  /* Stats chips (toujours une ligne) */
   .stats {
     display: flex;
     flex-wrap: nowrap;
@@ -270,7 +285,7 @@
     }
   }
 
-  /* Bloc OFF (harmonisé : fond transparent comme fields) */
+  /* Bloc OFF : input + bouton caméra (amélioré) */
   #off-box {
     padding: 8px 0
   }
@@ -289,14 +304,25 @@
   #off-box .infield-btn {
     position: absolute;
     right: 6px;
-    display: inline-grid;
+    display: grid;
     place-items: center;
     width: 40px;
     height: 40px;
     border-radius: 10px;
     border: 1px solid var(--border);
-    background: var(--chip);
-    cursor: pointer
+    background: transparent;
+    /* <<< transparent en clair & sombre */
+    cursor: pointer;
+    line-height: 1.1;
+    transition: transform .06s ease, background .12s ease;
+  }
+
+  #off-box .infield-btn:hover {
+    background: rgba(255, 255, 255, .06)
+  }
+
+  #off-box .infield-btn:active {
+    transform: scale(.97)
   }
 
   #off_error[hidden],
@@ -365,10 +391,10 @@
     </div>
   </div>
 
-  <!-- Ajout express (création produit) -->
+  <!-- Ajouter un produit -->
   <div class="card">
     <div class="title">
-      <h2>Ajout express</h2><span class="muted">→ créer un nouveau produit</span>
+      <h2>Ajouter un produit</h2><span class="muted">→ créer un nouveau produit</span>
     </div>
 
     <form id="create_form" method="post" action="{{ BASE }}product/add" class="form-grid">
@@ -425,8 +451,9 @@
         <input name="barcode" id="create_barcode" type="text" inputmode="numeric" placeholder="EAN/GTIN">
       </div>
 
-      <button class="primary btn-submit">＋ Ajouter</button>
-      <button id="create_reset" type="button" class="secondary">Réinitialiser</button>
+      <button class="primary btn-wide">＋ Ajouter</button>
+      <button id="create_reset" type="button" class="btn-ghost btn-wide"><span
+          class="ico">↺</span>Réinitialiser</button>
     </form>
   </div>
 
@@ -531,17 +558,15 @@
   </div>
 </div>
 
-<!-- Dialog Modifier -->
+<!-- Dialogs identiques (Modifier / Supprimer / Scanner) que précédemment -->
 <dialog id="dlg-edit">
   <form method="post" action="{{ BASE }}product/update" style="display:grid;gap:10px;min-width:min(520px,92vw)">
     <h3 style="margin:0">Modifier le produit</h3>
     <input type="hidden" name="product_id" id="dlg-product-id">
-
     <div>
       <div class="label">Nom</div>
       <input type="text" name="name" id="dlg-name" required>
     </div>
-
     <div class="row" style="gap:10px">
       <div style="flex:1">
         <div class="label">Unité</div>
@@ -574,7 +599,6 @@
         <input type="number" name="shelf" id="dlg-shelf" min="1">
       </div>
     </div>
-
     <div class="row" style="justify-content:flex-end;gap:8px">
       <button type="button" onclick="document.getElementById('dlg-edit').close()">Annuler</button>
       <button class="primary">Enregistrer</button>
@@ -582,7 +606,6 @@
   </form>
 </dialog>
 
-<!-- Dialog Supprimer -->
 <dialog id="dlg-delete">
   <form method="post" action="{{ BASE }}product/delete" style="display:grid;gap:10px;min-width:min(420px,92vw)">
     <h3 style="margin:0">Supprimer le produit</h3>
@@ -595,7 +618,6 @@
   </form>
 </dialog>
 
-<!-- Scanner live -->
 <dialog id="scan-modal">
   <div style="display:grid;gap:10px;min-width:min(520px,96vw)">
     <h3 style="margin:0">Scanner un code-barres</h3>
@@ -610,7 +632,7 @@
 
 {% block scripts %}
 <script>
-  /* --- Recherche live --- */
+  /* Recherche live */
   const q = document.getElementById('q'), tbody = document.getElementById('tbody'), cards = document.getElementById('cards');
   const rows = Array.from(tbody ? tbody.children : []), cardsItems = Array.from(cards ? cards.children : []);
   function applyFilter(s) {
@@ -621,7 +643,7 @@
   }
   if (q) q.addEventListener('input', e => applyFilter(e.target.value));
 
-  /* Helpers */
+  /* Utilitaires */
   const $ = s => document.querySelector(s);
   function setSelectValue(sel, val) {
     if (!sel) return;
@@ -651,7 +673,7 @@
     }
   });
 
-  /* Réinit création */
+  /* Reset création */
   (function () {
     const r = document.getElementById('create_reset'); if (!r) return;
     r.addEventListener('click', () => { ['create_name', 'create_shelf', 'create_barcode', 'off_barcode'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; }); const u = document.getElementById('create_unit'); if (u) u.value = 'pièce'; });
@@ -660,7 +682,7 @@
   /* Toasts via ?added=1 */
   (function () { const p = new URLSearchParams(location.search); if (p.get('added') === '1') window.showToast('Produit ajouté.', 'ok'); })();
 
-  /* --- OFF + Scanner --- */
+  /* OFF + Scanner */
   const elCode = $('#off_barcode'), elSearch = $('#off_search'), elScan = $('#off_scan'),
     elCapture = $('#off_capture'), elFile = $('#off_file'), elPaste = $('#off_paste'), elClear = $('#off_clear'),
     elError = $('#off_error'), elRes = $('#off_result'), elImg = $('#off_img'),
@@ -714,7 +736,7 @@
     const addBtn = document.querySelector('#create_form .primary'); if (addBtn) addBtn.focus();
   });
 
-  /* Scanner (BarcodeDetector + ZXing) */
+  /* Scanner live (BarcodeDetector + ZXing) */
   const dlgScan = document.getElementById('scan-modal'), scanVideo = document.getElementById('scan-video'), btnScanClose = document.getElementById('scan-close');
   let scanning = false, zxingReader = null, zxingLiveActive = false;
 
