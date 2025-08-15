@@ -145,7 +145,35 @@
     }
   }
 
-  /* Liste — colonnes 25/25/50 */
+  /* Outils: ligne responsive */
+  .tools-row {
+    display: flex;
+    gap: 12px;
+    align-items: end;
+    flex-wrap: wrap;
+  }
+
+  .tools-search {
+    flex: 1 1 320px;
+    min-width: 220px
+  }
+
+  .tools-chip {
+    flex: 0 0 auto
+  }
+
+  @media (max-width:700px) {
+    .tools-row {
+      flex-direction: column;
+      align-items: stretch
+    }
+
+    .tools-chip {
+      align-self: flex-start
+    }
+  }
+
+  /* Liste — colonnes 37/37/26 */
   .table-responsive {
     overflow-x: auto;
     -webkit-overflow-scrolling: touch;
@@ -155,7 +183,19 @@
     text-align: right;
   }
 
-  /* on annule width:100% global pour les boutons d'action */
+  /* Grille 2 colonnes = 50/50 pour les actions */
+  .actions-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    justify-items: stretch
+  }
+
+  .actions-grid button {
+    width: 100% !important;
+    min-width: 0
+  }
+
   .btn-inline {
     width: auto !important;
     min-width: 0;
@@ -230,7 +270,7 @@
 {% block content %}
 <div class="wrap">
 
-  <!-- Ajout express (en premier comme sur l’accueil) -->
+  <!-- Ajout express (en premier) -->
   <div class="card">
     <div class="title">
       <h2>Ajout express</h2><span class="muted">→ créer un nouvel emplacement</span>
@@ -244,17 +284,17 @@
     </form>
   </div>
 
-  <!-- Outils (recherche + compteur) -->
+  <!-- Outils -->
   <div class="card">
     <div class="title">
       <h2>Outils</h2><span class="muted">Recherche & compteur</span>
     </div>
-    <div class="row" style="align-items:end">
-      <div style="flex:1 1 320px;min-width:220px">
+    <div class="tools-row">
+      <div class="tools-search">
         <div class="label">Rechercher</div>
         <input id="search-input" type="search" placeholder="Filtrer les emplacements…">
       </div>
-      <div>
+      <div class="tools-chip">
         <span class="chip">📍 Emplacements : <b>{{ items|length }}</b></span>
       </div>
     </div>
@@ -270,9 +310,9 @@
     <div class="table-responsive">
       <table>
         <colgroup>
-          <col style="width:25%">
-          <col style="width:25%">
-          <col style="width:50%">
+          <col style="width:37%">
+          <col style="width:37%">
+          <col style="width:26%">
         </colgroup>
         <thead>
           <tr>
@@ -300,18 +340,17 @@
               {% endif %}
             </td>
             <td class="t-actions">
-              <div class="row" style="justify-content:flex-end;gap:8px">
+              <div class="actions-grid">
                 <button type="button" class="btn-inline js-rename"
                   style="padding:8px 10px;border-radius:10px;border:1px solid var(--border)" data-id="{{ loc.id }}"
                   data-name="{{ loc.name|e }}">
                   ✏️ <span class="btn-text">Modifier</span>
                 </button>
-                <form method="post" action="{{ BASE }}location/delete" class="js-delete" data-name="{{ loc.name|e }}">
-                  <input type="hidden" name="location_id" value="{{ loc.id }}">
-                  <button class="btn-inline" style="padding:8px 10px;border-radius:10px;border:1px solid var(--border)">
-                    🗑️ <span class="btn-text">Supprimer</span>
-                  </button>
-                </form>
+                <button type="button" class="btn-inline js-delete-open"
+                  style="padding:8px 10px;border-radius:10px;border:1px solid var(--border)" data-id="{{ loc.id }}"
+                  data-name="{{ loc.name|e }}">
+                  🗑️ <span class="btn-text">Supprimer</span>
+                </button>
               </div>
             </td>
           </tr>
@@ -340,12 +379,10 @@
         </div>
         <div class="loc-actions">
           <button type="button" title="Renommer" class="js-rename" data-id="{{ loc.id }}" data-name="{{ loc.name|e }}"
-            style="padding:8px 10px;border-radius:10px;border:1px solid var(--border)">✏️</button>
-          <form method="post" action="{{ BASE }}location/delete" class="js-delete" data-name="{{ loc.name|e }}">
-            <input type="hidden" name="location_id" value="{{ loc.id }}">
-            <button title="Supprimer"
-              style="padding:8px 10px;border-radius:10px;border:1px solid var(--border)">🗑️</button>
-          </form>
+            style="padding:8px 10px;border:1px solid var(--border);border-radius:10px">✏️</button>
+          <button type="button" title="Supprimer" class="js-delete-open" data-id="{{ loc.id }}"
+            data-name="{{ loc.name|e }}"
+            style="padding:8px 10px;border:1px solid var(--border);border-radius:10px">🗑️</button>
         </div>
       </div>
       {% endfor %}
@@ -372,10 +409,34 @@
     </div>
   </form>
 </dialog>
+
+<!-- Dialog Supprimer -->
+<dialog id="dlg-delete">
+  <form method="post" action="{{ BASE }}location/delete" style="display:grid;gap:10px;min-width:min(420px,92vw)">
+    <h3 style="margin:0">Supprimer l’emplacement</h3>
+    <p id="dlg-delete-text" class="muted" style="margin:0"></p>
+    <input type="hidden" name="location_id" id="dlg-delete-id">
+    <div class="row" style="justify-content:flex-end;gap:8px">
+      <button type="button" onclick="document.getElementById('dlg-delete').close()">Annuler</button>
+      <button class="primary">Supprimer</button>
+    </div>
+  </form>
+</dialog>
+
+<!-- Dialog Info (messages ajouté / doublon) -->
+<dialog id="dlg-info">
+  <div id="dlg-info-text" style="margin:0 0 10px 0"></div>
+  <div class="row" style="justify-content:flex-end;gap:8px">
+    <button class="primary" type="button" onclick="document.getElementById('dlg-info').close()">OK</button>
+  </div>
+</dialog>
 {% endblock %}
 
 {% block scripts %}
 <script>
+  // Helpers
+  const $ = (s, r = document) => r.querySelector(s);
+
   // Filtre live (table + cartes)
   (function () {
     const norm = (t) => (t || '').normalize('NFD').replace(/\p{Diacritic}/gu, '').toLowerCase();
@@ -390,11 +451,10 @@
     if (search) search.addEventListener('input', (e) => applyFilter(e.target.value));
   })();
 
-  // Ouvre la modale Renommer
+  // Modale Renommer
   function openRename(id, currentName) {
     const dlg = document.getElementById('dlg-rename');
     const idInput = document.getElementById('dlg-location-id');
-    a = idInput;
     const nameInput = document.getElementById('dlg-location-name');
     if (!dlg || !idInput || !nameInput) return;
     idInput.value = String(id ?? '');
@@ -403,24 +463,45 @@
     setTimeout(() => nameInput.focus(), 50);
   }
 
-  // Délégation clic sur boutons "Modifier"
+  // Modale Supprimer
+  function openDelete(id, name) {
+    const dlg = document.getElementById('dlg-delete');
+    const idInput = document.getElementById('dlg-delete-id');
+    const text = document.getElementById('dlg-delete-text');
+    idInput.value = String(id ?? '');
+    text.textContent = `Supprimer « ${name} » ? Les lots liés seront également supprimés.`;
+    dlg.showModal();
+  }
+
+  // Délégation clics
   document.addEventListener('click', function (e) {
-    const btn = e.target.closest('.js-rename');
-    if (!btn) return;
-    openRename(btn.dataset.id, btn.dataset.name || '');
+    const btnRename = e.target.closest('.js-rename');
+    if (btnRename) {
+      openRename(btnRename.dataset.id, btnRename.dataset.name || '');
+      return;
+    }
+    const btnDel = e.target.closest('.js-delete-open');
+    if (btnDel) {
+      openDelete(btnDel.dataset.id, btnDel.dataset.name || '');
+      return;
+    }
   });
 
-  // Confirmation suppression sur les formulaires "Supprimer"
-  function attachDeleteGuards(root = document) {
-    root.querySelectorAll('form.js-delete').forEach((form) => {
-      form.addEventListener('submit', (e) => {
-        const name = form.dataset.name || '';
-        if (!window.confirm(`Supprimer « ${name} » ?\nLes lots liés seront également supprimés.`)) {
-          e.preventDefault();
-        }
-      }, { once: false });
-    });
-  }
-  attachDeleteGuards();
+  // Dialog d'info sur paramètres d'URL (doublon / ajouté)
+  (function () {
+    const params = new URLSearchParams(location.search);
+    const info = document.getElementById('dlg-info');
+    const text = document.getElementById('dlg-info-text');
+    if (!info || !text) return;
+    if (params.get('duplicate') === '1') {
+      const n = params.get('name') || '';
+      text.textContent = `Emplacement « ${n} » existe déjà.`;
+      info.showModal();
+    } else if (params.get('added') === '1') {
+      const n = params.get('name') || '';
+      text.textContent = `Emplacement « ${n} » ajouté.`;
+      info.showModal();
+    }
+  })();
 </script>
 {% endblock %}

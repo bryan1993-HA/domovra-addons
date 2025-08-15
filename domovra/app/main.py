@@ -8,7 +8,7 @@ from jinja2 import Environment, FileSystemLoader, select_autoescape
 from db import (
     init_db,
     # Locations
-    add_location, list_locations, list_locations_with_counts, update_location, delete_location,
+    add_location, list_locations, update_location, delete_location,
     # Products
     add_product, list_products, update_product, delete_product,
     # Lots
@@ -168,8 +168,7 @@ def products_page(request: Request):
 def locations_page(request: Request):
     base = ingress_base(request)
     logger.info("GET /locations (BASE=%s)", base)
-    # Utilise les compteurs de lots par emplacement
-    items = list_locations_with_counts()
+    items = list_locations()
     return render("locations.html",
                   BASE=base,
                   page="locations",
@@ -317,9 +316,30 @@ def product_delete(request: Request, product_id: int = Form(...)):
 # ---------------- Actions Emplacements
 @app.post("/location/add")
 def location_add(request: Request, name: str = Form(...)):
-    lid = add_location(name)
-    log_event("location.add", {"id": lid, "name": name})
-    return RedirectResponse(ingress_base(request), status_code=303, headers={"Cache-Control":"no-store"})
+    """Ajoute un emplacement si non existant (insensible à la casse).
+       Redirige toujours vers /locations avec indicateurs de résultat.
+    """
+    base = ingress_base(request)
+    nm = (name or "").strip()
+    from urllib.parse import urlencode
+
+    # Doublon ?
+    with _conn() as c:
+        row = c.execute("SELECT id FROM locations WHERE lower(name)=lower(?)", (nm,)).fetchone()
+        if row:
+            lid = int(row["id"])
+            log_event("location.duplicate", {"id": lid, "name": nm})
+            params = urlencode({"duplicate": 1, "name": nm})
+            return RedirectResponse(base + f"locations?{params}",
+                                    status_code=303,
+                                    headers={"Cache-Control":"no-store"})
+
+    lid = add_location(nm)
+    log_event("location.add", {"id": lid, "name": nm})
+    params = urlencode({"added": 1, "name": nm})
+    return RedirectResponse(base + f"locations?{params}",
+                            status_code=303,
+                            headers={"Cache-Control":"no-store"})
 
 @app.post("/location/update")
 def location_update(request: Request, location_id: int = Form(...), name: str = Form(...)):
