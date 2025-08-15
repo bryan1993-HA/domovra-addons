@@ -9,7 +9,6 @@
     --border: #263043;
     --chip: #1a2230;
     --muted: #8ea0b7;
-    --accent: #00bcd4;
   }
 
   .wrap {
@@ -61,7 +60,8 @@
   .row {
     display: flex;
     gap: 10px;
-    align-items: center
+    align-items: center;
+    flex-wrap: wrap
   }
 
   input,
@@ -83,13 +83,6 @@
 
   button.secondary {
     background: #1a2230
-  }
-
-  button.icon {
-    width: 40px;
-    height: 40px;
-    display: inline-grid;
-    place-items: center
   }
 
   .tools-row {
@@ -154,6 +147,79 @@
   .product-note {
     font-size: 12px;
     color: var(--muted)
+  }
+
+  /* Input avec bouton intégré (scan) */
+  .infield {
+    position: relative;
+    display: flex;
+    align-items: center
+  }
+
+  .infield input {
+    width: 100%;
+    padding-right: 48px
+  }
+
+  .infield-btn {
+    position: absolute;
+    right: 6px;
+    display: inline-grid;
+    place-items: center;
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
+    border: 1px solid var(--border);
+    background: #1a2230;
+    cursor: pointer
+  }
+
+  .infield-btn:active {
+    transform: scale(.98)
+  }
+
+  /* Tooltips “?” (même style que index) */
+  .qmark {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 18px;
+    height: 18px;
+    border-radius: 999px;
+    font-size: 12px;
+    line-height: 1;
+    border: 1px solid var(--border);
+    background: #101828;
+    color: #cfe3ff;
+    cursor: help;
+    position: relative
+  }
+
+  .qmark[data-tip]::after {
+    content: attr(data-tip);
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+    bottom: calc(100% + 8px);
+    background: #0f1524;
+    border: 1px solid var(--border);
+    color: #e6eef9;
+    padding: 8px 10px;
+    border-radius: 8px;
+    width: max-content;
+    max-width: min(420px, 88vw);
+    box-shadow: 0 6px 16px rgba(0, 0, 0, .35);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity .15s ease;
+    white-space: normal;
+    font-size: 12px;
+    z-index: 30;
+  }
+
+  .qmark:hover::after,
+  .qmark:active::after {
+    opacity: 1
   }
 
   /* Mobile cards */
@@ -226,58 +292,6 @@
     color: #ffb4b4;
     margin-top: .35rem
   }
-
-  /* Tooltips — pastille “?” + bulle (style aligné index) */
-  .qmark {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 18px;
-    height: 18px;
-    border-radius: 999px;
-    font-size: 12px;
-    line-height: 1;
-    border: 1px solid var(--border);
-    background: #101828;
-    color: #cfe3ff;
-    cursor: help;
-    position: relative
-  }
-
-  .qmark:hover {
-    background: #0f1a2e
-  }
-
-  .qmark[data-tip]::after {
-    content: attr(data-tip);
-    position: absolute;
-    left: 50%;
-    transform: translateX(-50%);
-    bottom: calc(100% + 8px);
-    background: #0f1524;
-    border: 1px solid var(--border);
-    color: #e6eef9;
-    padding: 8px 10px;
-    border-radius: 8px;
-    width: max-content;
-    max-width: min(420px, 88vw);
-    box-shadow: 0 6px 16px rgba(0, 0, 0, .35);
-    opacity: 0;
-    pointer-events: none;
-    transition: opacity .15s ease;
-    white-space: normal;
-    font-size: 12px;
-    z-index: 30;
-  }
-
-  .qmark[data-tip]:hover::after {
-    opacity: 1
-  }
-
-  /* Sur mobile : affichage au clic */
-  .qmark:active::after {
-    opacity: 1
-  }
 </style>
 {% endblock %}
 
@@ -288,30 +302,31 @@
 {% block content %}
 <div class="wrap">
 
-  <!-- Open Food Facts & Scanner (placé AVANT Ajout express) -->
+  <!-- Open Food Facts & Scanner (en haut) -->
   <div class="card">
     <div class="title" style="margin:0 0 6px 0">
       <h2>Open Food Facts & Scanner</h2>
       <span class="muted">→ préremplir le formulaire</span>
       <span class="qmark"
-        data-tip="Saisis ou scanne un code‑barres (EAN/GTIN). On interroge Open Food Facts pour proposer un nom et une indication d’unité. Tu peux ensuite ajuster avant de créer le produit.">?</span>
+        data-tip="Saisis ou scanne un code‑barres (EAN/GTIN). On interroge Open Food Facts pour proposer un nom et une unité indicative.">?</span>
     </div>
+
     <div id="off-box">
-      <div class="row" style="flex-wrap:wrap">
-        <input id="off_barcode" type="text" inputmode="numeric"
-          placeholder="Scanner / saisir un code-barres (EAN/GTIN)…" style="flex:1;min-width:220px">
-        <button id="off_search">🔎 Rechercher</button>
-        <button id="off_scan" type="button">📷 Scanner (live)</button>
+      <div class="row">
+        <div class="infield" style="flex:1;min-width:220px">
+          <input id="off_barcode" type="text" inputmode="numeric"
+            placeholder="Scanner / saisir un code-barres (EAN/GTIN)…">
+          <button id="off_scan" type="button" class="infield-btn" title="Scanner (live)">📷</button>
+        </div>
+        <button id="off_search" class="secondary">🔎 Rechercher</button>
         <button id="off_capture" type="button" class="secondary">📸 Prendre une photo</button>
         <input id="off_file" type="file" accept="image/*" capture="environment" style="display:none">
         <button id="off_paste" class="secondary" type="button">📋 Coller</button>
         <button id="off_clear" class="secondary" type="button">✖ Effacer</button>
-        <span class="qmark"
-          data-tip="Si le flux caméra ne fonctionne pas dans l’app Home Assistant, utilise « Prendre une photo ». Tu peux aussi coller un code depuis le presse‑papiers.">?</span>
       </div>
+
       <div id="off_hint" class="muted" style="margin-top:.4rem">
-        Astuce : essaie <b>5449000000996</b> (Coca‑Cola 1,5 L). Si le flux <b>📷 Scanner (live)</b> ne démarre pas dans
-        l’app HA, utilise <b>📸 Prendre une photo</b>.
+        Astuce : essaie <b>5449000000996</b> (Coca‑Cola 1,5 L).
       </div>
       <div id="off_error">Erreur</div>
 
@@ -329,13 +344,12 @@
             <div class="muted" style="margin-top:.25rem">Quantité indiquée : <span id="off_qty">—</span></div>
             <div class="muted">Source : Open Food Facts</div>
             <div style="margin-top:.5rem;display:flex;gap:.5rem;flex-wrap:wrap">
-              <button id="off_fill_create" type="button">➕ Préremplir le formulaire d’ajout</button>
-              <span class="qmark"
-                data-tip="Recopie le nom et suggère l’unité à partir de la quantité (ml, L, g, kg, pièce…). Tu peux toujours corriger.">?</span>
+              <button id="off_fill_create" type="button" class="secondary">➕ Préremplir le formulaire d’ajout</button>
             </div>
           </div>
         </div>
       </div>
+
       <p class="product-note" style="margin:.4rem 0 0">
         Scanne/saisis un code‑barres → « Rechercher » → « Préremplir le formulaire », puis ajuste l’unité/la
         conservation et valide.
@@ -348,23 +362,35 @@
     <div class="title">
       <h2>Ajout express</h2><span class="muted">→ créer un nouveau produit</span>
       <span class="qmark"
-        data-tip="Crée rapidement un produit utilisable dans les stocks. L’unité sert de repère (pièce, g, kg, ml, L…) et la conservation (jours) permet de calculer les états Bientôt/Urgent.">?</span>
+        data-tip="Crée rapidement un produit utilisable dans les stocks. L’unité sert de repère et la conservation (jours) alimente les états Bientôt/Urgent.">?</span>
     </div>
+
     <form id="create_form" method="post" action="{{ BASE }}product/add" class="form-grid">
       <div>
         <div class="label">Nom du produit
-          <span class="qmark"
-            data-tip="Nom court et explicite. Exemple : « Lait demi‑écrémé », « Pâtes », « Riz ».">?</span>
+          <span class="qmark" data-tip="Nom court et explicite. Exemple : « Lait demi‑écrémé », « Pâtes ».">?</span>
         </div>
         <input name="name" id="create_name" type="text" required placeholder="ex. Pâtes, Lait demi-écrémé">
       </div>
+
+      <!-- Unité : liste déroulante + Autre… -->
       <div>
         <div class="label">Unité
           <span class="qmark"
-            data-tip="Indique l’unité de référence (pièce, g, kg, ml, L…). Elle sert d’aide lors des mouvements de stock.">?</span>
+            data-tip="Choisis parmi les unités courantes. Sélectionne « Autre… » pour saisir une unité personnalisée.">?</span>
         </div>
-        <input name="unit" id="create_unit" type="text" placeholder="pièce, g, kg, ml, L…">
+        <select id="create_unit_sel">
+          <option value="pièce">pièce</option>
+          <option value="g">g</option>
+          <option value="kg">kg</option>
+          <option value="ml">ml</option>
+          <option value="L">L</option>
+          <option value="__other__">Autre…</option>
+        </select>
+        <input name="unit" id="create_unit" type="hidden" value="pièce">
+        <input id="create_unit_other" type="text" placeholder="Saisir l’unité…" style="display:none;margin-top:8px">
       </div>
+
       <div>
         <div class="label">Conservation (jours)
           <span class="qmark"
@@ -372,6 +398,7 @@
         </div>
         <input name="shelf" id="create_shelf" type="number" min="1" placeholder="ex. 90">
       </div>
+
       <div>
         <div class="label">Code-barres (facultatif)
           <span class="qmark"
@@ -379,6 +406,7 @@
         </div>
         <input name="barcode" id="create_barcode" type="text" inputmode="numeric" placeholder="EAN/GTIN">
       </div>
+
       <div class="row" style="justify-content:flex-end">
         <button class="primary">＋ Ajouter</button>
         <button id="create_reset" type="button" class="secondary">Réinitialiser</button>
@@ -434,7 +462,7 @@
             <div class="row" style="flex-wrap:wrap">
               <span class="pill">Unité : <b>{{ it.unit }}</b></span>
               <span class="pill">Conservation : <b>{{ it.default_shelf_life_days }} j</b></span>
-              <span class="pill">Lots : <b>{{ it.lots_count }}</b></span>
+              <span class="pill">Stocks : <b>{{ it.lots_count }}</b></span>
               <span class="pill">Qté totale : <b>{{ '%.2f'|format(it.qty_total) }}</b></span>
             </div>
           </td>
@@ -468,7 +496,7 @@
           {% if it.barcode %}<span class="pill">EAN : <b>{{ it.barcode }}</b></span>{% endif %}
           <span class="pill">Unité : <b>{{ it.unit }}</b></span>
           <span class="pill">Conservation : <b>{{ it.default_shelf_life_days }} j</b></span>
-          <span class="pill">Lots : <b>{{ it.lots_count }}</b></span>
+          <span class="pill">Stocks : <b>{{ it.lots_count }}</b></span>
           <span class="pill">Qté : <b>{{ '%.2f'|format(it.qty_total) }}</b></span>
         </div>
         <div class="card-actions">
@@ -514,7 +542,7 @@
   <form method="post" action="{{ BASE }}product/delete" style="display:grid;gap:10px;min-width:min(420px,92vw)">
     <h3 style="margin:0">Supprimer le produit</h3>
     <input type="hidden" name="product_id" id="del-product-id">
-    <div class="muted" id="del-msg">La suppression retirera aussi les lots liés à ce produit.</div>
+    <div class="muted" id="del-msg">La suppression retirera aussi les stocks liés à ce produit.</div>
     <div class="row" style="justify-content:flex-end;gap:8px">
       <button type="button" onclick="document.getElementById('dlg-delete').close()">Annuler</button>
       <button class="primary" style="background:#ef5350;border-color:#ef5350;color:#1d0c0c">Supprimer</button>
@@ -530,10 +558,6 @@
       style="width:100%;border-radius:12px;border:1px solid var(--border)"></video>
     <div class="row" style="justify-content:flex-end;gap:8px">
       <button class="secondary" type="button" id="scan-close">Fermer</button>
-    </div>
-    <div class="muted" style="font-size:12px">
-      Autorise l’accès caméra si Android le demande (Paramètres → Applications → Home Assistant → Autorisations →
-      Caméra).
     </div>
   </div>
 </dialog>
@@ -566,7 +590,7 @@
   }
   if (q) { q.addEventListener('input', e => applyFilter(e.target.value)); }
 
-  // --- Ouvrir modales Modifier / Supprimer ---
+  // --- Modales Modifier / Supprimer ---
   const $ = (s) => document.querySelector(s);
   document.addEventListener('click', function (e) {
     const edit = e.target.closest('.js-edit-open');
@@ -584,7 +608,7 @@
       const name = del.dataset.name || '';
       const lots = parseInt(del.dataset.lots || '0', 10);
       const msg = lots > 0
-        ? `La suppression retirera aussi les ${lots} lot(s) lié(s) à « ${name} ».`
+        ? `La suppression retirera aussi les ${lots} stock(s) lié(s) à « ${name} ».`
         : `Supprimer « ${name} » ?`;
       $('#del-msg').textContent = msg;
       $('#dlg-delete').showModal();
@@ -597,9 +621,14 @@
     const r = document.getElementById('create_reset');
     if (!r) return;
     r.addEventListener('click', () => {
-      ['create_name', 'create_unit', 'create_shelf', 'create_barcode'].forEach(id => {
+      ['create_name', 'create_shelf', 'create_barcode', 'off_barcode', 'create_unit_other'].forEach(id => {
         const el = document.getElementById(id); if (el) el.value = '';
       });
+      const sel = document.getElementById('create_unit_sel');
+      const hid = document.getElementById('create_unit');
+      const other = document.getElementById('create_unit_other');
+      if (sel && hid) { sel.value = 'pièce'; hid.value = 'pièce'; }
+      if (other) { other.style.display = 'none'; }
     });
   })();
 
@@ -607,6 +636,30 @@
   (function () {
     const p = new URLSearchParams(location.search);
     if (p.get('added') === '1') window.showToast('Produit ajouté.', 'ok');
+  })();
+
+  // --- Unité : synchro select / hidden / autre… ---
+  (function () {
+    const sel = document.getElementById('create_unit_sel');
+    const hid = document.getElementById('create_unit');
+    const other = document.getElementById('create_unit_other');
+    function sync() {
+      if (sel.value === '__other__') {
+        other.style.display = 'block';
+        other.focus();
+        hid.value = other.value.trim();
+      } else {
+        other.style.display = 'none';
+        hid.value = sel.value;
+      }
+    }
+    if (sel && hid) {
+      sel.addEventListener('change', sync);
+      if (other) {
+        other.addEventListener('input', () => { if (sel.value === '__other__') { hid.value = other.value.trim(); } });
+      }
+      sync();
+    }
   })();
 
   // ==================== Open Food Facts + Scanner ====================
@@ -626,7 +679,9 @@
   const elFillCreate = document.getElementById('off_fill_create');
 
   const cfName = document.getElementById('create_name');
-  const cfUnit = document.getElementById('create_unit');
+  const cfUnitHidden = document.getElementById('create_unit');
+  const cfUnitSel = document.getElementById('create_unit_sel');
+  const cfUnitOther = document.getElementById('create_unit_other');
   const cfBarcode = document.getElementById('create_barcode');
 
   function showError(msg) { if (!elError) return; elError.textContent = msg; elError.style.display = 'block'; }
@@ -655,7 +710,7 @@
     const s = (qty + '').toLowerCase();
     if (/\b(kg|kilogram|kilo)/.test(s)) return 'kg';
     if (/\bg\b/.test(s)) return 'g';
-    if (/\bl\b/.test(s)) return 'L';
+    if (/\bl\b/.test(s)) return 'l';
     if (/\bml\b/.test(s)) return 'ml';
     if (/\bpi[eè]ce/.test(s) || /\bpcs?\b/.test(s)) return 'pièce';
     return '';
@@ -697,11 +752,20 @@
       doLookup();
     } catch (e) { showError('Impossible de lire le presse‑papiers.'); }
   });
+
+  // Préremplir formulaire d’ajout depuis OFF
   elFillCreate.addEventListener('click', () => {
     const payload = elFillCreate.dataset.payload ? JSON.parse(elFillCreate.dataset.payload) : null;
     if (!payload) { showError('Aucun résultat à insérer.'); return; }
     if (payload.name) cfName.value = payload.name;
-    const u = inferUnit(payload.quantity_hint); if (u) cfUnit.value = u;
+    const u = inferUnit(payload.quantity_hint);
+    if (u) {
+      // essaie de sélectionner l’unité correspondante
+      const opt = ['pièce', 'g', 'kg', 'ml', 'l'].includes(u) ? u.replace('l', 'L') : '__other__';
+      const sel = cfUnitSel; const hid = cfUnitHidden; const other = cfUnitOther;
+      if (opt !== '__other__') { sel.value = opt; hid.value = opt; if (other) { other.style.display = 'none'; } }
+      else { sel.value = '__other__'; if (other) { other.style.display = 'block'; other.value = u; hid.value = u; } }
+    }
     const addBtn = document.querySelector('#create_form .primary'); if (addBtn) addBtn.focus();
   });
 
@@ -777,7 +841,7 @@
   document.getElementById('off_scan').addEventListener('click', openScanModal);
   btnScanClose.addEventListener('click', closeScanModal);
 
-  // Fallback photo (ouvre la caméra et scanne l’image)
+  // Fallback photo
   elCapture.addEventListener('click', () => elFile.click());
   elFile.addEventListener('change', async (ev) => {
     const file = ev.target.files && ev.target.files[0]; if (!file) return;
