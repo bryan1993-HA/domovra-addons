@@ -11,6 +11,8 @@
     --muted: #8ea0b7;
     --accent: #00bcd4;
     --ok: #4caf50;
+    --warn: #ffb300;
+    --danger: #ef5350;
   }
 
   .wrap {
@@ -113,6 +115,23 @@
     color: var(--ok);
   }
 
+  .badge {
+    padding: 2px 8px;
+    border-radius: 999px;
+    font-size: 12px;
+    border: 1px solid transparent;
+  }
+
+  .badge.warn {
+    color: var(--warn);
+    border-color: rgba(255, 179, 0, .35);
+  }
+
+  .badge.danger {
+    color: var(--danger);
+    border-color: rgba(239, 83, 80, .35);
+  }
+
   /* Ajout express */
   .form-grid {
     display: grid;
@@ -127,7 +146,7 @@
     }
   }
 
-  /* Outils — grid: corrige l’espace en mobile */
+  /* Outils — grid: pas d’espace en mobile */
   .tools-row {
     display: grid;
     grid-template-columns: 1fr auto;
@@ -293,6 +312,10 @@
             <td>
               {% if loc.lot_count is defined %}
               <span class="pill">{{ loc.lot_count|int }} lot{{ '' if (loc.lot_count|int) == 1 else 's' }}</span>
+              {% if loc.urgent_count|int > 0 %} <span class="badge danger">{{ loc.urgent_count|int }} urgent{{ '' if
+                (loc.urgent_count|int) == 1 else 's' }}</span>{% endif %}
+              {% if loc.soon_count|int > 0 %} <span class="badge warn">{{ loc.soon_count|int }} bientôt</span>{% endif
+              %}
               {% else %}<span class="muted">—</span>{% endif %}
             </td>
             <td class="t-actions">
@@ -324,8 +347,12 @@
         <div class="loc-main">
           <div class="loc-title">{{ loc.name }}</div>
           <div class="loc-meta">
-            {% if loc.lot_count is defined %}<span>🧮 {{ loc.lot_count|int }} lot{{ '' if (loc.lot_count|int) == 1 else
-              's' }}</span>{% endif %}
+            {% if loc.lot_count is defined %}
+            <span>🧮 {{ loc.lot_count|int }} lot{{ '' if (loc.lot_count|int) == 1 else 's' }}</span>
+            {% if loc.urgent_count|int > 0 %}<span>⚠️ {{ loc.urgent_count|int }} urgent{{ '' if (loc.urgent_count|int)
+              == 1 else 's' }}</span>{% endif %}
+            {% if loc.soon_count|int > 0 %}<span>⏰ {{ loc.soon_count|int }} bientôt</span>{% endif %}
+            {% endif %}
           </div>
         </div>
         <div class="loc-actions">
@@ -359,12 +386,30 @@
   </form>
 </dialog>
 
-<!-- Dialog Supprimer -->
+<!-- Dialog Supprimer (avec déplacement) -->
 <dialog id="dlg-delete">
   <form method="post" action="{{ BASE }}location/delete" style="display:grid;gap:10px;min-width:min(420px,92vw)">
     <h3 style="margin:0">Supprimer l’emplacement</h3>
     <p id="dlg-delete-text" class="muted" style="margin:0"></p>
     <input type="hidden" name="location_id" id="dlg-delete-id">
+
+    <fieldset style="border:1px solid var(--border);border-radius:10px;padding:10px">
+      <legend class="muted">Gestion des lots existants</legend>
+      <label style="display:flex;gap:8px;align-items:center;margin-bottom:8px">
+        <input type="radio" name="del_mode" value="remove" checked>
+        <span>Supprimer les lots liés</span>
+      </label>
+      <label style="display:flex;gap:8px;align-items:center">
+        <input type="radio" name="del_mode" value="move">
+        <span>Déplacer les lots vers :</span>
+        <select name="move_to" id="dlg-move-select" style="min-width:160px" disabled>
+          {% for loc in items %}
+          <option value="{{ loc.id }}">{{ loc.name }}</option>
+          {% endfor %}
+        </select>
+      </label>
+    </fieldset>
+
     <div class="row" style="justify-content:flex-end;gap:8px">
       <button type="button" onclick="document.getElementById('dlg-delete').close()">Annuler</button>
       <button class="primary">Supprimer</button>
@@ -392,39 +437,64 @@
   })();
 
   function openRename(btn) {
-    const id = btn.closest('[data-id]')?.dataset.id || btn.dataset.id;
-    const name = btn.closest('[data-name]')?.dataset.name || btn.dataset.name || '';
-    const dlg = $('#dlg-rename'), idInput = $('#dlg-location-id'), nameInput = $('#dlg-location-name');
-    if (!dlg || !idInput || !nameInput) return;
-    idInput.value = id || ''; nameInput.value = name;
-    dlg.showModal(); setTimeout(() => nameInput.focus(), 50);
+    const row = btn.closest('[data-id]');
+    const id = row?.dataset.id || btn.dataset.id;
+    const name = row?.dataset.name || btn.dataset.name || '';
+    $('#dlg-location-id').value = id || '';
+    const nameInput = $('#dlg-location-name');
+    nameInput.value = name;
+    $('#dlg-rename').showModal();
+    setTimeout(() => nameInput.focus(), 50);
   }
+
   function openDelete(btn) {
-    const id = btn.closest('[data-id]')?.dataset.id || btn.dataset.id;
-    const name = btn.closest('[data-name]')?.dataset.name || btn.dataset.name || '';
-    const dlg = $('#dlg-delete'), idInput = $('#dlg-delete-id'), text = $('#dlg-delete-text');
-    idInput.value = id || '';
-    text.textContent = `Supprimer « ${name} » ? Les lots liés seront également supprimés.`;
-    dlg.showModal();
+    const row = btn.closest('[data-id]');
+    const id = row?.dataset.id || btn.dataset.id;
+    const name = row?.dataset.name || btn.dataset.name || '';
+    $('#dlg-delete-id').value = id || '';
+    $('#dlg-delete-text').textContent = `Supprimer « ${name} » ?`;
+
+    const sel = $('#dlg-move-select');
+    // Désactive l'option de la même location
+    Array.from(sel.options).forEach(o => o.disabled = (o.value === id));
+    // Choisit la première option valide
+    const firstValid = Array.from(sel.options).find(o => !o.disabled);
+    if (firstValid) sel.value = firstValid.value;
+
+    // Radio enable/disable
+    const radios = document.querySelectorAll('input[name="del_mode"]');
+    const toggle = () => {
+      const mode = Array.from(radios).find(r => r.checked)?.value || 'remove';
+      sel.disabled = (mode !== 'move') || !firstValid;
+    };
+    radios.forEach(r => r.addEventListener('change', toggle));
+    toggle();
+
+    $('#dlg-delete').showModal();
   }
+
   document.addEventListener('click', function (e) {
     const r = e.target.closest('.js-rename'); if (r) return openRename(r);
     const d = e.target.closest('.js-delete-open'); if (d) return openDelete(d);
+  });
+
+  // Envoi : si "move" non choisi, on vide move_to pour ne pas déplacer.
+  document.querySelector('#dlg-delete form')?.addEventListener('submit', (e) => {
+    const mode = Array.from(document.querySelectorAll('input[name="del_mode"]')).find(r => r.checked)?.value || 'remove';
+    if (mode !== 'move') {
+      e.target.querySelector('select[name="move_to"]').disabled = true;
+      e.target.querySelector('select[name="move_to"]').value = '';
+    }
   });
 
   // TOASTS via query params
   (function () {
     const p = new URLSearchParams(location.search);
     const n = p.get('name') || '';
-    if (p.get('duplicate') === '1') {
-      window.showToast(`Emplacement « ${n} » existe déjà.`, 'warn', 3500);
-    } else if (p.get('added') === '1') {
-      window.showToast(`Emplacement « ${n} » ajouté.`, 'ok', 2500);
-    } else if (p.get('updated') === '1') {
-      window.showToast(`Emplacement renommé en « ${n} ».`, 'ok', 2500);
-    } else if (p.get('deleted') === '1') {
-      window.showToast(`Emplacement supprimé.`, 'ok', 2500);
-    }
+    if (p.get('duplicate') === '1') window.showToast(`Emplacement « ${n} » existe déjà.`, 'warn');
+    else if (p.get('added') === '1') window.showToast(`Emplacement « ${n} » ajouté.`, 'ok');
+    else if (p.get('updated') === '1') window.showToast(`Emplacement renommé en « ${n} ».`, 'ok');
+    else if (p.get('deleted') === '1') window.showToast(`Emplacement supprimé.`, 'ok');
   })();
 </script>
 {% endblock %}

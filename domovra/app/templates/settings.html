@@ -3,138 +3,153 @@
 
 {% block head %}
 <style>
-    .settings-form {
-        display: grid;
-        gap: 16px;
-        grid-template-columns: repeat(12, 1fr);
+    .wrap {
+        max-width: 900px;
+        margin: 0 auto;
+        padding: 0 12px;
     }
 
-    .settings-card {
-        grid-column: 1 / -1;
+    .card {
+        border: 1px solid #263043;
+        border-radius: 12px;
+        padding: 12px;
+        margin-bottom: 12px;
     }
 
-    @media (min-width:900px) {
-        .settings-card {
-            grid-column: span 6;
-        }
-    }
-
-    .form-row {
+    .row {
         display: flex;
         gap: 12px;
-        align-items: center;
+        flex-wrap: wrap;
     }
 
-    .form-row>span {
-        flex: 0 0 240px;
+    .field {
+        flex: 1 1 240px;
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        min-width: 220px
     }
 
-    .hint {
-        font-size: .9rem;
-        opacity: .7;
+    .label {
+        font-size: 12px;
+        opacity: .7
+    }
+
+    input,
+    select,
+    button {
+        border: 1px solid #263043;
+        border-radius: 10px;
+        padding: 10px;
+        background: transparent;
+        color: inherit;
+        min-height: 44px
+    }
+
+    button.primary {
+        background: #00bcd4;
+        border: 0;
+        color: #02222a;
+        font-weight: 600;
+        cursor: pointer
+    }
+
+    .preview {
+        display: inline-block;
+        min-width: 44px;
+        border-radius: 999px;
+        border: 1px solid #263043
     }
 </style>
-
-<script>
-    // Utilitaire central : applique le thème sur <html>
-    function applyThemeToHtml(mode) {
-        const html = document.documentElement;
-        if (!html) return;
-        if (mode === "light" || mode === "dark") {
-            html.setAttribute("data-theme", mode);
-            html.style.colorScheme = mode;
-        } else {
-            // auto => suivre le système
-            const isDark = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
-            html.setAttribute("data-theme", isDark ? "dark" : "light");
-            html.style.colorScheme = isDark ? "dark" : "light";
-        }
-    }
-
-    // Applique un thème initial depuis <meta>
-    (function () {
-        const mTheme = document.querySelector('meta[name="domovra:theme"]');
-        const pref = (mTheme && mTheme.content) || 'auto';
-        try { if (pref === "light" || pref === "dark") localStorage.setItem("domovra_theme", pref); } catch (e) { }
-        applyThemeToHtml(pref);
-    })();
-
-    // Interaction : changement immédiat à la sélection
-    document.addEventListener('DOMContentLoaded', () => {
-        const selTheme = document.querySelector('select[name="theme"]');
-        const cbMini = document.querySelector('input[name="sidebar_compact"]');
-
-        if (cbMini) {
-            const mSide = document.querySelector('meta[name="domovra:sidebar"]');
-            cbMini.checked = (mSide && mSide.content === '1');
-            const applyMini = () => {
-                const html = document.documentElement;
-                if (cbMini.checked) html.classList.add('sidebar-mini'); else html.classList.remove('sidebar-mini');
-            };
-            cbMini.addEventListener('change', applyMini);
-            applyMini();
-        }
-
-        if (selTheme) {
-            selTheme.addEventListener('change', () => {
-                const v = selTheme.value;
-                try { localStorage.setItem('domovra_theme', v); } catch (e) { }
-                applyThemeToHtml(v);
-            });
-        }
-    });
-</script>
 {% endblock %}
 
 {% block content %}
-<h1>Paramètres</h1>
-<p class="muted">Ces réglages sont enregistrés dans <code>/data/settings.json</code> et persistent aux redémarrages.</p>
+<div class="wrap">
+    <form method="post" action="{{ BASE }}settings/save" class="row" style="flex-direction:column">
 
-<form class="settings-form" method="post" action="{{ BASE }}settings/save">
-    <div class="card settings-card">
-        <h2>🎨 Apparence</h2>
+        <div class="card">
+            <h2 style="margin:6px 0 12px">Apparence</h2>
+            <div class="row">
+                <div class="field">
+                    <div class="label">Thème</div>
+                    <select name="theme">
+                        <option value="auto" {{ 'selected' if SETTINGS.theme=='auto' }}>Auto</option>
+                        <option value="light" {{ 'selected' if SETTINGS.theme=='light' }}>Clair</option>
+                        <option value="dark" {{ 'selected' if SETTINGS.theme=='dark' }}>Sombre</option>
+                    </select>
+                </div>
+                <div class="field">
+                    <div class="label">Affichage des tableaux</div>
+                    <select name="table_mode">
+                        <option value="scroll" {{ 'selected' if SETTINGS.table_mode=='scroll' }}>Défilement horizontal
+                        </option>
+                        <option value="stacked" {{ 'selected' if SETTINGS.table_mode=='stacked' }}>Empilé (mobile)
+                        </option>
+                    </select>
+                </div>
+                <div class="field">
+                    <div class="label">Menu latéral compact</div>
+                    <label style="display:flex;align-items:center;gap:8px">
+                        <input type="checkbox" name="sidebar_compact" {{ 'checked' if SETTINGS.sidebar_compact }}>
+                        Activer
+                    </label>
+                </div>
+            </div>
+        </div>
 
-        <label class="form-row">
-            <span>Thème préféré</span>
-            <select name="theme">
-                <option value="auto" {{ 'selected' if SETTINGS.theme=='auto' }}>Automatique (suivre système)</option>
-                <option value="light" {{ 'selected' if SETTINGS.theme=='light' }}>Clair</option>
-                <option value="dark" {{ 'selected' if SETTINGS.theme=='dark' }}>Sombre</option>
-            </select>
-        </label>
-        <div class="hint">Le choix s’applique immédiatement et sera mémorisé pour toutes les pages.</div>
+        <div class="card">
+            <h2 style="margin:6px 0 12px">Produits / stocks</h2>
+            <div class="row">
+                <div class="field">
+                    <div class="label">Durée de conservation par défaut (jours)</div>
+                    <input type="number" name="default_shelf_days" value="{{ SETTINGS.default_shelf_days|default(90) }}"
+                        min="1">
+                </div>
+                <div class="field">
+                    <div class="label">Seuil “faible stock” par défaut</div>
+                    <input type="number" name="low_stock_default" value="{{ SETTINGS.low_stock_default|default(1) }}"
+                        min="0">
+                </div>
+            </div>
+        </div>
 
-        <label class="form-row" style="margin-top:12px;">
-            <span>Menu compact au démarrage</span>
-            <input type="checkbox" name="sidebar_compact" {{ 'checked' if SETTINGS.sidebar_compact }}>
-        </label>
-    </div>
+        <div class="card">
+            <h2 style="margin:6px 0 12px">Toasts (notifications)</h2>
+            <div class="row">
+                <div class="field">
+                    <div class="label">Durée d’affichage (ms)</div>
+                    <input type="number" name="toast_duration" min="500" step="100"
+                        value="{{ SETTINGS.toast_duration|default(3000) }}">
+                </div>
+                <div class="field">
+                    <div class="label">Couleur “Succès”</div>
+                    <input type="color" name="toast_ok" value="{{ SETTINGS.toast_ok|default('#4caf50') }}">
+                </div>
+                <div class="field">
+                    <div class="label">Couleur “Avertissement”</div>
+                    <input type="color" name="toast_warn" value="{{ SETTINGS.toast_warn|default('#ffb300') }}">
+                </div>
+                <div class="field">
+                    <div class="label">Couleur “Erreur”</div>
+                    <input type="color" name="toast_error" value="{{ SETTINGS.toast_error|default('#ef5350') }}">
+                </div>
+            </div>
+        </div>
 
-    <div class="card settings-card">
-        <h2>📊 Tableaux & valeurs par défaut</h2>
+        <div class="row" style="justify-content:flex-end">
+            <button class="primary" style="max-width:220px">Enregistrer</button>
+        </div>
 
-        <label class="form-row">
-            <span>Affichage des tableaux</span>
-            <select name="table_mode">
-                <option value="scroll" {{ 'selected' if SETTINGS.table_mode=='scroll' }}>Défilement horizontal</option>
-                <option value="stacked" {{ 'selected' if SETTINGS.table_mode=='stacked' }}>Empilé (mobile)</option>
-            </select>
-        </label>
+    </form>
+</div>
+{% endblock %}
 
-        <label class="form-row" style="margin-top:12px;">
-            <span>Jours de conservation par défaut</span>
-            <input type="number" min="1" name="default_shelf_days" value="{{ SETTINGS.default_shelf_days }}">
-        </label>
-
-        <label class="form-row">
-            <span>Seuil stock faible (par défaut)</span>
-            <input type="number" min="0" name="low_stock_default" value="{{ SETTINGS.low_stock_default }}">
-        </label>
-    </div>
-
-    <div style="grid-column:1/-1; display:flex; gap:12px;">
-        <button type="submit">💾 Enregistrer</button>
-        <a class="button" href="{{ BASE }}">← Retour</a>
-    </div>
-</form>
+{% block scripts %}
+<script>
+    (function () {
+        const p = new URLSearchParams(location.search);
+        if (p.get('ok') === '1') window.showToast('Paramètres enregistrés.', 'ok');
+        if (p.get('error') === '1') window.showToast('Erreur lors de l’enregistrement.', 'error');
+    })();
+</script>
 {% endblock %}

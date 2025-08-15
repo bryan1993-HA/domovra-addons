@@ -68,26 +68,6 @@ def list_locations():
     with _conn() as c:
         return [dict(r) for r in c.execute("SELECT * FROM locations ORDER BY name")]
 
-def list_locations_with_counts():
-    """
-    Renvoie la liste des emplacements avec le nombre de lots rattachés.
-    Retour: [{id, name, lot_count}]
-    """
-    with _conn() as c:
-        try:
-            q = """
-                SELECT l.id, l.name, COALESCE(COUNT(s.id), 0) AS lot_count
-                FROM locations l
-                LEFT JOIN stock_lots s ON s.location_id = l.id
-                GROUP BY l.id, l.name
-                ORDER BY l.name
-            """
-            return [dict(r) for r in c.execute(q)]
-        except sqlite3.OperationalError:
-            # Si la table stock_lots n'existe pas encore, on retourne 0
-            q = "SELECT id, name, 0 AS lot_count FROM locations ORDER BY name"
-            return [dict(r) for r in c.execute(q)]
-
 def update_location(location_id: int, name: str):
     with _conn() as c:
         c.execute("UPDATE locations SET name=? WHERE id=?", (name.strip(), location_id))
@@ -102,6 +82,14 @@ def delete_location(location_id: int):
             c.execute(f"DELETE FROM movements WHERE lot_id IN ({ph})", lot_ids)
             c.execute(f"DELETE FROM stock_lots WHERE id IN ({ph})", lot_ids)
         c.execute("DELETE FROM locations WHERE id=?", (location_id,))
+        c.commit()
+
+def move_lots_from_location(src_location_id: int, dest_location_id: int):
+    """Déplace tous les lots d'un emplacement vers un autre (sans toucher aux mouvements)."""
+    if int(src_location_id) == int(dest_location_id):
+        return
+    with _conn() as c:
+        c.execute("UPDATE stock_lots SET location_id=? WHERE location_id=?", (int(dest_location_id), int(src_location_id)))
         c.commit()
 
 # ---------- Products
