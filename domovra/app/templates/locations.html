@@ -292,8 +292,9 @@
             </td>
             <td>
               {% if loc.lot_count is defined %}
-              <span class="pill {{ 'ok' if (loc.lot_count|int) > 0 else '' }}">{{ loc.lot_count }} lot{{ 1 if
-                loc.lot_count == 1 else 's' }}</span>
+              <span class="pill {{ 'ok' if (loc.lot_count|int) > 0 else '' }}">
+                {{ loc.lot_count|int }} lot{{ '' if (loc.lot_count|int) == 1 else 's' }}
+              </span>
               {% else %}
               <span class="muted">—</span>
               {% endif %}
@@ -333,7 +334,7 @@
           <div class="loc-title">{{ loc.name }}</div>
           <div class="loc-meta">
             {% if loc.lot_count is defined %}
-            <span>🧮 {{ loc.lot_count }} lot{{ 1 if loc.lot_count == 1 else 's' }}</span>
+            <span>🧮 {{ loc.lot_count|int }} lot{{ '' if (loc.lot_count|int) == 1 else 's' }}</span>
             {% endif %}
           </div>
         </div>
@@ -393,6 +394,7 @@
   function openRename(id, currentName) {
     const dlg = document.getElementById('dlg-rename');
     const idInput = document.getElementById('dlg-location-id');
+    a = idInput;
     const nameInput = document.getElementById('dlg-location-name');
     if (!dlg || !idInput || !nameInput) return;
     idInput.value = String(id ?? '');
