@@ -272,11 +272,27 @@
 
   /* OFF box */
   #off-box {
-    border: 1px solid var(--border);
-    border-radius: 12px;
+    background: transparent !important;
+    border: none !important;
+    border-radius: 0 !important;
     padding: 10px;
-    background: #111a31
   }
+
+  #off-box input,
+  #off-box button,
+  #off-box .infield-btn {
+    background: transparent !important;
+    border: 1px solid var(--border);
+  }
+
+  #off-box input:focus,
+  #off-box button:focus,
+  #off-box .infield-btn:focus {
+    outline: none;
+    background: rgba(255, 255, 255, 0.05) !important;
+    /* léger effet au focus */
+  }
+
 
   #off_result {
     display: none;
