@@ -52,7 +52,10 @@
   .label {
     font-size: 12px;
     color: var(--muted);
-    margin-bottom: 4px
+    margin-bottom: 4px;
+    display: flex;
+    align-items: center;
+    gap: 6px
   }
 
   .row {
@@ -203,7 +206,6 @@
 
   /* OFF box */
   #off-box {
-    margin-top: 10px;
     border: 1px solid var(--border);
     border-radius: 12px;
     padding: 10px;
@@ -224,6 +226,58 @@
     color: #ffb4b4;
     margin-top: .35rem
   }
+
+  /* Tooltips — pastille “?” + bulle (style aligné index) */
+  .qmark {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 18px;
+    height: 18px;
+    border-radius: 999px;
+    font-size: 12px;
+    line-height: 1;
+    border: 1px solid var(--border);
+    background: #101828;
+    color: #cfe3ff;
+    cursor: help;
+    position: relative
+  }
+
+  .qmark:hover {
+    background: #0f1a2e
+  }
+
+  .qmark[data-tip]::after {
+    content: attr(data-tip);
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+    bottom: calc(100% + 8px);
+    background: #0f1524;
+    border: 1px solid var(--border);
+    color: #e6eef9;
+    padding: 8px 10px;
+    border-radius: 8px;
+    width: max-content;
+    max-width: min(420px, 88vw);
+    box-shadow: 0 6px 16px rgba(0, 0, 0, .35);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity .15s ease;
+    white-space: normal;
+    font-size: 12px;
+    z-index: 30;
+  }
+
+  .qmark[data-tip]:hover::after {
+    opacity: 1
+  }
+
+  /* Sur mobile : affichage au clic */
+  .qmark:active::after {
+    opacity: 1
+  }
 </style>
 {% endblock %}
 
@@ -234,40 +288,15 @@
 {% block content %}
 <div class="wrap">
 
-  <!-- Ajout express -->
+  <!-- Open Food Facts & Scanner (placé AVANT Ajout express) -->
   <div class="card">
-    <div class="title">
-      <h2>Ajout express</h2><span class="muted">→ créer un nouveau produit</span>
+    <div class="title" style="margin:0 0 6px 0">
+      <h2>Open Food Facts & Scanner</h2>
+      <span class="muted">→ préremplir le formulaire</span>
+      <span class="qmark"
+        data-tip="Saisis ou scanne un code‑barres (EAN/GTIN). On interroge Open Food Facts pour proposer un nom et une indication d’unité. Tu peux ensuite ajuster avant de créer le produit.">?</span>
     </div>
-    <form id="create_form" method="post" action="{{ BASE }}product/add" class="form-grid">
-      <div>
-        <div class="label">Nom du produit</div>
-        <input name="name" id="create_name" type="text" required placeholder="ex. Pâtes, Lait demi-écrémé">
-      </div>
-      <div>
-        <div class="label">Unité</div>
-        <input name="unit" id="create_unit" type="text" placeholder="pièce, g, kg, ml, L…">
-      </div>
-      <div>
-        <div class="label">Conservation (jours)</div>
-        <input name="shelf" id="create_shelf" type="number" min="1" placeholder="ex. 90">
-      </div>
-      <div>
-        <div class="label">Code-barres (facultatif)</div>
-        <input name="barcode" id="create_barcode" type="text" inputmode="numeric" placeholder="EAN/GTIN">
-      </div>
-      <div class="row" style="justify-content:flex-end">
-        <button class="primary">＋ Ajouter</button>
-        <button id="create_reset" type="button" class="secondary">Réinitialiser</button>
-      </div>
-    </form>
-
-    <!-- OFF + Scanner intégré -->
     <div id="off-box">
-      <div class="title" style="margin:0 0 6px 0">
-        <h2 style="font-size:16px">Open Food Facts & Scanner</h2>
-        <span class="muted">→ préremplir le formulaire</span>
-      </div>
       <div class="row" style="flex-wrap:wrap">
         <input id="off_barcode" type="text" inputmode="numeric"
           placeholder="Scanner / saisir un code-barres (EAN/GTIN)…" style="flex:1;min-width:220px">
@@ -277,6 +306,8 @@
         <input id="off_file" type="file" accept="image/*" capture="environment" style="display:none">
         <button id="off_paste" class="secondary" type="button">📋 Coller</button>
         <button id="off_clear" class="secondary" type="button">✖ Effacer</button>
+        <span class="qmark"
+          data-tip="Si le flux caméra ne fonctionne pas dans l’app Home Assistant, utilise « Prendre une photo ». Tu peux aussi coller un code depuis le presse‑papiers.">?</span>
       </div>
       <div id="off_hint" class="muted" style="margin-top:.4rem">
         Astuce : essaie <b>5449000000996</b> (Coca‑Cola 1,5 L). Si le flux <b>📷 Scanner (live)</b> ne démarre pas dans
@@ -289,12 +320,18 @@
           <img id="off_img" alt="photo produit"
             style="width:80px;height:80px;object-fit:cover;border-radius:8px;border:1px solid var(--border)">
           <div>
-            <div><b id="off_name">Nom</b></div>
+            <div style="display:flex;align-items:center;gap:6px;">
+              <b id="off_name">Nom</b>
+              <span class="qmark"
+                data-tip="Nom et marque récupérés d’Open Food Facts. Tu peux les modifier avant d’ajouter le produit.">?</span>
+            </div>
             <div id="off_brand" class="muted">Marque</div>
             <div class="muted" style="margin-top:.25rem">Quantité indiquée : <span id="off_qty">—</span></div>
             <div class="muted">Source : Open Food Facts</div>
             <div style="margin-top:.5rem;display:flex;gap:.5rem;flex-wrap:wrap">
               <button id="off_fill_create" type="button">➕ Préremplir le formulaire d’ajout</button>
+              <span class="qmark"
+                data-tip="Recopie le nom et suggère l’unité à partir de la quantité (ml, L, g, kg, pièce…). Tu peux toujours corriger.">?</span>
             </div>
           </div>
         </div>
@@ -306,10 +343,55 @@
     </div>
   </div>
 
+  <!-- Ajout express -->
+  <div class="card">
+    <div class="title">
+      <h2>Ajout express</h2><span class="muted">→ créer un nouveau produit</span>
+      <span class="qmark"
+        data-tip="Crée rapidement un produit utilisable dans les stocks. L’unité sert de repère (pièce, g, kg, ml, L…) et la conservation (jours) permet de calculer les états Bientôt/Urgent.">?</span>
+    </div>
+    <form id="create_form" method="post" action="{{ BASE }}product/add" class="form-grid">
+      <div>
+        <div class="label">Nom du produit
+          <span class="qmark"
+            data-tip="Nom court et explicite. Exemple : « Lait demi‑écrémé », « Pâtes », « Riz ».">?</span>
+        </div>
+        <input name="name" id="create_name" type="text" required placeholder="ex. Pâtes, Lait demi-écrémé">
+      </div>
+      <div>
+        <div class="label">Unité
+          <span class="qmark"
+            data-tip="Indique l’unité de référence (pièce, g, kg, ml, L…). Elle sert d’aide lors des mouvements de stock.">?</span>
+        </div>
+        <input name="unit" id="create_unit" type="text" placeholder="pièce, g, kg, ml, L…">
+      </div>
+      <div>
+        <div class="label">Conservation (jours)
+          <span class="qmark"
+            data-tip="Nombre de jours de conservation par défaut (utile pour les états : OK / Bientôt / Urgent). Tu peux laisser vide si non pertinent.">?</span>
+        </div>
+        <input name="shelf" id="create_shelf" type="number" min="1" placeholder="ex. 90">
+      </div>
+      <div>
+        <div class="label">Code-barres (facultatif)
+          <span class="qmark"
+            data-tip="EAN/GTIN du produit. Rempli automatiquement si tu utilises le scanner ci‑dessus.">?</span>
+        </div>
+        <input name="barcode" id="create_barcode" type="text" inputmode="numeric" placeholder="EAN/GTIN">
+      </div>
+      <div class="row" style="justify-content:flex-end">
+        <button class="primary">＋ Ajouter</button>
+        <button id="create_reset" type="button" class="secondary">Réinitialiser</button>
+      </div>
+    </form>
+  </div>
+
   <!-- Outils -->
   <div class="card">
     <div class="title">
       <h2>Outils</h2><span class="muted">Recherche & compteur</span>
+      <span class="qmark"
+        data-tip="Filtre instantané sur le nom, l’unité et le code‑barres. Le compteur se met à jour sur les résultats visibles.">?</span>
     </div>
     <div class="tools-row">
       <input id="q" class="tools-search" type="search" placeholder="Rechercher un produit…">
@@ -343,8 +425,10 @@
         <tr data-name="{{ it.name|lower }}" data-unit="{{ it.unit|lower }}"
           data-barcode="{{ (it.barcode or '')|lower }}">
           <td>
-            <div style="font-weight:600">{{ it.name }}</div>
-            {% if it.barcode %}<div class="muted">EAN : {{ it.barcode }}</div>{% endif %}
+            <div style="font-weight:600;display:flex;gap:6px;align-items:center">
+              <span>{{ it.name }}</span>
+              {% if it.barcode %}<span class="muted">EAN : {{ it.barcode }}</span>{% endif %}
+            </div>
           </td>
           <td>
             <div class="row" style="flex-wrap:wrap">
@@ -478,7 +562,7 @@
       const match = txt.includes(t);
       c.style.display = match ? '' : 'none';
     });
-    const pc = document.getElementById('prod-count'); if (pc) pc.textContent = shown || rows.length;
+    const pc = document.getElementById('prod-count'); if (pc) pc.textContent = t ? shown : rows.length;
   }
   if (q) { q.addEventListener('input', e => applyFilter(e.target.value)); }
 
@@ -690,7 +774,7 @@
     }
   }
 
-  elScan.addEventListener('click', openScanModal);
+  document.getElementById('off_scan').addEventListener('click', openScanModal);
   btnScanClose.addEventListener('click', closeScanModal);
 
   // Fallback photo (ouvre la caméra et scanne l’image)
