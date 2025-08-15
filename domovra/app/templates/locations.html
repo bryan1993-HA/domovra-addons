@@ -3,7 +3,6 @@
 
 {% block content %}
 
-<!-- Ajout express -->
 <section class="panel add-panel">
   <form id="add-form" class="add-grid" method="post" action="{{ BASE }}location/add" autocomplete="off">
     <div class="field">
@@ -11,7 +10,7 @@
       <input id="add-name" name="name" type="text" required placeholder="ex. Frigo, Placard haut, Bac 1" />
       <small class="help">Choisis un libellé simple. Tu pourras le renommer plus tard.</small>
     </div>
-    <div class="actions">
+    <div class="actions-pane">
       <button class="btn btn-primary" type="submit">
         <span class="i i-plus" aria-hidden="true"></span>
         Ajouter au listing
@@ -20,7 +19,6 @@
   </form>
 </section>
 
-<!-- Outils -->
 <section class="panel tools">
   <div class="tools-grid">
     <div class="tool">
@@ -36,40 +34,38 @@
   </div>
 </section>
 
-<!-- Liste -->
 <section class="panel list-wrapper">
   <!-- TABLE desktop -->
   <table class="table desktable" aria-label="Liste des emplacements">
-    <!-- Fige les 3 colonnes pour un alignement parfait -->
     <colgroup>
-      <col style="width: 48%">
-      <col style="width: 24%">
-      <col style="width: 28%">
+      <col style="width:48%">
+      <col style="width:24%">
+      <col style="width:28%">
     </colgroup>
     <thead>
       <tr>
-        <th class="col-name">Nom</th>
-        <th class="col-infos">Infos</th>
-        <th class="col-actions">Actions</th>
+        <th>Nom</th>
+        <th>Infos</th>
+        <th>Actions</th>
       </tr>
     </thead>
     <tbody id="locations-body">
       {% for loc in items %}
       <tr class="row" data-id="{{ loc.id }}" data-name="{{ loc.name }}" data-rename-url="{{ BASE }}location/update"
         data-delete-url="{{ BASE }}location/delete">
-        <td class="name">
+        <td class="col-name">
           <span class="label">{{ loc.name }}</span>
         </td>
-        <td class="infos">
+        <td class="col-infos">
           {% if loc.lot_count is defined %}
-          <span class="badge" title="Nombre de lots liés">{{ loc.lot_count }} lot{{ 1 if loc.lot_count == 1 else 's'
+          <span class="badge" title="Nombre de lots">{{ loc.lot_count }} lot{{ 1 if loc.lot_count == 1 else 's'
             }}</span>
           {% else %}
           <span class="muted">—</span>
           {% endif %}
         </td>
-        <td class="actions-td">
-          <div class="actions">
+        <td class="col-actions-td">
+          <div class="row-actions">
             <button class="btn btn-soft btn-rename" type="button" title="Renommer">
               <span class="i i-edit" aria-hidden="true"></span>
               <span class="hide-sm">Modifier</span>
@@ -273,7 +269,7 @@
     background: var(--primary-color, #3b82f6);
   }
 
-  /* === Table desktop — alignement rigoureux === */
+  /* TABLE desktop — alignement rigoureux */
   .table {
     width: 100%;
     table-layout: fixed;
@@ -302,7 +298,7 @@
     vertical-align: middle;
   }
 
-  .name .label {
+  .col-name .label {
     display: inline-block;
     max-width: 100%;
     overflow: hidden;
@@ -320,13 +316,15 @@
     font-size: .85rem;
   }
 
-  .actions-td {
+  /* IMPORTANT : nouvelles classes, pas de conflit */
+  .col-actions-td {
     text-align: right;
   }
 
-  .actions {
+  .row-actions {
     display: inline-flex;
     gap: .4rem;
+    justify-content: flex-end;
   }
 
   /* Cards mobile */
@@ -362,7 +360,7 @@
     justify-content: flex-end;
   }
 
-  @media (max-width: 900px) {
+  @media (max-width:900px) {
     .add-grid {
       grid-template-columns: 1fr;
     }
@@ -384,7 +382,7 @@
     }
   }
 
-  @media (min-width: 901px) {
+  @media (min-width:901px) {
     .desktable {
       display: table;
     }
@@ -425,7 +423,7 @@
     const $$ = (s, p = document) => Array.from(p.querySelectorAll(s));
 
     const search = $('#search-input');
-    const norm = (t) => (t || '').normalize('NFD').replace(/\p{Diacritic}/gu, '').toLowerCase();
+    const norm = t => (t || '').normalize('NFD').replace(/\p{Diacritic}/gu, '').toLowerCase();
     function filter(q) {
       const N = norm(q);
       const rows = $$('#locations-body .row');
@@ -469,8 +467,9 @@
     [frmR, frmD, $('#add-form')].forEach(f => {
       if (!f) return;
       f.addEventListener('submit', () => {
-        const s = f.querySelector('button[type="submit"]'); if (s) { s.disabled = true; s.textContent = s.textContent + '…'; }
-      })
+        const s = f.querySelector('button[type="submit"]');
+        if (s) { s.disabled = true; s.textContent = s.textContent + '…'; }
+      });
     });
   })();
 </script>
