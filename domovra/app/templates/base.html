@@ -631,12 +631,27 @@
       const mDur = document.querySelector('meta[name="domovra:toastDuration"]');
       const defaultDuration = mDur ? (parseInt(mDur.content || '3000', 10) || 3000) : 3000;
 
+      // Lit une variable CSS (déjà renseignée par Jinja dans :root)
+      const cssVar = (name) => getComputedStyle(document.documentElement)
+        .getPropertyValue(name).trim();
+
       function showToast(msg, type = 'ok', timeout) {
         if (!stack) return;
         const el = document.createElement('div');
         el.className = `toast ${type}`;
         el.textContent = msg;
+
+        // Applique explicitement les couleurs depuis les variables CSS
+        let col, bg;
+        if (type === 'warn') { col = cssVar('--toast-warn'); bg = cssVar('--toast-warn-bg'); }
+        else if (type === 'error') { col = cssVar('--toast-error'); bg = cssVar('--toast-err-bg'); }
+        else { col = cssVar('--toast-ok'); bg = cssVar('--toast-ok-bg'); }
+
+        if (col) el.style.borderLeftColor = col;
+        if (bg) el.style.background = bg;
+
         stack.appendChild(el);
+
         const hide = () => {
           el.style.transition = '200ms ease';
           el.style.opacity = '0';
