@@ -1,326 +1,417 @@
 {% extends "base.html" %}
 {% block title %}Domovra — Emplacements{% endblock %}
 
-{% block content %}
-<!-- ====== Barre outils (comme index : panel + chip compteur) ====== -->
-<section class="panel">
-  <div class="tools-grid" style="display:grid;grid-template-columns:1fr auto;gap:.75rem;align-items:end">
-    <div class="tool">
-      <label for="search-input">Rechercher</label>
-      <input id="search-input" type="search" placeholder="Filtrer les emplacements…" />
-    </div>
-    <div class="tool">
-      <div class="chip"
-        style="display:inline-flex;align-items:center;gap:.5rem;padding:.35rem .6rem;border-radius:999px;border:1px solid rgba(120,120,120,.25);background:rgba(255,255,255,.06);">
-        <span class="dot"
-          style="width:.5rem;height:.5rem;border-radius:50%;background:var(--primary-color,#3b82f6)"></span>
-        <strong>{{ items|length }}</strong> emplacements
-      </div>
-    </div>
-  </div>
-</section>
-
-<!-- ====== Ajout express (reprend la grille de l’accueil) ====== -->
-<section class="panel">
-  <form id="add-form" class="add-grid" method="post" action="{{ BASE }}location/add" autocomplete="off"
-    style="display:grid;grid-template-columns:1fr auto;gap:.75rem;align-items:end">
-    <div class="field" style="display:grid;gap:.35rem">
-      <label for="add-name">Nom de l’emplacement</label>
-      <input id="add-name" name="name" type="text" required placeholder="ex. Frigo, Placard haut, Bac 1" />
-      <small class="help" style="opacity:.7">Tu pourras le renommer plus tard.</small>
-    </div>
-    <div>
-      <button class="btn btn-primary" type="submit">
-        <span class="i i-plus" aria-hidden="true"></span>
-        <span class="btn-text">Ajouter</span>
-      </button>
-    </div>
-  </form>
-</section>
-
-<!-- ====== Liste (table desktop / cartes mobile, comme Top 8) ====== -->
-<section class="panel">
-  <!-- TABLE DESKTOP -->
-  <table class="table desktable" aria-label="Liste des emplacements"
-    style="width:100%;border-collapse:separate;border-spacing:0 6px;">
-    <!-- Largeurs fixes 25 / 25 / 50 pour caler “Actions” -->
-    <colgroup>
-      <col style="width:25%">
-      <col style="width:25%">
-      <col style="width:50%">
-    </colgroup>
-    <thead>
-      <tr>
-        <th>Nom</th>
-        <th>Infos</th>
-        <th>Actions</th>
-      </tr>
-    </thead>
-    <tbody id="locations-body">
-      {% for loc in items %}
-      <tr data-id="{{ loc.id }}" data-name="{{ loc.name }}" data-rename-url="{{ BASE }}location/update"
-        data-delete-url="{{ BASE }}location/delete">
-        <td class="t-name">
-          <span class="label"
-            style="display:inline-block;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{
-            loc.name }}</span>
-        </td>
-        <td class="t-infos">
-          {% if loc.lot_count is defined %}
-          <span class="badge">{{ loc.lot_count }} lot{{ 1 if loc.lot_count == 1 else 's' }}</span>
-          {% else %}
-          <span class="muted">—</span>
-          {% endif %}
-        </td>
-        <td class="t-actions">
-          <button class="btn btn-soft btn-rename" type="button" title="Renommer">
-            <span class="i i-edit" aria-hidden="true"></span>
-            <span class="btn-text">Modifier</span>
-          </button>
-          <button class="btn btn-danger btn-delete" type="button" title="Supprimer">
-            <span class="i i-trash" aria-hidden="true"></span>
-            <span class="btn-text">Supprimer</span>
-          </button>
-        </td>
-      </tr>
-      {% endfor %}
-    </tbody>
-  </table>
-
-  <!-- CARTES MOBILE (même logique que l’accueil) -->
-  <div class="mobcards" id="locations-cards" aria-label="Liste des emplacements (cartes)"
-    style="display:none;grid-template-columns:1fr;gap:.75rem">
-    {% for loc in items %}
-    <article class="card" data-id="{{ loc.id }}" data-name="{{ loc.name }}" data-rename-url="{{ BASE }}location/update"
-      data-delete-url="{{ BASE }}location/delete">
-      <header class="card-top" style="display:flex;align-items:center;justify-content:space-between;gap:.75rem">
-        <h3 class="title" style="margin:0">{{ loc.name }}</h3>
-        <div>
-          {% if loc.lot_count is defined %}
-          <span class="badge">{{ loc.lot_count }} lot{{ 1 if loc.lot_count == 1 else 's' }}</span>
-          {% endif %}
-        </div>
-      </header>
-      <footer class="card-actions" style="margin-top:.6rem;display:flex;gap:.5rem;justify-content:flex-end">
-        <!-- Icônes seules en mobile pour tenir “à côté du nom” -->
-        <button class="btn btn-soft btn-rename" type="button" title="Renommer">
-          <span class="i i-edit" aria-hidden="true"></span>
-        </button>
-        <button class="btn btn-danger btn-delete" type="button" title="Supprimer">
-          <span class="i i-trash" aria-hidden="true"></span>
-        </button>
-      </footer>
-    </article>
-    {% endfor %}
-  </div>
-</section>
-
-<!-- ====== Modales (renommer / supprimer) ====== -->
-<dialog id="rename-dialog" class="modal">
-  <form id="rename-form" method="post" action="{{ BASE }}location/update">
-    <h3 class="modal-title">Renommer l’emplacement</h3>
-    <div class="field" style="display:grid;gap:.35rem">
-      <label for="rename-input">Nouveau nom</label>
-      <input id="rename-input" name="name" type="text" required />
-      <input id="rename-hidden" name="location_id" type="hidden" />
-    </div>
-    <div class="modal-actions" style="display:flex;gap:.5rem;justify-content:flex-end">
-      <button class="btn" type="button" id="rename-cancel">Annuler</button>
-      <button class="btn btn-primary" type="submit">Enregistrer</button>
-    </div>
-  </form>
-</dialog>
-
-<dialog id="delete-dialog" class="modal">
-  <form id="delete-form" method="post" action="{{ BASE }}location/delete">
-    <h3 class="modal-title">Confirmer la suppression</h3>
-    <p>Supprimer <strong id="delete-name"></strong> ?</p>
-    <p class="hint" style="opacity:.7">Les lots présents à cet emplacement seront également supprimés.</p>
-    <input id="delete-hidden" name="location_id" type="hidden" />
-    <div class="modal-actions" style="display:flex;gap:.5rem;justify-content:flex-end">
-      <button class="btn" type="button" id="delete-cancel">Annuler</button>
-      <button class="btn btn-danger" type="submit">Supprimer</button>
-    </div>
-  </form>
-</dialog>
-
-<!-- ====== Ajustements minimes (scopés) pour colwidth & boutons ====== -->
+{% block head %}
 <style>
-  /* On s’appuie au maximum sur les styles globaux de index/base.
-     Ici seulement les règles nécessaires pour caler “Actions” et le responsive texte des boutons. */
+  /* === mêmes règles utilitaires que index.html === */
+  :root {
+    --gap: 12px;
+    --radius: 14px;
+    --border: #263043;
+    --chip: #1a2230;
+    --muted: #8ea0b7;
+    --accent: #00bcd4;
+    --ok: #4caf50;
+    --warn: #ffb300;
+    --danger: #ef5350;
+  }
 
-  .badge {
-    display: inline-flex;
+  .wrap {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 0 12px;
+  }
+
+  .row {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+
+  .card {
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 12px;
+    margin-bottom: 12px;
+  }
+
+  .title {
+    display: flex;
     align-items: center;
-    gap: .35rem;
-    padding: .2rem .5rem;
+    gap: 10px;
+    margin: 6px 0 8px;
+  }
+
+  .title h2 {
+    font-size: 16px;
+    margin: 0;
+  }
+
+  .chip {
+    background: var(--chip);
+    border: 1px solid var(--border);
     border-radius: 999px;
-    background: rgba(127, 127, 127, .25);
-    font-size: .85rem
+    padding: 6px 10px;
+    color: var(--muted);
+  }
+
+  .label {
+    font-size: 12px;
+    color: var(--muted);
+    display: flex;
+    align-items: center;
+    gap: 6px;
   }
 
   .muted {
-    opacity: .6
+    color: var(--muted);
   }
 
-  .btn {
-    display: inline-flex;
-    align-items: center;
-    gap: .45rem;
-    padding: .45rem .6rem;
+  input,
+  select,
+  button {
+    border: 1px solid var(--border);
     border-radius: 10px;
-    border: 1px solid rgba(120, 120, 120, .25);
+    padding: 10px;
     background: transparent;
-    cursor: pointer
+    color: inherit;
   }
 
-  .btn-primary {
-    background: var(--primary-color, #3b82f6);
-    color: #fff;
-    border-color: transparent
+  button.primary {
+    background: var(--accent);
+    border: 0;
+    color: #02222a;
+    font-weight: 600;
+    cursor: pointer;
   }
 
-  .btn-danger {
-    background: #7f1d1d;
-    color: #fff;
-    border-color: transparent
+  /* Table au look index */
+  table {
+    width: 100%;
+    border-collapse: collapse;
   }
 
-  .btn-soft {
-    background: rgba(255, 255, 255, .06)
+  thead th {
+    font-size: 12px;
+    color: var(--muted);
+    text-align: left;
+    padding: 6px 8px;
+    border-bottom: 1px solid var(--border);
   }
 
-  .i {
-    display: inline-block;
-    width: 1em;
-    text-align: center
+  tbody td {
+    padding: 10px 8px;
+    border-bottom: 1px solid var(--border);
   }
 
-  .i-plus::before {
-    content: "＋"
+  tbody tr:hover {
+    background-color: rgba(255, 255, 255, .03);
   }
 
-  .i-edit::before {
-    content: "✏️"
+  .pill {
+    padding: 2px 8px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 600;
+    border: 1px solid transparent;
   }
 
-  .i-trash::before {
-    content: "🗑️"
+  .ok {
+    color: var(--ok);
+    border-color: rgba(76, 175, 80, .35);
   }
 
-  /* Colonne Actions : 2 boutons toujours sur la même ligne, qui s’adaptent (shrink) */
+  .warn {
+    color: var(--warn);
+    border-color: rgba(255, 179, 0, .35);
+  }
+
+  .danger {
+    color: var(--danger);
+    border-color: rgba(239, 83, 80, .35);
+  }
+
+  /* Form grille simple pour l’ajout */
+  .form-grid {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 12px;
+    align-items: end;
+  }
+
+  @media (max-width:700px) {
+    .form-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  /* Liste — colonnes fixées comme demandé 25/25/50 */
+  .table-responsive {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
   .t-actions {
-    display: flex;
-    gap: .4rem;
-    justify-content: flex-end;
-    align-items: center
+    text-align: right;
   }
 
-  .t-actions .btn {
-    flex: 1 1 auto;
+  /* Dans les tableaux, on annule le width:100% global de base.html pour les boutons d’action */
+  td .btn-inline {
+    width: auto !important;
     min-width: 0;
-    white-space: nowrap
+    flex: 0 0 auto;
   }
 
-  /* Desktop vs Mobile : table vs cartes */
-  @media (max-width:900px) {
-    .desktable {
-      display: none
+  /* Mobile : cartes à la façon du Top 8 */
+  .loc-cards {
+    display: none;
+  }
+
+  @media (max-width:700px) {
+    .table-responsive {
+      display: none;
     }
 
-    #locations-cards {
-      display: grid
+    .loc-cards {
+      display: grid;
+      gap: 10px;
     }
 
-    /* Icônes seules en mobile */
+    .loc-card {
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 10px;
+      background: #121620;
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .loc-main {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .loc-title {
+      font-weight: 600;
+    }
+
+    .loc-meta {
+      font-size: .9rem;
+      color: var(--muted);
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .loc-actions {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      justify-content: flex-end;
+    }
+
+    .loc-actions button {
+      width: auto !important;
+      min-width: 40px;
+    }
+
+    /* En mobile on veut seulement les icônes pour gagner de la place */
     .btn-text {
-      display: none
+      display: none;
     }
-  }
-
-  @media (min-width:901px) {
-    .desktable {
-      display: table
-    }
-
-    #locations-cards {
-      display: none
-    }
-  }
-
-  /* Dialogs visuels cohérents avec index */
-  .modal::backdrop {
-    background: rgba(0, 0, 0, .35)
-  }
-
-  .modal {
-    border: none;
-    border-radius: 20px;
-    padding: 1rem;
-    width: min(520px, 92vw);
-    background: var(--card-background-color, #111827);
-    color: inherit
-  }
-
-  .modal-title {
-    margin: 0 0 .4rem
   }
 </style>
+{% endblock %}
 
+{% block content %}
+<div class="wrap">
+
+  <!-- Outils -->
+  <div class="card">
+    <div class="title">
+      <h2>Outils</h2><span class="muted">Recherche & compteur</span>
+    </div>
+    <div class="row" style="align-items:end">
+      <div style="flex:1 1 320px;min-width:220px">
+        <div class="label">Rechercher</div>
+        <input id="search-input" type="search" placeholder="Filtrer les emplacements…">
+      </div>
+      <div>
+        <span class="chip">📍 Emplacements : <b>{{ items|length }}</b></span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Ajout express d’un emplacement -->
+  <div class="card">
+    <div class="title">
+      <h2>Ajout express</h2><span class="muted">→ créer un nouvel emplacement</span>
+    </div>
+
+    <form method="post" action="{{ BASE }}location/add" class="form-grid">
+      <div>
+        <div class="label">Nom de l’emplacement</div>
+        <input name="name" type="text" required placeholder="ex. Frigo, Congélateur, Placard haut">
+      </div>
+      <button class="primary">＋ Ajouter</button>
+    </form>
+  </div>
+
+  <!-- Liste des emplacements -->
+  <div class="card">
+    <div class="title">
+      <h2>Liste</h2>
+    </div>
+
+    <!-- Version desktop/tablette -->
+    <div class="table-responsive">
+      <table>
+        <colgroup>
+          <col style="width:25%">
+          <col style="width:25%">
+          <col style="width:50%">
+        </colgroup>
+        <thead>
+          <tr>
+            <th>Nom</th>
+            <th>Infos</th>
+            <th style="text-align:right">Actions</th>
+          </tr>
+        </thead>
+        <tbody id="locations-body">
+          {% if items %}
+          {% for loc in items %}
+          <tr data-id="{{ loc.id }}" data-name="{{ loc.name }}" data-rename-url="{{ BASE }}location/update"
+            data-delete-url="{{ BASE }}location/delete">
+            <td>
+              <span
+                style="display:inline-block;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{
+                loc.name }}</span>
+            </td>
+            <td>
+              {% if loc.lot_count is defined %}
+              <span class="pill {{ 'ok' if (loc.lot_count|int) > 0 else '' }}">{{ loc.lot_count }} lot{{ 1 if
+                loc.lot_count == 1 else 's' }}</span>
+              {% else %}
+              <span class="muted">—</span>
+              {% endif %}
+            </td>
+            <td class="t-actions">
+              <div class="row" style="justify-content:flex-end;gap:8px">
+                <form method="post" action="{{ BASE }}location/update" class="row" style="gap:8px"
+                  onsubmit="return attachRename(this)">
+                  <input type="hidden" name="location_id" value="{{ loc.id }}">
+                  <input type="hidden" name="name" value="{{ loc.name }}">
+                  <button type="button" class="btn-inline"
+                    style="padding:8px 10px;border-radius:10px;border:1px solid var(--border)"
+                    onclick="openRename({{ loc.id }}, '{{ loc.name|e }}')">
+                    ✏️ <span class="btn-text">Modifier</span>
+                  </button>
+                </form>
+                <form method="post" action="{{ BASE }}location/delete"
+                  onsubmit="return confirmDelete({{ loc.id }}, '{{ loc.name|e }}')">
+                  <input type="hidden" name="location_id" value="{{ loc.id }}">
+                  <button class="btn-inline" style="padding:8px 10px;border-radius:10px;border:1px solid var(--border)">
+                    🗑️ <span class="btn-text">Supprimer</span>
+                  </button>
+                </form>
+              </div>
+            </td>
+          </tr>
+          {% endfor %}
+          {% else %}
+          <tr>
+            <td colspan="3" class="muted">Aucun emplacement.</td>
+          </tr>
+          {% endif %}
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Version mobile : cartes -->
+    <div class="loc-cards" id="locations-cards" aria-label="Liste des emplacements (cartes)">
+      {% if items %}
+      {% for loc in items %}
+      <div class="loc-card" data-id="{{ loc.id }}" data-name="{{ loc.name }}"
+        data-rename-url="{{ BASE }}location/update" data-delete-url="{{ BASE }}location/delete">
+        <div class="loc-main">
+          <div class="loc-title">{{ loc.name }}</div>
+          <div class="loc-meta">
+            {% if loc.lot_count is defined %}
+            <span>🧮 {{ loc.lot_count }} lot{{ 1 if loc.lot_count == 1 else 's' }}</span>
+            {% endif %}
+          </div>
+        </div>
+        <div class="loc-actions">
+          <button type="button" title="Renommer" onclick="openRename({{ loc.id }}, '{{ loc.name|e }}')"
+            style="padding:8px 10px;border-radius:10px;border:1px solid var(--border)">✏️</button>
+          <form method="post" action="{{ BASE }}location/delete"
+            onsubmit="return confirmDelete({{ loc.id }}, '{{ loc.name|e }}')">
+            <input type="hidden" name="location_id" value="{{ loc.id }}">
+            <button title="Supprimer"
+              style="padding:8px 10px;border-radius:10px;border:1px solid var(--border)">🗑️</button>
+          </form>
+        </div>
+      </div>
+      {% endfor %}
+      {% else %}
+      <div class="muted">Aucun emplacement.</div>
+      {% endif %}
+    </div>
+
+  </div>
+</div>
+
+<!-- Modales légères (natives) -->
+<dialog id="dlg-rename">
+  <form method="post" action="{{ BASE }}location/update" style="display:grid;gap:10px;min-width:min(420px,92vw)">
+    <h3 style="margin:0">Renommer l’emplacement</h3>
+    <input type="hidden" name="location_id" id="dlg-location-id">
+    <div>
+      <div class="label">Nouveau nom</div>
+      <input type="text" name="name" id="dlg-location-name" required>
+    </div>
+    <div class="row" style="justify-content:flex-end;gap:8px">
+      <button type="button" onclick="document.getElementById('dlg-rename').close()">Annuler</button>
+      <button class="primary">Enregistrer</button>
+    </div>
+  </form>
+</dialog>
+{% endblock %}
+
+{% block scripts %}
 <script>
+  // Filtre live (table + cartes)
   (function () {
-    const $ = (s, p = document) => p.querySelector(s);
-    const $$ = (s, p = document) => Array.from(p.querySelectorAll(s));
-
-    // Filtre live (table + cartes)
     const norm = t => (t || '').normalize('NFD').replace(/\p{Diacritic}/gu, '').toLowerCase();
-    const search = $('#search-input');
-    function filter(q) {
+    const search = document.getElementById('search-input');
+    function applyFilter(q) {
       const N = norm(q);
-      const rows = $$('#locations-body tr');
-      const cards = $$('#locations-cards .card');
-      [...rows, ...cards].forEach(el => {
-        const name = norm(el.dataset.name);
+      document.querySelectorAll('#locations-body tr, #locations-cards [data-id]').forEach(el => {
+        const name = norm(el.dataset.name || '');
         el.style.display = name.includes(N) ? '' : 'none';
       });
     }
-    search && search.addEventListener('input', e => filter(e.target.value));
-
-    // Renommage
-    const dlgR = $('#rename-dialog'), frmR = $('#rename-form');
-    const inpR = $('#rename-input'), hidR = $('#rename-hidden'), btnRC = $('#rename-cancel');
-    function openRename(host) {
-      inpR.value = host.dataset.name || '';
-      hidR.value = host.dataset.id || '';
-      frmR.setAttribute('action', host.dataset.renameUrl || '{{ BASE }}location/update');
-      dlgR.showModal(); setTimeout(() => inpR.focus(), 50);
-    }
-    $$('.btn-rename').forEach(b => b.addEventListener('click', e => {
-      const host = e.target.closest('tr, article'); if (host) openRename(host);
-    }));
-    btnRC && btnRC.addEventListener('click', () => dlgR.close());
-
-    // Suppression
-    const dlgD = $('#delete-dialog'), frmD = $('#delete-form');
-    const nameD = $('#delete-name'), hidD = $('#delete-hidden'), btnDC = $('#delete-cancel');
-    function openDelete(host) {
-      nameD.textContent = host.dataset.name || '';
-      hidD.value = host.dataset.id || '';
-      frmD.setAttribute('action', host.dataset.deleteUrl || '{{ BASE }}location/delete');
-      dlgD.showModal();
-    }
-    $$('.btn-delete').forEach(b => b.addEventListener('click', e => {
-      const host = e.target.closest('tr, article'); if (host) openDelete(host);
-    }));
-    btnDC && btnDC.addEventListener('click', () => dlgD.close());
-
-    // Anti double-submit
-    [frmR, frmD, $('#add-form')].forEach(f => {
-      if (!f) return;
-      f.addEventListener('submit', () => {
-        const s = f.querySelector('button[type="submit"]'); if (s) { s.disabled = true; s.textContent = s.textContent + '…'; }
-      });
-    });
+    if (search) search.addEventListener('input', e => applyFilter(e.target.value));
   })();
+
+  // Modale Renommer
+  function openRename(id, currentName) {
+    const dlg = document.getElementById('dlg-rename');
+    document.getElementById('dlg-location-id').value = id;
+    const input = document.getElementById('dlg-location-name');
+    input.value = currentName || '';
+    dlg.showModal();
+    setTimeout(() => input.focus(), 50);
+  }
+  function attachRename(form) { return true; } // noop
+
+  // Confirmation suppression
+  function confirmDelete(id, name) {
+    return confirm(`Supprimer « ${name} » ?\nLes lots liés seront également supprimés.`);
+  }
 </script>
 {% endblock %}
