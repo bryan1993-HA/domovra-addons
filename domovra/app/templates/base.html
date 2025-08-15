@@ -52,7 +52,7 @@
     :root {
       color-scheme: dark;
 
-      /* couleurs de toast configurables */
+      /* couleurs toasts depuis Paramètres */
       --toast-ok: {
           {
           SETTINGS.toast_ok|default('#4caf50')
@@ -76,6 +76,11 @@
       }
 
       ;
+
+      /* fonds translucides pour toasts */
+      --toast-ok-bg: color-mix(in srgb, var(--toast-ok) 16%, transparent);
+      --toast-warn-bg: color-mix(in srgb, var(--toast-warn) 16%, transparent);
+      --toast-err-bg: color-mix(in srgb, var(--toast-error) 16%, transparent);
     }
 
     /* Variables de fond (pour header solide) */
@@ -332,6 +337,7 @@
       min-width: 720px;
     }
 
+    /* Off-canvas (mobile) */
     @media (max-width:1024px) {
       .layout {
         grid-template-columns: 1fr;
@@ -397,6 +403,7 @@
       }
     }
 
+    /* Variantes clair */
     html[data-theme="light"] aside {
       background: #f7f7f8;
       border-right: 1px solid var(--line);
@@ -459,6 +466,7 @@
       border: 1px solid var(--line);
     }
 
+    /* Cacher les chips en mobile */
     @media (max-width:640px) {
       .header-right {
         display: none;
@@ -476,25 +484,28 @@
     }
 
     .toast {
-      background: #151922;
       border: 1px solid #242932;
       border-radius: 10px;
       padding: 10px 12px;
       box-shadow: 0 6px 16px rgba(0, 0, 0, .25);
       animation: toast-in .2s ease both;
       border-left: 4px solid transparent;
+      backdrop-filter: blur(2px);
     }
 
     .toast.ok {
       border-left-color: var(--toast-ok);
+      background: var(--toast-ok-bg);
     }
 
     .toast.warn {
       border-left-color: var(--toast-warn);
+      background: var(--toast-warn-bg);
     }
 
     .toast.error {
       border-left-color: var(--toast-error);
+      background: var(--toast-err-bg);
     }
 
     @keyframes toast-in {
@@ -559,8 +570,7 @@
           {% set seg = request.path.replace(BASE, '').strip('/') %}
           <h1 class="app-title">
             Domovra —
-            {% if seg == '' %}
-            Accueil
+            {% if seg == '' %}Accueil
             {% elif seg.startswith('products') %}Produits
             {% elif seg.startswith('locations') %}Emplacements
             {% elif seg.startswith('lots') %}Stocks

@@ -146,7 +146,7 @@
     }
   }
 
-  /* Outils — grid: pas d’espace en mobile */
+  /* Outils */
   .tools-row {
     display: grid;
     grid-template-columns: 1fr auto;
@@ -155,7 +155,7 @@
   }
 
   .tools-search {
-    min-width: 220px
+    min-width: 220px;
   }
 
   @media (max-width:700px) {
@@ -178,12 +178,12 @@
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 8px;
-    justify-items: stretch
+    justify-items: stretch;
   }
 
   .actions-grid button {
     width: 100% !important;
-    min-width: 0
+    min-width: 0;
   }
 
   /* Mobile : cartes */
@@ -246,6 +246,21 @@
       display: none;
     }
   }
+
+  /* Dialog petits ajustements */
+  dialog input[type="radio"] {
+    width: 16px;
+    height: 16px;
+    accent-color: #00bcd4;
+  }
+
+  dialog select {
+    min-height: 44px;
+  }
+
+  #del-mgmt label {
+    gap: 8px;
+  }
 </style>
 {% endblock %}
 
@@ -305,17 +320,16 @@
         <tbody id="locations-body">
           {% if items %}
           {% for loc in items %}
-          <tr data-id="{{ loc.id }}" data-name="{{ loc.name }}">
+          <tr data-id="{{ loc.id }}" data-name="{{ loc.name }}" data-lots="{{ loc.lot_count|int }}">
             <td><span
                 style="display:inline-block;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{
                 loc.name }}</span></td>
             <td>
               {% if loc.lot_count is defined %}
               <span class="pill">{{ loc.lot_count|int }} lot{{ '' if (loc.lot_count|int) == 1 else 's' }}</span>
-              {% if loc.urgent_count|int > 0 %} <span class="badge danger">{{ loc.urgent_count|int }} urgent{{ '' if
+              {% if loc.urgent_count|int > 0 %}<span class="badge danger">{{ loc.urgent_count|int }} urgent{{ '' if
                 (loc.urgent_count|int) == 1 else 's' }}</span>{% endif %}
-              {% if loc.soon_count|int > 0 %} <span class="badge warn">{{ loc.soon_count|int }} bientôt</span>{% endif
-              %}
+              {% if loc.soon_count|int > 0 %}<span class="badge warn">{{ loc.soon_count|int }} bientôt</span>{% endif %}
               {% else %}<span class="muted">—</span>{% endif %}
             </td>
             <td class="t-actions">
@@ -343,7 +357,7 @@
     <div class="loc-cards" id="locations-cards">
       {% if items %}
       {% for loc in items %}
-      <div class="loc-card" data-id="{{ loc.id }}" data-name="{{ loc.name }}">
+      <div class="loc-card" data-id="{{ loc.id }}" data-name="{{ loc.name }}" data-lots="{{ loc.lot_count|int }}">
         <div class="loc-main">
           <div class="loc-title">{{ loc.name }}</div>
           <div class="loc-meta">
@@ -393,13 +407,13 @@
     <p id="dlg-delete-text" class="muted" style="margin:0"></p>
     <input type="hidden" name="location_id" id="dlg-delete-id">
 
-    <fieldset style="border:1px solid var(--border);border-radius:10px;padding:10px">
+    <fieldset id="del-mgmt" style="border:1px solid var(--border);border-radius:10px;padding:10px">
       <legend class="muted">Gestion des lots existants</legend>
-      <label style="display:flex;gap:8px;align-items:center;margin-bottom:8px">
+      <label style="display:flex;align-items:center;margin-bottom:8px">
         <input type="radio" name="del_mode" value="remove" checked>
         <span>Supprimer les lots liés</span>
       </label>
-      <label style="display:flex;gap:8px;align-items:center">
+      <label style="display:flex;align-items:center">
         <input type="radio" name="del_mode" value="move">
         <span>Déplacer les lots vers :</span>
         <select name="move_to" id="dlg-move-select" style="min-width:160px" disabled>
@@ -451,22 +465,33 @@
     const row = btn.closest('[data-id]');
     const id = row?.dataset.id || btn.dataset.id;
     const name = row?.dataset.name || btn.dataset.name || '';
+    const lots = parseInt(row?.dataset.lots || '0', 10);
+
     $('#dlg-delete-id').value = id || '';
     $('#dlg-delete-text').textContent = `Supprimer « ${name} » ?`;
 
-    const sel = $('#dlg-move-select');
-    // Désactive l'option de la même location
-    Array.from(sel.options).forEach(o => o.disabled = (o.value === id));
-    // Choisit la première option valide
-    const firstValid = Array.from(sel.options).find(o => !o.disabled);
-    if (firstValid) sel.value = firstValid.value;
+    const mgmt = $('#del-mgmt');
+    mgmt.style.display = (lots > 0) ? 'block' : 'none';
 
-    // Radio enable/disable
+    const sel = $('#dlg-move-select');
+    // Exclure l'emplacement courant
+    Array.from(sel.options).forEach(o => o.disabled = (o.value === id));
+    // Première destination valide
+    const firstValid = Array.from(sel.options).find(o => !o.disabled);
+
     const radios = document.querySelectorAll('input[name="del_mode"]');
     const toggle = () => {
       const mode = Array.from(radios).find(r => r.checked)?.value || 'remove';
       sel.disabled = (mode !== 'move') || !firstValid;
     };
+
+    if (lots <= 0 || !firstValid) {
+      // Pas de lots OU pas de destination possible -> forcer suppression
+      radios.forEach(r => r.checked = (r.value === 'remove'));
+      sel.disabled = true;
+    } else {
+      sel.value = firstValid.value;
+    }
     radios.forEach(r => r.addEventListener('change', toggle));
     toggle();
 
@@ -482,8 +507,8 @@
   document.querySelector('#dlg-delete form')?.addEventListener('submit', (e) => {
     const mode = Array.from(document.querySelectorAll('input[name="del_mode"]')).find(r => r.checked)?.value || 'remove';
     if (mode !== 'move') {
-      e.target.querySelector('select[name="move_to"]').disabled = true;
-      e.target.querySelector('select[name="move_to"]').value = '';
+      const s = e.target.querySelector('select[name="move_to"]');
+      if (s) { s.disabled = true; s.value = ''; }
     }
   });
 
