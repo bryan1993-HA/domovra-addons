@@ -221,11 +221,14 @@ def lots_page(request: Request,
 
     locations = list_locations()
     products  = list_products()  # ✅ ajouté
-    return render("lots.html",
-                  BASE=base,
-                  page="lots",
-                  request=request,
-                  items=items, locations=locations, products=products)  # ✅ ajouté
+return render("lots.html",
+              BASE=base,
+              page="lots",
+              request=request,
+              items=items,
+              locations=locations,
+              products=list_products())   # ← ajouté (pour l’autocomplete)
+
 
 
 # --------- Journal page

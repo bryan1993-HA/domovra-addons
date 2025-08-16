@@ -142,6 +142,83 @@
     z-index: 60
   }
 
+  /* Infield (input + bouton à droite) */
+  .infield {
+    position: relative;
+    display: flex;
+    align-items: center
+  }
+
+  .infield input {
+    width: 100%;
+    padding-right: 56px
+  }
+
+  .infield-btn {
+    position: absolute;
+    right: 6px;
+    display: grid;
+    place-items: center;
+    width: 40px;
+    height: 40px;
+    border-radius: 10px;
+    border: 1px solid var(--border);
+    background: transparent;
+    cursor: pointer;
+    transition: transform .06s ease, background .12s ease
+  }
+
+  .infield-btn:hover {
+    background: rgba(255, 255, 255, .06)
+  }
+
+  .infield-btn:active {
+    transform: scale(.97)
+  }
+
+  /* Autocomplete custom */
+  .ac-panel {
+    position: absolute;
+    z-index: 60;
+    left: 0;
+    right: 0;
+    top: 100%;
+    margin-top: 6px;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    background: #0f1320;
+    max-height: 280px;
+    overflow: auto;
+    box-shadow: 0 6px 24px rgba(0, 0, 0, .35)
+  }
+
+  .ac-item {
+    padding: 10px 12px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 8px
+  }
+
+  .ac-item:hover,
+  .ac-item[aria-selected="true"] {
+    background: rgba(255, 255, 255, .06)
+  }
+
+  .ac-name {
+    flex: 1
+  }
+
+  .ac-barcode {
+    color: var(--muted);
+    white-space: nowrap
+  }
+
+  .ac-empty {
+    padding: 10px 12px;
+    color: var(--muted)
+  }
+
   /* Grille Ajout */
   .form-grid {
     display: grid;
@@ -249,7 +326,7 @@
     background: rgba(239, 83, 80, .12)
   }
 
-  /* Bloc dates pliable */
+  /* Bloc dates pliable + timeline */
   details.dates {
     margin-top: 6px
   }
@@ -379,19 +456,18 @@
     </div>
 
     <form id="lot_create_form" method="post" action="{{ BASE }}lot/add" class="form-grid">
-      <div>
+      <!-- Produit -->
+      <div style="position:relative">
         <div class="label">Produit</div>
-        <input list="products_list" id="lot_product_input" name="product_name" placeholder="Nom ou EAN…"
-          autocomplete="off" required>
+        <div class="infield">
+          <input id="lot_product_input" name="product_name" placeholder="Nom ou EAN…" autocomplete="off" required>
+          <button id="prod_scan_btn" type="button" class="infield-btn" title="Scanner (live)">📷</button>
+        </div>
         <input type="hidden" name="product_id" id="lot_product_id" required>
-        <datalist id="products_list">
-          {% for p in products %}
-          <option data-id="{{ p.id }}" data-barcode="{{ p.barcode or '' }}"
-            value="{{ p.name }}{% if p.barcode %} ({{ p.barcode }}){% endif %}"></option>
-          {% endfor %}
-        </datalist>
+        <div id="prod_ac" class="ac-panel" hidden></div>
       </div>
 
+      <!-- Emplacement -->
       <div>
         <div class="label">Emplacement</div>
         <select name="location_id" id="lot_location_id" required>
@@ -399,21 +475,25 @@
         </select>
       </div>
 
+      <!-- Quantité -->
       <div>
         <div class="label">Quantité</div>
         <input name="qty" id="lot_qty" type="number" min="0" step="0.01" placeholder="ex. 1" required>
       </div>
 
+      <!-- Congelé le -->
       <div>
         <div class="label">Congelé le</div>
         <input name="frozen_on" id="lot_frozen" type="date">
       </div>
 
+      <!-- À consommer avant -->
       <div>
         <div class="label">À consommer avant</div>
         <input name="best_before" id="lot_best_before" type="date">
       </div>
 
+      <!-- Code-barres (facultatif) -->
       <div class="wide" style="grid-column:1/-1">
         <div class="label">Code-barres (facultatif)</div>
         <div class="row" style="align-items:center">
@@ -500,7 +580,7 @@
               </span>
             </div>
 
-            <details class="dates" {% if false %}open{% endif %}>
+            <details class="dates">
               <summary>📅 Dates</summary>
               <div class="timeline">
                 <span class="pill">❄ <span>{{ it.frozen_on or '—' }}</span></span>
@@ -508,9 +588,7 @@
                   {% if it.best_before %}<small class="muted js-rel" data-date="{{ it.best_before }}"></small>{% endif
                   %}
                 </span>
-                {% if it.created_on %}
-                <span class="pill">➕ <span>{{ it.created_on }}</span></span>
-                {% endif %}
+                {% if it.created_on %}<span class="pill">➕ <span>{{ it.created_on }}</span></span>{% endif %}
               </div>
             </details>
           </td>
@@ -544,8 +622,8 @@
             it.status=="yellow" else ("Urgent" if it.status=="red" else "—")) }}</span>
         </div>
         <div class="card-sub">
-          {{ '%.2f'|format(it.qty) }} {{ it.unit }} • 📍 {{ it.location }}
-          {% if it.barcode %} • 🏷️ {{ it.barcode }}{% endif %}
+          {{ '%.2f'|format(it.qty) }} {{ it.unit }} • 📍 {{ it.location }}{% if it.barcode %} • 🏷️ {{ it.barcode }}{%
+          endif %}
         </div>
 
         <details class="dates" style="margin-top:6px">
@@ -679,6 +757,14 @@
 {% block scripts %}
 <script>
   const $ = s => document.querySelector(s);
+
+  /* Produits pour l'autocomplete (fourni par la route /lots) */
+  const PRODUCTS = [
+    {% for p in products %}
+  { id: { { p.id } }, name: "{{ p.name|replace('"','\\"') }}", barcode: "{{ (p.barcode or '') }}" },
+  {% endfor %}
+  ];
+
   function showError(el, msg) { if (!el) return; el.textContent = msg || 'Erreur'; el.hidden = false }
   function clearError(el) { if (!el) return; el.hidden = true; el.textContent = '' }
 
@@ -688,17 +774,61 @@
     r.addEventListener('click', () => { ['lot_product_input', 'lot_product_id', 'scan_barcode', 'lot_qty', 'lot_frozen', 'lot_best_before'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; }); const loc = $('#lot_location_id'); if (loc && loc.options.length) loc.selectedIndex = 0; });
   })();
 
-  /* Lier datalist -> hidden id */
-  (function () {
-    const inp = $('#lot_product_input'), hidden = $('#lot_product_id');
-    inp?.addEventListener('change', () => {
-      const val = inp.value; hidden.value = '';
-      const opts = [...document.querySelectorAll('#products_list option')];
-      const o = opts.find(o => o.value === val); if (o) hidden.value = o.dataset.id || '';
-    });
-  })();
+  /* ---------- Autocomplete Produit ---------- */
+  const prodInput = $('#lot_product_input');
+  const prodHidden = $('#lot_product_id');
+  const acPanel = $('#prod_ac');
+  let acIndex = -1, acItems = [];
 
-  /* Lookup local par EAN (pas OFF) */
+  function renderAC(list) {
+    acPanel.innerHTML = '';
+    if (!list.length) { acPanel.innerHTML = '<div class="ac-empty">Aucun résultat</div>'; acPanel.hidden = false; acItems = []; acIndex = -1; return; }
+    list.forEach((p, i) => {
+      const el = document.createElement('div');
+      el.className = 'ac-item';
+      el.dataset.id = p.id;
+      el.innerHTML = `<div class="ac-name">${p.name}</div>` + (p.barcode ? `<div class="ac-barcode">🏷️ ${p.barcode}</div>` : '');
+      el.addEventListener('mousedown', (ev) => { ev.preventDefault(); chooseAC(i); });
+      acPanel.appendChild(el);
+    });
+    acPanel.hidden = false;
+    acItems = [...acPanel.querySelectorAll('.ac-item')];
+    acIndex = -1;
+  }
+  function filterAC(q) {
+    q = (q || '').toLowerCase().trim();
+    if (!q) { acPanel.hidden = true; return; }
+    const res = PRODUCTS.filter(p => p.name.toLowerCase().includes(q) || (p.barcode && p.barcode.includes(q))).slice(0, 8);
+    renderAC(res);
+  }
+  function chooseAC(i) {
+    const item = acItems[i]; if (!item) return;
+    const id = item.dataset.id;
+    const p = PRODUCTS.find(x => String(x.id) === String(id)); if (!p) return;
+    prodInput.value = p.barcode ? `${p.name} (${p.barcode})` : p.name;
+    prodHidden.value = p.id;
+    acPanel.hidden = true;
+    $('#lot_qty')?.focus();
+  }
+  function moveAC(dir) {
+    if (acPanel.hidden) return;
+    acIndex += dir;
+    if (acIndex < 0) acIndex = acItems.length - 1;
+    if (acIndex >= acItems.length) acIndex = 0;
+    acItems.forEach((el, idx) => el.setAttribute('aria-selected', idx === acIndex ? 'true' : 'false'));
+    acItems[acIndex]?.scrollIntoView({ block: 'nearest' });
+  }
+  prodInput?.addEventListener('input', e => { prodHidden.value = ''; filterAC(e.target.value); });
+  prodInput?.addEventListener('focus', e => filterAC(e.target.value));
+  prodInput?.addEventListener('blur', () => setTimeout(() => acPanel.hidden = true, 120));
+  prodInput?.addEventListener('keydown', e => {
+    if (e.key === 'ArrowDown') { e.preventDefault(); moveAC(+1); }
+    else if (e.key === 'ArrowUp') { e.preventDefault(); moveAC(-1); }
+    else if (e.key === 'Enter') { if (!acPanel.hidden) { e.preventDefault(); chooseAC(acIndex < 0 ? 0 : acIndex); } }
+    else if (e.key === 'Escape') { acPanel.hidden = true; }
+  });
+
+  /* -------- Lookup local par code-barres -------- */
   async function lookupLocalProductByBarcode(code) {
     try {
       const res = await fetch(`{{ BASE }}api/product/by_barcode?code=${encodeURIComponent(code)}`, { headers: { 'Accept': 'application/json' } });
@@ -712,7 +842,7 @@
     $('#lot_product_input').value = label; $('#lot_product_id').value = p.id; $('#lot_qty')?.focus();
   }
 
-  /* Scan / Saisie code-barres */
+  /* Scan / Saisie code-barres (bloc facultatif) */
   const elCode = $('#scan_barcode'), btnLookup = $('#btn_barcode_lookup'), btnScan = $('#btn_scan_live'),
     btnCapture = $('#btn_capture'), fileCapture = $('#file_capture'),
     btnPaste = $('#btn_paste'), btnClear = $('#btn_clear'), errBox = $('#scan_error');
@@ -729,13 +859,29 @@
     openCreateProductModalWithBarcode(code);
   }
 
+  /* Bouton 📷 dans "Nom ou EAN…" -> ouvre le même scanner */
+  document.getElementById('prod_scan_btn')?.addEventListener('click', openScanModal);
+
+  /* Modale création produit (si non trouvé) */
   function openCreateProductModalWithBarcode(code) {
     $('#cp_barcode').value = code || ''; $('#cp_name').value = ''; $('#cp_unit').value = 'pièce'; $('#cp_shelf').value = '';
     document.getElementById('dlg-product-create').showModal();
   }
-  document.getElementById('create_product_form').addEventListener('submit', () => {/* redirect ?product_created=<id> coté backend */ });
+  document.getElementById('create_product_form').addEventListener('submit', () => { });
 
-  (function () { const p = new URLSearchParams(location.search); const pid = p.get('product_created'); if (pid) { const opt = [...document.querySelectorAll('#products_list option')].find(o => o.dataset.id === pid); if (opt) { $('#lot_product_input').value = opt.value; $('#lot_product_id').value = pid; window.showToast('Produit créé. Tu peux maintenant ajouter le stock.', 'ok'); } } })();
+  /* Auto-sélection post-création produit */
+  (function () {
+    const p = new URLSearchParams(location.search);
+    const pid = p.get('product_created');
+    if (pid) {
+      const found = PRODUCTS.find(x => String(x.id) === String(pid));
+      if (found) {
+        $('#lot_product_input').value = found.barcode ? `${found.name} (${found.barcode})` : found.name;
+        $('#lot_product_id').value = found.id;
+        window.showToast('Produit créé. Tu peux maintenant ajouter le stock.', 'ok');
+      }
+    }
+  })();
 
   /* Modales Modifier / Supprimer */
   document.addEventListener('click', (e) => {
@@ -764,7 +910,7 @@
   /* Scanner live (BarcodeDetector + ZXing) */
   const dlgScan = document.getElementById('scan-modal'), scanVideo = document.getElementById('scan-video'), btnScanClose = document.getElementById('scan-close');
   let scanning = false, zxingReader = null, zxingLiveActive = false;
-  async function onBarcodeDetected(code) { if (!code) return; elCode.value = code.replace(/\D+/g, ''); await closeScanModal(); doBarcodeLookup(); }
+  async function onBarcodeDetected(code) { if (!code) return; (document.activeElement === prodInput ? prodInput : elCode).value = (code || '').replace(/\D+/g, ''); await closeScanModal(); doBarcodeLookup(); }
   async function openScanModal() {
     if (!dlgScan) return; dlgScan.showModal(); scanning = true;
     if ('BarcodeDetector' in window) {
@@ -780,7 +926,7 @@
   async function closeScanModal() { scanning = false; if (dlgScan && dlgScan.open) dlgScan.close(); const s = scanVideo?.srcObject; if (s && s.getTracks) s.getTracks().forEach(t => t.stop()); if (zxingReader && zxingLiveActive) { try { await zxingReader.reset(); } catch { } zxingLiveActive = false; } }
   async function loadZXing() { return new Promise((res, rej) => { if (window.ZXing) return res(window.ZXing); const s = document.createElement('script'); s.src = 'https://unpkg.com/@zxing/library@latest'; s.onload = () => res(window.ZXing); s.onerror = () => rej(new Error('ZXing indisponible')); document.head.appendChild(s); }); }
   async function startZXingLive() { try { if (!window.ZXing) await loadZXing(); if (!zxingReader) zxingReader = new ZXing.BrowserMultiFormatReader(); zxingReader.decodeFromVideoDevice(undefined, scanVideo, async (r, err) => { if (!scanning) return; if (r && r.getText) { const code = (r.getText() || '').replace(/\D+/g, ''); if (code) await onBarcodeDetected(code); } }); zxingLiveActive = true; scanning = true; } catch (e) { showError(errBox, "Impossible de démarrer le flux live. Utilise « Photo »."); } }
-  document.getElementById('btn_scan_live').addEventListener('click', openScanModal);
+  document.getElementById('btn_scan_live')?.addEventListener('click', openScanModal);
   btnScanClose?.addEventListener('click', closeScanModal);
 
   btnCapture?.addEventListener('click', () => fileCapture.click());
