@@ -1,122 +1,928 @@
 {% extends "base.html" %}
 {% block title %}Domovra — Stocks{% endblock %}
 
+{% block head %}
+<style>
+  :root {
+    --gap: 12px;
+    --radius: 14px;
+    --border: #263043;
+    --chip: #1a2230;
+    --muted: #8ea0b7;
+    --accent: #00bcd4;
+    --ok: #4caf50;
+    --warn: #ffb300;
+    --danger: #ef5350;
+  }
+
+  .wrap {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 0 12px
+  }
+
+  .row {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap
+  }
+
+  .chip {
+    background: var(--chip);
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    padding: 6px 10px;
+    color: var(--muted)
+  }
+
+  .card {
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 12px;
+    margin-bottom: 12px
+  }
+
+  .title {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin: 6px 0 8px
+  }
+
+  .title h2 {
+    font-size: 16px;
+    margin: 0
+  }
+
+  .label {
+    font-size: 12px;
+    color: var(--muted);
+    display: flex;
+    align-items: center;
+    gap: 6px
+  }
+
+  input,
+  select,
+  button {
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 10px;
+    background: transparent;
+    color: inherit
+  }
+
+  input::placeholder {
+    color: rgba(200, 210, 225, .7)
+  }
+
+  button.primary {
+    background: var(--accent);
+    border: 0;
+    color: #02222a;
+    font-weight: 600;
+    cursor: pointer
+  }
+
+  button.secondary {
+    background: var(--chip);
+    border-color: var(--border)
+  }
+
+  .btn-ghost {
+    background: transparent;
+    border: 1px solid var(--border);
+    color: inherit
+  }
+
+  .btn-ghost:hover {
+    background: rgba(255, 255, 255, .06)
+  }
+
+  .help {
+    display: inline-grid;
+    place-items: center;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    font-size: 12px;
+    cursor: help;
+    background: #1f2735;
+    border: 1px solid var(--border);
+    color: #cfe3ff;
+    position: relative;
+    line-height: 1
+  }
+
+  .help::before {
+    content: "?";
+    font-weight: 700
+  }
+
+  .help:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px
+  }
+
+  .help:hover::after,
+  .help:focus-visible::after {
+    content: attr(data-tip);
+    position: absolute;
+    left: 50%;
+    bottom: 100%;
+    transform: translate(-50%, -8px);
+    background: #0f1320;
+    color: #e5e7eb;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 6px 8px;
+    white-space: normal;
+    width: max-content;
+    max-width: 280px;
+    z-index: 60
+  }
+
+  /* Grille Ajout au stock */
+  .form-grid {
+    display: grid;
+    grid-template-columns: 2fr 1.2fr 1fr 1fr 1fr auto;
+    gap: 12px;
+    align-items: end
+  }
+
+  @media(max-width:1100px) {
+    .form-grid {
+      grid-template-columns: 2fr 1.2fr 1fr 1fr auto
+    }
+  }
+
+  @media(max-width:900px) {
+    .form-grid {
+      grid-template-columns: 1fr 1fr 1fr
+    }
+
+    .form-grid .btn-wide {
+      grid-column: 1/-1;
+      justify-self: stretch
+    }
+  }
+
+  @media(max-width:700px) {
+    .form-grid {
+      grid-template-columns: 1fr
+    }
+
+    .form-grid .btn-wide {
+      width: 100%
+    }
+  }
+
+  /* Infield scan */
+  .infield {
+    position: relative;
+    display: flex;
+    align-items: center
+  }
+
+  .infield input {
+    width: 100%;
+    padding-right: 56px
+  }
+
+  .infield-btn {
+    position: absolute;
+    right: 6px;
+    display: grid;
+    place-items: center;
+    width: 40px;
+    height: 40px;
+    border-radius: 10px;
+    border: 1px solid var(--border);
+    background: transparent;
+    cursor: pointer;
+    transition: transform .06s ease, background .12s ease
+  }
+
+  .infield-btn:hover {
+    background: rgba(255, 255, 255, .06)
+  }
+
+  .infield-btn:active {
+    transform: scale(.97)
+  }
+
+  /* Tableau */
+  table {
+    width: 100%;
+    border-collapse: collapse
+  }
+
+  thead th {
+    font-size: 12px;
+    color: var(--muted);
+    text-align: left;
+    padding: 6px 8px;
+    border-bottom: 1px solid var(--border)
+  }
+
+  tbody td {
+    padding: 10px 8px;
+    border-bottom: 1px solid var(--border);
+    vertical-align: top
+  }
+
+  tbody tr:hover {
+    background: rgba(255, 255, 255, .03)
+  }
+
+  /* Stats chips */
+  .stats {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    white-space: nowrap
+  }
+
+  .stat {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 10px;
+    border-radius: 999px;
+    border: 1px solid var(--border);
+    background: transparent
+  }
+
+  .stat .k {
+    color: var(--muted)
+  }
+
+  .stat .v {
+    font-weight: 600
+  }
+
+  /* Badges état */
+  .tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 8px;
+    border-radius: 999px;
+    border: 1px solid var(--border)
+  }
+
+  .tag.green {
+    background: rgba(76, 175, 80, .12)
+  }
+
+  .tag.yellow {
+    background: rgba(255, 179, 0, .12)
+  }
+
+  .tag.red {
+    background: rgba(239, 83, 80, .12)
+  }
+
+  /* Mobile cards */
+  .cards {
+    display: none
+  }
+
+  @media(max-width:700px) {
+
+    thead,
+    table {
+      display: none
+    }
+
+    .cards {
+      display: grid;
+      gap: 10px
+    }
+
+    .card-item {
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 10px;
+      background: transparent
+    }
+
+    .card-head {
+      display: flex;
+      justify-content: space-between;
+      gap: 10px
+    }
+
+    .card-name {
+      font-weight: 600
+    }
+
+    .card-info {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 6px
+    }
+
+    .card-actions {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      margin-top: 8px
+    }
+  }
+
+  /* Comptage et filtres */
+  .filters-row {
+    display: grid;
+    grid-template-columns: 2fr 1fr 1fr 1fr auto;
+    gap: 12px
+  }
+
+  @media(max-width:900px) {
+    .filters-row {
+      grid-template-columns: 1fr 1fr
+    }
+
+    .filters-row .wide {
+      grid-column: 1/-1
+    }
+  }
+</style>
+{% endblock %}
+
+{% block header_right %}
+<span class="chip">🧺 Stocks : <b>{{ items|length }}</b></span>
+{% endblock %}
+
 {% block content %}
-<h1>Stocks</h1>
-<p class="muted">Modifier quantité / emplacement / dates, ou supprimer une entrée de stock.</p>
+<div class="wrap">
 
-<!-- Filtres -->
-<form method="get" action="{{ BASE }}lots" style="display:flex; gap:1rem; flex-wrap:wrap; margin-bottom:1rem;">
-  <label>Produit
-    <input type="text" name="product" value="{{ request.query_params.get('product','') }}">
-  </label>
+  <!-- Ajouter au stock -->
+  <div class="card">
+    <div class="title">
+      <h2>Ajouter au stock</h2>
+      <span class="muted">→ en un geste (scan ou saisie)</span>
+      <span class="help" tabindex="0"
+        data-tip="Scanne un code-barres pour retrouver le produit local. S’il n’existe pas encore, crée-le puis valide l’ajout du lot."></span>
+    </div>
 
-  <label>Emplacement
-    <select name="location">
-      <option value="">— Tous —</option>
-      {% for l in locations %}
-      <option value="{{ l.name }}" {% if request.query_params.get('location')==l.name %}selected{% endif %}>{{ l.name }}
-      </option>
+    <form id="lot_create_form" method="post" action="{{ BASE }}lot/add" class="form-grid">
+      <!-- Produit (select avec recherche simple) -->
+      <div>
+        <div class="label">Produit</div>
+        <input list="products_list" id="lot_product_input" name="product_name" placeholder="Nom ou EAN…"
+          autocomplete="off">
+        <input type="hidden" name="product_id" id="lot_product_id">
+        <datalist id="products_list">
+          {% for p in products %}
+          <option data-id="{{ p.id }}" data-barcode="{{ p.barcode or '' }}"
+            value="{{ p.name }}{% if p.barcode %} ({{ p.barcode }}){% endif %}"></option>
+          {% endfor %}
+        </datalist>
+      </div>
+
+      <!-- Emplacement -->
+      <div>
+        <div class="label">Emplacement</div>
+        <select name="location_id" id="lot_location_id" required>
+          {% for l in locations %}
+          <option value="{{ l.id }}">{{ l.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <!-- Quantité -->
+      <div>
+        <div class="label">Quantité</div>
+        <input name="qty" id="lot_qty" type="number" min="0" step="0.01" placeholder="ex. 1" required>
+      </div>
+
+      <!-- Congelé le -->
+      <div>
+        <div class="label">Congelé le</div>
+        <input name="frozen_on" id="lot_frozen" type="date">
+      </div>
+
+      <!-- À consommer avant -->
+      <div>
+        <div class="label">À consommer avant</div>
+        <input name="best_before" id="lot_best_before" type="date">
+      </div>
+
+      <!-- Scan / Saisie code-barres -->
+      <div class="wide" style="grid-column:1/-1">
+        <div class="label">Code-barres (facultatif)</div>
+        <div class="row" style="align-items:center">
+          <div class="infield" style="flex:1;min-width:220px">
+            <input id="scan_barcode" type="text" inputmode="numeric"
+              placeholder="Scanner / saisir un code-barres (EAN/GTIN)…">
+            <button id="btn_scan_live" type="button" class="infield-btn" title="Scanner (live)">📷</button>
+          </div>
+          <button id="btn_barcode_lookup" class="secondary" type="button">🔎 Rechercher</button>
+          <button id="btn_capture" type="button" class="secondary">📸 Photo</button>
+          <input id="file_capture" type="file" accept="image/*" capture="environment" style="display:none">
+          <button id="btn_paste" class="secondary" type="button">📋 Coller</button>
+          <button id="btn_clear" class="secondary" type="button">✖ Effacer</button>
+        </div>
+        <div id="scan_error" hidden class="muted" style="color:#ff6b6b;margin-top:.35rem">Erreur</div>
+      </div>
+
+      <button class="primary btn-wide">＋ Ajouter au stock</button>
+      <button id="lot_reset" type="button" class="btn-ghost btn-wide"><span class="ico">↺</span>Réinitialiser</button>
+    </form>
+  </div>
+
+  <!-- Outils : recherche & filtres -->
+  <div class="card">
+    <div class="title">
+      <h2>Outils</h2><span class="muted">Recherche & filtres</span>
+    </div>
+    <div class="filters-row">
+      <input id="q" class="wide" type="search" placeholder="Rechercher (produit, emplacement, EAN)…">
+      <select id="f_loc">
+        <option value="">📍 Tous emplacements</option>
+        {% for l in locations %}
+        <option value="{{ l.name|lower }}">{{ l.name }}</option>
+        {% endfor %}
+      </select>
+      <select id="f_status">
+        <option value="">⚑ Tous états</option>
+        <option value="green">OK</option>
+        <option value="yellow">Bientôt</option>
+        <option value="red">Urgent</option>
+      </select>
+      <span class="chip">🧺 Stocks : <b id="lots-count">{{ items|length }}</b></span>
+    </div>
+  </div>
+
+  <!-- Liste -->
+  <div class="card">
+    <div class="title">
+      <h2>Liste</h2><span class="muted">Table (bureau) / Cartes (mobile)</span>
+    </div>
+
+    <table id="tbl">
+      <colgroup>
+        <col style="width:30%">
+        <col style="width:54%">
+        <col style="width:16%">
+      </colgroup>
+      <thead>
+        <tr>
+          <th>Produit</th>
+          <th>Infos</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody id="tbody">
+        {% if items %}
+        {% for it in items %}
+        <tr data-name="{{ it.product|lower }}" data-loc="{{ it.location|lower }}"
+          data-barcode="{{ (it.barcode or '')|lower }}" data-status="{{ it.status }}">
+          <td>
+            <div style="font-weight:600;display:flex;gap:6px;align-items:center">
+              <span>{{ it.product }}</span>
+              {% if it.barcode %}<span class="muted">EAN : {{ it.barcode }}</span>{% endif %}
+            </div>
+          </td>
+          <td>
+            <div class="stats">
+              <span class="stat"><span class="k">Qté</span><span> :</span><span class="v">{{ '%.2f'|format(it.qty) }} {{
+                  it.unit }}</span></span>
+              <span class="stat"><span class="k">Lieu</span><span> :</span><span class="v">{{ it.location
+                  }}</span></span>
+              <span class="stat"><span class="k">Congelé</span><span> :</span><span class="v">{{ it.frozen_on or '—'
+                  }}</span></span>
+              <span class="stat"><span class="k">DLC</span><span> :</span><span class="v">{{ it.best_before or '—'
+                  }}</span></span>
+              <span class="stat"><span class="k">État</span><span> :</span>
+                <span class="v tag {{ it.status }}">{{ "OK" if it.status=="green" else ("Bientôt" if it.status=="yellow"
+                  else ("Urgent" if it.status=="red" else "—")) }}</span>
+              </span>
+            </div>
+          </td>
+          <td>
+            <div class="row" style="gap:8px">
+              <button class="secondary js-edit-open" data-id="{{ it.id }}" data-qty="{{ it.qty }}"
+                data-unit="{{ it.unit }}" data-location_id="{{ it.location_id }}" data-frozen="{{ it.frozen_on or '' }}"
+                data-best_before="{{ it.best_before or '' }}">✏️ Modifier</button>
+
+              <button class="secondary js-delete-open" data-id="{{ it.id }}" data-product="{{ it.product }}">🗑️
+                Supprimer</button>
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+        {% else %}
+        <tr>
+          <td colspan="3" class="muted">Aucune entrée de stock.</td>
+        </tr>
+        {% endif %}
+      </tbody>
+    </table>
+
+    <!-- Mobile cards -->
+    <div class="cards" id="cards">
+      {% for it in items %}
+      <div class="card-item" data-name="{{ it.product|lower }}" data-loc="{{ it.location|lower }}"
+        data-barcode="{{ (it.barcode or '')|lower }}" data-status="{{ it.status }}">
+        <div class="card-head">
+          <div class="card-name">{{ it.product }}</div>
+        </div>
+        <div class="card-info">
+          {% if it.barcode %}<span class="stat"><span class="k">EAN</span><span> :</span><span class="v">{{ it.barcode
+              }}</span></span>{% endif %}
+          <span class="stat"><span class="k">Qté</span><span> :</span><span class="v">{{ '%.2f'|format(it.qty) }} {{
+              it.unit }}</span></span>
+          <span class="stat"><span class="k">Lieu</span><span> :</span><span class="v">{{ it.location }}</span></span>
+          <span class="stat"><span class="k">Congelé</span><span> :</span><span class="v">{{ it.frozen_on or '—'
+              }}</span></span>
+          <span class="stat"><span class="k">DLC</span><span> :</span><span class="v">{{ it.best_before or '—'
+              }}</span></span>
+          <span class="stat"><span class="k">État</span><span> :</span><span class="v tag {{ it.status }}">{{ "OK" if
+              it.status=="green" else ("Bientôt" if it.status=="yellow" else ("Urgent" if it.status=="red" else "—"))
+              }}</span></span>
+        </div>
+        <div class="card-actions">
+          <button class="secondary js-edit-open" data-id="{{ it.id }}" data-qty="{{ it.qty }}" data-unit="{{ it.unit }}"
+            data-location_id="{{ it.location_id }}" data-frozen="{{ it.frozen_on or '' }}"
+            data-best_before="{{ it.best_before or '' }}">✏️ Modifier</button>
+          <button class="secondary js-delete-open" data-id="{{ it.id }}" data-product="{{ it.product }}">🗑️
+            Supprimer</button>
+        </div>
+      </div>
       {% endfor %}
-    </select>
-  </label>
+    </div>
+  </div>
+</div>
 
-  <label>État
-    <select name="status">
-      <option value="">— Tous —</option>
-      <option value="green" {% if request.query_params.get('status')=='green' %}selected{% endif %}>OK</option>
-      <option value="yellow" {% if request.query_params.get('status')=='yellow' %}selected{% endif %}>Bientôt</option>
-      <option value="red" {% if request.query_params.get('status')=='red' %}selected{% endif %}>Urgent</option>
-    </select>
-  </label>
+<!-- Dialogs: Modifier / Supprimer / Scanner / Création produit -->
+<dialog id="dlg-edit">
+  <form method="post" action="{{ BASE }}lot/update" style="display:grid;gap:10px;min-width:min(520px,92vw)">
+    <h3 style="margin:0">Modifier le stock</h3>
+    <input type="hidden" name="lot_id" id="dlg-lot-id">
+    <div class="row" style="gap:10px">
+      <div style="flex:1">
+        <div class="label">Quantité</div>
+        <input type="number" name="qty" id="dlg-qty" step="0.01" min="0" required>
+      </div>
+      <div style="flex:1">
+        <div class="label">Emplacement</div>
+        <select name="location_id" id="dlg-location">
+          {% for l in locations %}
+          <option value="{{ l.id }}">{{ l.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+    </div>
+    <div class="row" style="gap:10px">
+      <div style="flex:1">
+        <div class="label">Congelé le</div>
+        <input type="date" name="frozen_on" id="dlg-frozen">
+      </div>
+      <div style="flex:1">
+        <div class="label">À consommer avant</div>
+        <input type="date" name="best_before" id="dlg-best-before">
+      </div>
+    </div>
+    <div class="row" style="justify-content:flex-end;gap:8px">
+      <button type="button" onclick="document.getElementById('dlg-edit').close()">Annuler</button>
+      <button class="primary">Enregistrer</button>
+    </div>
+  </form>
+</dialog>
 
-  <button type="submit">Filtrer</button>
-  <a href="{{ BASE }}lots" style="align-self:flex-end;">Réinitialiser</a>
-</form>
+<dialog id="dlg-delete">
+  <form method="post" action="{{ BASE }}lot/delete" style="display:grid;gap:10px;min-width:min(420px,92vw)">
+    <h3 style="margin:0">Supprimer du stock</h3>
+    <input type="hidden" name="lot_id" id="del-lot-id">
+    <div class="muted" id="del-msg">Supprimer cette entrée de stock ?</div>
+    <div class="row" style="justify-content:flex-end;gap:8px">
+      <button type="button" onclick="document.getElementById('dlg-delete').close()">Annuler</button>
+      <button class="primary" style="background:var(--danger);border:0;color:#1d0c0c">Supprimer</button>
+    </div>
+  </form>
+</dialog>
 
-<table>
-  <thead>
-    <tr>
-      <th>Produit</th>
-      <th>Emplacement</th>
-      <th>Qté</th>
-      <th>Congelé le</th>
-      <th>À consommer avant</th>
-      <th>État</th>
-      <th>Actions</th>
-    </tr>
-  </thead>
-  <tbody>
-    {% for it in items %}
-    <tr>
-      <td>{{ it.product }}</td>
-      <td>{{ it.location }}</td>
-      <td>{{ it.qty }} {{ it.unit }}</td>
-      <td>{{ it.frozen_on or '' }}</td>
-      <td>{{ it.best_before or '' }}</td>
-      <td><span class="tag {{ it.status }}">{{ "OK" if it.status=="green" else ("Bientôt" if it.status=="yellow" else
-          ("Urgent" if it.status=="red" else "—")) }}</span></td>
-      <td>
-        <button class="edit-btn" data-id="{{ it.id }}" style="padding:.35rem .6rem;">✏️ Modifier</button>
-        <form method="post" action="{{ BASE }}lot/delete"
-          onsubmit="return confirm('Supprimer cette entrée de stock ?');" style="display:inline">
-          <input type="hidden" name="lot_id" value="{{ it.id }}">
-          <button title="Supprimer" aria-label="Supprimer"
-            style="padding:.35rem .6rem; border:1px solid #5a1b1b; background:#3a0f0f; color:#ffb4b4; border-radius:8px;">🗑️</button>
-        </form>
-      </td>
-    </tr>
+<dialog id="scan-modal">
+  <div style="display:grid;gap:10px;min-width:min(520px,96vw)">
+    <h3 style="margin:0">Scanner un code-barres</h3>
+    <video id="scan-video" autoplay playsinline
+      style="width:100%;border-radius:12px;border:1px solid var(--border)"></video>
+    <div class="row" style="justify-content:flex-end;gap:8px">
+      <button class="secondary" type="button" id="scan-close">Fermer</button>
+    </div>
+  </div>
+</dialog>
 
-    <tr class="edit-row" id="edit-{{ it.id }}" style="display:none;">
-      <td colspan="7">
-        <form method="post" action="{{ BASE }}lot/update" class="row"
-          style="gap:.5rem; align-items:center; flex-wrap:wrap;">
-          <input type="hidden" name="lot_id" value="{{ it.id }}">
-          <label style="flex:1; min-width:160px;">Quantité
-            <input name="qty" type="number" step="0.01" min="0" value="{{ it.qty }}">
-          </label>
-          <label style="flex:1; min-width:160px;">Emplacement
-            <select name="location_id">
-              {% for l in locations %}
-              <option value="{{ l.id }}" {% if l.id==it.location_id %}selected{% endif %}>{{ l.name }}</option>
-              {% endfor %}
-            </select>
-          </label>
-          <label style="flex:1; min-width:200px;">Congelé le
-            <input type="date" name="frozen_on" value="{{ it.frozen_on or '' }}">
-          </label>
-          <label style="flex:1; min-width:200px;">À consommer avant
-            <input type="date" name="best_before" value="{{ it.best_before or '' }}">
-          </label>
-          <button style="flex:0;">💾 Enregistrer</button>
-          <button type="button" class="cancel-btn" data-id="{{ it.id }}"
-            style="flex:0; background:#2b2f36;">Annuler</button>
-        </form>
-      </td>
-    </tr>
-    {% else %}
-    <tr>
-      <td colspan="7" class="muted">Aucune entrée de stock pour l’instant.</td>
-    </tr>
-    {% endfor %}
-  </tbody>
-</table>
+<dialog id="dlg-product-create">
+  <form id="create_product_form" method="post" action="{{ BASE }}product/add"
+    style="display:grid;gap:10px;min-width:min(520px,96vw)">
+    <h3 style="margin:0">Créer le produit</h3>
+    <div class="muted">Aucun produit local avec ce code-barres. Crée-le d’abord, puis ajoute le stock.</div>
+    <div>
+      <div class="label">Nom du produit</div>
+      <input type="text" name="name" id="cp_name" required>
+    </div>
+    <div class="row" style="gap:10px">
+      <div style="flex:1">
+        <div class="label">Unité</div>
+        <select name="unit" id="cp_unit">
+          <optgroup label="Comptage">
+            <option value="pièce" selected>pièce</option>
+            <option value="tranche">tranche</option>
+            <option value="paquet">paquet</option>
+            <option value="boîte">boîte</option>
+            <option value="bocal">bocal</option>
+            <option value="bouteille">bouteille</option>
+            <option value="sachet">sachet</option>
+            <option value="lot">lot</option>
+            <option value="barquette">barquette</option>
+            <option value="rouleau">rouleau</option>
+            <option value="dosette">dosette</option>
+          </optgroup>
+          <optgroup label="Poids">
+            <option value="g">g</option>
+            <option value="kg">kg</option>
+          </optgroup>
+          <optgroup label="Volume">
+            <option value="ml">ml</option>
+            <option value="L">L</option>
+          </optgroup>
+        </select>
+      </div>
+      <div style="flex:1">
+        <div class="label">Conservation (jours)</div>
+        <input type="number" name="shelf" id="cp_shelf" min="1" placeholder="ex. 90">
+      </div>
+    </div>
+    <div>
+      <div class="label">Code-barres</div>
+      <input type="text" name="barcode" id="cp_barcode" inputmode="numeric">
+    </div>
+    <div class="row" style="justify-content:flex-end;gap:8px">
+      <button type="button" onclick="document.getElementById('dlg-product-create').close()">Annuler</button>
+      <button class="primary">Créer</button>
+    </div>
+  </form>
+</dialog>
+{% endblock %}
 
+{% block scripts %}
 <script>
-  // Toggle lignes d'édition
-  document.querySelectorAll('.edit-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
-      const id = btn.dataset.id;
-      const row = document.getElementById('edit-' + id);
-      row.style.display = (row.style.display === 'none' || !row.style.display) ? 'table-row' : 'none';
+  /* ---------- Utils ---------- */
+  const $ = s => document.querySelector(s);
+  function showError(el, msg) { if (!el) return; el.textContent = msg || 'Erreur'; el.hidden = false; }
+  function clearError(el) { if (!el) return; el.hidden = true; el.textContent = ''; }
+
+  /* ---------- Réinitialiser formulaire ajout ---------- */
+  (function () {
+    const r = $('#lot_reset'); if (!r) return;
+    r.addEventListener('click', () => {
+      ['lot_product_input', 'lot_product_id', 'scan_barcode', 'lot_qty', 'lot_frozen', 'lot_best_before'].forEach(id => {
+        const el = document.getElementById(id); if (!el) return; if (el.tagName === 'INPUT') el.value = ''; else el.value = '';
+      });
+      const loc = $('#lot_location_id'); if (loc && loc.options.length) loc.selectedIndex = 0;
     });
-  });
-  document.querySelectorAll('.cancel-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
-      const id = btn.dataset.id;
-      const row = document.getElementById('edit-' + id);
-      if (row) row.style.display = 'none';
+  })();
+
+  /* ---------- Sélection produit à partir de l’input/datalist ---------- */
+  (function () {
+    const inp = $('#lot_product_input'); const hiddenId = $('#lot_product_id');
+    inp?.addEventListener('change', () => {
+      const val = inp.value;
+      hiddenId.value = '';
+      const opts = [...document.querySelectorAll('#products_list option')];
+      const o = opts.find(o => o.value === val);
+      if (o) { hiddenId.value = o.dataset.id || ''; }
     });
+  })();
+
+  /* ---------- Recherche locale produit par code-barres ---------- */
+  /* On tente une route JSON locale. À ajouter côté FastAPI:
+     GET {{ BASE }}api/product/by_barcode?code=xxxxx -> 200 {id,name,barcode} ou 404
+  */
+  async function lookupLocalProductByBarcode(code) {
+    try {
+      const res = await fetch(`{{ BASE }}api/product/by_barcode?code=${encodeURIComponent(code)}`, { headers: { 'Accept': 'application/json' } });
+      if (res.ok) {
+        return await res.json(); // {id, name, barcode}
+      }
+      return null;
+    } catch { return null; }
+  }
+
+  /* Applique le produit trouvé dans le formulaire d’ajout */
+  function applyFoundProduct(p) {
+    if (!p) return;
+    const inp = $('#lot_product_input'), hid = $('#lot_product_id');
+    // Tente de retrouver l’option datalist (si différente du libellé, on force)
+    const label = p.barcode ? `${p.name} (${p.barcode})` : p.name;
+    inp.value = label;
+    hid.value = p.id;
+    // Focalise la quantité pour enchaîner
+    $('#lot_qty')?.focus();
+  }
+
+  /* ---------- Actions scan / saisie code-barres ---------- */
+  const elCode = $('#scan_barcode'),
+    btnLookup = $('#btn_barcode_lookup'),
+    btnScan = $('#btn_scan_live'),
+    btnCapture = $('#btn_capture'),
+    fileCapture = $('#file_capture'),
+    btnPaste = $('#btn_paste'),
+    btnClear = $('#btn_clear'),
+    errBox = $('#scan_error');
+
+  btnClear?.addEventListener('click', () => { if (elCode) elCode.value = ''; clearError(errBox); });
+
+  btnPaste?.addEventListener('click', async () => {
+    try { const t = await navigator.clipboard.readText(); if (elCode) { elCode.value = (t || '').replace(/\D+/g, ''); doBarcodeLookup(); } }
+    catch { showError(errBox, 'Impossible de lire le presse-papiers.'); }
   });
+
+  btnLookup?.addEventListener('click', doBarcodeLookup);
+  elCode?.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); doBarcodeLookup(); } });
+
+  async function doBarcodeLookup() {
+    clearError(errBox);
+    const code = (elCode?.value || '').replace(/\D+/g, '');
+    if (!code) { showError(errBox, 'Renseigne un code-barres valide.'); return; }
+    // 1) Local DB
+    const found = await lookupLocalProductByBarcode(code);
+    if (found) { applyFoundProduct(found); return; }
+    // 2) Sinon -> modale création produit
+    openCreateProductModalWithBarcode(code);
+  }
+
+  /* ---------- Modale création produit (si non trouvé en local) ---------- */
+  function openCreateProductModalWithBarcode(code) {
+    $('#cp_barcode').value = code || '';
+    $('#cp_name').value = '';
+    $('#cp_unit').value = 'pièce';
+    $('#cp_shelf').value = '';
+    document.getElementById('dlg-product-create').showModal();
+  }
+  document.getElementById('create_product_form').addEventListener('submit', function () {
+    // À la redirection, côté serveur, renvoyer sur /lots?product_created=ID pour auto-sélection
+  });
+
+  /* Au chargement, si on revient avec ?product_created=ID, on auto-sélectionne */
+  (function () {
+    const p = new URLSearchParams(location.search);
+    const pid = p.get('product_created');
+    if (pid) {
+      // On tente de trouver le produit dans datalist
+      const opt = [...document.querySelectorAll('#products_list option')].find(o => o.dataset.id === pid);
+      if (opt) {
+        $('#lot_product_input').value = opt.value;
+        $('#lot_product_id').value = pid;
+        window.showToast('Produit créé. Tu peux maintenant ajouter le stock.', 'ok');
+      }
+    }
+  })();
+
+  /* ---------- Modales Modifier / Supprimer ---------- */
+  document.addEventListener('click', (e) => {
+    const edit = e.target.closest('.js-edit-open');
+    const del = e.target.closest('.js-delete-open');
+
+    if (edit) {
+      $('#dlg-lot-id').value = edit.dataset.id;
+      $('#dlg-qty').value = edit.dataset.qty || 0;
+      // Emplacement
+      const sel = $('#dlg-location'); if (sel) { sel.value = edit.dataset.location_id || sel.value; }
+      // Dates
+      $('#dlg-frozen').value = edit.dataset.frozen || '';
+      $('#dlg-best-before').value = edit.dataset.best_before || '';
+      document.getElementById('dlg-edit').showModal(); return;
+    }
+    if (del) {
+      $('#del-lot-id').value = del.dataset.id;
+      $('#del-msg').textContent = `Supprimer l’entrée de « ${del.dataset.product || 'produit'} » ?`;
+      document.getElementById('dlg-delete').showModal(); return;
+    }
+  });
+
+  /* ---------- Recherche / filtres live ---------- */
+  const q = document.getElementById('q'),
+    tbody = document.getElementById('tbody'),
+    cards = document.getElementById('cards'),
+    fLoc = document.getElementById('f_loc'),
+    fStatus = document.getElementById('f_status');
+  const rows = Array.from(tbody ? tbody.children : []);
+  const cardsItems = Array.from(cards ? cards.children : []);
+
+  function passesFilters(dataset, txt, loc, st) {
+    const s = (dataset.name + ' ' + (dataset.loc || '') + ' ' + (dataset.barcode || '')).includes(txt);
+    const l = loc ? (dataset.loc === loc) : true;
+    const t = st ? ((dataset.status || '') === st) : true;
+    return s && l && t;
+  }
+  function applyFilter() {
+    const txt = (q?.value || '').toLowerCase().trim();
+    const loc = (fLoc?.value || '').toLowerCase().trim();
+    const st = (fStatus?.value || '').trim();
+    let shown = 0;
+    rows.forEach(tr => {
+      const ds = tr.dataset;
+      const m = passesFilters(ds, txt, loc, st);
+      tr.style.display = m ? '' : 'none';
+      if (m) shown++;
+    });
+    cardsItems.forEach(c => {
+      const ds = c.dataset;
+      const m = passesFilters(ds, txt, loc, st);
+      c.style.display = m ? '' : 'none';
+    });
+    const lc = document.getElementById('lots-count'); if (lc) lc.textContent = (txt || loc || st) ? shown : rows.length;
+  }
+  [q, fLoc, fStatus].forEach(el => el && el.addEventListener('input', applyFilter));
+
+  /* ---------- Scanner live (BarcodeDetector + ZXing fallback) ---------- */
+  const dlgScan = document.getElementById('scan-modal'),
+    scanVideo = document.getElementById('scan-video'),
+    btnScanClose = document.getElementById('scan-close');
+  let scanning = false, zxingReader = null, zxingLiveActive = false;
+
+  async function onBarcodeDetected(code) {
+    if (!code) return;
+    elCode.value = code.replace(/\D+/g, '');
+    await closeScanModal();
+    doBarcodeLookup();
+  }
+  async function openScanModal() {
+    if (!dlgScan) return; dlgScan.showModal(); scanning = true;
+    if ('BarcodeDetector' in window) {
+      try {
+        const detector = new BarcodeDetector({ formats: ['ean_13', 'ean_8', 'upc_a', 'upc_e'] });
+        const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+        scanVideo.srcObject = stream;
+        const tick = async () => {
+          if (!scanning) return;
+          try {
+            const bm = await detector.detect(scanVideo);
+            if (bm && bm[0] && bm[0].rawValue) { await onBarcodeDetected(bm[0].rawValue); return; }
+          } catch { }
+          requestAnimationFrame(tick);
+        };
+        tick(); return;
+      } catch (e) {/* fallback */ }
+    }
+    startZXingLive();
+  }
+  async function closeScanModal() {
+    scanning = false;
+    if (dlgScan && dlgScan.open) dlgScan.close();
+    const s = scanVideo?.srcObject; if (s && s.getTracks) s.getTracks().forEach(t => t.stop());
+    if (zxingReader && zxingLiveActive) { try { await zxingReader.reset(); } catch { } zxingLiveActive = false; }
+  }
+  async function loadZXing() {
+    return new Promise((resolve, reject) => {
+      if (window.ZXing) return resolve(window.ZXing);
+      const s = document.createElement('script'); s.src = 'https://unpkg.com/@zxing/library@latest';
+      s.onload = () => resolve(window.ZXing); s.onerror = () => reject(new Error('ZXing indisponible'));
+      document.head.appendChild(s);
+    });
+  }
+  async function startZXingLive() {
+    try {
+      if (!window.ZXing) await loadZXing();
+      if (!zxingReader) zxingReader = new ZXing.BrowserMultiFormatReader();
+      zxingReader.decodeFromVideoDevice(undefined, scanVideo, async (result, err) => {
+        if (!scanning) return;
+        if (result && result.getText) {
+          const code = (result.getText() || '').replace(/\D+/g, '');
+          if (code) await onBarcodeDetected(code);
+        }
+      });
+      zxingLiveActive = true; scanning = true;
+    } catch (e) { showError(errBox, "Impossible de démarrer le flux live. Utilise « Photo »."); }
+  }
+  btnScan?.addEventListener('click', openScanModal);
+  btnScanClose?.addEventListener('click', closeScanModal);
+  btnCapture?.addEventListener('click', () => fileCapture.click());
+  fileCapture?.addEventListener('change', async (ev) => {
+    const file = ev.target.files && ev.target.files[0]; if (!file) return;
+    try {
+      if (!window.ZXing) await loadZXing();
+      if (!zxingReader) zxingReader = new ZXing.BrowserMultiFormatReader();
+      const url = URL.createObjectURL(file);
+      const img = document.createElement('img'); img.src = url; await img.decode();
+      const res = await zxingReader.decodeFromImageElement(img);
+      const code = res && res.getText ? (res.getText() || '').replace(/\D+/g, '') : '';
+      if (code) await onBarcodeDetected(code); else showError(errBox, 'Aucun code détecté sur la photo.');
+    } catch { showError(errBox, 'Erreur lecture de la photo.'); }
+    finally { fileCapture.value = ''; }
+  });
+
+  /* ---------- Toasts depuis querystring ---------- */
+  (function () {
+    const p = new URLSearchParams(location.search);
+    if (p.get('added') === '1') window.showToast('Stock ajouté.', 'ok');
+    if (p.get('updated') === '1') window.showToast('Stock mis à jour.', 'ok');
+    if (p.get('deleted') === '1') window.showToast('Stock supprimé.', 'warn');
+  })();
 </script>
 {% endblock %}
