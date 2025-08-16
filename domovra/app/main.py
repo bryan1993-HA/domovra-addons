@@ -201,33 +201,41 @@ def locations_page(request: Request):
                   items=items)
 
 @app.get("/lots", response_class=HTMLResponse)
-def lots_page(request: Request,
-              product: str = Query("", alias="product"),
-              location: str = Query("", alias="location"),
-              status:  str = Query("", alias="status")):
+def lots_page(
+    request: Request,
+    product: str = Query("", alias="product"),
+    location: str = Query("", alias="location"),
+    status: str = Query("", alias="status"),
+):
     base = ingress_base(request)
     logger.info("GET /lots (BASE=%s product=%s location=%s status=%s)", base, product, location, status)
+
     items = list_lots()
     for it in items:
         it["status"] = status_for(it.get("best_before"), WARNING_DAYS, CRITICAL_DAYS)
 
+    # Filtres
     if product:
         needle = product.casefold()
-        items = [i for i in items if needle in (i.get("product","").casefold())]
+        items = [i for i in items if needle in (i.get("product", "").casefold())]
     if location:
         items = [i for i in items if i.get("location") == location]
     if status:
         items = [i for i in items if i.get("status") == status]
 
     locations = list_locations()
-    products  = list_products()  # ✅ ajouté
-return render("lots.html",
-              BASE=base,
-              page="lots",
-              request=request,
-              items=items,
-              locations=locations,
-              products=list_products())   # ← ajouté (pour l’autocomplete)
+
+    # IMPORTANT : on passe aussi la liste des produits pour l'autocomplete
+    return render(
+        "lots.html",
+        BASE=base,
+        page="lots",
+        request=request,
+        items=items,
+        locations=locations,
+        products=list_products(),  # ← ajouté
+    )
+
 
 
 
