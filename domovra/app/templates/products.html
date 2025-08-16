@@ -620,7 +620,7 @@
 <dialog id="scan-modal">
   <div style="display:grid;gap:10px;min-width:min(520px,96vw)">
     <h3 style="margin:0">Scanner un code-barres</h3>
-    <video id="scan-video" autoplay playsinline
+    <video id="scan-video" autoplay playsinline muted playsInline webkit-playsinline
       style="width:100%;border-radius:12px;border:1px solid var(--border)"></video>
     <div class="row" style="justify-content:flex-end;gap:8px">
       <button class="secondary" type="button" id="scan-close">Fermer</button>
@@ -740,13 +740,26 @@
   let scanning = false, zxingReader = null, zxingLiveActive = false;
 
   async function onBarcodeDetected(code) { if (!code) return; elCode.value = code.replace(/\D+/g, ''); await closeScanModal(); doLookup(); }
+
   async function openScanModal() {
     if (!dlgScan) return; dlgScan.showModal(); scanning = true;
+
+    // Préparer la vidéo pour iOS/Safari + iframes
+    scanVideo.muted = true;
+    scanVideo.playsInline = true;
+    scanVideo.setAttribute('playsinline', '');
+    scanVideo.setAttribute('webkit-playsinline', '');
+
     if ('BarcodeDetector' in window) {
       try {
         const detector = new BarcodeDetector({ formats: ['ean_13', 'ean_8', 'upc_a', 'upc_e'] });
-        const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+        const stream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: 'environment' },
+          audio: false
+        });
         scanVideo.srcObject = stream;
+        try { await scanVideo.play(); } catch (_) { }
+
         const tick = async () => {
           if (!scanning) return;
           try { const bm = await detector.detect(scanVideo); if (bm && bm[0] && bm[0].rawValue) { await onBarcodeDetected(bm[0].rawValue); return; } } catch { }
@@ -757,22 +770,34 @@
     }
     startZXingLive();
   }
+
   async function closeScanModal() {
     scanning = false; if (dlgScan && dlgScan.open) dlgScan.close();
     const s = scanVideo && scanVideo.srcObject; if (s && s.getTracks) s.getTracks().forEach(t => t.stop());
     if (zxingReader && zxingLiveActive) { try { await zxingReader.reset(); } catch { } zxingLiveActive = false; }
   }
+
   async function loadZXing() {
     return new Promise((resolve, reject) => {
       if (window.ZXing) return resolve(window.ZXing);
       const s = document.createElement('script'); s.src = 'https://unpkg.com/@zxing/library@latest'; s.onload = () => resolve(window.ZXing); s.onerror = () => reject(new Error('ZXing indisponible')); document.head.appendChild(s);
     });
   }
+
   async function startZXingLive() {
     try {
+      // Assure les attributs vidéo aussi pour le fallback
+      scanVideo.muted = true;
+      scanVideo.playsInline = true;
+      scanVideo.setAttribute('playsinline', '');
+      scanVideo.setAttribute('webkit-playsinline', '');
+
       if (!window.ZXing) await loadZXing();
       if (!zxingReader) zxingReader = new ZXing.BrowserMultiFormatReader();
-      zxingReader.decodeFromVideoDevice(undefined, scanVideo, async (result, err) => { if (!scanning) return; if (result && result.getText) { const code = (result.getText() || '').replace(/\D+/g, ''); if (code) await onBarcodeDetected(code); } });
+      zxingReader.decodeFromVideoDevice(undefined, scanVideo, async (result, err) => {
+        if (!scanning) return;
+        if (result && result.getText) { const code = (result.getText() || '').replace(/\D+/g, ''); if (code) await onBarcodeDetected(code); }
+      });
       zxingLiveActive = true; scanning = true;
     } catch (e) { showError("Impossible de démarrer le flux live. Utilise « Prendre une photo »."); }
   }
