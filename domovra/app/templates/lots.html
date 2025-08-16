@@ -496,6 +496,10 @@
                   }}</span></span>
               <span class="stat"><span class="k">DLC</span><span> :</span><span class="v">{{ it.best_before or '—'
                   }}</span></span>
+              {% if it.created_on %}
+              <span class="stat"><span class="k">Ajouté</span><span> :</span><span class="v">{{ it.created_on
+                  }}</span></span>
+              {% endif %}
               <span class="stat"><span class="k">État</span><span> :</span>
                 <span class="v tag {{ it.status }}">{{ "OK" if it.status=="green" else ("Bientôt" if it.status=="yellow"
                   else ("Urgent" if it.status=="red" else "—")) }}</span>
@@ -540,6 +544,10 @@
               }}</span></span>
           <span class="stat"><span class="k">DLC</span><span> :</span><span class="v">{{ it.best_before or '—'
               }}</span></span>
+          {% if it.created_on %}
+          <span class="stat"><span class="k">Ajouté</span><span> :</span><span class="v">{{ it.created_on
+              }}</span></span>
+          {% endif %}
           <span class="stat"><span class="k">État</span><span> :</span><span class="v tag {{ it.status }}">{{ "OK" if
               it.status=="green" else ("Bientôt" if it.status=="yellow" else ("Urgent" if it.status=="red" else "—"))
               }}</span></span>

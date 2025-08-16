@@ -31,6 +31,7 @@ def init_db():
             qty REAL NOT NULL,
             frozen_on TEXT,
             best_before TEXT,
+            -- colonne created_on ajoutée plus bas si manquante (migration)
             FOREIGN KEY(product_id) REFERENCES products(id),
             FOREIGN KEY(location_id) REFERENCES locations(id)
         )""")
@@ -50,6 +51,21 @@ def init_db():
         # Index d'unicité (en tenant compte des NULL)
         c.execute("""CREATE UNIQUE INDEX IF NOT EXISTS idx_products_barcode_unique
                      ON products(barcode) WHERE barcode IS NOT NULL""")
+
+        # ----- Migration : ajout de created_on dans stock_lots (+ backfill)
+        if not _column_exists(c, "stock_lots", "created_on"):
+            c.execute("ALTER TABLE stock_lots ADD COLUMN created_on TEXT")
+            # Backfill depuis le premier mouvement IN (date d'ajout)
+            c.execute("""
+              UPDATE stock_lots
+              SET created_on = (
+                SELECT MIN(m.ts)
+                FROM movements m
+                WHERE m.lot_id = stock_lots.id AND m.type='IN'
+              )
+              WHERE created_on IS NULL
+            """)
+
         c.commit()
 
 # ---------- Locations
@@ -165,16 +181,17 @@ def _today():
 
 def add_lot(product_id: int, location_id: int, qty: float, frozen_on: str | None, best_before: str | None) -> int:
     with _conn() as c:
+        today = _today()
         cur = c.execute(
-            """INSERT INTO stock_lots(product_id,location_id,qty,frozen_on,best_before)
-               VALUES(?,?,?,?,?)""",
-            (product_id, location_id, qty, frozen_on, best_before)
+            """INSERT INTO stock_lots(product_id,location_id,qty,frozen_on,best_before,created_on)
+               VALUES(?,?,?,?,?,?)""",
+            (product_id, location_id, qty, frozen_on, best_before, today)
         )
         lot_id = cur.lastrowid
         c.execute(
             """INSERT INTO movements(lot_id,type,qty,ts,note)
                VALUES(?,?,?,?,?)""",
-            (lot_id, 'IN', qty, _today(), None)
+            (lot_id, 'IN', qty, today, None)
         )
         c.commit()
     return lot_id
@@ -187,17 +204,17 @@ def list_lots():
                  l.location_id,
                  p.name        AS product,
                  p.unit        AS unit,
-                 COALESCE(p.barcode,'') AS barcode,   -- ✅ ajouté pour l’UI
+                 COALESCE(p.barcode,'') AS barcode,
                  loc.name      AS location,
                  l.qty,
                  l.frozen_on,
-                 l.best_before
+                 l.best_before,
+                 l.created_on  AS created_on
                FROM stock_lots l
                JOIN products  p   ON p.id  = l.product_id
                JOIN locations loc ON loc.id = l.location_id
                ORDER BY COALESCE(l.best_before, '9999-12-31') ASC, p.name"""
         return [dict(r) for r in c.execute(q)]
-
 
 def consume_lot(lot_id: int, qty: float):
     with _conn() as c:
