@@ -755,15 +755,21 @@
 {% endblock %}
 
 {% block scripts %}
+
+<!-- Données produits en JSON pour l'autocomplete (évite les faux “erreurs JS” dans VS Code) -->
+<script type="application/json" id="__products">
+[
+{% for p in products %}
+  { "id": {{ p.id }}, "name": "{{ p.name|replace('"','\\"') }}", "barcode": "{{ (p.barcode or '') }}" }{% if not loop.last %},{% endif %}
+{% endfor %}
+]
+</script>
+
 <script>
   const $ = s => document.querySelector(s);
 
-  /* Produits pour l'autocomplete (fourni par la route /lots) */
-  const PRODUCTS = [
-    {% for p in products %}
-  { id: { { p.id } }, name: "{{ p.name|replace('"','\\"') }}", barcode: "{{ (p.barcode or '') }}" },
-  {% endfor %}
-  ];
+  /* Produits pour l'autocomplete (chargés depuis le JSON ci-dessus) */
+  const PRODUCTS = JSON.parse(document.getElementById('__products').textContent);
 
   function showError(el, msg) { if (!el) return; el.textContent = msg || 'Erreur'; el.hidden = false }
   function clearError(el) { if (!el) return; el.hidden = true; el.textContent = '' }
