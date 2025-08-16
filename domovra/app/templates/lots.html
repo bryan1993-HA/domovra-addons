@@ -142,7 +142,7 @@
     z-index: 60
   }
 
-  /* Grille Ajout au stock */
+  /* Grille Ajout */
   .form-grid {
     display: grid;
     grid-template-columns: 2fr 1.2fr 1fr 1fr 1fr auto;
@@ -177,41 +177,7 @@
     }
   }
 
-  /* Infield scan */
-  .infield {
-    position: relative;
-    display: flex;
-    align-items: center
-  }
-
-  .infield input {
-    width: 100%;
-    padding-right: 56px
-  }
-
-  .infield-btn {
-    position: absolute;
-    right: 6px;
-    display: grid;
-    place-items: center;
-    width: 40px;
-    height: 40px;
-    border-radius: 10px;
-    border: 1px solid var(--border);
-    background: transparent;
-    cursor: pointer;
-    transition: transform .06s ease, background .12s ease
-  }
-
-  .infield-btn:hover {
-    background: rgba(255, 255, 255, .06)
-  }
-
-  .infield-btn:active {
-    transform: scale(.97)
-  }
-
-  /* Tableau */
+  /* Table */
   table {
     width: 100%;
     border-collapse: collapse
@@ -235,52 +201,87 @@
     background: rgba(255, 255, 255, .03)
   }
 
-  /* Stats chips */
-  .stats {
+  /* Ligne compacte */
+  .line {
     display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
-    white-space: nowrap
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap
   }
 
-  .stat {
+  .meta {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    color: var(--muted);
+    font-size: 14px
+  }
+
+  .meta .v {
+    color: inherit
+  }
+
+  .sep {
+    opacity: .5
+  }
+
+  /* Badge état */
+  .status {
+    margin-left: auto;
     display: inline-flex;
     align-items: center;
     gap: 6px;
-    padding: 6px 10px;
+    padding: 4px 10px;
     border-radius: 999px;
     border: 1px solid var(--border);
-    background: transparent
-  }
-
-  .stat .k {
-    color: var(--muted)
-  }
-
-  .stat .v {
     font-weight: 600
   }
 
-  /* Badges état */
-  .tag {
+  .status.green {
+    background: rgba(76, 175, 80, .12)
+  }
+
+  .status.yellow {
+    background: rgba(255, 179, 0, .12)
+  }
+
+  .status.red {
+    background: rgba(239, 83, 80, .12)
+  }
+
+  /* Bloc dates pliable */
+  details.dates {
+    margin-top: 6px
+  }
+
+  details.dates summary {
+    cursor: pointer;
+    list-style: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--muted)
+  }
+
+  details.dates summary::-webkit-details-marker {
+    display: none
+  }
+
+  .timeline {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-top: 6px
+  }
+
+  .pill {
     display: inline-flex;
     align-items: center;
     gap: 6px;
     padding: 4px 8px;
     border-radius: 999px;
-    border: 1px solid var(--border)
-  }
-
-  .tag.green {
-    background: rgba(76, 175, 80, .12)
-  }
-
-  .tag.yellow {
-    background: rgba(255, 179, 0, .12)
-  }
-
-  .tag.red {
-    background: rgba(239, 83, 80, .12)
+    border: 1px solid var(--border);
+    background: transparent
   }
 
   /* Mobile cards */
@@ -309,30 +310,40 @@
 
     .card-head {
       display: flex;
-      justify-content: space-between;
-      gap: 10px
+      align-items: center;
+      gap: 8px
     }
 
-    .card-name {
-      font-weight: 600
+    .card-title {
+      font-weight: 600;
+      flex: 1
     }
 
-    .card-info {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 8px;
-      margin-top: 6px
+    .card-status {
+      margin-left: 0
+    }
+
+    .card-sub {
+      color: var(--muted);
+      font-size: 14px;
+      margin-top: 4px
     }
 
     .card-actions {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
+      display: flex;
       gap: 8px;
       margin-top: 8px
     }
+
+    .icon-btn {
+      padding: 8px 10px;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      background: transparent
+    }
   }
 
-  /* Comptage et filtres */
+  /* Filtres */
   .filters-row {
     display: grid;
     grid-template-columns: 2fr 1fr 1fr 1fr auto;
@@ -364,11 +375,10 @@
       <h2>Ajouter au stock</h2>
       <span class="muted">→ en un geste (scan ou saisie)</span>
       <span class="help" tabindex="0"
-        data-tip="Scanne un code-barres pour retrouver le produit local. S’il n’existe pas encore, crée-le puis valide l’ajout du lot."></span>
+        data-tip="Scanne un code-barres pour retrouver le produit local. S’il n’existe pas, crée-le d’abord."></span>
     </div>
 
     <form id="lot_create_form" method="post" action="{{ BASE }}lot/add" class="form-grid">
-      <!-- Produit -->
       <div>
         <div class="label">Produit</div>
         <input list="products_list" id="lot_product_input" name="product_name" placeholder="Nom ou EAN…"
@@ -382,35 +392,28 @@
         </datalist>
       </div>
 
-      <!-- Emplacement -->
       <div>
         <div class="label">Emplacement</div>
         <select name="location_id" id="lot_location_id" required>
-          {% for l in locations %}
-          <option value="{{ l.id }}">{{ l.name }}</option>
-          {% endfor %}
+          {% for l in locations %}<option value="{{ l.id }}">{{ l.name }}</option>{% endfor %}
         </select>
       </div>
 
-      <!-- Quantité -->
       <div>
         <div class="label">Quantité</div>
         <input name="qty" id="lot_qty" type="number" min="0" step="0.01" placeholder="ex. 1" required>
       </div>
 
-      <!-- Congelé le -->
       <div>
         <div class="label">Congelé le</div>
         <input name="frozen_on" id="lot_frozen" type="date">
       </div>
 
-      <!-- À consommer avant -->
       <div>
         <div class="label">À consommer avant</div>
         <input name="best_before" id="lot_best_before" type="date">
       </div>
 
-      <!-- Scan / Saisie code-barres -->
       <div class="wide" style="grid-column:1/-1">
         <div class="label">Code-barres (facultatif)</div>
         <div class="row" style="align-items:center">
@@ -433,7 +436,7 @@
     </form>
   </div>
 
-  <!-- Outils : recherche & filtres -->
+  <!-- Outils -->
   <div class="card">
     <div class="title">
       <h2>Outils</h2><span class="muted">Recherche & filtres</span>
@@ -442,9 +445,7 @@
       <input id="q" class="wide" type="search" placeholder="Rechercher (produit, emplacement, EAN)…">
       <select id="f_loc">
         <option value="">📍 Tous emplacements</option>
-        {% for l in locations %}
-        <option value="{{ l.name|lower }}">{{ l.name }}</option>
-        {% endfor %}
+        {% for l in locations %}<option value="{{ l.name|lower }}">{{ l.name }}</option>{% endfor %}
       </select>
       <select id="f_status">
         <option value="">⚑ Tous états</option>
@@ -464,8 +465,8 @@
 
     <table id="tbl">
       <colgroup>
-        <col style="width:30%">
-        <col style="width:54%">
+        <col style="width:36%">
+        <col style="width:48%">
         <col style="width:16%">
       </colgroup>
       <thead>
@@ -481,37 +482,43 @@
         <tr data-name="{{ it.product|lower }}" data-loc="{{ it.location|lower }}"
           data-barcode="{{ (it.barcode or '')|lower }}" data-status="{{ it.status }}">
           <td>
-            <div style="font-weight:600;display:flex;gap:6px;align-items:center">
-              <span>{{ it.product }}</span>
-              {% if it.barcode %}<span class="muted">EAN : {{ it.barcode }}</span>{% endif %}
+            <div class="line">
+              <div style="font-weight:600">{{ it.product }}</div>
+              {% if it.barcode %}<span class="sep">•</span><span class="muted">🏷️ {{ it.barcode }}</span>{% endif %}
             </div>
           </td>
           <td>
-            <div class="stats">
-              <span class="stat"><span class="k">Qté</span><span> :</span><span class="v">{{ '%.2f'|format(it.qty) }} {{
-                  it.unit }}</span></span>
-              <span class="stat"><span class="k">Lieu</span><span> :</span><span class="v">{{ it.location
-                  }}</span></span>
-              <span class="stat"><span class="k">Congelé</span><span> :</span><span class="v">{{ it.frozen_on or '—'
-                  }}</span></span>
-              <span class="stat"><span class="k">DLC</span><span> :</span><span class="v">{{ it.best_before or '—'
-                  }}</span></span>
-              {% if it.created_on %}
-              <span class="stat"><span class="k">Ajouté</span><span> :</span><span class="v">{{ it.created_on
-                  }}</span></span>
-              {% endif %}
-              <span class="stat"><span class="k">État</span><span> :</span>
-                <span class="v tag {{ it.status }}">{{ "OK" if it.status=="green" else ("Bientôt" if it.status=="yellow"
-                  else ("Urgent" if it.status=="red" else "—")) }}</span>
+            <div class="line">
+              <div class="meta">
+                <span>Qté <b class="v">{{ '%.2f'|format(it.qty) }} {{ it.unit }}</b></span>
+                <span class="sep">•</span>
+                <span>📍 <b class="v">{{ it.location }}</b></span>
+              </div>
+              <span class="status {{ it.status }}">
+                {{ "OK" if it.status=="green" else ("Bientôt" if it.status=="yellow" else ("Urgent" if it.status=="red"
+                else "—")) }}
               </span>
             </div>
+
+            <details class="dates" {% if false %}open{% endif %}>
+              <summary>📅 Dates</summary>
+              <div class="timeline">
+                <span class="pill">❄ <span>{{ it.frozen_on or '—' }}</span></span>
+                <span class="pill">⏳ <span>{{ it.best_before or '—' }}</span>
+                  {% if it.best_before %}<small class="muted js-rel" data-date="{{ it.best_before }}"></small>{% endif
+                  %}
+                </span>
+                {% if it.created_on %}
+                <span class="pill">➕ <span>{{ it.created_on }}</span></span>
+                {% endif %}
+              </div>
+            </details>
           </td>
           <td>
             <div class="row" style="gap:8px">
               <button class="secondary js-edit-open" data-id="{{ it.id }}" data-qty="{{ it.qty }}"
                 data-unit="{{ it.unit }}" data-location_id="{{ it.location_id }}" data-frozen="{{ it.frozen_on or '' }}"
                 data-best_before="{{ it.best_before or '' }}">✏️ Modifier</button>
-
               <button class="secondary js-delete-open" data-id="{{ it.id }}" data-product="{{ it.product }}">🗑️
                 Supprimer</button>
             </div>
@@ -532,32 +539,32 @@
       <div class="card-item" data-name="{{ it.product|lower }}" data-loc="{{ it.location|lower }}"
         data-barcode="{{ (it.barcode or '')|lower }}" data-status="{{ it.status }}">
         <div class="card-head">
-          <div class="card-name">{{ it.product }}</div>
+          <div class="card-title">{{ it.product }}</div>
+          <span class="status card-status {{ it.status }}">{{ "OK" if it.status=="green" else ("Bientôt" if
+            it.status=="yellow" else ("Urgent" if it.status=="red" else "—")) }}</span>
         </div>
-        <div class="card-info">
-          {% if it.barcode %}<span class="stat"><span class="k">EAN</span><span> :</span><span class="v">{{ it.barcode
-              }}</span></span>{% endif %}
-          <span class="stat"><span class="k">Qté</span><span> :</span><span class="v">{{ '%.2f'|format(it.qty) }} {{
-              it.unit }}</span></span>
-          <span class="stat"><span class="k">Lieu</span><span> :</span><span class="v">{{ it.location }}</span></span>
-          <span class="stat"><span class="k">Congelé</span><span> :</span><span class="v">{{ it.frozen_on or '—'
-              }}</span></span>
-          <span class="stat"><span class="k">DLC</span><span> :</span><span class="v">{{ it.best_before or '—'
-              }}</span></span>
-          {% if it.created_on %}
-          <span class="stat"><span class="k">Ajouté</span><span> :</span><span class="v">{{ it.created_on
-              }}</span></span>
-          {% endif %}
-          <span class="stat"><span class="k">État</span><span> :</span><span class="v tag {{ it.status }}">{{ "OK" if
-              it.status=="green" else ("Bientôt" if it.status=="yellow" else ("Urgent" if it.status=="red" else "—"))
-              }}</span></span>
+        <div class="card-sub">
+          {{ '%.2f'|format(it.qty) }} {{ it.unit }} • 📍 {{ it.location }}
+          {% if it.barcode %} • 🏷️ {{ it.barcode }}{% endif %}
         </div>
+
+        <details class="dates" style="margin-top:6px">
+          <summary>📅 Dates</summary>
+          <div class="timeline">
+            <span class="pill">❄ <span>{{ it.frozen_on or '—' }}</span></span>
+            <span class="pill">⏳ <span>{{ it.best_before or '—' }}</span>
+              {% if it.best_before %}<small class="muted js-rel" data-date="{{ it.best_before }}"></small>{% endif %}
+            </span>
+            {% if it.created_on %}<span class="pill">➕ <span>{{ it.created_on }}</span></span>{% endif %}
+          </div>
+        </details>
+
         <div class="card-actions">
-          <button class="secondary js-edit-open" data-id="{{ it.id }}" data-qty="{{ it.qty }}" data-unit="{{ it.unit }}"
-            data-location_id="{{ it.location_id }}" data-frozen="{{ it.frozen_on or '' }}"
-            data-best_before="{{ it.best_before or '' }}">✏️ Modifier</button>
-          <button class="secondary js-delete-open" data-id="{{ it.id }}" data-product="{{ it.product }}">🗑️
-            Supprimer</button>
+          <button class="icon-btn js-edit-open" title="Modifier" data-id="{{ it.id }}" data-qty="{{ it.qty }}"
+            data-unit="{{ it.unit }}" data-location_id="{{ it.location_id }}" data-frozen="{{ it.frozen_on or '' }}"
+            data-best_before="{{ it.best_before or '' }}">✏️</button>
+          <button class="icon-btn js-delete-open" title="Supprimer" data-id="{{ it.id }}"
+            data-product="{{ it.product }}">🗑️</button>
         </div>
       </div>
       {% endfor %}
@@ -565,7 +572,7 @@
   </div>
 </div>
 
-<!-- Dialogs: Modifier / Supprimer / Scanner / Création produit -->
+<!-- Dialogs -->
 <dialog id="dlg-edit">
   <form method="post" action="{{ BASE }}lot/update" style="display:grid;gap:10px;min-width:min(520px,92vw)">
     <h3 style="margin:0">Modifier le stock</h3>
@@ -578,20 +585,16 @@
       <div style="flex:1">
         <div class="label">Emplacement</div>
         <select name="location_id" id="dlg-location">
-          {% for l in locations %}
-          <option value="{{ l.id }}">{{ l.name }}</option>
-          {% endfor %}
+          {% for l in locations %}<option value="{{ l.id }}">{{ l.name }}</option>{% endfor %}
         </select>
       </div>
     </div>
     <div class="row" style="gap:10px">
       <div style="flex:1">
-        <div class="label">Congelé le</div>
-        <input type="date" name="frozen_on" id="dlg-frozen">
+        <div class="label">Congelé le</div><input type="date" name="frozen_on" id="dlg-frozen">
       </div>
       <div style="flex:1">
-        <div class="label">À consommer avant</div>
-        <input type="date" name="best_before" id="dlg-best-before">
+        <div class="label">À consommer avant</div><input type="date" name="best_before" id="dlg-best-before">
       </div>
     </div>
     <div class="row" style="justify-content:flex-end;gap:8px">
@@ -618,9 +621,8 @@
     <h3 style="margin:0">Scanner un code-barres</h3>
     <video id="scan-video" autoplay playsinline
       style="width:100%;border-radius:12px;border:1px solid var(--border)"></video>
-    <div class="row" style="justify-content:flex-end;gap:8px">
-      <button class="secondary" type="button" id="scan-close">Fermer</button>
-    </div>
+    <div class="row" style="justify-content:flex-end;gap:8px"><button class="secondary" type="button"
+        id="scan-close">Fermer</button></div>
   </div>
 </dialog>
 
@@ -630,8 +632,7 @@
     <h3 style="margin:0">Créer le produit</h3>
     <div class="muted">Aucun produit local avec ce code-barres. Crée-le d’abord, puis ajoute le stock.</div>
     <div>
-      <div class="label">Nom du produit</div>
-      <input type="text" name="name" id="cp_name" required>
+      <div class="label">Nom du produit</div><input type="text" name="name" id="cp_name" required>
     </div>
     <div class="row" style="gap:10px">
       <div style="flex:1">
@@ -661,18 +662,16 @@
         </select>
       </div>
       <div style="flex:1">
-        <div class="label">Conservation (jours)</div>
-        <input type="number" name="shelf" id="cp_shelf" min="1" placeholder="ex. 90">
+        <div class="label">Conservation (jours)</div><input type="number" name="shelf" id="cp_shelf" min="1"
+          placeholder="ex. 90">
       </div>
     </div>
     <div>
-      <div class="label">Code-barres</div>
-      <input type="text" name="barcode" id="cp_barcode" inputmode="numeric">
+      <div class="label">Code-barres</div><input type="text" name="barcode" id="cp_barcode" inputmode="numeric">
     </div>
-    <div class="row" style="justify-content:flex-end;gap:8px">
-      <button type="button" onclick="document.getElementById('dlg-product-create').close()">Annuler</button>
-      <button class="primary">Créer</button>
-    </div>
+    <div class="row" style="justify-content:flex-end;gap:8px"><button type="button"
+        onclick="document.getElementById('dlg-product-create').close()">Annuler</button><button
+        class="primary">Créer</button></div>
   </form>
 </dialog>
 {% endblock %}
@@ -680,238 +679,123 @@
 {% block scripts %}
 <script>
   const $ = s => document.querySelector(s);
-  function showError(el, msg) { if (!el) return; el.textContent = msg || 'Erreur'; el.hidden = false; }
-  function clearError(el) { if (!el) return; el.hidden = true; el.textContent = ''; }
+  function showError(el, msg) { if (!el) return; el.textContent = msg || 'Erreur'; el.hidden = false }
+  function clearError(el) { if (!el) return; el.hidden = true; el.textContent = '' }
 
   /* Reset */
   (function () {
     const r = $('#lot_reset'); if (!r) return;
-    r.addEventListener('click', () => {
-      ['lot_product_input', 'lot_product_id', 'scan_barcode', 'lot_qty', 'lot_frozen', 'lot_best_before'].forEach(id => {
-        const el = document.getElementById(id); if (!el) return; el.value = '';
-      });
-      const loc = $('#lot_location_id'); if (loc && loc.options.length) loc.selectedIndex = 0;
-    });
+    r.addEventListener('click', () => { ['lot_product_input', 'lot_product_id', 'scan_barcode', 'lot_qty', 'lot_frozen', 'lot_best_before'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; }); const loc = $('#lot_location_id'); if (loc && loc.options.length) loc.selectedIndex = 0; });
   })();
 
-  /* Lier input produit ↔ hidden product_id via datalist */
+  /* Lier datalist -> hidden id */
   (function () {
-    const inp = $('#lot_product_input'); const hiddenId = $('#lot_product_id');
+    const inp = $('#lot_product_input'), hidden = $('#lot_product_id');
     inp?.addEventListener('change', () => {
-      const val = inp.value; hiddenId.value = '';
-      const options = [...document.querySelectorAll('#products_list option')];
-      const o = options.find(o => o.value === val);
-      if (o) hiddenId.value = o.dataset.id || '';
+      const val = inp.value; hidden.value = '';
+      const opts = [...document.querySelectorAll('#products_list option')];
+      const o = opts.find(o => o.value === val); if (o) hidden.value = o.dataset.id || '';
     });
   })();
 
-  /* -------- Lookup local par code-barres (pas OFF) -------- */
+  /* Lookup local par EAN (pas OFF) */
   async function lookupLocalProductByBarcode(code) {
     try {
       const res = await fetch(`{{ BASE }}api/product/by_barcode?code=${encodeURIComponent(code)}`, { headers: { 'Accept': 'application/json' } });
-      if (res.ok) return await res.json(); // {id,name,barcode}
+      if (res.ok) return await res.json();
       return null;
     } catch { return null; }
   }
   function applyFoundProduct(p) {
     if (!p) return;
     const label = p.barcode ? `${p.name} (${p.barcode})` : p.name;
-    $('#lot_product_input').value = label;
-    $('#lot_product_id').value = p.id;
-    $('#lot_qty')?.focus();
+    $('#lot_product_input').value = label; $('#lot_product_id').value = p.id; $('#lot_qty')?.focus();
   }
 
-  /* Champs et boutons scan */
-  const elCode = $('#scan_barcode'),
-    btnLookup = $('#btn_barcode_lookup'),
-    btnScan = $('#btn_scan_live'),
-    btnCapture = $('#btn_capture'),
-    fileCapture = $('#file_capture'),
-    btnPaste = $('#btn_paste'),
-    btnClear = $('#btn_clear'),
-    errBox = $('#scan_error');
+  /* Scan / Saisie code-barres */
+  const elCode = $('#scan_barcode'), btnLookup = $('#btn_barcode_lookup'), btnScan = $('#btn_scan_live'),
+    btnCapture = $('#btn_capture'), fileCapture = $('#file_capture'),
+    btnPaste = $('#btn_paste'), btnClear = $('#btn_clear'), errBox = $('#scan_error');
 
   btnClear?.addEventListener('click', () => { if (elCode) elCode.value = ''; clearError(errBox); });
-  btnPaste?.addEventListener('click', async () => {
-    try { const t = await navigator.clipboard.readText(); if (elCode) { elCode.value = (t || '').replace(/\D+/g, ''); doBarcodeLookup(); } }
-    catch { showError(errBox, 'Impossible de lire le presse-papiers.'); }
-  });
+  btnPaste?.addEventListener('click', async () => { try { const t = await navigator.clipboard.readText(); if (elCode) { elCode.value = (t || '').replace(/\D+/g, ''); doBarcodeLookup(); } } catch { showError(errBox, 'Impossible de lire le presse-papiers.'); } });
   btnLookup?.addEventListener('click', doBarcodeLookup);
   elCode?.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); doBarcodeLookup(); } });
 
   async function doBarcodeLookup() {
     clearError(errBox);
-    const code = (elCode?.value || '').replace(/\D+/g, '');
-    if (!code) { showError(errBox, 'Renseigne un code-barres valide.'); return; }
-    const found = await lookupLocalProductByBarcode(code);
-    if (found) { applyFoundProduct(found); return; }
+    const code = (elCode?.value || '').replace(/\D+/g, ''); if (!code) { showError(errBox, 'Renseigne un code-barres valide.'); return; }
+    const found = await lookupLocalProductByBarcode(code); if (found) { applyFoundProduct(found); return; }
     openCreateProductModalWithBarcode(code);
   }
 
-  /* Modale création produit (si non trouvé localement) */
   function openCreateProductModalWithBarcode(code) {
-    $('#cp_barcode').value = code || '';
-    $('#cp_name').value = '';
-    $('#cp_unit').value = 'pièce';
-    $('#cp_shelf').value = '';
+    $('#cp_barcode').value = code || ''; $('#cp_name').value = ''; $('#cp_unit').value = 'pièce'; $('#cp_shelf').value = '';
     document.getElementById('dlg-product-create').showModal();
   }
-  document.getElementById('create_product_form').addEventListener('submit', function () {
-    /* Après création, le backend nous renverra sur /lots?product_created=<id> */
-  });
+  document.getElementById('create_product_form').addEventListener('submit', () => {/* redirect ?product_created=<id> coté backend */ });
 
-  /* Auto-sélection post-création produit */
-  (function () {
-    const p = new URLSearchParams(location.search);
-    const pid = p.get('product_created');
-    if (pid) {
-      const opt = [...document.querySelectorAll('#products_list option')].find(o => o.dataset.id === pid);
-      if (opt) {
-        $('#lot_product_input').value = opt.value;
-        $('#lot_product_id').value = pid;
-        window.showToast('Produit créé. Tu peux maintenant ajouter le stock.', 'ok');
-      }
-    }
-  })();
+  (function () { const p = new URLSearchParams(location.search); const pid = p.get('product_created'); if (pid) { const opt = [...document.querySelectorAll('#products_list option')].find(o => o.dataset.id === pid); if (opt) { $('#lot_product_input').value = opt.value; $('#lot_product_id').value = pid; window.showToast('Produit créé. Tu peux maintenant ajouter le stock.', 'ok'); } } })();
 
   /* Modales Modifier / Supprimer */
   document.addEventListener('click', (e) => {
-    const edit = e.target.closest('.js-edit-open');
-    const del = e.target.closest('.js-delete-open');
-
-    if (edit) {
-      $('#dlg-lot-id').value = edit.dataset.id;
-      $('#dlg-qty').value = edit.dataset.qty || 0;
-      const sel = $('#dlg-location'); if (sel) { sel.value = edit.dataset.location_id || sel.value; }
-      $('#dlg-frozen').value = edit.dataset.frozen || '';
-      $('#dlg-best-before').value = edit.dataset.best_before || '';
-      document.getElementById('dlg-edit').showModal(); return;
-    }
-    if (del) {
-      $('#del-lot-id').value = del.dataset.id;
-      $('#del-msg').textContent = `Supprimer l’entrée de « ${del.dataset.product || 'produit'} » ?`;
-      document.getElementById('dlg-delete').showModal(); return;
-    }
+    const edit = e.target.closest('.js-edit-open'), del = e.target.closest('.js-delete-open');
+    if (edit) { $('#dlg-lot-id').value = edit.dataset.id; $('#dlg-qty').value = edit.dataset.qty || 0; const sel = $('#dlg-location'); if (sel) sel.value = edit.dataset.location_id || sel.value; $('#dlg-frozen').value = edit.dataset.frozen || ''; $('#dlg-best-before').value = edit.dataset.best_before || ''; document.getElementById('dlg-edit').showModal(); return; }
+    if (del) { $('#del-lot-id').value = del.dataset.id; $('#del-msg').textContent = `Supprimer l’entrée de « ${del.dataset.product || 'produit'} » ?`; document.getElementById('dlg-delete').showModal(); return; }
   });
 
   /* Recherche / filtres live */
-  const q = document.getElementById('q'),
-    tbody = document.getElementById('tbody'),
-    cards = document.getElementById('cards'),
-    fLoc = document.getElementById('f_loc'),
-    fStatus = document.getElementById('f_status');
-  const rows = Array.from(tbody ? tbody.children : []);
-  const cardsItems = Array.from(cards ? cards.children : []);
-
-  function passesFilters(dataset, txt, loc, st) {
-    const s = (dataset.name + ' ' + (dataset.loc || '') + ' ' + (dataset.barcode || '')).includes(txt);
-    const l = loc ? (dataset.loc === loc) : true;
-    const t = st ? ((dataset.status || '') === st) : true;
-    return s && l && t;
-  }
+  const q = document.getElementById('q'), tbody = document.getElementById('tbody'), cards = document.getElementById('cards'),
+    fLoc = document.getElementById('f_loc'), fStatus = document.getElementById('f_status');
+  const rows = Array.from(tbody ? tbody.children : []), cardsItems = Array.from(cards ? cards.children : []);
+  function passesFilters(ds, txt, loc, st) { const s = (ds.name + ' ' + (ds.loc || '') + ' ' + (ds.barcode || '')).includes(txt); const l = loc ? (ds.loc === loc) : true; const t = st ? ((ds.status || '') === st) : true; return s && l && t; }
   function applyFilter() {
-    const txt = (q?.value || '').toLowerCase().trim();
-    const loc = (fLoc?.value || '').toLowerCase().trim();
-    const st = (fStatus?.value || '').trim();
-    let shown = 0;
-    rows.forEach(tr => {
-      const ds = tr.dataset;
-      const m = passesFilters(ds, txt, loc, st);
-      tr.style.display = m ? '' : 'none';
-      if (m) shown++;
-    });
-    cardsItems.forEach(c => {
-      const ds = c.dataset;
-      const m = passesFilters(ds, txt, loc, st);
-      c.style.display = m ? '' : 'none';
-    });
+    const txt = (q?.value || '').toLowerCase().trim(), loc = (fLoc?.value || '').toLowerCase().trim(), st = (fStatus?.value || '').trim(); let shown = 0;
+    rows.forEach(tr => { const m = passesFilters(tr.dataset, txt, loc, st); tr.style.display = m ? '' : 'none'; if (m) shown++; });
+    cardsItems.forEach(c => { const m = passesFilters(c.dataset, txt, loc, st); c.style.display = m ? '' : 'none'; });
     const lc = document.getElementById('lots-count'); if (lc) lc.textContent = (txt || loc || st) ? shown : rows.length;
   }
   [q, fLoc, fStatus].forEach(el => el && el.addEventListener('input', applyFilter));
 
-  /* Scanner live (BarcodeDetector + ZXing fallback) */
-  const dlgScan = document.getElementById('scan-modal'),
-    scanVideo = document.getElementById('scan-video'),
-    btnScanClose = document.getElementById('scan-close');
-  let scanning = false, zxingReader = null, zxingLiveActive = false;
+  /* Relative J±N à côté des DLC */
+  function relDays(iso) { try { const d = new Date(iso + 'T00:00:00'); const t = new Date(); t.setHours(0, 0, 0, 0); const diff = Math.round((d - t) / 86400000); if (isNaN(diff)) return ''; return ` (J${diff >= 0 ? '+' : ''}${diff})`; } catch { return ''; } }
+  document.querySelectorAll('.js-rel').forEach(el => { const iso = el.dataset.date; const r = relDays(iso); el.textContent = r; el.title = iso; });
 
-  async function onBarcodeDetected(code) {
-    if (!code) return;
-    elCode.value = code.replace(/\D+/g, '');
-    await closeScanModal();
-    doBarcodeLookup();
-  }
+  /* Scanner live (BarcodeDetector + ZXing) */
+  const dlgScan = document.getElementById('scan-modal'), scanVideo = document.getElementById('scan-video'), btnScanClose = document.getElementById('scan-close');
+  let scanning = false, zxingReader = null, zxingLiveActive = false;
+  async function onBarcodeDetected(code) { if (!code) return; elCode.value = code.replace(/\D+/g, ''); await closeScanModal(); doBarcodeLookup(); }
   async function openScanModal() {
     if (!dlgScan) return; dlgScan.showModal(); scanning = true;
     if ('BarcodeDetector' in window) {
       try {
         const detector = new BarcodeDetector({ formats: ['ean_13', 'ean_8', 'upc_a', 'upc_e'] });
-        const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
-        scanVideo.srcObject = stream;
-        const tick = async () => {
-          if (!scanning) return;
-          try {
-            const bm = await detector.detect(scanVideo);
-            if (bm && bm[0] && bm[0].rawValue) { await onBarcodeDetected(bm[0].rawValue); return; }
-          } catch { }
-          requestAnimationFrame(tick);
-        };
+        const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } }); scanVideo.srcObject = stream;
+        const tick = async () => { if (!scanning) return; try { const bm = await detector.detect(scanVideo); if (bm && bm[0]?.rawValue) { await onBarcodeDetected(bm[0].rawValue); return; } } catch { } requestAnimationFrame(tick); };
         tick(); return;
-      } catch (e) {/* fallback */ }
+      } catch (e) { }
     }
     startZXingLive();
   }
-  async function closeScanModal() {
-    scanning = false;
-    if (dlgScan && dlgScan.open) dlgScan.close();
-    const s = scanVideo?.srcObject; if (s && s.getTracks) s.getTracks().forEach(t => t.stop());
-    if (zxingReader && zxingLiveActive) { try { await zxingReader.reset(); } catch { } zxingLiveActive = false; }
-  }
-  async function loadZXing() {
-    return new Promise((resolve, reject) => {
-      if (window.ZXing) return resolve(window.ZXing);
-      const s = document.createElement('script'); s.src = 'https://unpkg.com/@zxing/library@latest';
-      s.onload = () => resolve(window.ZXing); s.onerror = () => reject(new Error('ZXing indisponible'));
-      document.head.appendChild(s);
-    });
-  }
-  async function startZXingLive() {
-    try {
-      if (!window.ZXing) await loadZXing();
-      if (!zxingReader) zxingReader = new ZXing.BrowserMultiFormatReader();
-      zxingReader.decodeFromVideoDevice(undefined, scanVideo, async (result, err) => {
-        if (!scanning) return;
-        if (result && result.getText) {
-          const code = (result.getText() || '').replace(/\D+/g, '');
-          if (code) await onBarcodeDetected(code);
-        }
-      });
-      zxingLiveActive = true; scanning = true;
-    } catch (e) { showError(errBox, "Impossible de démarrer le flux live. Utilise « Photo »."); }
-  }
+  async function closeScanModal() { scanning = false; if (dlgScan && dlgScan.open) dlgScan.close(); const s = scanVideo?.srcObject; if (s && s.getTracks) s.getTracks().forEach(t => t.stop()); if (zxingReader && zxingLiveActive) { try { await zxingReader.reset(); } catch { } zxingLiveActive = false; } }
+  async function loadZXing() { return new Promise((res, rej) => { if (window.ZXing) return res(window.ZXing); const s = document.createElement('script'); s.src = 'https://unpkg.com/@zxing/library@latest'; s.onload = () => res(window.ZXing); s.onerror = () => rej(new Error('ZXing indisponible')); document.head.appendChild(s); }); }
+  async function startZXingLive() { try { if (!window.ZXing) await loadZXing(); if (!zxingReader) zxingReader = new ZXing.BrowserMultiFormatReader(); zxingReader.decodeFromVideoDevice(undefined, scanVideo, async (r, err) => { if (!scanning) return; if (r && r.getText) { const code = (r.getText() || '').replace(/\D+/g, ''); if (code) await onBarcodeDetected(code); } }); zxingLiveActive = true; scanning = true; } catch (e) { showError(errBox, "Impossible de démarrer le flux live. Utilise « Photo »."); } }
   document.getElementById('btn_scan_live').addEventListener('click', openScanModal);
   btnScanClose?.addEventListener('click', closeScanModal);
+
   btnCapture?.addEventListener('click', () => fileCapture.click());
   fileCapture?.addEventListener('change', async (ev) => {
     const file = ev.target.files && ev.target.files[0]; if (!file) return;
     try {
-      if (!window.ZXing) await loadZXing();
-      if (!zxingReader) zxingReader = new ZXing.BrowserMultiFormatReader();
-      const url = URL.createObjectURL(file);
-      const img = document.createElement('img'); img.src = url; await img.decode();
-      const res = await zxingReader.decodeFromImageElement(img);
-      const code = res && res.getText ? (res.getText() || '').replace(/\D+/g, '') : '';
-      if (code) await onBarcodeDetected(code); else showError(errBox, 'Aucun code détecté sur la photo.');
-    } catch { showError(errBox, 'Erreur lecture de la photo.'); }
+      if (!window.ZXing) await loadZXing(); if (!zxingReader) zxingReader = new ZXing.BrowserMultiFormatReader();
+      const url = URL.createObjectURL(file); const img = document.createElement('img'); img.src = url; await img.decode();
+      const res = await zxingReader.decodeFromImageElement(img); const code = res && res.getText ? (res.getText() || '').replace(/\D+/g, '') : ''; if (code) await onBarcodeDetected(code); else showError(errBox, 'Aucun code détecté sur la photo.');
+    }
+    catch { showError(errBox, 'Erreur lecture de la photo.'); }
     finally { fileCapture.value = ''; }
   });
 
   /* Toasts via querystring */
-  (function () {
-    const p = new URLSearchParams(location.search);
-    if (p.get('added') === '1') window.showToast('Stock ajouté.', 'ok');
-    if (p.get('updated') === '1') window.showToast('Stock mis à jour.', 'ok');
-    if (p.get('deleted') === '1') window.showToast('Stock supprimé.', 'warn');
-  })();
+  (function () { const p = new URLSearchParams(location.search); if (p.get('added') === '1') window.showToast('Stock ajouté.', 'ok'); if (p.get('updated') === '1') window.showToast('Stock mis à jour.', 'ok'); if (p.get('deleted') === '1') window.showToast('Stock supprimé.', 'warn'); })();
 </script>
 {% endblock %}
