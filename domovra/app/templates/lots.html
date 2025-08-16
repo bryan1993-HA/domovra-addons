@@ -791,5 +791,40 @@
     if (p.get('updated') === '1') window.showToast('Stock mis à jour.', 'ok');
     if (p.get('deleted') === '1') window.showToast('Stock supprimé.', 'warn');
   })();
+
+  /* -------- Modales Edit/Supprimer -------- */
+  (function () {
+    const editDialog = document.getElementById('dlg-edit');
+    const delDialog = document.getElementById('dlg-delete');
+    const setVal = (id, v) => { const el = document.getElementById(id); if (el != null) el.value = v ?? ''; };
+
+    document.querySelectorAll('.js-edit-open').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const id = btn.getAttribute('data-id');
+        const qty = btn.getAttribute('data-qty');
+        const loc = btn.getAttribute('data-location_id');
+        const frozen = btn.getAttribute('data-frozen') || '';
+        const bb = btn.getAttribute('data-best_before') || '';
+        setVal('dlg-lot-id', id);
+        setVal('dlg-qty', qty);
+        setVal('dlg-location', loc);
+        setVal('dlg-frozen', frozen);
+        setVal('dlg-best', bb);
+        if (editDialog) editDialog.showModal();
+      });
+    });
+
+    document.querySelectorAll('.js-delete-open').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const id = btn.getAttribute('data-id');
+        const product = btn.getAttribute('data-product') || '';
+        setVal('del-lot-id', id);
+        const msg = document.getElementById('del-msg');
+        if (msg) msg.textContent = product ? `Supprimer "${product}" du stock ?` : 'Supprimer cette entrée de stock ?';
+        if (delDialog) delDialog.showModal();
+      });
+    });
+  })();
+
 </script>
 {% endblock %}
