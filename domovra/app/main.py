@@ -337,8 +337,10 @@ def product_add(request: Request,
                 unit: str = Form("pièce"),
                 shelf: int = Form(90),
                 barcode: str = Form("")):
-    try: shelf = int(shelf)
-    except Exception: shelf = 90
+    try:
+        shelf = int(shelf)
+    except Exception:
+        shelf = 90
     bid = barcode.strip() or None
     pid = add_product(name, unit or "pièce", shelf, bid)
     log_event("product.add", {"id": pid, "name": name, "unit": unit, "shelf": shelf, "barcode": bid})
@@ -348,12 +350,13 @@ def product_add(request: Request,
     if "/lots" in referer:
         # Si la création provient de la page Stocks, on y revient pour enchaîner l’ajout du lot
         return RedirectResponse(base + f"lots?product_created={pid}", status_code=303,
-                                headers={"Cache-Control":"no-store"})
+                                headers={"Cache-Control": "no-store"})
 
     # Comportement historique (page Produits)
     params = urlencode({"added": 1, "pid": pid})
     return RedirectResponse(base + f"products?{params}", status_code=303,
-                            headers={"Cache-Control":"no-store"})
+                            headers={"Cache-Control": "no-store"})
+
 
 
 
@@ -429,10 +432,17 @@ def lot_add_action(request: Request,
                    frozen_on: str = Form(""),
                    best_before: str = Form("")):
     add_lot(product_id, location_id, float(qty), frozen_on or None, best_before or None)
-    log_event("lot.add", {"product_id": product_id, "location_id": location_id, "qty": float(qty),
-                          "frozen_on": frozen_on or None, "best_before": best_before or None})
+    log_event("lot.add", {
+        "product_id": product_id,
+        "location_id": location_id,
+        "qty": float(qty),
+        "frozen_on": frozen_on or None,
+        "best_before": best_before or None
+    })
     base = ingress_base(request)
-    return RedirectResponse(base + "lots?added=1", status_code=303, headers={"Cache-Control":"no-store"})
+    return RedirectResponse(base + "lots?added=1", status_code=303,
+                            headers={"Cache-Control": "no-store"})
+
 
 
 @app.post("/lot/update")
@@ -442,13 +452,22 @@ def lot_update_action(request: Request,
                       location_id: int = Form(...),
                       frozen_on: str = Form(""),
                       best_before: str = Form("")):
-    try: q = float(qty)
-    except Exception: q = 0.0
+    try:
+        q = float(qty)
+    except Exception:
+        q = 0.0
     update_lot(lot_id, q, int(location_id), frozen_on or None, best_before or None)
-    log_event("lot.update", {"lot_id": lot_id, "qty": q, "location_id": int(location_id),
-                             "frozen_on": frozen_on or None, "best_before": best_before or None})
-        base = ingress_base(request)
-    return RedirectResponse(base + "lots?updated=1", status_code=303, headers={"Cache-Control":"no-store"})
+    log_event("lot.update", {
+        "lot_id": lot_id,
+        "qty": q,
+        "location_id": int(location_id),
+        "frozen_on": frozen_on or None,
+        "best_before": best_before or None
+    })
+    base = ingress_base(request)
+    return RedirectResponse(base + "lots?updated=1", status_code=303,
+                            headers={"Cache-Control": "no-store"})
+
 
 
 
@@ -463,10 +482,9 @@ def lot_consume_action(request: Request, lot_id: int = Form(...), qty: float = F
 def lot_delete_action(request: Request, lot_id: int = Form(...)):
     delete_lot(lot_id)
     log_event("lot.delete", {"lot_id": lot_id})
-        base = ingress_base(request)
-    return RedirectResponse(base + "lots?deleted=1", status_code=303, headers={"Cache-Control":"no-store"})
-
-
+    base = ingress_base(request)
+    return RedirectResponse(base + "lots?deleted=1", status_code=303,
+                            headers={"Cache-Control": "no-store"})
 
 # ---------------- Page Support (Ko-fi)
 @app.get("/support", response_class=HTMLResponse)
