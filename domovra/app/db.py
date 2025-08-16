@@ -181,13 +181,23 @@ def add_lot(product_id: int, location_id: int, qty: float, frozen_on: str | None
 
 def list_lots():
     with _conn() as c:
-        q = """SELECT l.id, l.product_id, l.location_id, p.name AS product, p.unit,
-                      loc.name AS location, l.qty, l.frozen_on, l.best_before
+        q = """SELECT
+                 l.id,
+                 l.product_id,
+                 l.location_id,
+                 p.name        AS product,
+                 p.unit        AS unit,
+                 COALESCE(p.barcode,'') AS barcode,   -- ✅ ajouté pour l’UI
+                 loc.name      AS location,
+                 l.qty,
+                 l.frozen_on,
+                 l.best_before
                FROM stock_lots l
-               JOIN products p ON p.id=l.product_id
-               JOIN locations loc ON loc.id=l.location_id
+               JOIN products  p   ON p.id  = l.product_id
+               JOIN locations loc ON loc.id = l.location_id
                ORDER BY COALESCE(l.best_before, '9999-12-31') ASC, p.name"""
         return [dict(r) for r in c.execute(q)]
+
 
 def consume_lot(lot_id: int, qty: float):
     with _conn() as c:

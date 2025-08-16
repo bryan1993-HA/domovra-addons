@@ -368,12 +368,12 @@
     </div>
 
     <form id="lot_create_form" method="post" action="{{ BASE }}lot/add" class="form-grid">
-      <!-- Produit (select avec recherche simple) -->
+      <!-- Produit -->
       <div>
         <div class="label">Produit</div>
         <input list="products_list" id="lot_product_input" name="product_name" placeholder="Nom ou EAN…"
-          autocomplete="off">
-        <input type="hidden" name="product_id" id="lot_product_id">
+          autocomplete="off" required>
+        <input type="hidden" name="product_id" id="lot_product_id" required>
         <datalist id="products_list">
           {% for p in products %}
           <option data-id="{{ p.id }}" data-barcode="{{ p.barcode or '' }}"
@@ -671,61 +671,49 @@
 
 {% block scripts %}
 <script>
-  /* ---------- Utils ---------- */
   const $ = s => document.querySelector(s);
   function showError(el, msg) { if (!el) return; el.textContent = msg || 'Erreur'; el.hidden = false; }
   function clearError(el) { if (!el) return; el.hidden = true; el.textContent = ''; }
 
-  /* ---------- Réinitialiser formulaire ajout ---------- */
+  /* Reset */
   (function () {
     const r = $('#lot_reset'); if (!r) return;
     r.addEventListener('click', () => {
       ['lot_product_input', 'lot_product_id', 'scan_barcode', 'lot_qty', 'lot_frozen', 'lot_best_before'].forEach(id => {
-        const el = document.getElementById(id); if (!el) return; if (el.tagName === 'INPUT') el.value = ''; else el.value = '';
+        const el = document.getElementById(id); if (!el) return; el.value = '';
       });
       const loc = $('#lot_location_id'); if (loc && loc.options.length) loc.selectedIndex = 0;
     });
   })();
 
-  /* ---------- Sélection produit à partir de l’input/datalist ---------- */
+  /* Lier input produit ↔ hidden product_id via datalist */
   (function () {
     const inp = $('#lot_product_input'); const hiddenId = $('#lot_product_id');
     inp?.addEventListener('change', () => {
-      const val = inp.value;
-      hiddenId.value = '';
-      const opts = [...document.querySelectorAll('#products_list option')];
-      const o = opts.find(o => o.value === val);
-      if (o) { hiddenId.value = o.dataset.id || ''; }
+      const val = inp.value; hiddenId.value = '';
+      const options = [...document.querySelectorAll('#products_list option')];
+      const o = options.find(o => o.value === val);
+      if (o) hiddenId.value = o.dataset.id || '';
     });
   })();
 
-  /* ---------- Recherche locale produit par code-barres ---------- */
-  /* On tente une route JSON locale. À ajouter côté FastAPI:
-     GET {{ BASE }}api/product/by_barcode?code=xxxxx -> 200 {id,name,barcode} ou 404
-  */
+  /* -------- Lookup local par code-barres (pas OFF) -------- */
   async function lookupLocalProductByBarcode(code) {
     try {
       const res = await fetch(`{{ BASE }}api/product/by_barcode?code=${encodeURIComponent(code)}`, { headers: { 'Accept': 'application/json' } });
-      if (res.ok) {
-        return await res.json(); // {id, name, barcode}
-      }
+      if (res.ok) return await res.json(); // {id,name,barcode}
       return null;
     } catch { return null; }
   }
-
-  /* Applique le produit trouvé dans le formulaire d’ajout */
   function applyFoundProduct(p) {
     if (!p) return;
-    const inp = $('#lot_product_input'), hid = $('#lot_product_id');
-    // Tente de retrouver l’option datalist (si différente du libellé, on force)
     const label = p.barcode ? `${p.name} (${p.barcode})` : p.name;
-    inp.value = label;
-    hid.value = p.id;
-    // Focalise la quantité pour enchaîner
+    $('#lot_product_input').value = label;
+    $('#lot_product_id').value = p.id;
     $('#lot_qty')?.focus();
   }
 
-  /* ---------- Actions scan / saisie code-barres ---------- */
+  /* Champs et boutons scan */
   const elCode = $('#scan_barcode'),
     btnLookup = $('#btn_barcode_lookup'),
     btnScan = $('#btn_scan_live'),
@@ -736,12 +724,10 @@
     errBox = $('#scan_error');
 
   btnClear?.addEventListener('click', () => { if (elCode) elCode.value = ''; clearError(errBox); });
-
   btnPaste?.addEventListener('click', async () => {
     try { const t = await navigator.clipboard.readText(); if (elCode) { elCode.value = (t || '').replace(/\D+/g, ''); doBarcodeLookup(); } }
     catch { showError(errBox, 'Impossible de lire le presse-papiers.'); }
   });
-
   btnLookup?.addEventListener('click', doBarcodeLookup);
   elCode?.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); doBarcodeLookup(); } });
 
@@ -749,14 +735,12 @@
     clearError(errBox);
     const code = (elCode?.value || '').replace(/\D+/g, '');
     if (!code) { showError(errBox, 'Renseigne un code-barres valide.'); return; }
-    // 1) Local DB
     const found = await lookupLocalProductByBarcode(code);
     if (found) { applyFoundProduct(found); return; }
-    // 2) Sinon -> modale création produit
     openCreateProductModalWithBarcode(code);
   }
 
-  /* ---------- Modale création produit (si non trouvé en local) ---------- */
+  /* Modale création produit (si non trouvé localement) */
   function openCreateProductModalWithBarcode(code) {
     $('#cp_barcode').value = code || '';
     $('#cp_name').value = '';
@@ -765,15 +749,14 @@
     document.getElementById('dlg-product-create').showModal();
   }
   document.getElementById('create_product_form').addEventListener('submit', function () {
-    // À la redirection, côté serveur, renvoyer sur /lots?product_created=ID pour auto-sélection
+    /* Après création, le backend nous renverra sur /lots?product_created=<id> */
   });
 
-  /* Au chargement, si on revient avec ?product_created=ID, on auto-sélectionne */
+  /* Auto-sélection post-création produit */
   (function () {
     const p = new URLSearchParams(location.search);
     const pid = p.get('product_created');
     if (pid) {
-      // On tente de trouver le produit dans datalist
       const opt = [...document.querySelectorAll('#products_list option')].find(o => o.dataset.id === pid);
       if (opt) {
         $('#lot_product_input').value = opt.value;
@@ -783,7 +766,7 @@
     }
   })();
 
-  /* ---------- Modales Modifier / Supprimer ---------- */
+  /* Modales Modifier / Supprimer */
   document.addEventListener('click', (e) => {
     const edit = e.target.closest('.js-edit-open');
     const del = e.target.closest('.js-delete-open');
@@ -791,9 +774,7 @@
     if (edit) {
       $('#dlg-lot-id').value = edit.dataset.id;
       $('#dlg-qty').value = edit.dataset.qty || 0;
-      // Emplacement
       const sel = $('#dlg-location'); if (sel) { sel.value = edit.dataset.location_id || sel.value; }
-      // Dates
       $('#dlg-frozen').value = edit.dataset.frozen || '';
       $('#dlg-best-before').value = edit.dataset.best_before || '';
       document.getElementById('dlg-edit').showModal(); return;
@@ -805,7 +786,7 @@
     }
   });
 
-  /* ---------- Recherche / filtres live ---------- */
+  /* Recherche / filtres live */
   const q = document.getElementById('q'),
     tbody = document.getElementById('tbody'),
     cards = document.getElementById('cards'),
@@ -840,7 +821,7 @@
   }
   [q, fLoc, fStatus].forEach(el => el && el.addEventListener('input', applyFilter));
 
-  /* ---------- Scanner live (BarcodeDetector + ZXing fallback) ---------- */
+  /* Scanner live (BarcodeDetector + ZXing fallback) */
   const dlgScan = document.getElementById('scan-modal'),
     scanVideo = document.getElementById('scan-video'),
     btnScanClose = document.getElementById('scan-close');
@@ -900,7 +881,7 @@
       zxingLiveActive = true; scanning = true;
     } catch (e) { showError(errBox, "Impossible de démarrer le flux live. Utilise « Photo »."); }
   }
-  btnScan?.addEventListener('click', openScanModal);
+  document.getElementById('btn_scan_live').addEventListener('click', openScanModal);
   btnScanClose?.addEventListener('click', closeScanModal);
   btnCapture?.addEventListener('click', () => fileCapture.click());
   fileCapture?.addEventListener('change', async (ev) => {
@@ -917,7 +898,7 @@
     finally { fileCapture.value = ''; }
   });
 
-  /* ---------- Toasts depuis querystring ---------- */
+  /* Toasts via querystring */
   (function () {
     const p = new URLSearchParams(location.search);
     if (p.get('added') === '1') window.showToast('Stock ajouté.', 'ok');
