@@ -62,7 +62,7 @@
     gap: 6px
   }
 
-  /* Entrées & boutons – thème clair/sombre aligné Accueil */
+  /* Entrées & boutons */
   input,
   select,
   button {
@@ -90,7 +90,6 @@
     border-color: var(--border);
   }
 
-  /* Ghost/outline (Réinitialiser) */
   .btn-ghost {
     background: transparent;
     border: 1px solid var(--border);
@@ -257,7 +256,8 @@
       border: 1px solid var(--border);
       border-radius: 12px;
       padding: 10px;
-      background: #121620
+      /* FIX clair/sombre : fond transparent, pas de bloc sombre */
+      background: transparent;
     }
 
     .card-head {
@@ -285,7 +285,7 @@
     }
   }
 
-  /* Bloc OFF : input + bouton caméra (amélioré) */
+  /* Bloc OFF : input + bouton caméra */
   #off-box {
     padding: 8px 0
   }
@@ -311,7 +311,6 @@
     border-radius: 10px;
     border: 1px solid var(--border);
     background: transparent;
-    /* <<< transparent en clair & sombre */
     cursor: pointer;
     line-height: 1.1;
     transition: transform .06s ease, background .12s ease;
@@ -558,7 +557,7 @@
   </div>
 </div>
 
-<!-- Dialogs identiques (Modifier / Supprimer / Scanner) que précédemment -->
+<!-- Dialogs (Modifier / Supprimer / Scanner) identiques -->
 <dialog id="dlg-edit">
   <form method="post" action="{{ BASE }}product/update" style="display:grid;gap:10px;min-width:min(520px,92vw)">
     <h3 style="margin:0">Modifier le produit</h3>
