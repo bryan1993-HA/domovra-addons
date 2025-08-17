@@ -12,6 +12,7 @@ from db import (
     add_location, list_locations, update_location, delete_location, move_lots_from_location,
     # Products
     add_product, list_products, update_product, delete_product,
+    list_products_with_stats, list_low_stock_products,
     # Lots
     add_lot, list_lots, update_lot, delete_lot, consume_lot,
     # Helper
@@ -25,7 +26,7 @@ except Exception:
     def load_settings():
         return {
             "theme":"auto","table_mode":"scroll","sidebar_compact":False,
-            "default_shelf_days":90,"low_stock_default":1,
+            "default_shelf_days":90,
             "toast_duration":3000,"toast_ok":"#4caf50","toast_warn":"#ffb300","toast_error":"#ef5350"
         }
     def save_settings(new_values: dict):
@@ -117,8 +118,8 @@ def pluralize_fr(unit: str, qty) -> str:
         "unite": "unites",
         "pack": "packs",
         "lot": "lots",
-        "bocal": "bocaux",  # bonus utile
-        "journal": "journaux"  # bonus utile
+        "bocal": "bocaux",
+        "journal": "journaux"
     }
     # déjà au pluriel / finissant par s/x
     if u in irregulars.values() or u.endswith(("s","x")):
@@ -216,18 +217,27 @@ def index(request: Request):
     lots      = list_lots()
     for it in lots:
         it["status"] = status_for(it.get("best_before"), WARNING_DAYS, CRITICAL_DAYS)
+
+    # Nouveau : Top 8 produits en "faible stock"
+    low_products = []
+    try:
+        low_products = list_low_stock_products(limit=8)
+    except Exception as e:
+        logger.warning("list_low_stock_products indisponible : %s", e)
+
     return render("index.html",
                   BASE=base,
                   page="home",
                   request=request,
                   locations=locations, products=products, lots=lots,
+                  low_products=low_products,
                   WARNING_DAYS=WARNING_DAYS, CRITICAL_DAYS=CRITICAL_DAYS)
 
 @app.get("/products", response_class=HTMLResponse)
 def products_page(request: Request):
     base = ingress_base(request)
     logger.info("GET /products (BASE=%s)", base)
-    items = get_products_with_stats()
+    items = list_products_with_stats()
     return render("products.html",
                   BASE=base,
                   page="products",
@@ -298,7 +308,7 @@ def lots_page(
         request=request,
         items=items,
         locations=locations,
-        products=list_products(),  # ← ajouté
+        products=list_products(),  # ← pour l'autocomplete
     )
 
 # --------- Journal page
@@ -369,7 +379,6 @@ def settings_save(request: Request,
                   table_mode: str = Form("scroll"),
                   sidebar_compact: str = Form(None),
                   default_shelf_days: int = Form(90),
-                  low_stock_default: int = Form(1),
                   toast_duration: int = Form(3000),
                   toast_ok: str = Form("#4caf50"),
                   toast_warn: str = Form("#ffb300"),
@@ -380,7 +389,6 @@ def settings_save(request: Request,
         "table_mode": table_mode if table_mode in ("scroll","stacked") else "scroll",
         "sidebar_compact": (sidebar_compact == "on"),
         "default_shelf_days": int(default_shelf_days or 90),
-        "low_stock_default": int(low_stock_default or 1),
         "toast_duration": max(500, int(toast_duration or 3000)),
         "toast_ok": (toast_ok or "#4caf50").strip(),
         "toast_warn": (toast_warn or "#ffb300").strip(),
@@ -408,14 +416,24 @@ def product_add(request: Request,
                 name: str = Form(...),
                 unit: str = Form("pièce"),
                 shelf: int = Form(90),
-                barcode: str = Form("")):
+                barcode: str = Form(""),
+                min_qty: str = Form("")):
     try:
         shelf = int(shelf)
     except Exception:
         shelf = 90
-    bid = barcode.strip() or None
-    pid = add_product(name, unit or "pièce", shelf, bid)
-    log_event("product.add", {"id": pid, "name": name, "unit": unit, "shelf": shelf, "barcode": bid})
+    bid = (barcode or "").strip() or None
+    # min_qty optionnel
+    mq = None
+    if isinstance(min_qty, str) and min_qty.strip():
+        try:
+            mq = float(min_qty)
+            if mq < 0: mq = 0.0
+        except Exception:
+            mq = None
+
+    pid = add_product(name, unit or "pièce", shelf, bid, mq)
+    log_event("product.add", {"id": pid, "name": name, "unit": unit, "shelf": shelf, "barcode": bid, "min_qty": mq})
 
     base = ingress_base(request)
     referer = (request.headers.get("referer") or "").lower()
@@ -434,11 +452,26 @@ def product_update(request: Request,
                    product_id: int = Form(...),
                    name: str = Form(...),
                    unit: str = Form("pièce"),
-                   shelf: int = Form(90)):
-    try: shelf = int(shelf)
-    except Exception: shelf = 90
-    update_product(product_id, name, unit, shelf)
-    log_event("product.update", {"id": product_id, "name": name, "unit": unit, "shelf": shelf})
+                   shelf: int = Form(90),
+                   barcode: str = Form(""),
+                   min_qty: str = Form("")):
+    try:
+        shelf = int(shelf)
+    except Exception:
+        shelf = 90
+
+    # Normalisation barcode & min_qty
+    bid = (barcode or "").strip() or None
+    mq = None
+    if isinstance(min_qty, str) and min_qty.strip():
+        try:
+            mq = float(min_qty)
+            if mq < 0: mq = 0.0
+        except Exception:
+            mq = None
+
+    update_product(product_id, name, unit, shelf, mq, bid)
+    log_event("product.update", {"id": product_id, "name": name, "unit": unit, "shelf": shelf, "barcode": bid, "min_qty": mq})
     return RedirectResponse(ingress_base(request)+"products", status_code=303, headers={"Cache-Control":"no-store"})
 
 @app.post("/product/delete")

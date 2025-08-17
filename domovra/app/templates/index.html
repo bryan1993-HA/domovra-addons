@@ -402,10 +402,70 @@
     <div class="muted">Aucun lot enregistré.</div>
     {% endif %}
   </div>
-
-  <div class="row" style="margin-top:8px;justify-content:flex-end">
-    <a class="chip" href="{{ BASE }}lots">Voir tout</a>
-  </div>
 </div>
+
+<!-- 👇 NOUVEAU : Produits en faible stock (Top 8) -->
+<div class="card">
+  <div class="title">
+    <h2>Produits en faible stock (Top 8)</h2>
+  </div>
+
+  <!-- Version desktop -->
+  <div class="top8-table table-responsive">
+    <table>
+      <thead>
+        <tr>
+          <th>Produit</th>
+          <th>Stock total</th>
+          <th>Seuil min</th>
+          <th>Δ</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% if low_products %}
+        {% for p in low_products %}
+        {% if loop.index0 < 8 %} <tr>
+          <td>{{ p.name }}</td>
+          <td>{{ '%.2f'|format(p.qty_total)|trim('0')|trim('.') }} {{ p.unit|pluralize_fr(p.qty_total) }}</td>
+          <td>{{ '%.2f'|format(p.min_qty)|trim('0')|trim('.') }}</td>
+          <td>{{ '%.2f'|format(p.delta)|trim('0')|trim('.') }}</td>
+          </tr>{% endif %}
+          {% endfor %}
+          {% else %}
+          <tr>
+            <td colspan="4" class="muted">Aucun produit en faible stock.</td>
+          </tr>
+          {% endif %}
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Version mobile -->
+  <div class="top8-cards">
+    {% if low_products %}
+    {% for p in low_products %}
+    {% if loop.index0 < 8 %} <div class="lot-card">
+      <div class="lot-main">
+        <div class="lot-title">{{ p.name }}</div>
+        <div class="lot-meta">
+          <span>⚖️ {{ '%.2f'|format(p.qty_total)|trim('0')|trim('.') }} {{ p.unit|pluralize_fr(p.qty_total) }}</span>
+          <span>🎯 Seuil : {{ '%.2f'|format(p.min_qty)|trim('0')|trim('.') }}</span>
+          <span>Δ : {{ '%.2f'|format(p.delta)|trim('0')|trim('.') }}</span>
+        </div>
+      </div>
+  </div>{% endif %}
+  {% endfor %}
+  {% else %}
+  <div class="muted">Aucun produit en faible stock.</div>
+  {% endif %}
+</div>
+</div>
+
+<!-- Liens “voir tout” -->
+<div class="row" style="margin-top:8px;justify-content:flex-end">
+  <a class="chip" href="{{ BASE }}lots">Voir tout</a>
+  <a class="chip" href="{{ BASE }}products">Voir tout (produits)</a>
+</div>
+
 </div>
 {% endblock %}

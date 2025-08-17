@@ -22,7 +22,7 @@ def init_db():
             name TEXT UNIQUE NOT NULL,
             unit TEXT DEFAULT 'pièce',
             default_shelf_life_days INTEGER DEFAULT 90
-            -- colonne barcode ajoutée plus bas si manquante (migration)
+            -- colonnes ajoutées plus bas si manquantes (migrations)
         )""")
         c.execute("""CREATE TABLE IF NOT EXISTS stock_lots(
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -65,6 +65,10 @@ def init_db():
               )
               WHERE created_on IS NULL
             """)
+
+        # ----- 🚀 Nouvelle migration : seuil mini par produit
+        if not _column_exists(c, "products", "min_qty"):
+            c.execute("ALTER TABLE products ADD COLUMN min_qty REAL")  # nullable
 
         c.commit()
 
@@ -109,7 +113,9 @@ def move_lots_from_location(src_location_id: int, dest_location_id: int):
         c.commit()
 
 # ---------- Products
-def add_product(name: str, unit: str = 'pièce', shelf: int = 90, barcode: str | None = None) -> int:
+def add_product(name: str, unit: str = 'pièce', shelf: int = 90,
+                barcode: str | None = None,
+                min_qty: float | None = None) -> int:
     """
     Ajoute un produit. Unicité sur name (héritée) et sur barcode (si non NULL).
     Si conflit, renvoie l'id existant (par name ou barcode).
@@ -118,12 +124,14 @@ def add_product(name: str, unit: str = 'pièce', shelf: int = 90, barcode: str |
     unit = (unit.strip() or 'pièce')
     shelf = int(shelf)
     barcode = (barcode.strip() or None) if isinstance(barcode, str) else None
+    min_qty = float(min_qty) if (min_qty is not None and str(min_qty).strip() != "") else None
+    if min_qty is not None and min_qty < 0: min_qty = 0.0
 
     with _conn() as c:
         try:
             cur = c.execute(
-                "INSERT INTO products(name,unit,default_shelf_life_days,barcode) VALUES (?,?,?,?)",
-                (name, unit, shelf, barcode)
+                "INSERT INTO products(name,unit,default_shelf_life_days,barcode,min_qty) VALUES (?,?,?,?,?)",
+                (name, unit, shelf, barcode, min_qty)
             )
             c.commit()
             return cur.lastrowid
@@ -140,28 +148,95 @@ def add_product(name: str, unit: str = 'pièce', shelf: int = 90, barcode: str |
 
 def list_products():
     with _conn() as c:
-        return [dict(r) for r in c.execute("SELECT id, name, unit, default_shelf_life_days, barcode FROM products ORDER BY name")]
+        return [dict(r) for r in c.execute(
+            "SELECT id, name, unit, default_shelf_life_days, barcode, min_qty FROM products ORDER BY name"
+        )]
 
 def list_products_with_stats():
+    """
+    Retourne les produits avec:
+      - qty_total (somme des lots)
+      - lots_count
+      - min_qty
+      - delta = qty_total - min_qty (NULL si min_qty NULL)
+    """
     with _conn() as c:
         q = """
+        WITH totals AS (
+          SELECT product_id, COALESCE(SUM(qty),0) AS qty_total, COUNT(id) AS lots_count
+          FROM stock_lots
+          GROUP BY product_id
+        )
         SELECT
-          p.id, p.name, p.unit, p.default_shelf_life_days, p.barcode,
-          COALESCE(SUM(l.qty),0) AS qty_total,
-          COUNT(l.id) AS lots_count
+          p.id, p.name, p.unit, p.default_shelf_life_days, p.barcode, p.min_qty,
+          COALESCE(t.qty_total,0) AS qty_total,
+          COALESCE(t.lots_count,0) AS lots_count,
+          CASE WHEN p.min_qty IS NULL THEN NULL ELSE COALESCE(t.qty_total,0) - p.min_qty END AS delta
         FROM products p
-        LEFT JOIN stock_lots l ON l.product_id = p.id
-        GROUP BY p.id
+        LEFT JOIN totals t ON t.product_id = p.id
         ORDER BY p.name
         """
         return [dict(r) for r in c.execute(q)]
 
-def update_product(product_id: int, name: str, unit: str, default_shelf_life_days: int):
+def list_low_stock_products(limit: int = 8):
+    """
+    Produits FAIBLES : min_qty défini ET qty_total <= min_qty.
+    Tri par criticité (delta croissant), puis qty_total croissant, puis nom.
+    """
     with _conn() as c:
-        c.execute(
-            "UPDATE products SET name=?, unit=?, default_shelf_life_days=? WHERE id=?",
-            (name.strip(), unit.strip() or 'pièce', int(default_shelf_life_days), product_id)
+        q = """
+        WITH totals AS (
+          SELECT product_id, COALESCE(SUM(qty),0) AS qty_total
+          FROM stock_lots
+          GROUP BY product_id
         )
+        SELECT
+          p.id, p.name, p.unit, p.barcode, p.min_qty,
+          COALESCE(t.qty_total,0) AS qty_total,
+          (COALESCE(t.qty_total,0) - p.min_qty) AS delta
+        FROM products p
+        LEFT JOIN totals t ON t.product_id = p.id
+        WHERE p.min_qty IS NOT NULL
+          AND COALESCE(t.qty_total,0) <= p.min_qty
+        ORDER BY delta ASC, qty_total ASC, p.name
+        LIMIT ?
+        """
+        return [dict(r) for r in c.execute(q, (int(limit),))]
+
+def update_product(product_id: int, name: str, unit: str,
+                   default_shelf_life_days: int,
+                   min_qty: float | None = None,
+                   barcode: str | None = None):
+    """
+    Mise à jour produit. Les anciens appels continuent de marcher
+    (min_qty/barcode sont optionnels).
+    """
+    name = name.strip()
+    unit = unit.strip() or 'pièce'
+    default_shelf_life_days = int(default_shelf_life_days)
+    if min_qty is not None and str(min_qty).strip() != "":
+        try:
+            min_qty = float(min_qty)
+            if min_qty < 0: min_qty = 0.0
+        except ValueError:
+            min_qty = None
+    else:
+        # On respecte 'None' = pas de seuil
+        min_qty = None
+
+    with _conn() as c:
+        # Si barcode est fourni, on l’inclut ; sinon on ne le touche pas
+        if barcode is not None:
+            barcode = (barcode.strip() or None)
+            c.execute(
+                "UPDATE products SET name=?, unit=?, default_shelf_life_days=?, barcode=?, min_qty=? WHERE id=?",
+                (name, unit, default_shelf_life_days, barcode, min_qty, product_id)
+            )
+        else:
+            c.execute(
+                "UPDATE products SET name=?, unit=?, default_shelf_life_days=?, min_qty=? WHERE id=?",
+                (name, unit, default_shelf_life_days, min_qty, product_id)
+            )
         c.commit()
 
 def delete_product(product_id: int):

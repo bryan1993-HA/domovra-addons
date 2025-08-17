@@ -62,7 +62,7 @@
     gap: 6px
   }
 
-  /* Entrées & boutons */
+  /* Inputs / boutons */
   input,
   select,
   button {
@@ -151,20 +151,20 @@
   /* Grille du formulaire de création */
   .form-grid {
     display: grid;
-    grid-template-columns: 2fr 1fr 1fr 1fr auto auto;
+    grid-template-columns: 2fr 1fr 1fr 1fr 1fr auto auto;
     gap: 12px;
     align-items: end
   }
 
   @media (max-width:1100px) {
     .form-grid {
-      grid-template-columns: 2fr 1fr 1fr auto auto
+      grid-template-columns: 2fr 1fr 1fr 1fr auto auto
     }
   }
 
   @media (max-width:900px) {
     .form-grid {
-      grid-template-columns: 1fr 1fr 1fr
+      grid-template-columns: 1fr 1fr 1fr;
     }
 
     .form-grid .btn-wide {
@@ -207,7 +207,7 @@
     background: rgba(255, 255, 255, .03)
   }
 
-  /* Stats chips (toujours une ligne) */
+  /* Stats chips */
   .stats {
     display: flex;
     flex-wrap: nowrap;
@@ -235,6 +235,20 @@
     font-weight: 600
   }
 
+  /* Badge */
+  .pill {
+    padding: 2px 8px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 600;
+    border: 1px solid transparent;
+  }
+
+  .danger {
+    color: var(--danger);
+    border-color: rgba(239, 83, 80, .35);
+  }
+
   /* Mobile : cartes */
   .cards {
     display: none
@@ -256,7 +270,6 @@
       border: 1px solid var(--border);
       border-radius: 12px;
       padding: 10px;
-      /* FIX clair/sombre : fond transparent, pas de bloc sombre */
       background: transparent;
     }
 
@@ -285,7 +298,7 @@
     }
   }
 
-  /* Bloc OFF : input + bouton caméra */
+  /* Bloc OFF */
   #off-box {
     padding: 8px 0
   }
@@ -443,6 +456,15 @@
       </div>
 
       <div>
+        <div class="label">Stock faible (min_qty)
+          <span class="help" tabindex="0"
+            data-tip="Seuil d’alerte propre à ce produit. En-dessous, le produit est considéré en stock faible."></span>
+        </div>
+        <input name="min_qty" id="create_min_qty" type="number" min="0" step="0.01" placeholder="ex. 1"
+          value="{{ SETTINGS.low_stock_default }}">
+      </div>
+
+      <div>
         <div class="label">Code-barres (facultatif)
           <span class="help" tabindex="0"
             data-tip="EAN/GTIN du produit. Renseigné automatiquement depuis le scanner."></span>
@@ -489,12 +511,14 @@
       <tbody id="tbody">
         {% if items %}
         {% for it in items %}
-        <tr data-name="{{ it.name|lower }}" data-unit="{{ it.unit|lower }}"
-          data-barcode="{{ (it.barcode or '')|lower }}">
+        {% set threshold = it.min_qty if it.min_qty is not none else SETTINGS.low_stock_default %}
+        {% set is_low = (it.qty_total < threshold) %} <tr data-name="{{ it.name|lower }}"
+          data-unit="{{ it.unit|lower }}" data-barcode="{{ (it.barcode or '')|lower }}">
           <td>
-            <div style="font-weight:600;display:flex;gap:6px;align-items:center">
+            <div style="font-weight:600;display:flex;gap:6px;align-items:center;flex-wrap:wrap">
               <span>{{ it.name }}</span>
               {% if it.barcode %}<span class="muted">EAN : {{ it.barcode }}</span>{% endif %}
+              {% if is_low %}<span class="pill danger">🔻 Faible stock</span>{% endif %}
             </div>
           </td>
           <td>
@@ -506,33 +530,40 @@
                   }}</span></span>
               <span class="stat"><span class="k">Qté totale</span><span> :</span><span class="v">{{
                   '%.2f'|format(it.qty_total) }}</span></span>
+              <span class="stat"><span class="k">Seuil min</span><span> :</span><span class="v">{{ threshold
+                  }}</span></span>
             </div>
           </td>
           <td>
             <div class="row" style="gap:8px">
               <button class="secondary js-edit-open" data-id="{{ it.id }}" data-name="{{ it.name }}"
-                data-unit="{{ it.unit }}" data-shelf="{{ it.default_shelf_life_days }}">✏️ Modifier</button>
+                data-unit="{{ it.unit }}" data-shelf="{{ it.default_shelf_life_days }}" data-min="{{ threshold }}">✏️
+                Modifier</button>
               <button class="secondary js-delete-open" data-id="{{ it.id }}" data-name="{{ it.name }}"
                 data-lots="{{ it.lots_count|int }}">🗑️ Supprimer</button>
             </div>
           </td>
-        </tr>
-        {% endfor %}
-        {% else %}
-        <tr>
-          <td colspan="3" class="muted">Aucun produit.</td>
-        </tr>
-        {% endif %}
+          </tr>
+          {% endfor %}
+          {% else %}
+          <tr>
+            <td colspan="3" class="muted">Aucun produit.</td>
+          </tr>
+          {% endif %}
       </tbody>
     </table>
 
     <!-- Mobile cards -->
     <div class="cards" id="cards">
       {% for it in items %}
-      <div class="card-item" data-name="{{ it.name|lower }}" data-unit="{{ it.unit|lower }}"
-        data-barcode="{{ (it.barcode or '')|lower }}">
+      {% set threshold = it.min_qty if it.min_qty is not none else SETTINGS.low_stock_default %}
+      {% set is_low = (it.qty_total < threshold) %} <div class="card-item" data-name="{{ it.name|lower }}"
+        data-unit="{{ it.unit|lower }}" data-barcode="{{ (it.barcode or '')|lower }}">
         <div class="card-head">
-          <div class="card-name">{{ it.name }}</div>
+          <div class="card-name">
+            {{ it.name }}
+            {% if is_low %}<span class="pill danger">🔻 Faible stock</span>{% endif %}
+          </div>
         </div>
         <div class="card-info">
           {% if it.barcode %}<span class="stat"><span class="k">EAN</span><span> :</span><span class="v">{{ it.barcode
@@ -544,20 +575,23 @@
               }}</span></span>
           <span class="stat"><span class="k">Qté</span><span> :</span><span class="v">{{ '%.2f'|format(it.qty_total)
               }}</span></span>
+          <span class="stat"><span class="k">Seuil min</span><span> :</span><span class="v">{{ threshold
+              }}</span></span>
         </div>
         <div class="card-actions">
           <button class="secondary js-edit-open" data-id="{{ it.id }}" data-name="{{ it.name }}"
-            data-unit="{{ it.unit }}" data-shelf="{{ it.default_shelf_life_days }}">✏️ Modifier</button>
+            data-unit="{{ it.unit }}" data-shelf="{{ it.default_shelf_life_days }}" data-min="{{ threshold }}">✏️
+            Modifier</button>
           <button class="secondary js-delete-open" data-id="{{ it.id }}" data-name="{{ it.name }}"
             data-lots="{{ it.lots_count|int }}">🗑️ Supprimer</button>
         </div>
-      </div>
-      {% endfor %}
     </div>
+    {% endfor %}
   </div>
 </div>
+</div>
 
-<!-- Dialogs (Modifier / Supprimer / Scanner) identiques -->
+<!-- Dialogs -->
 <dialog id="dlg-edit">
   <form method="post" action="{{ BASE }}product/update" style="display:grid;gap:10px;min-width:min(520px,92vw)">
     <h3 style="margin:0">Modifier le produit</h3>
@@ -598,6 +632,12 @@
         <input type="number" name="shelf" id="dlg-shelf" min="1">
       </div>
     </div>
+
+    <div>
+      <div class="label">Stock faible (min_qty)</div>
+      <input type="number" name="min_qty" id="dlg-min" min="0" step="0.01" placeholder="ex. 1">
+    </div>
+
     <div class="row" style="justify-content:flex-end;gap:8px">
       <button type="button" onclick="document.getElementById('dlg-edit').close()">Annuler</button>
       <button class="primary">Enregistrer</button>
@@ -660,6 +700,7 @@
       $('#dlg-name').value = edit.dataset.name || '';
       setSelectValue($('#dlg-unit'), edit.dataset.unit || 'pièce');
       $('#dlg-shelf').value = edit.dataset.shelf || 90;
+      $('#dlg-min').value = (edit.dataset.min || '{{ SETTINGS.low_stock_default }}');
       $('#dlg-edit').showModal(); return;
     }
     if (del) {
@@ -675,13 +716,18 @@
   /* Reset création */
   (function () {
     const r = document.getElementById('create_reset'); if (!r) return;
-    r.addEventListener('click', () => { ['create_name', 'create_shelf', 'create_barcode', 'off_barcode'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; }); const u = document.getElementById('create_unit'); if (u) u.value = 'pièce'; });
+    r.addEventListener('click', () => {
+      ['create_name', 'create_shelf', 'create_barcode', 'off_barcode', 'create_min_qty'].forEach(id => {
+        const el = document.getElementById(id); if (el) el.value = id === 'create_min_qty' ? '{{ SETTINGS.low_stock_default }}' : '';
+      });
+      const u = document.getElementById('create_unit'); if (u) u.value = 'pièce';
+    });
   })();
 
   /* Toasts via ?added=1 */
   (function () { const p = new URLSearchParams(location.search); if (p.get('added') === '1') window.showToast('Produit ajouté.', 'ok'); })();
 
-  /* OFF + Scanner */
+  /* OFF + Scanner (inchangé) */
   const elCode = $('#off_barcode'), elSearch = $('#off_search'), elScan = $('#off_scan'),
     elCapture = $('#off_capture'), elFile = $('#off_file'), elPaste = $('#off_paste'), elClear = $('#off_clear'),
     elError = $('#off_error'), elRes = $('#off_result'), elImg = $('#off_img'),
@@ -701,13 +747,34 @@
     const qty = p.quantity || p.serving_quantity || p.serving_size || '';
     return { name: nm, brand, img, quantity_hint: qty };
   }
-  function showResult(o) { elImg.src = o.img || ''; elName.textContent = o.name || '—'; elBrand.textContent = o.brand || '—'; elQty.textContent = o.quantity_hint || '—'; elRes.hidden = false; if (elFillCreate) elFillCreate.dataset.payload = JSON.stringify(o); }
-  function inferUnit(q) { if (!q) return ''; const s = (q + '').toLowerCase(); if (/\b(kg|kilogram|kilo)/.test(s)) return 'kg'; if (/\bg\b/.test(s)) return 'g'; if (/\bml\b/.test(s)) return 'ml'; if (/\bl\b/.test(s)) return 'L'; if (/\bpi[eè]ce|\bpcs?\b/.test(s)) return 'pièce'; return ''; }
-  function setUnitIfExists(u) { if (!u) return; const opts = [...cfUnitSel.options].map(o => o.value); if (opts.includes(u)) cfUnitSel.value = u; }
+  function showResult(o) {
+    elImg.src = o.img || '';
+    elName.textContent = o.name || '—';
+    elBrand.textContent = o.brand || '—';
+    elQty.textContent = o.quantity_hint || '—';
+    elRes.hidden = false;
+    if (elFillCreate) elFillCreate.dataset.payload = JSON.stringify(o);
+  }
+  function inferUnit(q) {
+    if (!q) return '';
+    const s = (q + '').toLowerCase();
+    if (/\b(kg|kilogram|kilo)/.test(s)) return 'kg';
+    if (/\bg\b/.test(s)) return 'g';
+    if (/\bml\b/.test(s)) return 'ml';
+    if (/\bl\b/.test(s)) return 'L';
+    if (/\bpi[eè]ce|\bpcs?\b/.test(s)) return 'pièce';
+    return '';
+  }
+  function setUnitIfExists(u) {
+    if (!u) return;
+    const opts = [...cfUnitSel.options].map(o => o.value);
+    if (opts.includes(u)) cfUnitSel.value = u;
+  }
 
   async function doLookup() {
     clearError(); clearResult();
-    const code = (elCode.value || '').replace(/\D+/g, ''); if (!code) { showError('Renseigne un code-barres valide.'); return; }
+    const code = (elCode.value || '').replace(/\D+/g, '');
+    if (!code) { showError('Renseigne un code-barres valide.'); return; }
     elSearch.disabled = true; elSearch.textContent = '…';
     try {
       const res = await fetch(`https://world.openfoodfacts.org/api/v0/product/${code}.json`);
@@ -722,17 +789,12 @@
     finally { elSearch.disabled = false; elSearch.textContent = '🔎 Rechercher'; }
   }
 
-  elSearch.addEventListener('click', doLookup);
+  document.getElementById('off_search').addEventListener('click', doLookup);
   elCode.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); doLookup(); } });
-  elClear.addEventListener('click', () => { elCode.value = ''; clearError(); clearResult(); });
-  elPaste.addEventListener('click', async () => { try { const t = await navigator.clipboard.readText(); elCode.value = (t || '').replace(/\D+/g, ''); doLookup(); } catch { showError('Impossible de lire le presse-papiers.'); } });
-
-  elFillCreate && elFillCreate.addEventListener('click', () => {
-    const payload = elFillCreate.dataset.payload ? JSON.parse(elFillCreate.dataset.payload) : null;
-    if (!payload) { showError('Aucun résultat à insérer.'); return; }
-    if (payload.name) cfName.value = payload.name;
-    const u = inferUnit(payload.quantity_hint); setUnitIfExists(u);
-    const addBtn = document.querySelector('#create_form .primary'); if (addBtn) addBtn.focus();
+  document.getElementById('off_clear').addEventListener('click', () => { elCode.value = ''; clearError(); clearResult(); });
+  document.getElementById('off_paste').addEventListener('click', async () => {
+    try { const t = await navigator.clipboard.readText(); elCode.value = (t || '').replace(/\D+/g, ''); doLookup(); }
+    catch { showError('Impossible de lire le presse-papiers.'); }
   });
 
   /* Scanner live (BarcodeDetector + ZXing) */
@@ -753,16 +815,16 @@
     if ('BarcodeDetector' in window) {
       try {
         const detector = new BarcodeDetector({ formats: ['ean_13', 'ean_8', 'upc_a', 'upc_e'] });
-        const stream = await navigator.mediaDevices.getUserMedia({
-          video: { facingMode: 'environment' },
-          audio: false
-        });
+        const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' }, audio: false });
         scanVideo.srcObject = stream;
         try { await scanVideo.play(); } catch (_) { }
 
         const tick = async () => {
           if (!scanning) return;
-          try { const bm = await detector.detect(scanVideo); if (bm && bm[0] && bm[0].rawValue) { await onBarcodeDetected(bm[0].rawValue); return; } } catch { }
+          try {
+            const bm = await detector.detect(scanVideo);
+            if (bm && bm[0] && bm[0].rawValue) { await onBarcodeDetected(bm[0].rawValue); return; }
+          } catch { }
           requestAnimationFrame(tick);
         };
         tick(); return;
@@ -773,20 +835,23 @@
 
   async function closeScanModal() {
     scanning = false; if (dlgScan && dlgScan.open) dlgScan.close();
-    const s = scanVideo && scanVideo.srcObject; if (s && s.getTracks) s.getTracks().forEach(t => t.stop());
+    const s = scanVideo && (scanVideo.srcObject); if (s && s.getTracks) s.getTracks().forEach(t => t.stop());
     if (zxingReader && zxingLiveActive) { try { await zxingReader.reset(); } catch { } zxingLiveActive = false; }
   }
 
   async function loadZXing() {
     return new Promise((resolve, reject) => {
       if (window.ZXing) return resolve(window.ZXing);
-      const s = document.createElement('script'); s.src = 'https://unpkg.com/@zxing/library@latest'; s.onload = () => resolve(window.ZXing); s.onerror = () => reject(new Error('ZXing indisponible')); document.head.appendChild(s);
+      const s = document.createElement('script'); s.src = 'https://unpkg.com/@zxing/library@latest';
+      s.onload = () => resolve(window.ZXing);
+      s.onerror = () => reject(new Error('ZXing indisponible'));
+      document.head.appendChild(s);
     });
   }
 
   async function startZXingLive() {
     try {
-      // Assure les attributs vidéo aussi pour le fallback
+      // Attributs vidéo pour le fallback
       scanVideo.muted = true;
       scanVideo.playsInline = true;
       scanVideo.setAttribute('playsinline', '');
@@ -796,7 +861,10 @@
       if (!zxingReader) zxingReader = new ZXing.BrowserMultiFormatReader();
       zxingReader.decodeFromVideoDevice(undefined, scanVideo, async (result, err) => {
         if (!scanning) return;
-        if (result && result.getText) { const code = (result.getText() || '').replace(/\D+/g, ''); if (code) await onBarcodeDetected(code); }
+        if (result && result.getText) {
+          const code = (result.getText() || '').replace(/\D+/g, '');
+          if (code) await onBarcodeDetected(code);
+        }
       });
       zxingLiveActive = true; scanning = true;
     } catch (e) { showError("Impossible de démarrer le flux live. Utilise « Prendre une photo »."); }
@@ -805,18 +873,19 @@
   document.getElementById('off_scan').addEventListener('click', openScanModal);
   btnScanClose.addEventListener('click', closeScanModal);
 
-  elCapture.addEventListener('click', () => elFile.click());
-  elFile.addEventListener('change', async (ev) => {
+  document.getElementById('off_capture').addEventListener('click', () => document.getElementById('off_file').click());
+  document.getElementById('off_file').addEventListener('change', async (ev) => {
     const file = ev.target.files && ev.target.files[0]; if (!file) return;
     try {
       if (!window.ZXing) await loadZXing();
       if (!zxingReader) zxingReader = new ZXing.BrowserMultiFormatReader();
-      const imgURL = URL.createObjectURL(file); const img = document.createElement('img'); img.src = imgURL; await img.decode();
+      const imgURL = URL.createObjectURL(file);
+      const img = document.createElement('img'); img.src = imgURL; await img.decode();
       const res = await zxingReader.decodeFromImageElement(img);
       const code = res && res.getText ? (res.getText() || '').replace(/\D+/g, '') : '';
       if (code) await onBarcodeDetected(code); else showError('Aucun code détecté sur la photo.');
     } catch (e) { showError('Erreur lecture de la photo.'); }
-    finally { elFile.value = ''; }
+    finally { ev.target.value = ''; }
   });
 </script>
 {% endblock %}
