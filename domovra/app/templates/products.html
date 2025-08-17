@@ -446,7 +446,7 @@
         </div>
         <button id="off_search" class="secondary" type="button">🔎 Rechercher</button>
 
-        <!-- Bouton Photo via LABEL (fiable, pas de submit implicite) -->
+        <!-- Remplacement du bouton par un LABEL (évite tout submit/navigation implicite) -->
         <label for="off_file" class="label-button" id="off_capture_lbl">📸 Prendre une photo</label>
         <input id="off_file" type="file" accept="image/*" capture="environment" style="display:none">
 
@@ -660,17 +660,14 @@
           </div>
         </div>
 
-        <!-- Bouton repliable -->
         <button class="card-toggle js-card-toggle" type="button" aria-expanded="false" aria-controls="more-{{ it.id }}">
           <span>Plus d’infos</span><span class="chev">▶</span>
         </button>
 
-        <!-- Détails cachés par défaut -->
         <div class="card-extra" id="more-{{ it.id }}" hidden>
           <div class="card-info">
-            {% if it.barcode %}
-            <span class="stat"><span class="k">EAN</span><span> :</span><span class="v">{{ it.barcode }}</span></span>
-            {% endif %}
+            {% if it.barcode %}<span class="stat"><span class="k">EAN</span><span> :</span><span class="v">{{ it.barcode
+                }}</span></span>{% endif %}
             <span class="stat"><span class="k">Unité</span><span> :</span><span class="v">{{ it.unit }}</span></span>
             <span class="stat"><span class="k">Conservation</span><span> :</span><span class="v">{{
                 it.default_shelf_life_days }} j</span></span>
@@ -967,39 +964,41 @@
   document.getElementById('off_scan').addEventListener('click', openScanModal);
   btnScanClose.addEventListener('click', closeScanModal);
 
-  /* ---- Mode Photo universel (avec alertes) ---- */
+  /* ---- Mode Photo universel (avec protections anti-refresh) ---- */
+  elFile.addEventListener('click', (e) => {  // empêche certains navigateurs d'interpréter ça comme un submit
+    e.preventDefault(); e.stopPropagation();
+    // relance proprement l'ouverture de la cam photo
+    setTimeout(() => elFile.removeAttribute('disabled'), 0);
+  }, true);
+
   elFile.addEventListener('change', async (ev) => {
+    // 🔒 Bloque toute tentative de submit/navigation involontaire
+    ev.preventDefault(); ev.stopPropagation();
+
     const file = ev.target.files && ev.target.files[0];
-    if (!file) return;
+    if (!file) { return; }
 
     try {
       if (!window.ZXing) await loadZXing();
       if (!zxingReader) zxingReader = new ZXing.BrowserMultiFormatReader();
 
       const imgURL = URL.createObjectURL(file);
-      const img = document.createElement('img');
-      img.src = imgURL;
-      await img.decode();
+      const img = document.createElement('img'); img.src = imgURL; await img.decode();
 
       const res = await zxingReader.decodeFromImageElement(img);
       const code = res && res.getText ? (res.getText() || '').replace(/\D+/g, '') : '';
-
-      if (code) {
-        console.log("✅ Code détecté (photo):", code);
-        alert("Code détecté : " + code);
-        elCode.value = code;
-        doLookup();
-      } else {
-        console.log("❌ Aucun code détecté sur la photo");
-        alert("Aucun code détecté sur la photo.");
-      }
+      if (code) { await onBarcodeDetected(code); }
+      else { showError('Aucun code détecté sur la photo.'); }
     } catch (e) {
-      console.error("Erreur ZXing photo:", e);
-      alert("Erreur lors du décodage : " + (e?.message || e));
+      console.error(e);
+      showError('Erreur lecture de la photo.');
     } finally {
-      ev.target.value = ''; // reset pour pouvoir reprendre une photo
+      // Permettre une nouvelle prise sans recharger la page
+      ev.target.value = '';
+      // Double-sécurité : empêcher une navigation accidentelle immédiatement après retour caméra
+      history.replaceState(null, document.title, location.href);
     }
-  });
+  }, true);
 
   /* Toggle "Plus d'infos" sur mobile */
   document.addEventListener('click', (e) => {
