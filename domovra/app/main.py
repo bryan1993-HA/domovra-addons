@@ -69,6 +69,71 @@ templates = Environment(
     autoescape=select_autoescape()
 )
 
+# -------- Filtre pluralisation FR --------
+def pluralize_fr(unit: str, qty) -> str:
+    """Pluralise une unité française selon la quantité.
+    - Singulier pour 1 / 1.0
+    - Invariants: kg, g, L, ml, etc.
+    - Irréguliers courants: pièce→pièces, sachet→sachets, œuf→œufs, boîte→boîtes, etc.
+    - Sinon: ajout de 's', et quelques règles simples ('al'→'aux', 'eau'→'eaux').
+    """
+    try:
+        q = float(qty)
+    except Exception:
+        q = qty
+    try:
+        is_one = abs(float(q) - 1.0) < 1e-9
+    except Exception:
+        is_one = (q == 1)
+
+    if not unit:
+        return unit
+    u = str(unit)
+
+    if is_one:
+        return u
+
+    invariants = { "kg","g","mg","l","L","ml","cl","m","cm","mm","%", "°C", "°F" }
+    if u in invariants:
+        return u
+
+    irregulars = {
+        "pièce": "pièces",
+        "piece": "pieces",
+        "sachet": "sachets",
+        "boîte": "boîtes",
+        "boite": "boites",
+        "bouteille": "bouteilles",
+        "canette": "canettes",
+        "paquet": "paquets",
+        "tranche": "tranches",
+        "gousse": "gousses",
+        "pot": "pots",
+        "brique": "briques",
+        "barquette": "barquettes",
+        "œuf": "œufs",
+        "oeuf": "oeufs",
+        "unité": "unités",
+        "unite": "unites",
+        "pack": "packs",
+        "lot": "lots",
+        "bocal": "bocaux",  # bonus utile
+        "journal": "journaux"  # bonus utile
+    }
+    # déjà au pluriel / finissant par s/x
+    if u in irregulars.values() or u.endswith(("s","x")):
+        return u
+    if u in irregulars:
+        return irregulars[u]
+    if u.endswith("al"):
+        return u[:-2] + "aux"
+    if u.endswith("eau"):
+        return u + "x"
+    return u + "s"
+
+templates.filters["pluralize_fr"] = pluralize_fr
+
+# -------- Helpers
 def nocache_html(html: str) -> Response:
     return HTMLResponse(html, headers={
         "Cache-Control":"no-store, no-cache, must-revalidate, max-age=0",
@@ -236,9 +301,6 @@ def lots_page(
         products=list_products(),  # ← ajouté
     )
 
-
-
-
 # --------- Journal page
 @app.get("/journal", response_class=HTMLResponse)
 def journal_page(request: Request, limit: int = Query(200, ge=1, le=1000)):
@@ -284,7 +346,6 @@ def api_product_by_barcode(code: str):
     if not row:
         return JSONResponse({"error": "not found"}, status_code=404)
     return JSONResponse({"id": row["id"], "name": row["name"], "barcode": row["barcode"]})
-
 
 # ---------------- Page Paramètres
 @app.get("/settings", response_class=HTMLResponse)
@@ -367,9 +428,6 @@ def product_add(request: Request,
     params = urlencode({"added": 1, "pid": pid})
     return RedirectResponse(base + f"products?{params}", status_code=303,
                             headers={"Cache-Control": "no-store"})
-
-
-
 
 @app.post("/product/update")
 def product_update(request: Request,
@@ -454,8 +512,6 @@ def lot_add_action(request: Request,
     return RedirectResponse(base + "lots?added=1", status_code=303,
                             headers={"Cache-Control": "no-store"})
 
-
-
 @app.post("/lot/update")
 def lot_update_action(request: Request,
                       lot_id: int = Form(...),
@@ -478,9 +534,6 @@ def lot_update_action(request: Request,
     base = ingress_base(request)
     return RedirectResponse(base + "lots?updated=1", status_code=303,
                             headers={"Cache-Control": "no-store"})
-
-
-
 
 @app.post("/lot/consume")
 def lot_consume_action(request: Request, lot_id: int = Form(...), qty: float = Form(...)):

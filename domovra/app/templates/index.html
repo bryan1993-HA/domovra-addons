@@ -72,7 +72,6 @@
     cursor: pointer;
   }
 
-  /* champs + labels + aides */
   .field {
     display: flex;
     flex-direction: column;
@@ -180,10 +179,8 @@
     color: var(--muted);
   }
 
-  /* ===== Ajout express : CSS Grid pour supprimer les grands espaces ===== */
   .form-grid {
     display: grid !important;
-    /* override .row (flex) */
     grid-template-columns: 2fr 2fr 1fr 1fr auto;
     gap: 12px;
     align-items: end;
@@ -197,8 +194,6 @@
     height: 44px;
     align-self: end;
   }
-
-  /* taille contrôlée */
 
   @media (max-width:1100px) {
     .form-grid {
@@ -227,7 +222,6 @@
     }
   }
 
-  /* ===== Mobile : cartes au lieu de table ===== */
   .top8-table {
     display: block;
   }
@@ -250,9 +244,7 @@
       border: 1px solid var(--border);
       border-radius: 12px;
       padding: 10px;
-      /* Était: background: #121620;  --> force sombre */
       background: transparent;
-      /* comme sur la page Produits */
       display: grid;
       grid-template-columns: 1fr auto;
       gap: 8px;
@@ -298,43 +290,31 @@
     <div class="title">
       <h2>Ajout express</h2><span class="muted">→ produit existant → ajout au stock</span>
     </div>
-
     <form method="post" action="{{ BASE }}lot/add" class="row form-grid">
       <div class="field">
-        <div class="label">Produit <span class="help" tabindex="0"
-            data-tip="Choisis un produit déjà créé. Utilise « + Nouveau produit » s’il n’existe pas encore."></span>
-        </div>
+        <div class="label">Produit</div>
         <select name="product_id" required>
           <option value="">Produit…</option>
           {% for p in products %}<option value="{{ p.id }}">{{ p.name }}</option>{% endfor %}
         </select>
       </div>
-
       <div class="field">
-        <div class="label">Emplacement <span class="help" tabindex="0"
-            data-tip="Où tu ranges cet article (ex. Frigo, Congélateur, Placard). Tu peux créer un nouvel emplacement."></span>
-        </div>
+        <div class="label">Emplacement</div>
         <select name="location_id" required>
           <option value="">Emplacement…</option>
           {% for l in locations %}<option value="{{ l.id }}">{{ l.name }}</option>{% endfor %}
         </select>
       </div>
-
       <div class="field">
-        <div class="label">Quantité <span class="help" tabindex="0"
-            data-tip="Valeur par défaut : 1. Utilise des décimales (0,5) pour des quantités partielles."></span></div>
+        <div class="label">Quantité</div>
         <input type="number" name="qty" value="1" min="0.1" step="0.1">
       </div>
-
       <div class="field">
-        <div class="label">À consommer avant <span class="help" tabindex="0"
-            data-tip="Optionnel. Sert à calculer les états OK / Bientôt / Urgent selon tes paramètres."></span></div>
+        <div class="label">À consommer avant</div>
         <input type="date" name="best_before">
       </div>
-
       <button class="primary btn-add-stock">＋ Ajouter au stock</button>
     </form>
-
     <div class="row" style="margin-top:8px">
       <a class="chip" href="{{ BASE }}products">+ Nouveau produit</a>
       <a class="chip" href="{{ BASE }}locations">+ Nouvel emplacement</a>
@@ -347,7 +327,7 @@
       <h2>À consommer (Top 8)</h2>
     </div>
 
-    <!-- Version desktop : table -->
+    <!-- Version desktop -->
     <div class="top8-table table-responsive">
       <table>
         <thead>
@@ -366,7 +346,7 @@
           {% if loop.index0 < 8 %} <tr>
             <td>{{ it.product }}</td>
             <td class="muted">{{ it.location }}</td>
-            <td>{{ '%.2f'|format(it.qty)|trim('0')|trim('.') }} {{ it.unit }}</td>
+            <td>{{ '%.2f'|format(it.qty)|trim('0')|trim('.') }} {{ it.unit|pluralize_fr(it.qty) }}</td>
             <td>{{ it.best_before or '—' }}</td>
             <td>
               {% if it.status == 'red' %}<span class="pill danger">Urgent</span>
@@ -392,7 +372,7 @@
       </table>
     </div>
 
-    <!-- Version mobile : cartes -->
+    <!-- Version mobile -->
     <div class="top8-cards">
       {% if lots %}
       {% for it in lots %}
@@ -401,7 +381,7 @@
           <div class="lot-title">{{ it.product }}</div>
           <div class="lot-meta">
             <span>📍 {{ it.location }}</span>
-            <span>⚖️ {{ '%.2f'|format(it.qty)|trim('0')|trim('.') }} {{ it.unit }}</span>
+            <span>⚖️ {{ '%.2f'|format(it.qty)|trim('0')|trim('.') }} {{ it.unit|pluralize_fr(it.qty) }}</span>
             <span>🗓️ {{ it.best_before or '—' }}</span>
             <span>
               {% if it.status == 'red' %}<span class="pill danger">Urgent</span>
@@ -427,6 +407,5 @@
     <a class="chip" href="{{ BASE }}lots">Voir tout</a>
   </div>
 </div>
-
 </div>
 {% endblock %}
