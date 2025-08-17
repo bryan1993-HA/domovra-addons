@@ -535,6 +535,69 @@ def product_delete(request: Request, product_id: int = Form(...)):
     log_event("product.delete", {"id": product_id})
     return RedirectResponse(ingress_base(request)+"products", status_code=303, headers={"Cache-Control":"no-store"})
 
+# ---------------- Helpers incrémentation rapide
+def get_step_for_unit(unit: str) -> float:
+    unit = (unit or "").lower().strip()
+    # Comptage
+    if unit in ["pièce", "piece", "tranche", "paquet", "boîte", "boite",
+                "bocal", "bouteille", "sachet", "lot", "barquette", "rouleau", "dosette"]:
+        return 1.0
+    # Poids
+    if unit == "g":  # clic = 50 g
+        return 50.0
+    if unit == "kg":  # clic = 0,1 kg = 100 g
+        return 0.1
+    # Volume
+    if unit == "ml":  # clic = 50 ml
+        return 50.0
+    if unit == "l":   # clic = 0,1 L = 100 ml
+        return 0.1
+    # fallback
+    return 1.0
+
+@app.post("/product/adjust")
+def product_adjust(request: Request, product_id: int = Form(...), delta: int = Form(...)):
+    """
+    Ajuste rapidement le stock d'un produit :
+    - delta = +1 → ajoute +step (selon l'unité)
+    - delta = -1 → retire -step (consommation FIFO par DLC)
+    """
+    # 1) Retrouver le produit et son unité
+    prods = {p["id"]: p for p in list_products()}
+    prod = prods.get(int(product_id))
+    if not prod:
+        return RedirectResponse(ingress_base(request) + "products?error=noprod", status_code=303)
+
+    step = get_step_for_unit(prod.get("unit"))
+    qty = step * int(delta)
+
+    if qty > 0:
+        # 2) Ajouter un lot "rapide" dans un emplacement (ou en créer un si aucun)
+        locs = list_locations()
+        if locs:
+            loc_id = int(locs[0]["id"])
+        else:
+            # crée un emplacement par défaut si aucun n'existe (robuste)
+            loc_id = int(add_location("Général"))
+        add_lot(product_id, loc_id, qty, None, None)
+        log_event("product.adjust", {"id": product_id, "delta": qty, "action": "add"})
+    else:
+        # 3) Consommer en FIFO par date (list_lots() est trié par best_before puis nom)
+        remaining = abs(qty)
+        for lot in list_lots():
+            if lot["product_id"] != product_id:
+                continue
+            if remaining <= 0:
+                break
+            consume = min(remaining, float(lot["qty"]))
+            consume_lot(int(lot["id"]), consume)
+            remaining -= consume
+        log_event("product.adjust", {"id": product_id, "delta": qty, "action": "consume"})
+
+    return RedirectResponse(ingress_base(request) + "products", status_code=303)
+
+    
+
 # ---------------- Actions Emplacements
 @app.post("/location/add")
 def location_add(request: Request, name: str = Form(...)):

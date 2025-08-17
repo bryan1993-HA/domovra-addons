@@ -545,7 +545,22 @@
             </div>
           </td>
           <td>
-            <div class="row" style="gap:8px">
+            <div class="row" style="gap:8px;flex-wrap:wrap">
+              <!-- ➖ Décrémenter -->
+              <form method="post" action="{{ BASE }}product/adjust" style="display:inline">
+                <input type="hidden" name="product_id" value="{{ it.id }}">
+                <input type="hidden" name="delta" value="-1">
+                <button class="secondary" title="Retirer une étape">➖</button>
+              </form>
+
+              <!-- ➕ Incrémenter -->
+              <form method="post" action="{{ BASE }}product/adjust" style="display:inline">
+                <input type="hidden" name="product_id" value="{{ it.id }}">
+                <input type="hidden" name="delta" value="1">
+                <button class="secondary" title="Ajouter une étape">➕</button>
+              </form>
+
+              <!-- Actions existantes -->
               <button class="secondary js-edit-open" data-id="{{ it.id }}" data-name="{{ it.name }}"
                 data-unit="{{ it.unit }}" data-shelf="{{ it.default_shelf_life_days }}" data-min="{{ threshold }}">✏️
                 Modifier</button>
@@ -553,6 +568,7 @@
                 data-lots="{{ it.lots_count|int }}">🗑️ Supprimer</button>
             </div>
           </td>
+
           </tr>
           {% endfor %}
           {% else %}
