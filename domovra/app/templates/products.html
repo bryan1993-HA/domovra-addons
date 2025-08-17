@@ -6,10 +6,10 @@
   :root {
     --gap: 12px;
     --radius: 14px;
-    /*    --border: #263043;
+    --border: #263043;
     --chip: #1a2230;
     --muted: #8ea0b7;
-    --accent: #00bcd4;*/
+    --accent: #00bcd4;
     --ok: #4caf50;
     --warn: #ffb300;
     --danger: #ef5350;
@@ -86,11 +86,12 @@
     cursor: pointer;
   }
 
-  button.secondary,
-  .label-button.secondary {
+  /* s'applique aussi aux <label class="secondary"> */
+  .secondary {
     background: var(--chip);
     border-color: var(--border);
   }
+
 
   .btn-ghost {
     background: transparent;
