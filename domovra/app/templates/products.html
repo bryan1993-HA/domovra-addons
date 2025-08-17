@@ -208,12 +208,17 @@
   }
 
   /* Stats chips */
+  /* Stats chips (toujours une ligne) */
+  /* Stats chips (wrap sur 2 lignes pour gagner de la place) */
   .stats {
     display: flex;
-    flex-wrap: nowrap;
-    gap: 8px;
-    white-space: nowrap;
-    overflow: hidden
+    flex-wrap: wrap;
+    /* ✅ autorise le retour à la ligne */
+    gap: 8px 10px;
+    white-space: normal;
+    /* ✅ permet d'aller à la ligne */
+    overflow: visible;
+    max-width: 100%;
   }
 
   .stat {
@@ -224,8 +229,13 @@
     border-radius: 999px;
     border: 1px solid var(--border);
     background: transparent;
-    flex: 0 0 auto
+    flex: 1 1 calc(50% - 10px);
+    /* ✅ ~2 par ligne */
+    min-width: 180px;
+    /* évite que ça devienne trop étroit */
   }
+
+
 
   .stat .k {
     color: var(--muted)
@@ -497,9 +507,9 @@
 
     <table id="tbl">
       <colgroup>
-        <col style="width:30%">
-        <col style="width:54%">
-        <col style="width:16%">
+        <col style="width:28%">
+        <col style="width:50%">
+        <col style="width:22%">
       </colgroup>
       <thead>
         <tr>
