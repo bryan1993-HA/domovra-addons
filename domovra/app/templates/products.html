@@ -59,7 +59,7 @@
     color: var(--muted);
     display: flex;
     align-items: center;
-    gap: 6px
+    gap: 6px;
   }
 
   /* Inputs / boutons */
@@ -70,7 +70,7 @@
     border-radius: 10px;
     padding: 10px;
     background: transparent;
-    color: inherit
+    color: inherit;
   }
 
   input::placeholder {
@@ -82,7 +82,7 @@
     border: 0;
     color: #02222a;
     font-weight: 600;
-    cursor: pointer
+    cursor: pointer;
   }
 
   button.secondary {
@@ -93,7 +93,7 @@
   .btn-ghost {
     background: transparent;
     border: 1px solid var(--border);
-    color: inherit
+    color: inherit;
   }
 
   .btn-ghost:hover {
@@ -208,15 +208,11 @@
   }
 
   /* Stats chips */
-  /* Stats chips (toujours une ligne) */
-  /* Stats chips (wrap sur 2 lignes pour gagner de la place) */
   .stats {
     display: flex;
     flex-wrap: wrap;
-    /* ✅ autorise le retour à la ligne */
     gap: 8px 10px;
     white-space: normal;
-    /* ✅ permet d'aller à la ligne */
     overflow: visible;
     max-width: 100%;
   }
@@ -230,12 +226,8 @@
     border: 1px solid var(--border);
     background: transparent;
     flex: 1 1 calc(50% - 10px);
-    /* ✅ ~2 par ligne */
     min-width: 180px;
-    /* évite que ça devienne trop étroit */
   }
-
-
 
   .stat .k {
     color: var(--muted)
@@ -336,7 +328,7 @@
     background: transparent;
     cursor: pointer;
     line-height: 1.1;
-    transition: transform .06s ease, background .12s ease;
+    transition: transform .06s, background .12s;
   }
 
   #off-box .infield-btn:hover {
@@ -352,7 +344,7 @@
     display: none !important
   }
 
-  /* Actions en 2 lignes: 1) +/-  2) Modifier/Supprimer */
+  /* Actions colonne bureau */
   .actions {
     display: grid;
     gap: 8px;
@@ -366,18 +358,53 @@
 
   .actions .row2 form,
   .actions .row2 button {
-    width: 100%;
+    width: 100%
   }
 
   .actions .row2 button.secondary {
     padding: 8px 10px;
-    /* compacts et propres */
   }
 
-  /* (optionnel) même compaction dans les cartes mobiles */
   @media (max-width:700px) {
     .card-actions form button.secondary {
       padding: 8px 10px;
+    }
+  }
+
+  /* --------- Toggle "Plus d'infos" (mobile) --------- */
+  @media (max-width:700px) {
+    .card-toggle {
+      width: 100%;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 8px 10px;
+      background: transparent;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+    }
+
+    .card-toggle .chev {
+      transition: transform .15s ease;
+    }
+
+    .card-toggle[aria-expanded="true"] .chev {
+      transform: rotate(90deg);
+    }
+
+    .card-extra[hidden] {
+      display: none !important;
+    }
+
+    .card-extra {
+      margin-top: 8px;
+    }
+  }
+
+  @media (prefers-reduced-motion:reduce) {
+    .card-toggle .chev {
+      transition: none
     }
   }
 </style>
@@ -575,34 +602,27 @@
           </td>
           <td>
             <div class="actions">
-              <!-- Ligne 1 : ➖ / ➕ -->
               <div class="row2">
                 <form method="post" action="{{ BASE }}product/adjust">
                   <input type="hidden" name="product_id" value="{{ it.id }}">
                   <input type="hidden" name="delta" value="-1">
                   <button class="secondary" title="Retirer une étape">➖</button>
                 </form>
-
                 <form method="post" action="{{ BASE }}product/adjust">
                   <input type="hidden" name="product_id" value="{{ it.id }}">
                   <input type="hidden" name="delta" value="1">
                   <button class="secondary" title="Ajouter une étape">➕</button>
                 </form>
               </div>
-
-              <!-- Ligne 2 : Modifier / Supprimer -->
               <div class="row2">
                 <button class="secondary js-edit-open" data-id="{{ it.id }}" data-name="{{ it.name }}"
                   data-unit="{{ it.unit }}" data-shelf="{{ it.default_shelf_life_days }}" data-min="{{ threshold }}">✏️
                   Modifier</button>
-
                 <button class="secondary js-delete-open" data-id="{{ it.id }}" data-name="{{ it.name }}"
                   data-lots="{{ it.lots_count|int }}">🗑️ Supprimer</button>
               </div>
             </div>
           </td>
-
-
           </tr>
           {% endfor %}
           {% else %}
@@ -619,7 +639,6 @@
       {% set threshold = it.min_qty if it.min_qty is not none else SETTINGS.low_stock_default %}
       {% set is_low = (it.qty_total < threshold) %} <div class="card-item" data-name="{{ it.name|lower }}"
         data-unit="{{ it.unit|lower }}" data-barcode="{{ (it.barcode or '')|lower }}">
-
         <div class="card-head">
           <div class="card-name">
             {{ it.name }}
@@ -627,46 +646,50 @@
           </div>
         </div>
 
-        <div class="card-info">
-          {% if it.barcode %}
-          <span class="stat"><span class="k">EAN</span><span> :</span><span class="v">{{ it.barcode }}</span></span>
-          {% endif %}
-          <span class="stat"><span class="k">Unité</span><span> :</span><span class="v">{{ it.unit }}</span></span>
-          <span class="stat"><span class="k">Conservation</span><span> :</span><span class="v">{{
-              it.default_shelf_life_days }} j</span></span>
-          <span class="stat"><span class="k">Stocks</span><span> :</span><span class="v">{{ it.lots_count
-              }}</span></span>
-          <span class="stat"><span class="k">Qté</span><span> :</span><span class="v">{{ '%.2f'|format(it.qty_total)
-              }}</span></span>
-          <span class="stat"><span class="k">Seuil min</span><span> :</span><span class="v">{{ threshold
-              }}</span></span>
+        <!-- Bouton repliable -->
+        <button class="card-toggle js-card-toggle" type="button" aria-expanded="false" aria-controls="more-{{ it.id }}">
+          <span>Plus d’infos</span><span class="chev">▶</span>
+        </button>
+
+        <!-- Détails cachés par défaut -->
+        <div class="card-extra" id="more-{{ it.id }}" hidden>
+          <div class="card-info">
+            {% if it.barcode %}
+            <span class="stat"><span class="k">EAN</span><span> :</span><span class="v">{{ it.barcode }}</span></span>
+            {% endif %}
+            <span class="stat"><span class="k">Unité</span><span> :</span><span class="v">{{ it.unit }}</span></span>
+            <span class="stat"><span class="k">Conservation</span><span> :</span><span class="v">{{
+                it.default_shelf_life_days }} j</span></span>
+            <span class="stat"><span class="k">Stocks</span><span> :</span><span class="v">{{ it.lots_count
+                }}</span></span>
+            <span class="stat"><span class="k">Qté</span><span> :</span><span class="v">{{ '%.2f'|format(it.qty_total)
+                }}</span></span>
+            <span class="stat"><span class="k">Seuil min</span><span> :</span><span class="v">{{ threshold
+                }}</span></span>
+          </div>
         </div>
 
         <div class="card-actions">
-          <!-- ➖ -->
           <form method="post" action="{{ BASE }}product/adjust">
             <input type="hidden" name="product_id" value="{{ it.id }}">
             <input type="hidden" name="delta" value="-1">
             <button class="secondary" title="Retirer une étape">➖</button>
           </form>
-          <!-- ➕ -->
           <form method="post" action="{{ BASE }}product/adjust">
             <input type="hidden" name="product_id" value="{{ it.id }}">
             <input type="hidden" name="delta" value="1">
             <button class="secondary" title="Ajouter une étape">➕</button>
           </form>
-          <!-- Modifier / Supprimer -->
           <button class="secondary js-edit-open" data-id="{{ it.id }}" data-name="{{ it.name }}"
             data-unit="{{ it.unit }}" data-shelf="{{ it.default_shelf_life_days }}" data-min="{{ threshold }}">✏️
             Modifier</button>
-
           <button class="secondary js-delete-open" data-id="{{ it.id }}" data-name="{{ it.name }}"
             data-lots="{{ it.lots_count|int }}">🗑️ Supprimer</button>
         </div>
     </div>
     {% endfor %}
   </div>
-
+</div>
 </div>
 
 <!-- Dialogs -->
@@ -754,8 +777,14 @@
   const rows = Array.from(tbody ? tbody.children : []), cardsItems = Array.from(cards ? cards.children : []);
   function applyFilter(s) {
     const t = s.toLowerCase().trim(); let shown = 0;
-    rows.forEach(tr => { const txt = tr.dataset.name + ' ' + tr.dataset.unit + ' ' + (tr.dataset.barcode || ''); const m = txt.includes(t); tr.style.display = m ? '' : 'none'; if (m) shown++; });
-    cardsItems.forEach(c => { const txt = c.dataset.name + ' ' + c.dataset.unit + ' ' + (c.dataset.barcode || ''); const m = txt.includes(t); c.style.display = m ? '' : 'none'; });
+    rows.forEach(tr => {
+      const txt = tr.dataset.name + ' ' + tr.dataset.unit + ' ' + (tr.dataset.barcode || '');
+      const m = txt.includes(t); tr.style.display = m ? '' : 'none'; if (m) shown++;
+    });
+    cardsItems.forEach(c => {
+      const txt = c.dataset.name + ' ' + c.dataset.unit + ' ' + (c.dataset.barcode || '');
+      const m = txt.includes(t); c.style.display = m ? '' : 'none';
+    });
     const pc = document.getElementById('prod-count'); if (pc) pc.textContent = t ? shown : rows.length;
   }
   if (q) q.addEventListener('input', e => applyFilter(e.target.value));
@@ -796,7 +825,8 @@
     const r = document.getElementById('create_reset'); if (!r) return;
     r.addEventListener('click', () => {
       ['create_name', 'create_shelf', 'create_barcode', 'off_barcode', 'create_min_qty'].forEach(id => {
-        const el = document.getElementById(id); if (el) el.value = id === 'create_min_qty' ? '{{ SETTINGS.low_stock_default }}' : '';
+        const el = document.getElementById(id);
+        if (el) el.value = id === 'create_min_qty' ? '{{ SETTINGS.low_stock_default }}' : '';
       });
       const u = document.getElementById('create_unit'); if (u) u.value = 'pièce';
     });
@@ -805,12 +835,10 @@
   /* Toasts via ?added=1 */
   (function () { const p = new URLSearchParams(location.search); if (p.get('added') === '1') window.showToast('Produit ajouté.', 'ok'); })();
 
-  /* OFF + Scanner (inchangé) */
-  const elCode = $('#off_barcode'), elSearch = $('#off_search'), elScan = $('#off_scan'),
-    elCapture = $('#off_capture'), elFile = $('#off_file'), elPaste = $('#off_paste'), elClear = $('#off_clear'),
-    elError = $('#off_error'), elRes = $('#off_result'), elImg = $('#off_img'),
-    elName = $('#off_name'), elBrand = $('#off_brand'), elQty = $('#off_qty'), elFillCreate = $('#off_fill_create');
-
+  /* OFF + Scanner */
+  const elCode = $('#off_barcode'), elSearch = $('#off_search'), elCapture = $('#off_capture'), elFile = $('#off_file'),
+    elPaste = $('#off_paste'), elClear = $('#off_clear'), elError = $('#off_error'), elRes = $('#off_result'),
+    elImg = $('#off_img'), elName = $('#off_name'), elBrand = $('#off_brand'), elQty = $('#off_qty'), elFillCreate = $('#off_fill_create');
   const cfName = $('#create_name'), cfUnitSel = $('#create_unit'), cfBarcode = $('#create_barcode');
 
   function showError(msg) { if (!elError) return; elError.textContent = msg || 'Erreur'; elError.hidden = false; }
@@ -826,27 +854,8 @@
     return { name: nm, brand, img, quantity_hint: qty };
   }
   function showResult(o) {
-    elImg.src = o.img || '';
-    elName.textContent = o.name || '—';
-    elBrand.textContent = o.brand || '—';
-    elQty.textContent = o.quantity_hint || '—';
-    elRes.hidden = false;
-    if (elFillCreate) elFillCreate.dataset.payload = JSON.stringify(o);
-  }
-  function inferUnit(q) {
-    if (!q) return '';
-    const s = (q + '').toLowerCase();
-    if (/\b(kg|kilogram|kilo)/.test(s)) return 'kg';
-    if (/\bg\b/.test(s)) return 'g';
-    if (/\bml\b/.test(s)) return 'ml';
-    if (/\bl\b/.test(s)) return 'L';
-    if (/\bpi[eè]ce|\bpcs?\b/.test(s)) return 'pièce';
-    return '';
-  }
-  function setUnitIfExists(u) {
-    if (!u) return;
-    const opts = [...cfUnitSel.options].map(o => o.value);
-    if (opts.includes(u)) cfUnitSel.value = u;
+    elImg.src = o.img || ''; elName.textContent = o.name || '—'; elBrand.textContent = o.brand || '—'; elQty.textContent = o.quantity_hint || '—';
+    elRes.hidden = false; if (elFillCreate) elFillCreate.dataset.payload = JSON.stringify(o);
   }
 
   async function doLookup() {
@@ -880,77 +889,50 @@
   let scanning = false, zxingReader = null, zxingLiveActive = false;
 
   async function onBarcodeDetected(code) { if (!code) return; elCode.value = code.replace(/\D+/g, ''); await closeScanModal(); doLookup(); }
-
   async function openScanModal() {
     if (!dlgScan) return; dlgScan.showModal(); scanning = true;
-
-    // Préparer la vidéo pour iOS/Safari + iframes
-    scanVideo.muted = true;
-    scanVideo.playsInline = true;
-    scanVideo.setAttribute('playsinline', '');
-    scanVideo.setAttribute('webkit-playsinline', '');
-
+    scanVideo.muted = true; scanVideo.playsInline = true; scanVideo.setAttribute('playsinline', ''); scanVideo.setAttribute('webkit-playsinline', '');
     if ('BarcodeDetector' in window) {
       try {
         const detector = new BarcodeDetector({ formats: ['ean_13', 'ean_8', 'upc_a', 'upc_e'] });
         const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' }, audio: false });
-        scanVideo.srcObject = stream;
-        try { await scanVideo.play(); } catch (_) { }
-
+        scanVideo.srcObject = stream; try { await scanVideo.play(); } catch (_) { }
         const tick = async () => {
           if (!scanning) return;
-          try {
-            const bm = await detector.detect(scanVideo);
-            if (bm && bm[0] && bm[0].rawValue) { await onBarcodeDetected(bm[0].rawValue); return; }
-          } catch { }
+          try { const bm = await detector.detect(scanVideo); if (bm && bm[0] && bm[0].rawValue) { await onBarcodeDetected(bm[0].rawValue); return; } }
+          catch { }
           requestAnimationFrame(tick);
-        };
-        tick(); return;
+        }; tick(); return;
       } catch (e) { /* fallback */ }
     }
     startZXingLive();
   }
-
   async function closeScanModal() {
     scanning = false; if (dlgScan && dlgScan.open) dlgScan.close();
     const s = scanVideo && (scanVideo.srcObject); if (s && s.getTracks) s.getTracks().forEach(t => t.stop());
     if (zxingReader && zxingLiveActive) { try { await zxingReader.reset(); } catch { } zxingLiveActive = false; }
   }
-
   async function loadZXing() {
     return new Promise((resolve, reject) => {
       if (window.ZXing) return resolve(window.ZXing);
       const s = document.createElement('script'); s.src = 'https://unpkg.com/@zxing/library@latest';
-      s.onload = () => resolve(window.ZXing);
-      s.onerror = () => reject(new Error('ZXing indisponible'));
-      document.head.appendChild(s);
+      s.onload = () => resolve(window.ZXing); s.onerror = () => reject(new Error('ZXing indisponible')); document.head.appendChild(s);
     });
   }
-
   async function startZXingLive() {
     try {
-      // Attributs vidéo pour le fallback
-      scanVideo.muted = true;
-      scanVideo.playsInline = true;
-      scanVideo.setAttribute('playsinline', '');
-      scanVideo.setAttribute('webkit-playsinline', '');
-
+      scanVideo.muted = true; scanVideo.playsInline = true; scanVideo.setAttribute('playsinline', ''); scanVideo.setAttribute('webkit-playsinline', '');
       if (!window.ZXing) await loadZXing();
       if (!zxingReader) zxingReader = new ZXing.BrowserMultiFormatReader();
       zxingReader.decodeFromVideoDevice(undefined, scanVideo, async (result, err) => {
         if (!scanning) return;
-        if (result && result.getText) {
-          const code = (result.getText() || '').replace(/\D+/g, '');
-          if (code) await onBarcodeDetected(code);
-        }
+        if (result && result.getText) { const code = (result.getText() || '').replace(/\D+/g, ''); if (code) await onBarcodeDetected(code); }
       });
       zxingLiveActive = true; scanning = true;
     } catch (e) { showError("Impossible de démarrer le flux live. Utilise « Prendre une photo »."); }
   }
-
   document.getElementById('off_scan').addEventListener('click', openScanModal);
   btnScanClose.addEventListener('click', closeScanModal);
-
   document.getElementById('off_capture').addEventListener('click', () => document.getElementById('off_file').click());
   document.getElementById('off_file').addEventListener('change', async (ev) => {
     const file = ev.target.files && ev.target.files[0]; if (!file) return;
@@ -964,6 +946,16 @@
       if (code) await onBarcodeDetected(code); else showError('Aucun code détecté sur la photo.');
     } catch (e) { showError('Erreur lecture de la photo.'); }
     finally { ev.target.value = ''; }
+  });
+
+  /* Toggle "Plus d'infos" sur mobile */
+  document.addEventListener('click', (e) => {
+    const btn = e.target.closest('.js-card-toggle'); if (!btn) return;
+    const id = btn.getAttribute('aria-controls'); const panel = document.getElementById(id); if (!panel) return;
+    const open = btn.getAttribute('aria-expanded') === 'true';
+    btn.setAttribute('aria-expanded', String(!open));
+    panel.hidden = open;
+    const label = btn.querySelector('span:first-child'); if (label) label.textContent = open ? 'Plus d’infos' : 'Moins d’infos';
   });
 </script>
 {% endblock %}
