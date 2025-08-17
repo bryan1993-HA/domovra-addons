@@ -619,15 +619,18 @@
       {% set threshold = it.min_qty if it.min_qty is not none else SETTINGS.low_stock_default %}
       {% set is_low = (it.qty_total < threshold) %} <div class="card-item" data-name="{{ it.name|lower }}"
         data-unit="{{ it.unit|lower }}" data-barcode="{{ (it.barcode or '')|lower }}">
+
         <div class="card-head">
           <div class="card-name">
             {{ it.name }}
             {% if is_low %}<span class="pill danger">🔻 Faible stock</span>{% endif %}
           </div>
         </div>
+
         <div class="card-info">
-          {% if it.barcode %}<span class="stat"><span class="k">EAN</span><span> :</span><span class="v">{{ it.barcode
-              }}</span></span>{% endif %}
+          {% if it.barcode %}
+          <span class="stat"><span class="k">EAN</span><span> :</span><span class="v">{{ it.barcode }}</span></span>
+          {% endif %}
           <span class="stat"><span class="k">Unité</span><span> :</span><span class="v">{{ it.unit }}</span></span>
           <span class="stat"><span class="k">Conservation</span><span> :</span><span class="v">{{
               it.default_shelf_life_days }} j</span></span>
@@ -638,34 +641,32 @@
           <span class="stat"><span class="k">Seuil min</span><span> :</span><span class="v">{{ threshold
               }}</span></span>
         </div>
+
         <div class="card-actions">
-          <div class="card-actions">
-            <!-- ➖ -->
-            <form method="post" action="{{ BASE }}product/adjust">
-              <input type="hidden" name="product_id" value="{{ it.id }}">
-              <input type="hidden" name="delta" value="-1">
-              <button class="secondary" title="Retirer une étape">➖</button>
-            </form>
+          <!-- ➖ -->
+          <form method="post" action="{{ BASE }}product/adjust">
+            <input type="hidden" name="product_id" value="{{ it.id }}">
+            <input type="hidden" name="delta" value="-1">
+            <button class="secondary" title="Retirer une étape">➖</button>
+          </form>
+          <!-- ➕ -->
+          <form method="post" action="{{ BASE }}product/adjust">
+            <input type="hidden" name="product_id" value="{{ it.id }}">
+            <input type="hidden" name="delta" value="1">
+            <button class="secondary" title="Ajouter une étape">➕</button>
+          </form>
+          <!-- Modifier / Supprimer -->
+          <button class="secondary js-edit-open" data-id="{{ it.id }}" data-name="{{ it.name }}"
+            data-unit="{{ it.unit }}" data-shelf="{{ it.default_shelf_life_days }}" data-min="{{ threshold }}">✏️
+            Modifier</button>
 
-            <!-- ➕ -->
-            <form method="post" action="{{ BASE }}product/adjust">
-              <input type="hidden" name="product_id" value="{{ it.id }}">
-              <input type="hidden" name="delta" value="1">
-              <button class="secondary" title="Ajouter une étape">➕</button>
-            </form>
-
-            <!-- existants -->
-            <button class="secondary js-edit-open" data-id="{{ it.id }}" data-name="{{ it.name }}"
-              data-unit="{{ it.unit }}" data-shelf="{{ it.default_shelf_life_days }}" data-min="{{ threshold }}">✏️
-              Modifier</button>
-            <button class="secondary js-delete-open" data-id="{{ it.id }}" data-name="{{ it.name }}"
-              data-lots="{{ it.lots_count|int }}">🗑️ Supprimer</button>
-          </div>
-
+          <button class="secondary js-delete-open" data-id="{{ it.id }}" data-name="{{ it.name }}"
+            data-lots="{{ it.lots_count|int }}">🗑️ Supprimer</button>
         </div>
-        {% endfor %}
     </div>
+    {% endfor %}
   </div>
+
 </div>
 
 <!-- Dialogs -->
