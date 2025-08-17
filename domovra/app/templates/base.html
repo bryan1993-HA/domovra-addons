@@ -51,6 +51,10 @@
     :root {
       color-scheme: dark;
 
+      /* Largeurs sidebar */
+      --sidebar-w: 260px;
+      --sidebar-mini-w: 72px;
+
       /* Couleurs toasts depuis Paramètres (valeurs hex valides) */
       --toast-ok: {
           {
@@ -116,10 +120,11 @@
       display: block;
     }
 
+    /* --- Layout de base --- */
     .layout {
-      display: grid;
-      grid-template-columns: 260px 1fr;
       min-height: 100dvh;
+      display: block;
+      /* on laisse le flux normal, la sidebar sera fixée sur desktop */
     }
 
     aside {
@@ -331,35 +336,29 @@
       min-width: 720px;
     }
 
-    /* Off-canvas (mobile) */
-    @media (max-width:1024px) {
-      .layout {
-        grid-template-columns: 1fr;
-      }
-
+    /* --- Sidebar figée sur desktop --- */
+    @media (min-width:1025px) {
       aside {
         position: fixed;
-        inset: 0 auto 0 0;
-        width: 260px;
-        transform: translateX(-100%);
-        transition: transform .25s ease;
-        z-index: 70;
+        top: 0;
+        left: 0;
+        bottom: 0;
+        width: var(--sidebar-w);
+        overflow: auto;
+        -webkit-overflow-scrolling: touch;
       }
 
-      body.sidebar-open aside {
-        transform: translateX(0);
-        box-shadow: 0 10px 30px rgba(0, 0, 0, .45);
-        z-index: 2000;
-      }
-    }
-
-    @media (min-width:1025px) {
-      .sidebar-mini .layout {
-        grid-template-columns: 72px 1fr;
+      main {
+        margin-left: var(--sidebar-w);
       }
 
+      /* Mode compact */
       .sidebar-mini aside {
-        padding: 12px 8px;
+        width: var(--sidebar-mini-w);
+      }
+
+      .sidebar-mini main {
+        margin-left: var(--sidebar-mini-w);
       }
 
       .sidebar-mini .menu a {
@@ -369,6 +368,35 @@
 
       .sidebar-mini .menu a span:not(.ico) {
         display: none;
+      }
+
+      .sidebar-mini aside {
+        padding: 12px 8px;
+      }
+    }
+
+    /* --- Mobile : off-canvas conservé --- */
+    @media (max-width:1024px) {
+      .layout {
+        display: block;
+      }
+
+      aside {
+        position: fixed;
+        inset: 0 auto 0 0;
+        width: var(--sidebar-w);
+        transform: translateX(-100%);
+        transition: transform .25s ease;
+        z-index: 2000;
+      }
+
+      body.sidebar-open aside {
+        transform: translateX(0);
+        box-shadow: 0 10px 30px rgba(0, 0, 0, .45);
+      }
+
+      main {
+        margin-left: 0;
       }
     }
 
@@ -485,12 +513,10 @@
       box-shadow: 0 6px 16px rgba(0, 0, 0, .25);
       animation: toast-in .2s ease both;
       background: rgba(20, 24, 32, .85);
-      /* fond neutre, on ajoute une teinte en inline JS */
       backdrop-filter: blur(2px);
       color: inherit;
     }
 
-    /* Petite barre colorée collée à gauche (on la colore en inline JS) */
     .toast .stripe {
       position: absolute;
       inset: -1px auto -1px -1px;
@@ -631,7 +657,6 @@
       }
 
       function colorFor(type) {
-        // lit la couleur choisie dans Paramètres via variables CSS
         if (type === 'warn') return cssVar('--toast-warn') || '#ffb300';
         if (type === 'error') return cssVar('--toast-error') || '#ef5350';
         return cssVar('--toast-ok') || '#4caf50';
@@ -643,14 +668,12 @@
         el.className = 'toast ' + (type || 'ok');
         el.textContent = msg;
 
-        // Stripe colorée (toujours visible car inline)
         const stripe = document.createElement('i');
         stripe.className = 'stripe';
         const col = colorFor(type);
         stripe.style.backgroundColor = col;
         el.appendChild(stripe);
 
-        // Légère teinte du fond (inline, compat assurée)
         el.style.backgroundColor = hexToRgba(col, 0.10);
 
         stack.appendChild(el);
