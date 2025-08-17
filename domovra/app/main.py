@@ -190,6 +190,61 @@ def list_events(limit: int = 200):
             items.append({"id": r["id"], "created_at": r["created_at"], "kind": r["kind"], "details": det})
         return items
 
+def get_low_stock_products(limit: int = 8):
+    """Retourne les produits dont le stock total <= min_qty (et min_qty > 0), triés par criticité."""
+    dflt = 1
+    try:
+        dflt = int(load_settings().get("low_stock_default", 1))
+    except Exception:
+        dflt = 1
+
+    with _conn() as c:
+        try:
+            # Chemin « normal » : il existe une colonne p.min_qty
+            q = """
+            SELECT
+              p.id, p.name, p.unit,
+              COALESCE(p.min_qty, ?) AS min_qty,
+              COALESCE(SUM(l.qty), 0) AS qty_total
+            FROM products p
+            LEFT JOIN stock_lots l ON l.product_id = p.id
+            GROUP BY p.id
+            HAVING qty_total <= COALESCE(p.min_qty, ?) AND COALESCE(p.min_qty, ?) > 0
+            ORDER BY (qty_total - COALESCE(p.min_qty, ?)) ASC, p.name
+            LIMIT ?
+            """
+            rows = c.execute(q, (dflt, dflt, dflt, dflt, limit)).fetchall()
+        except sqlite3.OperationalError:
+            # Fallback si la colonne min_qty n’existe pas encore : on applique seulement le seuil global
+            q = """
+            SELECT
+              p.id, p.name, p.unit,
+              ? AS min_qty,
+              COALESCE(SUM(l.qty), 0) AS qty_total
+            FROM products p
+            LEFT JOIN stock_lots l ON l.product_id = p.id
+            GROUP BY p.id
+            HAVING qty_total <= ? AND ? > 0
+            ORDER BY (qty_total - ?) ASC, p.name
+            LIMIT ?
+            """
+            rows = c.execute(q, (dflt, dflt, dflt, dflt, limit)).fetchall()
+
+        items = []
+        for r in rows:
+            min_qty = float(r["min_qty"] or 0)
+            qty_total = float(r["qty_total"] or 0)
+            items.append({
+                "id": r["id"],
+                "name": r["name"],
+                "unit": r["unit"],
+                "min_qty": min_qty,
+                "qty_total": qty_total,
+                "delta": qty_total - min_qty,
+            })
+        return items
+
+
 # ---------------- Lifecycle
 @app.on_event("startup")
 def _startup():
@@ -212,26 +267,26 @@ def ping(): return "ok"
 def index(request: Request):
     base = ingress_base(request)
     logger.info("GET /  (BASE=%s UA=%s)", base, request.headers.get("user-agent", "-"))
+
     locations = list_locations()
     products  = list_products()
     lots      = list_lots()
     for it in lots:
         it["status"] = status_for(it.get("best_before"), WARNING_DAYS, CRITICAL_DAYS)
 
-    # Nouveau : Top 8 produits en "faible stock"
-    low_products = []
-    try:
-        low_products = list_low_stock_products(limit=8)
-    except Exception as e:
-        logger.warning("list_low_stock_products indisponible : %s", e)
+    low_products = get_low_stock_products(limit=8)
 
     return render("index.html",
                   BASE=base,
                   page="home",
                   request=request,
-                  locations=locations, products=products, lots=lots,
-                  low_products=low_products,
-                  WARNING_DAYS=WARNING_DAYS, CRITICAL_DAYS=CRITICAL_DAYS)
+                  locations=locations,
+                  products=products,
+                  lots=lots,
+                  low_products=low_products,   # ← *** important ***
+                  WARNING_DAYS=WARNING_DAYS,
+                  CRITICAL_DAYS=CRITICAL_DAYS)
+
 
 @app.get("/products", response_class=HTMLResponse)
 def products_page(request: Request):
