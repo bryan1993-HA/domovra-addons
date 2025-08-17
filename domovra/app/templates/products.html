@@ -104,6 +104,17 @@
     margin-right: .4rem
   }
 
+  /* Label qui se comporte comme un bouton (pour le capture photo) */
+  .label-button {
+    display: inline-block;
+    padding: 10px;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    background: var(--chip);
+    cursor: pointer;
+    user-select: none;
+  }
+
   /* Aides “?” */
   .help {
     display: inline-grid;
@@ -371,7 +382,7 @@
     }
   }
 
-  /* --------- Toggle "Plus d'infos" (mobile) --------- */
+  /* Toggle "Plus d'infos" (mobile) */
   @media (max-width:700px) {
     .card-toggle {
       width: 100%;
@@ -433,9 +444,12 @@
             placeholder="Scanner / saisir un code-barres (EAN/GTIN)…">
           <button id="off_scan" type="button" class="infield-btn" title="Scanner (live)">📷</button>
         </div>
-        <button id="off_search" class="secondary">🔎 Rechercher</button>
-        <button id="off_capture" type="button" class="secondary">📸 Prendre une photo</button>
+        <button id="off_search" class="secondary" type="button">🔎 Rechercher</button>
+
+        <!-- Remplacement du bouton par un LABEL (évite tout submit/navigation implicite) -->
+        <label for="off_file" class="label-button" id="off_capture_lbl">📸 Prendre une photo</label>
         <input id="off_file" type="file" accept="image/*" capture="environment" style="display:none">
+
         <button id="off_paste" class="secondary" type="button">📋 Coller</button>
         <button id="off_clear" class="secondary" type="button">✖ Effacer</button>
       </div>
@@ -475,7 +489,7 @@
       <h2>Ajouter un produit</h2><span class="muted">→ créer un nouveau produit</span>
     </div>
 
-    <form id="create_form" method="post" action="{{ BASE }}product/add" class="form-grid">
+    <form id="create_form" method="post" action="{{ BASE }}product/add" class="form-grid" onsubmit="return true">
       <div>
         <div class="label">Nom du produit
           <span class="help" tabindex="0"
@@ -538,7 +552,7 @@
         <input name="barcode" id="create_barcode" type="text" inputmode="numeric" placeholder="EAN/GTIN">
       </div>
 
-      <button class="primary btn-wide">＋ Ajouter</button>
+      <button class="primary btn-wide" type="submit">＋ Ajouter</button>
       <button id="create_reset" type="button" class="btn-ghost btn-wide"><span
           class="ico">↺</span>Réinitialiser</button>
     </form>
@@ -606,12 +620,12 @@
                 <form method="post" action="{{ BASE }}product/adjust">
                   <input type="hidden" name="product_id" value="{{ it.id }}">
                   <input type="hidden" name="delta" value="-1">
-                  <button class="secondary" title="Retirer une étape">➖</button>
+                  <button class="secondary" type="submit" title="Retirer une étape">➖</button>
                 </form>
                 <form method="post" action="{{ BASE }}product/adjust">
                   <input type="hidden" name="product_id" value="{{ it.id }}">
                   <input type="hidden" name="delta" value="1">
-                  <button class="secondary" title="Ajouter une étape">➕</button>
+                  <button class="secondary" type="submit" title="Ajouter une étape">➕</button>
                 </form>
               </div>
               <div class="row2">
@@ -646,17 +660,14 @@
           </div>
         </div>
 
-        <!-- Bouton repliable -->
         <button class="card-toggle js-card-toggle" type="button" aria-expanded="false" aria-controls="more-{{ it.id }}">
           <span>Plus d’infos</span><span class="chev">▶</span>
         </button>
 
-        <!-- Détails cachés par défaut -->
         <div class="card-extra" id="more-{{ it.id }}" hidden>
           <div class="card-info">
-            {% if it.barcode %}
-            <span class="stat"><span class="k">EAN</span><span> :</span><span class="v">{{ it.barcode }}</span></span>
-            {% endif %}
+            {% if it.barcode %}<span class="stat"><span class="k">EAN</span><span> :</span><span class="v">{{ it.barcode
+                }}</span></span>{% endif %}
             <span class="stat"><span class="k">Unité</span><span> :</span><span class="v">{{ it.unit }}</span></span>
             <span class="stat"><span class="k">Conservation</span><span> :</span><span class="v">{{
                 it.default_shelf_life_days }} j</span></span>
@@ -673,12 +684,12 @@
           <form method="post" action="{{ BASE }}product/adjust">
             <input type="hidden" name="product_id" value="{{ it.id }}">
             <input type="hidden" name="delta" value="-1">
-            <button class="secondary" title="Retirer une étape">➖</button>
+            <button class="secondary" type="submit" title="Retirer une étape">➖</button>
           </form>
           <form method="post" action="{{ BASE }}product/adjust">
             <input type="hidden" name="product_id" value="{{ it.id }}">
             <input type="hidden" name="delta" value="1">
-            <button class="secondary" title="Ajouter une étape">➕</button>
+            <button class="secondary" type="submit" title="Ajouter une étape">➕</button>
           </form>
           <button class="secondary js-edit-open" data-id="{{ it.id }}" data-name="{{ it.name }}"
             data-unit="{{ it.unit }}" data-shelf="{{ it.default_shelf_life_days }}" data-min="{{ threshold }}">✏️
@@ -796,7 +807,11 @@
     [...sel.querySelectorAll('option[data-temp="1"]')].forEach(o => o.remove());
     const opts = [...sel.options].map(o => o.value);
     if (opts.includes(val)) sel.value = val;
-    else if (val) { const o = document.createElement('option'); o.value = val; o.textContent = val + ' (autre)'; o.dataset.temp = '1'; sel.insertBefore(o, sel.firstChild); sel.value = val; }
+    else if (val) {
+      const o = document.createElement('option');
+      o.value = val; o.textContent = val + ' (autre)'; o.dataset.temp = '1';
+      sel.insertBefore(o, sel.firstChild); sel.value = val;
+    }
   }
 
   /* Modales Modifier / Supprimer */
@@ -836,8 +851,10 @@
   (function () { const p = new URLSearchParams(location.search); if (p.get('added') === '1') window.showToast('Produit ajouté.', 'ok'); })();
 
   /* OFF + Scanner */
-  const elCode = $('#off_barcode'), elSearch = $('#off_search'), elCapture = $('#off_capture'), elFile = $('#off_file'),
-    elPaste = $('#off_paste'), elClear = $('#off_clear'), elError = $('#off_error'), elRes = $('#off_result'),
+  const elCode = $('#off_barcode'), elSearch = $('#off_search'),
+    elFile = $('#off_file'),
+    elPaste = $('#off_paste'), elClear = $('#off_clear'),
+    elError = $('#off_error'), elRes = $('#off_result'),
     elImg = $('#off_img'), elName = $('#off_name'), elBrand = $('#off_brand'), elQty = $('#off_qty'), elFillCreate = $('#off_fill_create');
   const cfName = $('#create_name'), cfUnitSel = $('#create_unit'), cfBarcode = $('#create_barcode');
 
@@ -888,7 +905,12 @@
   const dlgScan = document.getElementById('scan-modal'), scanVideo = document.getElementById('scan-video'), btnScanClose = document.getElementById('scan-close');
   let scanning = false, zxingReader = null, zxingLiveActive = false;
 
-  async function onBarcodeDetected(code) { if (!code) return; elCode.value = code.replace(/\D+/g, ''); await closeScanModal(); doLookup(); }
+  async function onBarcodeDetected(code) {
+    if (!code) return;
+    elCode.value = code.replace(/\D+/g, '');
+    await closeScanModal();
+    doLookup();
+  }
   async function openScanModal() {
     if (!dlgScan) return; dlgScan.showModal(); scanning = true;
     scanVideo.muted = true; scanVideo.playsInline = true; scanVideo.setAttribute('playsinline', ''); scanVideo.setAttribute('webkit-playsinline', '');
@@ -899,8 +921,10 @@
         scanVideo.srcObject = stream; try { await scanVideo.play(); } catch (_) { }
         const tick = async () => {
           if (!scanning) return;
-          try { const bm = await detector.detect(scanVideo); if (bm && bm[0] && bm[0].rawValue) { await onBarcodeDetected(bm[0].rawValue); return; } }
-          catch { }
+          try {
+            const bm = await detector.detect(scanVideo);
+            if (bm && bm[0] && bm[0].rawValue) { await onBarcodeDetected(bm[0].rawValue); return; }
+          } catch { }
           requestAnimationFrame(tick);
         }; tick(); return;
       } catch (e) { /* fallback */ }
@@ -915,8 +939,11 @@
   async function loadZXing() {
     return new Promise((resolve, reject) => {
       if (window.ZXing) return resolve(window.ZXing);
-      const s = document.createElement('script'); s.src = 'https://unpkg.com/@zxing/library@latest';
-      s.onload = () => resolve(window.ZXing); s.onerror = () => reject(new Error('ZXing indisponible')); document.head.appendChild(s);
+      const s = document.createElement('script');
+      s.src = 'https://unpkg.com/@zxing/library@latest';
+      s.onload = () => resolve(window.ZXing);
+      s.onerror = () => reject(new Error('ZXing indisponible'));
+      document.head.appendChild(s);
     });
   }
   async function startZXingLive() {
@@ -926,7 +953,10 @@
       if (!zxingReader) zxingReader = new ZXing.BrowserMultiFormatReader();
       zxingReader.decodeFromVideoDevice(undefined, scanVideo, async (result, err) => {
         if (!scanning) return;
-        if (result && result.getText) { const code = (result.getText() || '').replace(/\D+/g, ''); if (code) await onBarcodeDetected(code); }
+        if (result && result.getText) {
+          const code = (result.getText() || '').replace(/\D+/g, '');
+          if (code) await onBarcodeDetected(code);
+        }
       });
       zxingLiveActive = true; scanning = true;
     } catch (e) { showError("Impossible de démarrer le flux live. Utilise « Prendre une photo »."); }
@@ -934,21 +964,41 @@
   document.getElementById('off_scan').addEventListener('click', openScanModal);
   btnScanClose.addEventListener('click', closeScanModal);
 
-  /* ---- Mode Photo universel ---- */
-  document.getElementById('off_capture').addEventListener('click', () => document.getElementById('off_file').click());
-  document.getElementById('off_file').addEventListener('change', async (ev) => {
-    const file = ev.target.files && ev.target.files[0]; if (!file) return;
+  /* ---- Mode Photo universel (avec protections anti-refresh) ---- */
+  elFile.addEventListener('click', (e) => {  // empêche certains navigateurs d'interpréter ça comme un submit
+    e.preventDefault(); e.stopPropagation();
+    // relance proprement l'ouverture de la cam photo
+    setTimeout(() => elFile.removeAttribute('disabled'), 0);
+  }, true);
+
+  elFile.addEventListener('change', async (ev) => {
+    // 🔒 Bloque toute tentative de submit/navigation involontaire
+    ev.preventDefault(); ev.stopPropagation();
+
+    const file = ev.target.files && ev.target.files[0];
+    if (!file) { return; }
+
     try {
       if (!window.ZXing) await loadZXing();
       if (!zxingReader) zxingReader = new ZXing.BrowserMultiFormatReader();
+
       const imgURL = URL.createObjectURL(file);
       const img = document.createElement('img'); img.src = imgURL; await img.decode();
+
       const res = await zxingReader.decodeFromImageElement(img);
       const code = res && res.getText ? (res.getText() || '').replace(/\D+/g, '') : '';
-      if (code) await onBarcodeDetected(code); else showError('Aucun code détecté sur la photo.');
-    } catch (e) { showError('Erreur lecture de la photo.'); }
-    finally { ev.target.value = ''; }
-  });
+      if (code) { await onBarcodeDetected(code); }
+      else { showError('Aucun code détecté sur la photo.'); }
+    } catch (e) {
+      console.error(e);
+      showError('Erreur lecture de la photo.');
+    } finally {
+      // Permettre une nouvelle prise sans recharger la page
+      ev.target.value = '';
+      // Double-sécurité : empêcher une navigation accidentelle immédiatement après retour caméra
+      history.replaceState(null, document.title, location.href);
+    }
+  }, true);
 
   /* Toggle "Plus d'infos" sur mobile */
   document.addEventListener('click', (e) => {
