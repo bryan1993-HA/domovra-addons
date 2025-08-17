@@ -906,11 +906,15 @@
   async function loadZXing() {
     return new Promise((resolve, reject) => {
       if (window.ZXing) return resolve(window.ZXing);
-      const s = document.createElement('script'); s.src = 'https://unpkg.com/@zxing/library@latest';
-      s.onload = () => resolve(window.ZXing); s.onerror = () => reject(new Error('ZXing indisponible'));
+      const s = document.createElement('script');
+      // version stable, évite les régressions du "latest"
+      s.src = 'https://unpkg.com/@zxing/library@0.20.0';
+      s.onload = () => resolve(window.ZXing);
+      s.onerror = () => reject(new Error('ZXing indisponible'));
       document.head.appendChild(s);
     });
   }
+
   async function startZXingLive() {
     try {
       scanVideo.muted = true; scanVideo.playsInline = true; scanVideo.setAttribute('playsinline', ''); scanVideo.setAttribute('webkit-playsinline', '');
@@ -932,18 +936,74 @@
   });
 
   /* Mode Photo */
+  // helper: tente plusieurs stratégies + downscale + conversion HEIC -> JPEG
+  async function decodeImageFileWithZXing(file) {
+    if (!window.ZXing) await loadZXing();
+    if (!zxingReader) zxingReader = new ZXing.BrowserMultiFormatReader();
+
+    const url = URL.createObjectURL(file);
+    try {
+      // 1) tentative directe par URL
+      try {
+        const r1 = await zxingReader.decodeFromImageUrl(url);
+        if (r1 && r1.getText) return r1.getText();
+      } catch (e) {
+        // NotFound = on continue; autres erreurs = on log et on continue
+        if (!e || e.name !== 'NotFoundException') console.warn('decodeFromImageUrl:', e);
+      }
+
+      // 2) dessiner sur canvas (downscale) puis retenter en PNG
+      const imgBitmap = await (self.createImageBitmap ? createImageBitmap(file) : (async () => {
+        const im = new Image(); im.src = url; await im.decode(); return im;
+      })());
+      const maxSide = 1600; // limite pour éviter les images de 12-48MP
+      const scale = Math.min(1, maxSide / Math.max(imgBitmap.width, imgBitmap.height));
+      const w = Math.max(1, Math.round(imgBitmap.width * scale));
+      const h = Math.max(1, Math.round(imgBitmap.height * scale));
+      const cv = document.createElement('canvas'); cv.width = w; cv.height = h;
+      cv.getContext('2d').drawImage(imgBitmap, 0, 0, w, h);
+
+      try {
+        const dataURLpng = cv.toDataURL('image/png');
+        const r2 = await zxingReader.decodeFromImageUrl(dataURLpng);
+        if (r2 && r2.getText) return r2.getText();
+      } catch (e) { /* continue */ }
+
+      // 3) conversion JPEG (bypass HEIC)
+      try {
+        const dataURLjpg = cv.toDataURL('image/jpeg', 0.92);
+        const r3 = await zxingReader.decodeFromImageUrl(dataURLjpg);
+        if (r3 && r3.getText) return r3.getText();
+      } catch (e) { /* continue */ }
+
+      // si rien trouvé
+      const err = new Error('NotFound'); err.name = 'NotFoundException'; throw err;
+    } finally {
+      URL.revokeObjectURL(url);
+    }
+  }
+
   elFile.addEventListener('change', async (ev) => {
     const file = ev.target.files && ev.target.files[0]; if (!file) return;
     try {
-      if (!window.ZXing) await loadZXing();
-      if (!zxingReader) zxingReader = new ZXing.BrowserMultiFormatReader();
-      const imgURL = URL.createObjectURL(file);
-      const img = document.createElement('img'); img.src = imgURL; await img.decode();
-      const res = await zxingReader.decodeFromImageElement(img);
-      const code = res && res.getText ? (res.getText() || '').replace(/\D+/g, '') : '';
-      if (code) await onBarcodeDetected(code); else showError('Aucun code détecté sur la photo.');
-    } catch (e) { console.error('Erreur ZXing photo:', e); showError('Erreur lors du décodage.'); }
-    finally { ev.target.value = ''; }
+      const text = await decodeImageFileWithZXing(file);
+      const code = (text || '').replace(/\D+/g, '');
+      if (code) {
+        await onBarcodeDetected(code);
+      } else {
+        showError('Aucun code détecté sur la photo.');
+      }
+    } catch (e) {
+      if (e && e.name === 'NotFoundException') {
+        showError('Aucun code détecté sur la photo.');
+      } else {
+        console.error('ZXing error:', e);
+        showError('Erreur lors du décodage (format/qualité de la photo).');
+      }
+    } finally {
+      // permet de reprendre une autre photo immédiatement
+      ev.target.value = '';
+    }
   });
 
   /* Toggle "Plus d'infos" mobile */
