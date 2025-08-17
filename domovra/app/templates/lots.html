@@ -505,7 +505,8 @@
           <td>
             <div class="line">
               <div class="meta">
-                <span>Qté <b>{{ '%.2f'|format(it.qty) }} {{ it.unit }}</b></span>
+                <span>Qté <b>{{ '%.2f'|format(it.qty)|trim('0')|trim('.') }} {{ it.unit|pluralize_fr(it.qty)
+                    }}</b></span>
                 <span class="sep">•</span>
                 <span>📍 <b>{{ it.location }}</b></span>
               </div>
@@ -553,8 +554,8 @@
             ("Urgent" if it.status=="red" else "—")) }}</span>
         </div>
         <div class="card-sub">
-          {{ '%.2f'|format(it.qty) }} {{ it.unit }} • 📍 {{ it.location }}{% if it.barcode %} • 🏷️ {{ it.barcode }}{%
-          endif %}
+          {{ '%.2f'|format(it.qty)|trim('0')|trim('.') }} {{ it.unit|pluralize_fr(it.qty) }} • 📍 {{ it.location }}{% if
+          it.barcode %} • 🏷️ {{ it.barcode }}{% endif %}
         </div>
         <details class="dates" style="margin-top:6px">
           <summary>📅 Dates</summary>
