@@ -933,6 +933,8 @@
   }
   document.getElementById('off_scan').addEventListener('click', openScanModal);
   btnScanClose.addEventListener('click', closeScanModal);
+
+  /* ---- Mode Photo universel ---- */
   document.getElementById('off_capture').addEventListener('click', () => document.getElementById('off_file').click());
   document.getElementById('off_file').addEventListener('change', async (ev) => {
     const file = ev.target.files && ev.target.files[0]; if (!file) return;
