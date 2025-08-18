@@ -32,7 +32,7 @@
 
                 <div class="field">
                     <div class="label">Menu latéral compact</div>
-                    <label class="hstack-8">
+                    <label style="display:flex;align-items:center;gap:8px">
                         <input type="checkbox" name="sidebar_compact" {{ 'checked' if SETTINGS.sidebar_compact }}>
                         Activer
                     </label>
@@ -86,9 +86,8 @@
         </div>
 
         <!-- Actions -->
-        <div class="row end">
-            <button class="secondary">Annuler</button>
-            <button class="primary">Enregistrer</button>
+        <div class="row" style="justify-content:flex-end">
+            <button class="secondary">Enregistrer</button>
         </div>
 
     </form>
