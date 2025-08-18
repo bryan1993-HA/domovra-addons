@@ -545,6 +545,7 @@ html[data-theme="light"] .wrap {
 
 /* Titres */
 .wrap .title {
+    background-color: #00bcd4;
     display: flex;
     align-items: center;
     gap: 10px;
