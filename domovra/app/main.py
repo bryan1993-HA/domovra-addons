@@ -67,8 +67,19 @@ DB_PATH       = os.environ.get("DB_PATH", "/data/domovra.sqlite3")
 app = FastAPI()
 
 # === NEW: Static files mount (robuste avec chemin absolu) ===
-STATIC_DIR = os.path.join(os.path.dirname(__file__), "static")
+from fastapi.staticfiles import StaticFiles
+
+# --- Static files : dossier sibling de app/ ---
+HERE = os.path.dirname(__file__)                              # …/domovra/app
+ROOT = os.path.abspath(os.path.join(HERE, ".."))              # …/domovra
+STATIC_DIR = os.path.join(ROOT, "static")                     # …/domovra/static
+
+# sécurité : crée le dossier au besoin (évite le crash au boot)
+os.makedirs(os.path.join(STATIC_DIR, "css"), exist_ok=True)
+
 app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
+logger.info("Static mounted at %s", STATIC_DIR)
+
 # ============================================================
 
 templates = Environment(
