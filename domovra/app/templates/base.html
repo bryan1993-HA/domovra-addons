@@ -49,7 +49,8 @@
 
   <!-- Précharge la CSS ; si préload annulé par le navigateur, le <link> normal prend le relai -->
   <link rel="preload" href="{{ BASE }}static/css/domovra.css?v={{ ASSET_VER }}" as="style">
-  <link rel="stylesheet" href="{{ BASE }}static/css/domovra.css?v={{ ASSET_VER }}">
+  <!-- DOMOVRA CSS LINK CHECK: v=0.4.0 @ 2025-08-18 22:40 -->
+  <link rel="stylesheet" id="domovra-css" href="{{ BASE }}static/domovra.css?v=0.4.0">
 
   {% block head %}{% endblock %}
 </head>
