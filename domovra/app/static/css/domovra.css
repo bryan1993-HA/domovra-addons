@@ -1,4 +1,27 @@
-/* ========== Domovra CSS global ========== */
+/* *****************************************************************************
+ * Domovra — feuille de styles globale
+ * -----------------------------------------------------------------------------
+ * Table des matières
+ *  01) Variables & thèmes (root, dark/light)
+ *  02) Resets & éléments génériques
+ *  03) Layout général (aside/main/header, menu, cards…)
+ *  04) Formulaires (style global)
+ *  05) Tables (style global)
+ *  06) Grilles utilitaires (grid/row/responsive helpers)
+ *  07) Sidebar (desktop) & off‑canvas (mobile)
+ *  08) Variantes claires (overrides pour data-theme="light")
+ *  09) Header compact mobile
+ *  10) Toasts (notifications)
+ *  11) Page Accueil (/): styles scopés (.wrap …)
+ *  12) Page Emplacements (/locations)
+ *  13) Page Produits (/products)
+ *  14) Page Stocks (/lots)
+ *  15) Page Paramètres (/settings)
+ *  16) Page Journal (/journal)
+ *  17) Page Support (/support)
+ * *****************************************************************************/
+
+/* ========== 01) Variables & thèmes ======================================== */
 
 /* Préférences générales */
 :root {
@@ -42,7 +65,8 @@ html[data-theme="light"] body {
     color: #1f2328;
 }
 
-/* Reset utiles */
+/* ========== 02) Resets & éléments génériques ============================== */
+
 * {
     box-sizing: border-box;
 }
@@ -57,7 +81,8 @@ img {
     display: block;
 }
 
-/* --- Layout de base --- */
+/* ========== 03) Layout général ============================================ */
+
 .layout {
     min-height: 100dvh;
     display: block;
@@ -172,7 +197,8 @@ header {
     opacity: .7;
 }
 
-/* Formulaires (globaux) */
+/* ========== 04) Formulaires (global) ====================================== */
+
 input,
 select,
 button {
@@ -201,7 +227,8 @@ html[data-theme="light"] optgroup {
     color: #111827;
 }
 
-/* Tables (globaux) */
+/* ========== 05) Tables (global) =========================================== */
+
 table {
     width: 100%;
     border-collapse: collapse;
@@ -221,7 +248,8 @@ tbody tr:nth-child(even) {
     background: #121620;
 }
 
-/* Grilles utilitaires */
+/* ========== 06) Grilles utilitaires ======================================= */
+
 .grid {
     display: grid;
     grid-template-columns: repeat(12, 1fr);
@@ -269,7 +297,8 @@ tbody tr:nth-child(even) {
     min-width: 720px;
 }
 
-/* --- Sidebar figée (desktop) --- */
+/* ========== 07) Sidebar (desktop) & off‑canvas (mobile) ==================== */
+
 @media (min-width:1025px) {
     aside {
         position: fixed;
@@ -308,7 +337,6 @@ tbody tr:nth-child(even) {
     }
 }
 
-/* --- Mobile : off-canvas --- */
 @media (max-width:1024px) {
     .layout {
         display: block;
@@ -359,7 +387,8 @@ tbody tr:nth-child(even) {
     }
 }
 
-/* Variantes claires */
+/* ========== 08) Variantes claires (overrides) ============================== */
+
 html[data-theme="light"] aside {
     background: #f7f7f8;
     border-right: 1px solid var(--line);
@@ -422,14 +451,16 @@ html[data-theme="light"] .chip {
     border: 1px solid var(--line);
 }
 
-/* Mobile : cacher les chips du header */
+/* ========== 09) Header compact mobile ===================================== */
+
 @media (max-width:640px) {
     .header-right {
         display: none;
     }
 }
 
-/* ===== TOASTS ===== */
+/* ========== 10) Toasts ===================================================== */
+
 .toast-stack {
     position: fixed;
     top: 12px;
@@ -488,15 +519,15 @@ html[data-theme="light"] .chip {
 }
 
 /* ========================================================================== */
-/* ========== Page Accueil (styles scopés pour reproduire l'inline) ========= */
+/* ========== 11) Page Accueil (styles scopés) =============================== */
 /* ========================================================================== */
 
-/* Variables locales mappées au thème global */
+/* Conteneur + variables locales */
 .wrap {
     --gap: 12px;
     --radius: 14px;
     --border: var(--line);
-    /* aligné sur le thème (au lieu de #263043) */
+    /* aligné sur le thème */
     --chip: #1a2230;
     /* fond chips (dark) */
     --muted: var(--text-muted);
@@ -514,7 +545,7 @@ html[data-theme="light"] .wrap {
     --chip: #ffffff;
 }
 
-/* Rangées — neutralise l’étirement global */
+/* Rangées & éléments */
 .wrap .row {
     display: flex;
     gap: 12px;
@@ -525,7 +556,7 @@ html[data-theme="light"] .wrap {
     flex: initial;
 }
 
-/* Chips (liens actions) */
+/* Chips */
 .wrap .chip {
     background: var(--chip);
     border: 1px solid var(--border);
@@ -535,7 +566,7 @@ html[data-theme="light"] .wrap {
     white-space: nowrap;
 }
 
-/* Cartes */
+/* Cartes & titres */
 .wrap .card {
     border: 1px solid var(--border);
     border-radius: var(--radius);
@@ -543,7 +574,6 @@ html[data-theme="light"] .wrap {
     margin-bottom: 12px;
 }
 
-/* Titres */
 .wrap .title {
     display: flex;
     align-items: center;
@@ -556,7 +586,7 @@ html[data-theme="light"] .wrap {
     margin: 0;
 }
 
-/* Formulaires — style inline (fond transparent, bord var(--border)) */
+/* Champs & labels (scopés) */
 .wrap input,
 .wrap select,
 .wrap button {
@@ -571,7 +601,6 @@ html[data-theme="light"] .wrap {
     /* bat le width:100% global */
 }
 
-/* Champs + libellés */
 .wrap .field {
     display: flex;
     flex-direction: column;
@@ -587,7 +616,7 @@ html[data-theme="light"] .wrap {
     gap: 6px;
 }
 
-/* Bouton primaire */
+/* Bouton primaire (scopé) */
 .wrap button.primary {
     background: var(--accent);
     border: 0;
@@ -601,7 +630,7 @@ html[data-theme="light"] .wrap {
     align-self: end;
 }
 
-/* Grille Ajout express (doit battre .row {display:flex}) */
+/* Grille “Ajout express” */
 .wrap .form-grid {
     display: grid !important;
     grid-template-columns: 2fr 2fr 1fr 1fr auto;
@@ -640,7 +669,7 @@ html[data-theme="light"] .wrap {
     }
 }
 
-/* Tableaux du Top 8 : on annule les bordures complètes et on remet seulement bottom */
+/* Tableaux “Top 8” */
 .wrap .top8-table thead th {
     font-size: 12px;
     color: var(--muted);
@@ -665,13 +694,12 @@ html[data-theme="light"] .wrap .top8-table tbody tr:hover {
     background-color: rgba(0, 0, 0, .03);
 }
 
-/* Teinte "muted" sans opacité */
 .wrap .muted {
     color: var(--muted);
     opacity: 1;
 }
 
-/* Pastilles d'état (compat avec ton HTML) */
+/* Pastilles */
 .wrap .pill {
     padding: 2px 8px;
     border-radius: 999px;
@@ -695,7 +723,7 @@ html[data-theme="light"] .wrap .top8-table tbody tr:hover {
     border-color: rgba(239, 83, 80, .35);
 }
 
-/* TOP 8 Desktop/Mobile */
+/* Bascule table/cartes */
 .wrap .top8-table {
     display: block;
 }
@@ -713,48 +741,48 @@ html[data-theme="light"] .wrap .top8-table tbody tr:hover {
         display: grid;
         gap: 10px;
     }
-
-    .wrap .lot-card {
-        border: 1px solid var(--border);
-        border-radius: 12px;
-        padding: 10px;
-        background: transparent;
-        display: grid;
-        grid-template-columns: 1fr auto;
-        gap: 8px;
-        align-items: center;
-    }
-
-    .wrap .lot-main {
-        display: flex;
-        flex-direction: column;
-        gap: 4px;
-    }
-
-    .wrap .lot-title {
-        font-weight: 600;
-    }
-
-    .wrap .lot-meta {
-        font-size: .9rem;
-        color: var(--muted);
-        display: flex;
-        gap: 10px;
-        flex-wrap: wrap;
-    }
-
-    .wrap .lot-action {
-        display: flex;
-        gap: 8px;
-        align-items: center;
-    }
-
-    .wrap .lot-action input {
-        max-width: 90px;
-    }
 }
 
-/* Détails d’espacement */
+.wrap .lot-card {
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 10px;
+    background: transparent;
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 8px;
+    align-items: center;
+}
+
+.wrap .lot-main {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.wrap .lot-title {
+    font-weight: 600;
+}
+
+.wrap .lot-meta {
+    font-size: .9rem;
+    color: var(--muted);
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.wrap .lot-action {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+.wrap .lot-action input {
+    max-width: 90px;
+}
+
+/* Espacements */
 .wrap .card+.card {
     margin-top: 12px;
 }
@@ -764,12 +792,8 @@ html[data-theme="light"] .wrap .top8-table tbody tr:hover {
     flex-wrap: wrap;
 }
 
-/* ==== Fix mobile cards (Home / Top 8) pour Companion ==== */
-
-/* élargir le breakpoint pour déclencher les cartes mobiles plus souvent */
+/* Fix “Companion” (élargit le breakpoint pour mobile cards) */
 @media (max-width: 900px) {
-
-    /* bascule table -> cards */
     .wrap .top8-table {
         display: none !important;
     }
@@ -779,20 +803,17 @@ html[data-theme="light"] .wrap .top8-table tbody tr:hover {
         gap: 10px;
     }
 
-    /* card générique plein largeur + espacements nets */
     .wrap .card {
         display: block;
         width: 100%;
         margin: 0 0 12px 0;
     }
 
-    /* neutralise l'étirement des enfants dans les rangées de cartes */
     .wrap .card .row>* {
         flex: initial !important;
         min-width: 0;
     }
 
-    /* fiche lot (mobile) identique à ton inline */
     .wrap .lot-card {
         border: 1px solid var(--border, var(--line));
         border-radius: 12px;
@@ -822,7 +843,6 @@ html[data-theme="light"] .wrap .top8-table tbody tr:hover {
         flex-wrap: wrap;
     }
 
-    /* zone action : input + bouton sans débordement */
     .wrap .lot-action {
         display: flex;
         gap: 8px;
@@ -838,7 +858,7 @@ html[data-theme="light"] .wrap .top8-table tbody tr:hover {
     }
 }
 
-/* au cas où le WebView rapporte une largeur “bizarre” : fallback par densité tactile */
+/* Fallback densité tactile */
 @media (pointer: coarse) {
     .wrap .top8-table {
         display: none !important;
@@ -850,20 +870,7 @@ html[data-theme="light"] .wrap .top8-table tbody tr:hover {
     }
 }
 
-/* 1) iOS/Android WebView : élargir + fiabiliser le breakpoint mobile */
-@media screen and (max-width: 900px),
-(pointer: coarse) {
-    .wrap .top8-table {
-        display: none !important;
-    }
-
-    .wrap .top8-cards {
-        display: grid !important;
-        gap: 10px;
-    }
-}
-
-/* 2) Ha Companion (WebKit iOS) : certains WebView ignorent le (max-width) selon DPR */
+/* WebKit iOS (orientation portrait) */
 @supports (-webkit-touch-callout: none) {
     @media (orientation: portrait) {
         .wrap .top8-table {
@@ -877,7 +884,7 @@ html[data-theme="light"] .wrap .top8-table tbody tr:hover {
     }
 }
 
-/* 3) Neutraliser l'étirement hérité DANS les cartes (évite les chips pleine largeur en mobile) */
+/* Neutraliser l’étirement dans les cartes */
 @media (max-width: 900px),
 (pointer: coarse) {
     .wrap .card .row>* {
@@ -891,10 +898,10 @@ html[data-theme="light"] .wrap .top8-table tbody tr:hover {
 }
 
 /* ========================================================================== */
-/* ========== Page Emplacements (/locations) ================================ */
+/* ========== 12) Page Emplacements (/locations) ============================ */
 /* ========================================================================== */
 
-/* Ajout express — grille compacte (n'affecte QUE le form d'ajout d'emplacement) */
+/* Ajout express — grille compacte */
 .wrap form[action$="location/add"].form-grid {
     display: grid !important;
     grid-template-columns: 1fr auto;
@@ -908,7 +915,7 @@ html[data-theme="light"] .wrap .top8-table tbody tr:hover {
     }
 }
 
-/* Outils (recherche + compteur) */
+/* Outils */
 .wrap .tools-row {
     display: grid;
     grid-template-columns: 1fr auto;
@@ -926,7 +933,7 @@ html[data-theme="light"] .wrap .top8-table tbody tr:hover {
     }
 }
 
-/* Liste — alignement de la colonne Actions + boutons 50/50 */
+/* Actions */
 .wrap .t-actions {
     text-align: right;
 }
@@ -943,7 +950,7 @@ html[data-theme="light"] .wrap .top8-table tbody tr:hover {
     min-width: 0;
 }
 
-/* Table "Liste" (uniquement celle qui contient #locations-body) */
+/* Table (ciblée) */
 .wrap table:has(#locations-body) thead th {
     font-size: 12px;
     color: var(--text-muted);
@@ -968,7 +975,7 @@ html[data-theme="light"] .wrap table:has(#locations-body) tbody tr:hover {
     background-color: rgba(0, 0, 0, .03);
 }
 
-/* Pastilles & badges (complément aux .wrap .pill déjà présentes) */
+/* Badges */
 .wrap .badge {
     padding: 2px 8px;
     border-radius: 999px;
@@ -986,14 +993,12 @@ html[data-theme="light"] .wrap table:has(#locations-body) tbody tr:hover {
     border-color: rgba(239, 83, 80, .35);
 }
 
-/* Cartes mobiles Emplacements */
+/* Cartes mobiles */
 .wrap .loc-cards {
     display: none;
 }
 
 @media (max-width:700px) {
-
-    /* Cache uniquement la table Emplacements en mobile */
     .wrap .table-responsive:has(#locations-body) {
         display: none;
     }
@@ -1008,7 +1013,6 @@ html[data-theme="light"] .wrap table:has(#locations-body) tbody tr:hover {
         border-radius: 12px;
         padding: 10px;
         background: transparent;
-        /* harmonisé avec les autres pages */
         display: grid;
         grid-template-columns: 1fr auto;
         gap: 8px;
@@ -1050,7 +1054,7 @@ html[data-theme="light"] .wrap table:has(#locations-body) tbody tr:hover {
     }
 }
 
-/* Dialog — petits ajustements */
+/* Dialog (ajustements) */
 .wrap dialog input[type="radio"] {
     width: 16px;
     height: 16px;
@@ -1066,10 +1070,10 @@ html[data-theme="light"] .wrap table:has(#locations-body) tbody tr:hover {
 }
 
 /* ========================================================================== */
-/* ========== Page Produits (/products) ===================================== */
+/* ========== 13) Page Produits (/products) ================================= */
 /* ========================================================================== */
 
-/* Variantes de boutons (cohérentes avec l’inline de produits.html) */
+/* Variantes de boutons (scopées) */
 .wrap button.primary {
     background: var(--accent);
     border: 0;
@@ -1098,7 +1102,7 @@ html[data-theme="light"] .wrap table:has(#locations-body) tbody tr:hover {
     margin-right: .4rem;
 }
 
-/* Placeholders un peu adoucis (utilisé sur produits.html) */
+/* Placeholders adoucis */
 .wrap input::placeholder {
     color: rgba(200, 210, 225, .7);
 }
@@ -1107,7 +1111,7 @@ html[data-theme="light"] .wrap input::placeholder {
     color: rgba(60, 70, 90, .6);
 }
 
-/* Aide "?" (tooltip) */
+/* Aide “?” (tooltips) */
 .wrap .help {
     display: inline-grid;
     place-items: center;
@@ -1157,7 +1161,7 @@ html[data-theme="light"] .wrap .help:focus-visible::after {
     color: #111827;
 }
 
-/* ------- OFF : grille colonnes + infield + boutons à droite ------- */
+/* OFF (champ + 2 icônes) */
 .wrap #off-box {
     padding: 8px 0;
 }
@@ -1171,7 +1175,6 @@ html[data-theme="light"] .wrap .help:focus-visible::after {
 .wrap #off-box .infield input {
     width: 100%;
     padding-right: 98px;
-    /* place pour les 2 icônes */
 }
 
 .wrap #off-box .infield .btns {
@@ -1203,7 +1206,7 @@ html[data-theme="light"] .wrap .help:focus-visible::after {
     display: none !important;
 }
 
-/* Grille utilitaire pour OFF (spans comme dans l’inline) */
+/* Grille OFF (spans) */
 .wrap .off-grid {
     display: grid;
     grid-template-columns: repeat(12, minmax(0, 1fr));
@@ -1279,8 +1282,7 @@ html[data-theme="light"] .wrap .help:focus-visible::after {
     }
 }
 
-/* ------- Formulaire "Ajouter un produit" (grille) ------- */
-/* N'affecte QUE le form d'ajout produit */
+/* Form “Ajouter un produit” (grille) */
 .wrap form[action$="product/add"].form-grid {
     display: grid !important;
     grid-template-columns: 2fr 1fr 1fr 1fr 1fr auto auto;
@@ -1315,7 +1317,7 @@ html[data-theme="light"] .wrap .help:focus-visible::after {
     }
 }
 
-/* ------- Table Liste (UNIQUEMENT Produits) ------- */
+/* Table Liste (produits) */
 #tbl {
     width: 100%;
     border-collapse: collapse;
@@ -1346,7 +1348,7 @@ html[data-theme="light"] #tbl tbody tr:hover {
     background: rgba(0, 0, 0, .03);
 }
 
-/* ------- Stats (chips d’infos dans la colonne Infos) ------- */
+/* Stats (chips) */
 .wrap .stats {
     display: flex;
     flex-wrap: wrap;
@@ -1376,14 +1378,13 @@ html[data-theme="light"] #tbl tbody tr:hover {
     font-weight: 600;
 }
 
-/* ------- Cartes mobiles (bascules à <=700px) ------- */
+/* Cartes mobiles (produits) */
 .wrap .cards {
     display: none;
 }
 
 @media (max-width:700px) {
 
-    /* Cache UNIQUEMENT la table Produits */
     #tbl,
     #tbl thead {
         display: none;
@@ -1425,7 +1426,7 @@ html[data-theme="light"] #tbl tbody tr:hover {
         margin-top: 8px;
     }
 
-    /* Toggle “Plus d’infos” */
+    /* Toggle mobile */
     .wrap .card-toggle {
         width: 100%;
         border: 1px solid var(--line);
@@ -1461,7 +1462,7 @@ html[data-theme="light"] #tbl tbody tr:hover {
     }
 }
 
-/* ------- Dialog (petits ajustements) ------- */
+/* Dialog (produits) */
 .wrap dialog input[type="radio"] {
     width: 16px;
     height: 16px;
@@ -1473,10 +1474,10 @@ html[data-theme="light"] #tbl tbody tr:hover {
 }
 
 /* ========================================================================== */
-/* ========== Page Stocks (/lots) =========================================== */
+/* ========== 14) Page Stocks (/lots) ======================================= */
 /* ========================================================================== */
 
-/* --- Infield (select Produit + boutons scanner/photo) : SCOPÉ AU FORM LOT --- */
+/* Infield (select + boutons) */
 .wrap form[action$="lot/add"] .infield {
     position: relative;
     display: flex;
@@ -1486,7 +1487,6 @@ html[data-theme="light"] #tbl tbody tr:hover {
 .wrap form[action$="lot/add"] .infield select {
     width: 100%;
     padding-right: 104px;
-    /* place pour 2 boutons icône */
     appearance: none;
     background: linear-gradient(transparent, transparent) padding-box;
 }
@@ -1500,7 +1500,7 @@ html[data-theme="light"] #tbl tbody tr:hover {
     gap: 6px;
 }
 
-/* Boutons icône réutilisables (desktop + cartes mobile) */
+/* Boutons icône (commun) */
 .wrap .icon-btn {
     width: 40px;
     height: 40px;
@@ -1541,7 +1541,7 @@ html[data-theme="light"] #tbl tbody tr:hover {
     border: 0;
 }
 
-/* --- Grille Ajout (form lot) : SCOPÉE --- */
+/* Grille Ajout (lot) */
 .wrap form[action$="lot/add"].form-grid {
     display: grid !important;
     grid-template-columns: 2fr 1.2fr 1fr 1fr 1fr;
@@ -1576,7 +1576,7 @@ html[data-theme="light"] #tbl tbody tr:hover {
     }
 }
 
-/* --- Ligne/Meta/Status/Timeline (liste) --- */
+/* Ligne / meta / status / timeline */
 .wrap .line {
     display: flex;
     align-items: center;
@@ -1596,7 +1596,6 @@ html[data-theme="light"] #tbl tbody tr:hover {
     opacity: .5;
 }
 
-/* Pastille d’état à droite */
 .wrap .status {
     margin-left: auto;
     display: inline-flex;
@@ -1620,7 +1619,6 @@ html[data-theme="light"] #tbl tbody tr:hover {
     background: rgba(239, 83, 80, .12);
 }
 
-/* Détails dates */
 .wrap details.dates {
     margin-top: 6px;
 }
@@ -1645,7 +1643,6 @@ html[data-theme="light"] #tbl tbody tr:hover {
     margin-top: 6px;
 }
 
-/* petite pastille de timeline (sans toucher aux .pill globaux ailleurs) */
 .wrap .timeline .pill {
     display: inline-flex;
     align-items: center;
@@ -1656,7 +1653,7 @@ html[data-theme="light"] #tbl tbody tr:hover {
     background: transparent;
 }
 
-/* --- Table Liste (UNIQUEMENT Stocks) --- */
+/* Table Liste (stocks) */
 #tbl {
     width: 100%;
     border-collapse: collapse;
@@ -1687,7 +1684,7 @@ html[data-theme="light"] #tbl tbody tr:hover {
     background: rgba(0, 0, 0, .03);
 }
 
-/* --- Filtres (Recherche & filtres) --- */
+/* Filtres */
 .wrap .filters-row {
     display: grid;
     grid-template-columns: 2fr 1fr 1fr 1fr auto;
@@ -1704,14 +1701,13 @@ html[data-theme="light"] #tbl tbody tr:hover {
     }
 }
 
-/* --- Cartes mobiles (bascule à <=700px) --- */
+/* Cartes mobiles (stocks) */
 .wrap .cards {
     display: none;
 }
 
 @media (max-width:700px) {
 
-    /* Cache UNIQUEMENT la table des stocks */
     #tbl,
     #tbl thead {
         display: none;
@@ -1752,7 +1748,6 @@ html[data-theme="light"] #tbl tbody tr:hover {
         margin-top: 8px;
     }
 
-    /* harmonise les boutons icône en mobile */
     .wrap .card-actions .icon-btn {
         padding: 8px 10px;
         border-radius: 10px;
@@ -1762,16 +1757,14 @@ html[data-theme="light"] #tbl tbody tr:hover {
 }
 
 /* ========================================================================== */
-/* ========== Page Paramètres (/settings) =================================== */
+/* ========== 15) Page Paramètres (/settings) =============================== */
 /* ========================================================================== */
 
-/* Conteneur étroit uniquement pour le formulaire des paramètres */
 .wrap form[action$="settings/save"] {
     max-width: 900px;
     margin: 0 auto;
 }
 
-/* Champs en colonnes, largeur mini confortable (évite de casser ailleurs) */
 .wrap form[action$="settings/save"] .field {
     flex: 1 1 240px;
     display: flex;
@@ -1780,7 +1773,6 @@ html[data-theme="light"] #tbl tbody tr:hover {
     min-width: 220px;
 }
 
-/* Pastille d’aperçu (couleur toast, etc.) */
 .wrap form[action$="settings/save"] .preview {
     display: inline-block;
     min-width: 44px;
@@ -1790,7 +1782,7 @@ html[data-theme="light"] #tbl tbody tr:hover {
 }
 
 /* ========================================================================== */
-/* ========== Page Journal (/journal) ======================================= */
+/* ========== 16) Page Journal (/journal) =================================== */
 /* ========================================================================== */
 
 .events-head {
@@ -1832,7 +1824,7 @@ html[data-theme="light"] #tbl tbody tr:hover {
     font-size: .9rem;
 }
 
-/* Pastille type d'événement (spécifique Journal) */
+/* Pastille type d'événement */
 .events-table .pill {
     display: inline-block;
     padding: .15rem .5rem;
@@ -1842,7 +1834,7 @@ html[data-theme="light"] #tbl tbody tr:hover {
     background: transparent;
 }
 
-/* Couleurs par type d'événement */
+/* Couleurs par type d’événement */
 .kind-settings_update {
     color: #5fb673;
     border-color: #5fb673;
@@ -1908,7 +1900,7 @@ html[data-theme="light"] #tbl tbody tr:hover {
     border-color: #ff6b6b;
 }
 
-/* Flash message (ex. ?cleared=1) */
+/* Flash message (?cleared=1) */
 .flash {
     display: none;
     margin: 8px 0 12px;
@@ -1918,7 +1910,7 @@ html[data-theme="light"] #tbl tbody tr:hover {
 }
 
 /* ========================================================================== */
-/* ========== Page Support (/support) ======================================= */
+/* ========== 17) Page Support (/support) =================================== */
 /* ========================================================================== */
 
 /* Conteneur étroit */
@@ -1966,7 +1958,7 @@ html[data-theme="light"] .support-hero {
     line-height: 1.6;
 }
 
-/* Zone d’actions */
+/* Actions */
 .support-actions {
     display: flex;
     flex-wrap: wrap;
@@ -1996,7 +1988,6 @@ html[data-theme="light"] .support-hero {
 /* Primaire */
 .kofi-primary {
     background: #29abe0;
-    /* bleu Ko‑fi */
     color: #0b1016;
 }
 
@@ -2023,7 +2014,7 @@ html[data-theme="light"] .kofi-outline {
     display: inline-block;
 }
 
-/* Cartes d’explication */
+/* Carte d’explication */
 .support-card {
     margin-top: 1rem;
     border-radius: 12px;
