@@ -1471,3 +1471,292 @@ html[data-theme="light"] #tbl tbody tr:hover {
 .wrap dialog select {
     min-height: 44px;
 }
+
+/* ========================================================================== */
+/* ========== Page Stocks (/lots) =========================================== */
+/* ========================================================================== */
+
+/* --- Infield (select Produit + boutons scanner/photo) : SCOPÉ AU FORM LOT --- */
+.wrap form[action$="lot/add"] .infield {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.wrap form[action$="lot/add"] .infield select {
+    width: 100%;
+    padding-right: 104px;
+    /* place pour 2 boutons icône */
+    appearance: none;
+    background: linear-gradient(transparent, transparent) padding-box;
+}
+
+.wrap form[action$="lot/add"] .infield-buttons {
+    position: absolute;
+    right: 6px;
+    top: 50%;
+    transform: translateY(-50%);
+    display: flex;
+    gap: 6px;
+}
+
+/* Boutons icône réutilisables (desktop + cartes mobile) */
+.wrap .icon-btn {
+    width: 40px;
+    height: 40px;
+    border-radius: 10px;
+    display: grid;
+    place-items: center;
+    border: 1px solid var(--line);
+    background: transparent;
+    color: var(--text-muted);
+    cursor: pointer;
+    transition: transform .06s, background .12s;
+}
+
+.wrap .icon-btn:hover {
+    background: rgba(255, 255, 255, .06);
+}
+
+.wrap .icon-btn:active {
+    transform: scale(.97);
+}
+
+.wrap .icon-btn svg {
+    width: 18px;
+    height: 18px;
+    fill: currentColor;
+}
+
+/* Accessibilité utilitaire */
+.wrap .sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+}
+
+/* --- Grille Ajout (form lot) : SCOPÉE --- */
+.wrap form[action$="lot/add"].form-grid {
+    display: grid !important;
+    grid-template-columns: 2fr 1.2fr 1fr 1fr 1fr;
+    gap: 12px;
+    align-items: end;
+}
+
+@media (max-width:1100px) {
+    .wrap form[action$="lot/add"].form-grid {
+        grid-template-columns: 2fr 1.2fr 1fr 1fr;
+    }
+}
+
+@media (max-width:900px) {
+    .wrap form[action$="lot/add"].form-grid {
+        grid-template-columns: 1fr 1fr 1fr;
+    }
+
+    .wrap form[action$="lot/add"].form-grid .btn-wide {
+        grid-column: 1 / -1;
+        justify-self: stretch;
+    }
+}
+
+@media (max-width:700px) {
+    .wrap form[action$="lot/add"].form-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .wrap form[action$="lot/add"].form-grid .btn-wide {
+        width: 100%;
+    }
+}
+
+/* --- Ligne/Meta/Status/Timeline (liste) --- */
+.wrap .line {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.wrap .meta {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    color: var(--text-muted);
+    font-size: 14px;
+}
+
+.wrap .sep {
+    opacity: .5;
+}
+
+/* Pastille d’état à droite */
+.wrap .status {
+    margin-left: auto;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 10px;
+    border-radius: 999px;
+    border: 1px solid var(--line);
+    font-weight: 600;
+}
+
+.wrap .status.green {
+    background: rgba(76, 175, 80, .12);
+}
+
+.wrap .status.yellow {
+    background: rgba(255, 179, 0, .12);
+}
+
+.wrap .status.red {
+    background: rgba(239, 83, 80, .12);
+}
+
+/* Détails dates */
+.wrap details.dates {
+    margin-top: 6px;
+}
+
+.wrap details.dates summary {
+    cursor: pointer;
+    list-style: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--text-muted);
+}
+
+.wrap details.dates summary::-webkit-details-marker {
+    display: none;
+}
+
+.wrap .timeline {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-top: 6px;
+}
+
+/* petite pastille de timeline (sans toucher aux .pill globaux ailleurs) */
+.wrap .timeline .pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 8px;
+    border-radius: 999px;
+    border: 1px solid var(--line);
+    background: transparent;
+}
+
+/* --- Table Liste (UNIQUEMENT Stocks) --- */
+#tbl {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+#tbl thead th {
+    font-size: 12px;
+    color: var(--text-muted);
+    text-align: left;
+    padding: 6px 8px;
+    border: 0;
+    border-bottom: 1px solid var(--line);
+    background: transparent;
+}
+
+#tbl tbody td {
+    padding: 10px 8px;
+    border: 0;
+    border-bottom: 1px solid var(--line);
+    vertical-align: top;
+}
+
+#tbl tbody tr:hover {
+    background: rgba(255, 255, 255, .03);
+}
+
+html[data-theme="light"] #tbl tbody tr:hover {
+    background: rgba(0, 0, 0, .03);
+}
+
+/* --- Filtres (Recherche & filtres) --- */
+.wrap .filters-row {
+    display: grid;
+    grid-template-columns: 2fr 1fr 1fr 1fr auto;
+    gap: 12px;
+}
+
+@media (max-width:900px) {
+    .wrap .filters-row {
+        grid-template-columns: 1fr 1fr;
+    }
+
+    .wrap .filters-row .wide {
+        grid-column: 1 / -1;
+    }
+}
+
+/* --- Cartes mobiles (bascule à <=700px) --- */
+.wrap .cards {
+    display: none;
+}
+
+@media (max-width:700px) {
+
+    /* Cache UNIQUEMENT la table des stocks */
+    #tbl,
+    #tbl thead {
+        display: none;
+    }
+
+    .wrap .cards {
+        display: grid;
+        gap: 10px;
+    }
+
+    .wrap .card-item {
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        padding: 10px;
+        background: transparent;
+    }
+
+    .wrap .card-head {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .wrap .card-title {
+        font-weight: 600;
+        flex: 1;
+    }
+
+    .wrap .card-sub {
+        color: var(--text-muted);
+        font-size: 14px;
+        margin-top: 4px;
+    }
+
+    .wrap .card-actions {
+        display: flex;
+        gap: 8px;
+        margin-top: 8px;
+    }
+
+    /* harmonise les boutons icône en mobile */
+    .wrap .card-actions .icon-btn {
+        padding: 8px 10px;
+        border-radius: 10px;
+        border: 1px solid var(--line);
+        background: transparent;
+    }
+}
