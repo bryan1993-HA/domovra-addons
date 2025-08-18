@@ -46,7 +46,7 @@
       if (mini) html.classList.add('sidebar-mini'); else html.classList.remove('sidebar-mini');
     })();
   </script>
-  <link rel="stylesheet" href="{{ BASE }}static/css/domovra.css?v={{ START_TS }}">
+  <link rel="stylesheet" href="{{ request.url_for('static', path='css/domovra.css') }}?v={{ START_TS }}">
   {% block head %}{% endblock %}
 </head>
 
