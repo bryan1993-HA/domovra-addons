@@ -22,7 +22,7 @@ from db import (
 
 # ===== Settings store (fallback si absent) =====
 try:
-    from settings_store import load_settings, save_settings  # settings_store.py à côté de main.py
+    from settings_store import load_settings, save_settings
 except Exception:
     def load_settings():
         return {
@@ -64,46 +64,43 @@ WARNING_DAYS  = int(os.environ.get("WARNING_DAYS",  "30"))
 CRITICAL_DAYS = int(os.environ.get("CRITICAL_DAYS", "14"))
 DB_PATH       = os.environ.get("DB_PATH", "/data/domovra.sqlite3")
 
-# Cache-buster injecté dans les templates (permet de forcer le rechargement du CSS)
-START_TS = str(int(time.time()))
+# Cache-buster global injecté dans les templates
+START_TS = os.environ.get("START_TS") or str(int(time.time()))
 
 app = FastAPI()
 
-# === Static files : dossier sibling de main.py (Option A) ===
-HERE = os.path.dirname(__file__)                  # …/domovra/app
-STATIC_DIR = os.path.join(HERE, "static")         # …/domovra/app/static
+# === Static files : dossier à côté de main.py (Option A) ===
+HERE = os.path.dirname(__file__)                  # /opt/app
+STATIC_DIR = os.path.join(HERE, "static")         # /opt/app/static
 os.makedirs(os.path.join(STATIC_DIR, "css"), exist_ok=True)
 
 app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
-logger.info("Static mounted at %s", STATIC_DIR)
 
-# Debug présence du CSS
+# Logs de vérification au boot
 try:
-    _css_path = os.path.join(STATIC_DIR, "css", "domovra.css")
-    logger.info("DEBUG CSS: %s exists=%s size=%s bytes",
-                _css_path, os.path.isfile(_css_path),
-                (os.path.getsize(_css_path) if os.path.isfile(_css_path) else -1))
+    logger.info("Static mounted at %s", STATIC_DIR)
+    def _ls(p):
+        try:
+            return sorted(os.listdir(p))
+        except Exception:
+            return "N/A"
+    logger.info("Check %s exists=%s items=%s", STATIC_DIR, os.path.isdir(STATIC_DIR), _ls(STATIC_DIR))
+    css_dir = os.path.join(STATIC_DIR, "css")
+    logger.info("Check %s exists=%s items=%s", css_dir, os.path.isdir(css_dir), _ls(css_dir))
+    css_file = os.path.join(css_dir, "domovra.css")
+    logger.info("CSS file %s exists=%s size=%s", css_file, os.path.isfile(css_file), os.path.getsize(css_file) if os.path.isfile(css_file) else "N/A")
 except Exception as e:
-    logger.warning("DEBUG CSS: error: %s", e)
-
-# ============================================================
+    logger.exception("Static check failed: %s", e)
 
 templates = Environment(
     loader=FileSystemLoader("templates"),
     autoescape=select_autoescape()
 )
-
-# Injecte START_TS dans tous les templates (pour le cache-buster ?v=START_TS)
+# Injecte START_TS partout
 templates.globals["START_TS"] = START_TS
 
 # -------- Filtre pluralisation FR --------
 def pluralize_fr(unit: str, qty) -> str:
-    """Pluralise une unité française selon la quantité.
-    - Singulier pour 1 / 1.0
-    - Invariants: kg, g, L, ml, etc.
-    - Irréguliers courants: pièce→pièces, sachet→sachets, œuf→œufs, boîte→boîtes, etc.
-    - Sinon: ajout de 's', et quelques règles simples ('al'→'aux', 'eau'→'eaux').
-    """
     try:
         q = float(qty)
     except Exception:
@@ -125,29 +122,12 @@ def pluralize_fr(unit: str, qty) -> str:
         return u
 
     irregulars = {
-        "pièce": "pièces",
-        "piece": "pieces",
-        "sachet": "sachets",
-        "boîte": "boîtes",
-        "boite": "boites",
-        "bouteille": "bouteilles",
-        "canette": "canettes",
-        "paquet": "paquets",
-        "tranche": "tranches",
-        "gousse": "gousses",
-        "pot": "pots",
-        "brique": "briques",
-        "barquette": "barquettes",
-        "œuf": "œufs",
-        "oeuf": "oeufs",
-        "unité": "unités",
-        "unite": "unites",
-        "pack": "packs",
-        "lot": "lots",
-        "bocal": "bocaux",
-        "journal": "journaux"
+        "pièce": "pièces","piece": "pieces","sachet": "sachets","boîte": "boîtes","boite": "boites",
+        "bouteille": "bouteilles","canette": "canettes","paquet": "paquets","tranche": "tranches",
+        "gousse": "gousses","pot": "pots","brique": "briques","barquette": "barquettes",
+        "œuf": "œufs","oeuf": "oeufs","unité": "unités","unite": "unites","pack": "packs",
+        "lot": "lots","bocal": "bocaux","journal": "journaux"
     }
-    # déjà au pluriel / finissant par s/x
     if u in irregulars.values() or u.endswith(("s","x")):
         return u
     if u in irregulars:
@@ -217,7 +197,6 @@ def list_events(limit: int = 200):
         return items
 
 def get_low_stock_products(limit: int = 8):
-    """Retourne les produits dont le stock total <= min_qty (et min_qty > 0), triés par criticité."""
     dflt = 1
     try:
         dflt = int(load_settings().get("low_stock_default", 1))
@@ -226,7 +205,6 @@ def get_low_stock_products(limit: int = 8):
 
     with _conn() as c:
         try:
-            # Chemin « normal » : il existe une colonne p.min_qty
             q = """
             SELECT
               p.id, p.name, p.unit,
@@ -241,7 +219,6 @@ def get_low_stock_products(limit: int = 8):
             """
             rows = c.execute(q, (dflt, dflt, dflt, dflt, limit)).fetchall()
         except sqlite3.OperationalError:
-            # Fallback si la colonne min_qty n’existe pas encore : on applique seulement le seuil global
             q = """
             SELECT
               p.id, p.name, p.unit,
@@ -270,7 +247,6 @@ def get_low_stock_products(limit: int = 8):
             })
         return items
 
-
 # ---------------- Lifecycle
 @app.on_event("startup")
 def _startup():
@@ -286,6 +262,21 @@ def _startup():
 
 @app.get("/ping", response_class=PlainTextResponse)
 def ping(): return "ok"
+
+# ---------------- Petit endpoint de debug pour le static
+@app.get("/_debug/static")
+def debug_static(request: Request):
+    css_path = os.path.join(STATIC_DIR, "css", "domovra.css")
+    return JSONResponse({
+        "STATIC_DIR": STATIC_DIR,
+        "exists": os.path.isdir(STATIC_DIR),
+        "css_exists": os.path.isfile(css_path),
+        "css_size": os.path.getsize(css_path) if os.path.isfile(css_path) else None,
+        "ls_static": sorted(os.listdir(STATIC_DIR)) if os.path.isdir(STATIC_DIR) else [],
+        "ls_css": sorted(os.listdir(os.path.join(STATIC_DIR, "css"))) if os.path.isdir(os.path.join(STATIC_DIR, "css")) else [],
+        "url_css": str(request.url_for("static", path="css/domovra.css")),
+        "cache_buster": START_TS,
+    })
 
 # ---------------- Pages
 @app.get("/", response_class=HTMLResponse)
@@ -309,10 +300,9 @@ def index(request: Request):
                   locations=locations,
                   products=products,
                   lots=lots,
-                  low_products=low_products,   # ← *** important ***
+                  low_products=low_products,
                   WARNING_DAYS=WARNING_DAYS,
                   CRITICAL_DAYS=CRITICAL_DAYS)
-
 
 @app.get("/products", response_class=HTMLResponse)
 def products_page(request: Request):
@@ -331,7 +321,6 @@ def locations_page(request: Request):
     logger.info("GET /locations (BASE=%s)", base)
     items = list_locations()
 
-    # Comptages agrégés (total / soon / urgent)
     counts_total: dict[int,int] = {}
     counts_soon:  dict[int,int] = {}
     counts_urg:   dict[int,int] = {}
@@ -370,7 +359,6 @@ def lots_page(
     for it in items:
         it["status"] = status_for(it.get("best_before"), WARNING_DAYS, CRITICAL_DAYS)
 
-    # Filtres
     if product:
         needle = product.casefold()
         items = [i for i in items if needle in (i.get("product", "").casefold())]
@@ -381,7 +369,6 @@ def lots_page(
 
     locations = list_locations()
 
-    # IMPORTANT : on passe aussi la liste des produits pour l'autocomplete
     return render(
         "lots.html",
         BASE=base,
@@ -389,10 +376,9 @@ def lots_page(
         request=request,
         items=items,
         locations=locations,
-        products=list_products(),  # ← pour l'autocomplete
+        products=list_products(),
     )
 
-# --------- Journal page
 @app.get("/journal", response_class=HTMLResponse)
 def journal_page(request: Request, limit: int = Query(200, ge=1, le=1000)):
     base = ingress_base(request)
@@ -421,7 +407,6 @@ def api_events(limit: int = 200):
     logger.info("GET /api/events limit=%s", limit)
     return JSONResponse(list_events(limit))
 
-# ---------- API: lookup produit local par code-barres ----------
 @app.get("/api/product/by_barcode")
 def api_product_by_barcode(code: str):
     code = (code or "").strip().replace(" ", "")
@@ -438,7 +423,6 @@ def api_product_by_barcode(code: str):
         return JSONResponse({"error": "not found"}, status_code=404)
     return JSONResponse({"id": row["id"], "name": row["name"], "barcode": row["barcode"]})
 
-# ---------------- Page Paramètres
 @app.get("/settings", response_class=HTMLResponse)
 def settings_page(request: Request):
     base = ingress_base(request)
@@ -491,7 +475,6 @@ def settings_save(request: Request,
                                 status_code=303,
                                 headers={"Cache-Control":"no-store"})
 
-# ---------------- Actions Produits
 @app.post("/product/add")
 def product_add(request: Request,
                 name: str = Form(...),
@@ -504,7 +487,6 @@ def product_add(request: Request,
     except Exception:
         shelf = 90
     bid = (barcode or "").strip() or None
-    # min_qty optionnel
     mq = None
     if isinstance(min_qty, str) and min_qty.strip():
         try:
@@ -519,11 +501,8 @@ def product_add(request: Request,
     base = ingress_base(request)
     referer = (request.headers.get("referer") or "").lower()
     if "/lots" in referer:
-        # Si la création provient de la page Stocks, on y revient pour enchaîner l’ajout du lot
         return RedirectResponse(base + f"lots?product_created={pid}", status_code=303,
                                 headers={"Cache-Control": "no-store"})
-
-    # Comportement historique (page Produits)
     params = urlencode({"added": 1, "pid": pid})
     return RedirectResponse(base + f"products?{params}", status_code=303,
                             headers={"Cache-Control": "no-store"})
@@ -540,8 +519,6 @@ def product_update(request: Request,
         shelf = int(shelf)
     except Exception:
         shelf = 90
-
-    # Normalisation barcode & min_qty
     bid = (barcode or "").strip() or None
     mq = None
     if isinstance(min_qty, str) and min_qty.strip():
@@ -561,34 +538,23 @@ def product_delete(request: Request, product_id: int = Form(...)):
     log_event("product.delete", {"id": product_id})
     return RedirectResponse(ingress_base(request)+"products", status_code=303, headers={"Cache-Control":"no-store"})
 
-# ---------------- Helpers incrémentation rapide
 def get_step_for_unit(unit: str) -> float:
     unit = (unit or "").lower().strip()
-    # Comptage
     if unit in ["pièce", "piece", "tranche", "paquet", "boîte", "boite",
                 "bocal", "bouteille", "sachet", "lot", "barquette", "rouleau", "dosette"]:
         return 1.0
-    # Poids
-    if unit == "g":  # clic = 50 g
+    if unit == "g":
         return 50.0
-    if unit == "kg":  # clic = 0,1 kg = 100 g
+    if unit == "kg":
         return 0.1
-    # Volume
-    if unit == "ml":  # clic = 50 ml
+    if unit == "ml":
         return 50.0
-    if unit == "l":   # clic = 0,1 L = 100 ml
+    if unit == "l":
         return 0.1
-    # fallback
     return 1.0
 
 @app.post("/product/adjust")
 def product_adjust(request: Request, product_id: int = Form(...), delta: int = Form(...)):
-    """
-    Ajuste rapidement le stock d'un produit :
-    - delta = +1 → ajoute +step (selon l'unité)
-    - delta = -1 → retire -step (consommation FIFO par DLC)
-    """
-    # 1) Retrouver le produit et son unité
     prods = {p["id"]: p for p in list_products()}
     prod = prods.get(int(product_id))
     if not prod:
@@ -598,17 +564,14 @@ def product_adjust(request: Request, product_id: int = Form(...), delta: int = F
     qty = step * int(delta)
 
     if qty > 0:
-        # 2) Ajouter un lot "rapide" dans un emplacement (ou en créer un si aucun)
         locs = list_locations()
         if locs:
             loc_id = int(locs[0]["id"])
         else:
-            # crée un emplacement par défaut si aucun n'existe (robuste)
             loc_id = int(add_location("Général"))
         add_lot(product_id, loc_id, qty, None, None)
         log_event("product.adjust", {"id": product_id, "delta": qty, "action": "add"})
     else:
-        # 3) Consommer en FIFO par date (list_lots() est trié par best_before puis nom)
         remaining = abs(qty)
         for lot in list_lots():
             if lot["product_id"] != product_id:
@@ -622,7 +585,6 @@ def product_adjust(request: Request, product_id: int = Form(...), delta: int = F
 
     return RedirectResponse(ingress_base(request) + "products", status_code=303)
 
-# ---------------- Actions Emplacements
 @app.post("/location/add")
 def location_add(request: Request, name: str = Form(...)):
     base = ingress_base(request)
@@ -649,11 +611,9 @@ def location_update(request: Request, location_id: int = Form(...), name: str = 
 @app.post("/location/delete")
 def location_delete(request: Request, location_id: int = Form(...), move_to: str = Form("")):
     base = ingress_base(request)
-    # Nom avant suppression
     with _conn() as c:
         row = c.execute("SELECT name FROM locations WHERE id=?", (location_id,)).fetchone()
         nm = row["name"] if row else ""
-    # Déplacement éventuel des lots
     move_to_id = (move_to or "").strip()
     if move_to_id:
         try:
@@ -661,13 +621,11 @@ def location_delete(request: Request, location_id: int = Form(...), move_to: str
             log_event("location.move_lots", {"from": int(location_id), "to": int(move_to_id)})
         except Exception as e:
             logger.exception("move_lots_from_location error: %s", e)
-    # Suppression
     delete_location(location_id)
     log_event("location.delete", {"id": location_id, "name": nm, "moved_to": move_to_id or None})
     params = urlencode({"deleted": 1})
     return RedirectResponse(base + f"locations?{params}", status_code=303, headers={"Cache-Control":"no-store"})
 
-# ---------------- Actions Lots
 @app.post("/lot/add")
 def lot_add_action(request: Request,
                    product_id: int = Form(...),
@@ -725,7 +683,6 @@ def lot_delete_action(request: Request, lot_id: int = Form(...)):
     return RedirectResponse(base + "lots?deleted=1", status_code=303,
                             headers={"Cache-Control": "no-store"})
 
-# ---------------- Page Support (Ko-fi)
 @app.get("/support", response_class=HTMLResponse)
 def support_page(request: Request):
     base = ingress_base(request)
@@ -735,14 +692,12 @@ def support_page(request: Request):
                   page="support",
                   request=request)
 
-# ---------------- Fallback
 @app.get("/{path:path}", include_in_schema=False)
 def fallback(request: Request, path: str):
     base = ingress_base(request)
     logger.info("Fallback -> redirect %s", base)
     return RedirectResponse(base, status_code=303, headers={"Cache-Control":"no-store"})
 
-# --------- util pour produits avec stats (fallback)
 def get_products_with_stats():
     try:
         from db import list_products_with_stats  # type: ignore

@@ -46,7 +46,10 @@
       if (mini) html.classList.add('sidebar-mini'); else html.classList.remove('sidebar-mini');
     })();
   </script>
+
+  <!-- ⚠️ Lien robuste vers la CSS (Ingress-safe) -->
   <link rel="stylesheet" href="{{ request.url_for('static', path='css/domovra.css') }}?v={{ START_TS }}">
+
   {% block head %}{% endblock %}
 </head>
 
@@ -116,7 +119,7 @@
   <!-- TOASTS -->
   <div id="toast-stack" class="toast-stack" aria-live="polite"></div>
 
-  <!-- JS : sidebar mobile + toasts -->
+  <!-- JS : sidebar mobile + toasts (inchangé) -->
   <script>
     (function () {
       const btn = document.getElementById('hamburger');
