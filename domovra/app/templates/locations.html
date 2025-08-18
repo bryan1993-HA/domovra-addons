@@ -1,9 +1,7 @@
 {% extends "base.html" %}
 {% block title %}Domovra — Emplacements{% endblock %}
 
-{% block head %}
-
-{% endblock %}
+{% block head %}{% endblock %}
 
 {% block content %}
 <div class="wrap">
@@ -18,7 +16,8 @@
         <div class="label">Nom de l’emplacement</div>
         <input name="name" type="text" required placeholder="ex. Frigo, Congélateur, Placard haut">
       </div>
-      <button class="primary">＋ Ajouter</button>
+      <!-- cohérent avec index (boutons pilule gris) -->
+      <button class="secondary">＋ Ajouter</button>
     </form>
   </div>
 
@@ -62,24 +61,31 @@
           {% if items %}
           {% for loc in items %}
           <tr data-id="{{ loc.id }}" data-name="{{ loc.name }}" data-lots="{{ loc.lot_count|int }}">
-            <td><span
-                style="display:inline-block;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{
-                loc.name }}</span></td>
+            <td>
+              <span
+                style="display:inline-block;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">
+                {{ loc.name }}
+              </span>
+            </td>
             <td>
               {% if loc.lot_count is defined %}
               <span class="pill">{{ loc.lot_count|int }} lot{{ '' if (loc.lot_count|int) == 1 else 's' }}</span>
-              {% if loc.urgent_count|int > 0 %}<span class="badge danger">{{ loc.urgent_count|int }} urgent{{ '' if
-                (loc.urgent_count|int) == 1 else 's' }}</span>{% endif %}
-              {% if loc.soon_count|int > 0 %}<span class="badge warn">{{ loc.soon_count|int }} bientôt</span>{% endif %}
-              {% else %}<span class="muted">—</span>{% endif %}
+              {% if loc.urgent_count|int > 0 %}
+              <span class="badge danger">{{ loc.urgent_count|int }} urgent{{ '' if (loc.urgent_count|int) == 1 else 's'
+                }}</span>
+              {% endif %}
+              {% if loc.soon_count|int > 0 %}
+              <span class="badge warn">{{ loc.soon_count|int }} bientôt</span>
+              {% endif %}
+              {% else %}
+              <span class="muted">—</span>
+              {% endif %}
             </td>
             <td class="t-actions">
               <div class="actions-grid">
-                <button type="button" class="js-rename"
-                  style="padding:8px 10px;border-radius:10px;border:1px solid var(--border)">✏️ <span
-                    class="btn-text">Modifier</span></button>
-                <button type="button" class="js-delete-open"
-                  style="padding:8px 10px;border-radius:10px;border:1px solid var(--border)">🗑️ <span
+                <!-- mêmes boutons pilule que partout -->
+                <button type="button" class="secondary js-rename">✏️ <span class="btn-text">Modifier</span></button>
+                <button type="button" class="secondary js-delete-open">🗑️ <span
                     class="btn-text">Supprimer</span></button>
               </div>
             </td>
@@ -111,10 +117,9 @@
           </div>
         </div>
         <div class="loc-actions">
-          <button type="button" class="js-rename"
-            style="padding:8px 10px;border:1px solid var(--border);border-radius:10px" title="Renommer">✏️</button>
-          <button type="button" class="js-delete-open"
-            style="padding:8px 10px;border:1px solid var(--border);border-radius:10px" title="Supprimer">🗑️</button>
+          <!-- icônes cohérentes (class .icon-btn) -->
+          <button type="button" class="icon-btn js-rename" title="Renommer">✏️</button>
+          <button type="button" class="icon-btn js-delete-open" title="Supprimer">🗑️</button>
         </div>
       </div>
       {% endfor %}
@@ -167,7 +172,7 @@
 
     <div class="row" style="justify-content:flex-end;gap:8px">
       <button type="button" onclick="document.getElementById('dlg-delete').close()">Annuler</button>
-      <button class="primary">Supprimer</button>
+      <button class="primary" style="background:var(--danger);border:0;color:#1d0c0c">Supprimer</button>
     </div>
   </form>
 </dialog>
@@ -215,9 +220,7 @@
     mgmt.style.display = (lots > 0) ? 'block' : 'none';
 
     const sel = $('#dlg-move-select');
-    // Exclure l'emplacement courant
     Array.from(sel.options).forEach(o => o.disabled = (o.value === id));
-    // Première destination valide
     const firstValid = Array.from(sel.options).find(o => !o.disabled);
 
     const radios = document.querySelectorAll('input[name="del_mode"]');
@@ -227,7 +230,6 @@
     };
 
     if (lots <= 0 || !firstValid) {
-      // Pas de lots OU pas de destination possible -> forcer suppression
       radios.forEach(r => r.checked = (r.value === 'remove'));
       sel.disabled = true;
     } else {
@@ -246,7 +248,8 @@
 
   // Envoi : si "move" non choisi, on vide move_to pour ne pas déplacer.
   document.querySelector('#dlg-delete form')?.addEventListener('submit', (e) => {
-    const mode = Array.from(document.querySelectorAll('input[name="del_mode"]')).find(r => r.checked)?.value || 'remove';
+    const mode = Array.from(document.querySelectorAll('input[name="del_mode"]'))
+      .find(r => r.checked)?.value || 'remove';
     if (mode !== 'move') {
       const s = e.target.querySelector('select[name="move_to"]');
       if (s) { s.disabled = true; s.value = ''; }
