@@ -3,6 +3,7 @@ from logging.handlers import RotatingFileHandler
 from datetime import datetime, timezone
 from fastapi import FastAPI, Request, Form, Query
 from fastapi.responses import HTMLResponse, RedirectResponse, JSONResponse, PlainTextResponse, Response
+from fastapi.staticfiles import StaticFiles  # ← NEW
 from jinja2 import Environment, FileSystemLoader, select_autoescape
 from urllib.parse import urlencode
 
@@ -64,6 +65,11 @@ CRITICAL_DAYS = int(os.environ.get("CRITICAL_DAYS", "14"))
 DB_PATH       = os.environ.get("DB_PATH", "/data/domovra.sqlite3")
 
 app = FastAPI()
+
+# === NEW: Static files mount (robuste avec chemin absolu) ===
+STATIC_DIR = os.path.join(os.path.dirname(__file__), "static")
+app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
+# ============================================================
 
 templates = Environment(
     loader=FileSystemLoader("templates"),
