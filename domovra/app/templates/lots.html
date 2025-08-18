@@ -142,7 +142,7 @@
     z-index: 60
   }
 
-  /* Infield pour le select Produit + boutons 📷/📸 */
+  /* Infield pour le select Produit + boutons */
   .infield {
     position: relative;
     display: flex;
@@ -151,36 +151,57 @@
 
   .infield select {
     width: 100%;
-    padding-right: 98px;
+    padding-right: 104px;
     appearance: none;
     background: linear-gradient(transparent, transparent) padding-box;
   }
 
-  .infield .btns {
+  .infield-buttons {
     position: absolute;
     right: 6px;
+    top: 50%;
+    transform: translateY(-50%);
     display: flex;
     gap: 6px;
   }
 
-  .infield .btns .infield-btn {
-    display: grid;
-    place-items: center;
+  .icon-btn {
     width: 40px;
     height: 40px;
     border-radius: 10px;
+    display: grid;
+    place-items: center;
     border: 1px solid var(--border);
     background: transparent;
+    color: var(--muted);
     cursor: pointer;
     transition: transform .06s, background .12s;
   }
 
-  .infield .btns .infield-btn:hover {
+  .icon-btn:hover {
     background: rgba(255, 255, 255, .06)
   }
 
-  .infield .btns .infield-btn:active {
+  .icon-btn:active {
     transform: scale(.97)
+  }
+
+  .icon-btn svg {
+    width: 18px;
+    height: 18px;
+    fill: currentColor
+  }
+
+  .sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
   }
 
   /* Grille Ajout */
@@ -421,10 +442,29 @@
             {% endfor %}
           </select>
 
-          <!-- boutons 🧲 à droite du select -->
-          <div class="btns">
-            <button id="prod_scan_btn" type="button" class="infield-btn" title="Scanner (live)">📷</button>
-            <button id="prod_capture_btn" type="button" class="infield-btn" title="Prendre une photo">📸</button>
+          <!-- Boutons icône -->
+          <div class="infield-buttons">
+            <!-- Live scan -->
+            <button id="prod_scan_btn" type="button" class="icon-btn" title="Scanner (live)">
+              <span class="sr-only">Scanner (live)</span>
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <rect x="2" y="4" width="2" height="16" />
+                <rect x="6" y="4" width="1" height="16" />
+                <rect x="9" y="4" width="2" height="16" />
+                <rect x="13" y="4" width="1" height="16" />
+                <rect x="16" y="4" width="2" height="16" />
+                <rect x="20" y="4" width="1" height="16" />
+              </svg>
+            </button>
+
+            <!-- Photo -->
+            <button id="prod_capture_btn" type="button" class="icon-btn" title="Prendre une photo">
+              <span class="sr-only">Prendre une photo</span>
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M4 7h3l1.4-2h6.2L16 7h4a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V9a2 2 0 0 1 2-2z" />
+                <circle cx="12" cy="13" r="3.5" />
+              </svg>
+            </button>
             <input id="prod_file" type="file" accept="image/*" capture="environment" hidden>
           </div>
         </div>
@@ -520,8 +560,10 @@
                 <span class="sep">•</span>
                 <span>📍 <b>{{ it.location }}</b></span>
               </div>
-              <span class="status {{ it.status }}">{{ "OK" if it.status=="green" else ("Bientôt" if it.status=="yellow"
-                else ("Urgent" if it.status=="red" else "—")) }}</span>
+              <span class="status {{ it.status }}">
+                {{ "OK" if it.status=="green" else ("Bientôt" if it.status=="yellow" else ("Urgent" if it.status=="red"
+                else "—")) }}
+              </span>
             </div>
             <details class="dates">
               <summary>📅 Dates</summary>
@@ -593,7 +635,8 @@
     <input type="hidden" name="lot_id" id="dlg-lot-id">
     <div class="row" style="gap:10px">
       <div style="flex:1">
-        <div class="label">Quantité</div><input type="number" name="qty" id="dlg-qty" step="0.01" min="0" required>
+        <div class="label">Quantité</div>
+        <input type="number" name="qty" id="dlg-qty" step="0.01" min="0" required>
       </div>
       <div style="flex:1">
         <div class="label">Emplacement</div>
@@ -634,8 +677,9 @@
     <h3 style="margin:0">Scanner un code-barres</h3>
     <video id="scan-video" autoplay playsinline muted playsInline webkit-playsinline
       style="width:100%;border-radius:12px;border:1px solid var(--border)"></video>
-    <div class="row" style="justify-content:flex-end;gap:8px"><button class="secondary" type="button"
-        id="scan-close">Fermer</button></div>
+    <div class="row" style="justify-content:flex-end;gap:8px">
+      <button class="secondary" type="button" id="scan-close">Fermer</button>
+    </div>
   </div>
 </dialog>
 
@@ -675,16 +719,17 @@
         </select>
       </div>
       <div style="flex:1">
-        <div class="label">Conservation (jours)</div><input type="number" name="shelf" id="cp_shelf" min="1"
-          placeholder="ex. 90">
+        <div class="label">Conservation (jours)</div>
+        <input type="number" name="shelf" id="cp_shelf" min="1" placeholder="ex. 90">
       </div>
     </div>
     <div>
       <div class="label">Code-barres</div><input type="text" name="barcode" id="cp_barcode" inputmode="numeric">
     </div>
-    <div class="row" style="justify-content:flex-end;gap:8px"><button type="button"
-        onclick="document.getElementById('dlg-product-create').close()">Annuler</button><button
-        class="primary">Créer</button></div>
+    <div class="row" style="justify-content:flex-end;gap:8px">
+      <button type="button" onclick="document.getElementById('dlg-product-create').close()">Annuler</button>
+      <button class="primary">Créer</button>
+    </div>
   </form>
 </dialog>
 {% endblock %}
@@ -703,7 +748,7 @@
     });
   })();
 
-  /* ---- Lookup produit local par EAN ---- */
+  /* Lookup produit local par EAN */
   async function lookupLocalProductByBarcode(code) {
     try {
       const res = await fetch(`{{ BASE }}api/product/by_barcode?code=${encodeURIComponent(code)}`, { headers: { 'Accept': 'application/json' } });
@@ -718,7 +763,7 @@
     return false;
   }
 
-  /* ---- Variables scanner / ZXing partagées ---- */
+  /* Scanner live / ZXing */
   const dlgScan = $('#scan-modal'), scanVideo = $('#scan-video'), btnScanClose = $('#scan-close');
   let scanning = false, zxingReader = null, zxingLiveActive = false;
 
@@ -729,7 +774,6 @@
     const found = await lookupLocalProductByBarcode(clean);
     if (found) { selectProductById(found.id); }
     else {
-      // Préremplir création produit
       $('#cp_barcode').value = clean;
       $('#cp_name').value = '';
       $('#cp_unit').value = 'pièce';
@@ -738,10 +782,8 @@
     }
   }
 
-  /* ---- Live scan (BarcodeDetector → fallback ZXing) ---- */
   async function openScanModal() {
     if (!dlgScan) return; dlgScan.showModal(); scanning = true;
-
     scanVideo.muted = true; scanVideo.playsInline = true;
     scanVideo.setAttribute('playsinline', ''); scanVideo.setAttribute('webkit-playsinline', '');
 
@@ -757,15 +799,15 @@
             if (bm && bm[0]?.rawValue) { await onBarcodeDetected(bm[0].rawValue); return; }
           } catch { }
           requestAnimationFrame(tick);
-        };
-        tick(); return;
+        }; tick(); return;
       } catch (e) { }
     }
     startZXingLive();
   }
 
   async function closeScanModal() {
-    scanning = false; if (dlgScan && dlgScan.open) dlgScan.close();
+    scanning = false;
+    if (dlgScan && dlgScan.open) dlgScan.close();
     const s = scanVideo?.srcObject; if (s && s.getTracks) s.getTracks().forEach(t => t.stop());
     if (zxingReader && zxingLiveActive) { try { await zxingReader.reset(); } catch { } zxingLiveActive = false; }
   }
@@ -773,8 +815,10 @@
   async function loadZXing() {
     return new Promise((res, rej) => {
       if (window.ZXing) return res(window.ZXing);
-      const s = document.createElement('script'); s.src = 'https://unpkg.com/@zxing/library@latest';
-      s.onload = () => res(window.ZXing); s.onerror = () => rej(new Error('ZXing indisponible'));
+      const s = document.createElement('script');
+      s.src = 'https://unpkg.com/@zxing/library@latest';
+      s.onload = () => res(window.ZXing);
+      s.onerror = () => rej(new Error('ZXing indisponible'));
       document.head.appendChild(s);
     });
   }
@@ -799,7 +843,7 @@
   document.getElementById('prod_scan_btn')?.addEventListener('click', openScanModal);
   btnScanClose?.addEventListener('click', closeScanModal);
 
-  /* ---- Prendre une photo → ZXing decodeFromImageElement ---- */
+  /* Photo → ZXing decodeFromImageElement */
   const prodCaptureBtn = document.getElementById('prod_capture_btn');
   const prodFileInput = document.getElementById('prod_file');
 
@@ -810,25 +854,19 @@
     try {
       if (!window.ZXing) await loadZXing();
       if (!zxingReader) zxingReader = new ZXing.BrowserMultiFormatReader();
-
       const imgURL = URL.createObjectURL(file);
-      const img = document.createElement('img');
-      img.src = imgURL;
-      await img.decode();
-
+      const img = document.createElement('img'); img.src = imgURL; await img.decode();
       const res = await zxingReader.decodeFromImageElement(img);
       const code = res && res.getText ? (res.getText() || '').replace(/\D+/g, '') : '';
-      if (code) { await onBarcodeDetected(code); }
-      else { window.showToast('Aucun code détecté sur la photo.', 'warn'); }
+      if (code) await onBarcodeDetected(code);
+      else window.showToast('Aucun code détecté sur la photo.', 'warn');
     } catch (e) {
       console.error('Erreur ZXing photo:', e);
       window.showToast('Erreur lors du décodage de la photo.', 'error');
-    } finally {
-      ev.target.value = '';
-    }
+    } finally { ev.target.value = ''; }
   });
 
-  /* ---- Recherche / filtres live ---- */
+  /* Recherche / filtres live */
   const q = document.getElementById('q'), tbody = document.getElementById('tbody'), cards = document.getElementById('cards'),
     fLoc = document.getElementById('f_loc'), fStatus = document.getElementById('f_status');
   const rows = Array.from(tbody ? tbody.children : []), cardsItems = Array.from(cards ? cards.children : []);
@@ -839,7 +877,9 @@
     return s && l && t;
   }
   function applyFilter() {
-    const txt = (q?.value || '').toLowerCase().trim(), loc = (fLoc?.value || '').toLowerCase().trim(), st = (fStatus?.value || '').trim();
+    const txt = (q?.value || '').toLowerCase().trim(),
+      loc = (fLoc?.value || '').toLowerCase().trim(),
+      st = (fStatus?.value || '').trim();
     let shown = 0;
     rows.forEach(tr => { const m = passesFilters(tr.dataset, txt, loc, st); tr.style.display = m ? '' : 'none'; if (m) shown++; });
     cardsItems.forEach(c => { const m = passesFilters(c.dataset, txt, loc, st); c.style.display = m ? '' : 'none'; });
@@ -847,14 +887,14 @@
   }
   [q, fLoc, fStatus].forEach(el => el && el.addEventListener('input', applyFilter));
 
-  /* ---- Auto-sélection après création produit ---- */
+  /* Auto-sélection après création produit */
   (function () {
     const p = new URLSearchParams(location.search);
     const pid = p.get('product_created');
     if (pid) { if (selectProductById(pid)) { window.showToast('Produit créé. Tu peux maintenant ajouter le stock.', 'ok'); } }
   })();
 
-  /* ---- Toasts via querystring ---- */
+  /* Toasts via querystring */
   (function () {
     const p = new URLSearchParams(location.search);
     if (p.get('added') === '1') window.showToast('Stock ajouté.', 'ok');
@@ -862,7 +902,7 @@
     if (p.get('deleted') === '1') window.showToast('Stock supprimé.', 'warn');
   })();
 
-  /* ---- Modales Edit/Supprimer (corrigé: id best_before) ---- */
+  /* Modales Edit/Supprimer (id best_before corrigé) */
   (function () {
     const editDialog = document.getElementById('dlg-edit');
     const delDialog = document.getElementById('dlg-delete');
@@ -874,7 +914,7 @@
         setVal('dlg-qty', btn.getAttribute('data-qty'));
         setVal('dlg-location', btn.getAttribute('data-location_id'));
         setVal('dlg-frozen', btn.getAttribute('data-frozen') || '');
-        setVal('dlg-best-before', btn.getAttribute('data-best_before') || ''); // <-- fix ici
+        setVal('dlg-best-before', btn.getAttribute('data-best_before') || ''); // fix
         if (editDialog) editDialog.showModal();
       });
     });
