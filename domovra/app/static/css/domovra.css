@@ -11,6 +11,9 @@ html {
     --sidebar-w: 260px;
     --sidebar-mini-w: 72px;
 
+    /* Couleurs globales */
+    --accent: #00bcd4;
+
     /* Toasts (valeurs par défaut ; override depuis base.html) */
     --toast-ok: #4caf50;
     --toast-warn: #ffb300;
@@ -172,7 +175,7 @@ header {
     opacity: .7;
 }
 
-/* Formulaires */
+/* Formulaires (globaux) */
 input,
 select,
 button {
@@ -201,7 +204,7 @@ html[data-theme="light"] optgroup {
     color: #111827;
 }
 
-/* Tables */
+/* Tables (globaux) */
 table {
     width: 100%;
     border-collapse: collapse;
@@ -487,440 +490,45 @@ html[data-theme="light"] .chip {
     }
 }
 
-/* ========== Page Accueil ========== */
-
-/* Titre de section dans les cartes */
-.title {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    margin: 6px 0 8px;
-}
-
-.title h2 {
-    font-size: 16px;
-    margin: 0;
-}
-
-/* Champs formulaire */
-.field {
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-    min-width: 160px;
-}
-
-.label {
-    font-size: 12px;
-    color: var(--text-muted);
-    display: flex;
-    align-items: center;
-    gap: 6px;
-}
-
-/* Bouton "Ajouter au stock" */
-.btn-add-stock {
-    height: 44px;
-    align-self: end;
-}
-
-/* Grille d’ajout express */
-.form-grid {
-    display: grid;
-    grid-template-columns: 2fr 2fr 1fr 1fr auto;
-    gap: 12px;
-    align-items: end;
-}
-
-.form-grid .field {
-    margin: 0;
-}
-
-@media (max-width:1100px) {
-    .form-grid {
-        grid-template-columns: 2fr 2fr 1fr auto;
-    }
-}
-
-@media (max-width:900px) {
-    .form-grid {
-        grid-template-columns: 1fr 1fr 1fr;
-    }
-
-    .btn-add-stock {
-        grid-column: 1 / -1;
-        justify-self: stretch;
-    }
-}
-
-@media (max-width:700px) {
-    .form-grid {
-        grid-template-columns: 1fr;
-    }
-
-    .btn-add-stock {
-        width: 100%;
-    }
-}
-
-/* États (OK / Bientôt / Urgent) */
-.pill {
-    padding: 2px 8px;
-    border-radius: 999px;
-    font-size: 12px;
-    font-weight: 600;
-    border: 1px solid transparent;
-}
-
-.pill.ok {
-    color: var(--toast-ok);
-    border-color: rgba(76, 175, 80, .35);
-}
-
-.pill.warn {
-    color: var(--toast-warn);
-    border-color: rgba(255, 179, 0, .35);
-}
-
-.pill.danger {
-    color: var(--toast-error);
-    border-color: rgba(239, 83, 80, .35);
-}
-
-/* TOP 8 Desktop / Mobile */
-.top8-table {
-    display: block;
-}
-
-.top8-cards {
-    display: none;
-}
-
-@media (max-width:700px) {
-    .top8-table {
-        display: none;
-    }
-
-    .top8-cards {
-        display: grid;
-        gap: 10px;
-    }
-
-    .lot-card {
-        border: 1px solid var(--line);
-        border-radius: 12px;
-        padding: 10px;
-        background: transparent;
-        display: grid;
-        grid-template-columns: 1fr auto;
-        gap: 8px;
-        align-items: center;
-    }
-
-    .lot-main {
-        display: flex;
-        flex-direction: column;
-        gap: 4px;
-    }
-
-    .lot-title {
-        font-weight: 600;
-    }
-
-    .lot-meta {
-        font-size: .9rem;
-        color: var(--text-muted);
-        display: flex;
-        gap: 10px;
-        flex-wrap: wrap;
-    }
-
-    .lot-action {
-        display: flex;
-        gap: 8px;
-        align-items: center;
-    }
-
-    .lot-action input {
-        max-width: 90px;
-    }
-}
-
-/* ========== Accueil — correctifs d'apparence ========== */
-
-/* 1) Variable d'accent manquante (boutons .primary) */
-:root {
-    --accent: #00bcd4;
-}
-
-/* 2) Conteneur central de la page */
-.wrap {
-    max-width: 1100px;
-    margin: 0 auto;
-    padding: 0 12px;
-}
-
-/* 3) Titre de section dans les cartes */
-.title {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    margin: 6px 0 8px;
-}
-
-.title h2 {
-    font-size: 16px;
-    margin: 0;
-}
-
-/* 4) Champs formulaire (Ajout express) */
-.field {
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-    min-width: 160px;
-}
-
-.label {
-    font-size: 12px;
-    color: var(--text-muted);
-    display: flex;
-    align-items: center;
-    gap: 6px;
-}
-
-/* 5) Grille Ajout express + bouton */
-.form-grid {
-    display: grid;
-    grid-template-columns: 2fr 2fr 1fr 1fr auto;
-    gap: 12px;
-    align-items: end;
-}
-
-.form-grid .field {
-    margin: 0;
-}
-
-.btn-add-stock {
-    height: 44px;
-    align-self: end;
-}
-
-@media (max-width:1100px) {
-    .form-grid {
-        grid-template-columns: 2fr 2fr 1fr auto;
-    }
-}
-
-@media (max-width:900px) {
-    .form-grid {
-        grid-template-columns: 1fr 1fr 1fr;
-    }
-
-    .btn-add-stock {
-        grid-column: 1 / -1;
-        justify-self: stretch;
-    }
-}
-
-@media (max-width:700px) {
-    .form-grid {
-        grid-template-columns: 1fr;
-    }
-
-    .btn-add-stock {
-        width: 100%;
-    }
-}
-
-/* 6) Bouton d’action accentué */
-button.primary {
-    background: var(--accent);
-    border: 0;
-    color: #02222a;
-    font-weight: 600;
-    cursor: pointer;
-}
-
-/* 7) Chips de liens sous le formulaire (ne pas s'étirer) */
-.card .row {
-    flex-wrap: wrap;
-    gap: 12px;
-}
-
-/* gap comme avant */
-.card .row>.chip {
-    flex: 0 0 auto;
-}
-
-/* empêche l'étirement */
-.chip {
-    color: var(--text-muted);
-}
-
-/* couleur comme avant */
-
-/* 8) Espacement vertical entre cartes empilées */
-.card+.card {
-    margin-top: 12px;
-}
-
-/* 9) Styles des tableaux du Top 8 (entêtes, cellules, hover) */
-.top8-table thead th {
-    font-size: 12px;
-    color: var(--text-muted);
-    text-align: left;
-    padding: 6px 8px;
-    border-bottom: 1px solid var(--line);
-    background: transparent;
-}
-
-.top8-table tbody td {
-    padding: 10px 8px;
-    border-bottom: 1px solid var(--line);
-}
-
-.top8-table tbody tr:hover {
-    background-color: rgba(255, 255, 255, .03);
-}
-
-html[data-theme="light"] .top8-table tbody tr:hover {
-    background-color: rgba(0, 0, 0, .03);
-}
-
-/* 10) Teinte "muted" dans les cartes/sections concernées */
-.card .muted,
-.top8-cards .muted {
-    color: var(--text-muted);
-    opacity: 1;
-}
-
-/* 11) Pastilles d'état (OK / Bientôt / Urgent) — compat avec l'existant */
-.pill {
-    padding: 2px 8px;
-    border-radius: 999px;
-    font-size: 12px;
-    font-weight: 600;
-    border: 1px solid transparent;
-}
-
-/* Sélecteurs non-namespacés comme dans ta page: */
-.ok {
-    color: var(--toast-ok);
-    border-color: rgba(76, 175, 80, .35);
-}
-
-.warn {
-    color: var(--toast-warn);
-    border-color: rgba(255, 179, 0, .35);
-}
-
-.danger {
-    color: var(--toast-error);
-    border-color: rgba(239, 83, 80, .35);
-}
-
-/* 12) Cartes mobiles du Top 8 (identiques à l'inline) */
-.top8-table {
-    display: block;
-}
-
-.top8-cards {
-    display: none;
-}
-
-@media (max-width:700px) {
-    .top8-table {
-        display: none;
-    }
-
-    .top8-cards {
-        display: grid;
-        gap: 10px;
-    }
-
-    .lot-card {
-        border: 1px solid var(--line);
-        border-radius: 12px;
-        padding: 10px;
-        background: transparent;
-        display: grid;
-        grid-template-columns: 1fr auto;
-        gap: 8px;
-        align-items: center;
-    }
-
-    .lot-main {
-        display: flex;
-        flex-direction: column;
-        gap: 4px;
-    }
-
-    .lot-title {
-        font-weight: 600;
-    }
-
-    .lot-meta {
-        font-size: .9rem;
-        color: var(--text-muted);
-        display: flex;
-        gap: 10px;
-        flex-wrap: wrap;
-    }
-
-    .lot-action {
-        display: flex;
-        gap: 8px;
-        align-items: center;
-    }
-
-    .lot-action input {
-        max-width: 90px;
-    }
-}
-
-/* ========== Accueil — styles scoppés pour respecter l'ancien rendu ========== */
-
-/* 0) Variables locales de la page (map vers le thème global) */
+/* ========================================================================== */
+/* ========== Page Accueil (styles scopés pour reproduire l'inline) ========= */
+/* ========================================================================== */
+
+/* Variables locales mappées au thème global */
 .wrap {
     --gap: 12px;
     --radius: 14px;
-    --accent: #00bcd4;
     --border: var(--line);
-    /* était #263043 en inline ; aligne sur thème */
+    /* aligné sur le thème (au lieu de #263043) */
     --chip: #1a2230;
     /* fond chips (dark) */
     --muted: var(--text-muted);
-    /* map vers variable globale */
+    --accent: var(--accent);
     --ok: var(--toast-ok);
     --warn: var(--toast-warn);
     --danger: var(--toast-error);
+
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 0 12px;
 }
 
 html[data-theme="light"] .wrap {
     --chip: #ffffff;
 }
 
-/* 1) Conteneur + rangées */
-.wrap .wrap {
-    /* au cas où .wrap imbriqués */
-    max-width: 1100px;
-    margin: 0 auto;
-    padding: 0 12px;
-}
-
+/* Rangées — neutralise l’étirement global */
 .wrap .row {
     display: flex;
     gap: 12px;
     flex-wrap: wrap;
 }
 
-/* Neutralise l'étirement global (.row > * { flex:1 }) pour retrouver les largeurs naturelles */
 .wrap .row>* {
     flex: initial;
 }
 
-/* 2) Chips */
+/* Chips (liens actions) */
 .wrap .chip {
     background: var(--chip);
     border: 1px solid var(--border);
@@ -930,7 +538,7 @@ html[data-theme="light"] .wrap {
     white-space: nowrap;
 }
 
-/* 3) Cartes */
+/* Cartes */
 .wrap .card {
     border: 1px solid var(--border);
     border-radius: var(--radius);
@@ -938,7 +546,7 @@ html[data-theme="light"] .wrap {
     margin-bottom: 12px;
 }
 
-/* 4) Titre de section */
+/* Titres */
 .wrap .title {
     display: flex;
     align-items: center;
@@ -951,7 +559,7 @@ html[data-theme="light"] .wrap {
     margin: 0;
 }
 
-/* 5) Champs et libellés */
+/* Formulaires — style inline (fond transparent, bord var(--border)) */
 .wrap input,
 .wrap select,
 .wrap button {
@@ -961,11 +569,12 @@ html[data-theme="light"] .wrap {
     background: transparent;
     color: inherit;
     min-height: 0;
-    /* évite le min-height global si présent */
+    /* bat le min-height global */
     width: auto;
-    /* évite le width:100% global si présent */
+    /* bat le width:100% global */
 }
 
+/* Champs + libellés */
 .wrap .field {
     display: flex;
     flex-direction: column;
@@ -981,7 +590,7 @@ html[data-theme="light"] .wrap {
     gap: 6px;
 }
 
-/* 6) Boutons */
+/* Bouton primaire */
 .wrap button.primary {
     background: var(--accent);
     border: 0;
@@ -995,7 +604,7 @@ html[data-theme="light"] .wrap {
     align-self: end;
 }
 
-/* 7) Grille Ajout express (doit battre .row {display:flex}) */
+/* Grille Ajout express (doit battre .row {display:flex}) */
 .wrap .form-grid {
     display: grid !important;
     grid-template-columns: 2fr 2fr 1fr 1fr auto;
@@ -1034,7 +643,7 @@ html[data-theme="light"] .wrap {
     }
 }
 
-/* 8) Tableaux Top 8 (annule les bordures complètes du style global) */
+/* Tableaux du Top 8 : on annule les bordures complètes et on remet seulement bottom */
 .wrap .top8-table thead th {
     font-size: 12px;
     color: var(--muted);
@@ -1059,13 +668,13 @@ html[data-theme="light"] .wrap .top8-table tbody tr:hover {
     background-color: rgba(0, 0, 0, .03);
 }
 
-/* 9) Muted (évite l'opacité globale) */
+/* Teinte "muted" sans opacité */
 .wrap .muted {
     color: var(--muted);
     opacity: 1;
 }
 
-/* 10) Pastilles d'état */
+/* Pastilles d'état (compat avec ton HTML) */
 .wrap .pill {
     padding: 2px 8px;
     border-radius: 999px;
@@ -1089,7 +698,7 @@ html[data-theme="light"] .wrap .top8-table tbody tr:hover {
     border-color: rgba(239, 83, 80, .35);
 }
 
-/* 11) Top 8 — bascule desktop/mobile */
+/* TOP 8 Desktop/Mobile */
 .wrap .top8-table {
     display: block;
 }
@@ -1148,7 +757,11 @@ html[data-theme="light"] .wrap .top8-table tbody tr:hover {
     }
 }
 
-/* 12) Petits détails d'espacement */
+/* Détails d’espacement */
+.wrap .card+.card {
+    margin-top: 12px;
+}
+
 .wrap .card .row {
     gap: 12px;
     flex-wrap: wrap;
