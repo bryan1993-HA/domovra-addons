@@ -16,7 +16,6 @@
         <div class="label">Nom de l’emplacement</div>
         <input name="name" type="text" required placeholder="ex. Frigo, Congélateur, Placard haut">
       </div>
-      <!-- cohérent avec index (boutons pilule gris) -->
       <button class="secondary">＋ Ajouter</button>
     </form>
   </div>
@@ -83,7 +82,6 @@
             </td>
             <td class="t-actions">
               <div class="actions-grid">
-                <!-- mêmes boutons pilule que partout -->
                 <button type="button" class="secondary js-rename">✏️ <span class="btn-text">Modifier</span></button>
                 <button type="button" class="secondary js-delete-open">🗑️ <span
                     class="btn-text">Supprimer</span></button>
@@ -117,9 +115,8 @@
           </div>
         </div>
         <div class="loc-actions">
-          <!-- icônes cohérentes (class .icon-btn) -->
-          <button type="button" class="icon-btn js-rename" title="Renommer">✏️</button>
-          <button type="button" class="icon-btn js-delete-open" title="Supprimer">🗑️</button>
+          <button type="button" class="secondary js-rename" title="Renommer">✏️</button>
+          <button type="button" class="secondary js-delete-open" title="Supprimer">🗑️</button>
         </div>
       </div>
       {% endfor %}
@@ -140,8 +137,8 @@
       <input type="text" name="name" id="dlg-location-name" required>
     </div>
     <div class="row" style="justify-content:flex-end;gap:8px">
-      <button type="button" onclick="document.getElementById('dlg-rename').close()">Annuler</button>
-      <button class="primary">Enregistrer</button>
+      <button type="button" class="secondary" onclick="document.getElementById('dlg-rename').close()">Annuler</button>
+      <button class="secondary">Enregistrer</button>
     </div>
   </form>
 </dialog>
@@ -171,8 +168,8 @@
     </fieldset>
 
     <div class="row" style="justify-content:flex-end;gap:8px">
-      <button type="button" onclick="document.getElementById('dlg-delete').close()">Annuler</button>
-      <button class="primary" style="background:var(--danger);border:0;color:#1d0c0c">Supprimer</button>
+      <button type="button" class="secondary" onclick="document.getElementById('dlg-delete').close()">Annuler</button>
+      <button class="secondary">Supprimer</button>
     </div>
   </form>
 </dialog>
@@ -246,7 +243,7 @@
     const d = e.target.closest('.js-delete-open'); if (d) return openDelete(d);
   });
 
-  // Envoi : si "move" non choisi, on vide move_to pour ne pas déplacer.
+  // Envoi : si "move" non choisi, on vide move_to
   document.querySelector('#dlg-delete form')?.addEventListener('submit', (e) => {
     const mode = Array.from(document.querySelectorAll('input[name="del_mode"]'))
       .find(r => r.checked)?.value || 'remove';
