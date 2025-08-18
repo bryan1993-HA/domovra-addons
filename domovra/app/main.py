@@ -1,4 +1,4 @@
-import os, logging, sqlite3, time, json, hashlib
+import os, logging, sqlite3, time, json, hashlib, shutil
 from functools import lru_cache
 from logging.handlers import RotatingFileHandler
 from datetime import datetime, timezone
@@ -102,13 +102,12 @@ templates = Environment(
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
 def _abs_path(relpath: str) -> str:
-    """Relatif à la racine du projet (main.py), accepte '/static/...' ou 'static/...'
-       Ex.: 'static/css/domovra.css' """
+    """Relatif à la racine du projet (main.py), accepte '/static/...' ou 'static/...'"""
     p = relpath.lstrip("/\\")
     return os.path.join(BASE_DIR, p)
 
 def _file_hash(abs_path: str) -> str:
-    """MD5 court (10 chars) du contenu du fichier – change dès que le fichier change."""
+    """MD5 court (10 chars) du contenu – change dès que le fichier change."""
     h = hashlib.md5()
     with open(abs_path, "rb") as f:
         for chunk in iter(lambda: f.read(64 * 1024), b""):
@@ -121,8 +120,7 @@ def _version_for(abs_path: str, mtime: float) -> str:
     return _file_hash(abs_path)
 
 def asset_ver(relpath: str) -> str:
-    """Retourne une version stable (hash) pour un fichier statique.
-       Si le fichier n'existe pas, renvoie 'dev' pour ne pas casser le rendu."""
+    """Retourne une version stable (hash) pour un fichier statique."""
     abs_path = _abs_path(relpath)
     try:
         mtime = os.path.getmtime(abs_path)
@@ -131,11 +129,54 @@ def asset_ver(relpath: str) -> str:
         return "dev"
     return _version_for(abs_path, mtime)
 
+def ensure_hashed_asset(src_rel: str) -> str:
+    """
+    Crée (si nécessaire) une copie /static/.../nom-<hash>.ext et retourne son chemin relatif.
+    Ex: 'static/css/domovra.css' -> 'static/css/domovra-abcdef1234.css'
+    """
+    abs_src = _abs_path(src_rel)
+    hv = asset_ver(src_rel)
+    if hv == "dev":
+        # Fallback: garder le nom d'origine si le fichier n'existe pas
+        logger.warning("ensure_hashed_asset: fallback dev for %s", src_rel)
+        return src_rel
+
+    dirname, basename = os.path.split(src_rel)
+    name, ext = os.path.splitext(basename)
+    hashed_name = f"{name}-{hv}{ext}"
+    dst_rel = os.path.join(dirname, hashed_name)
+    abs_dst = _abs_path(dst_rel)
+
+    try:
+        # Copie si manquant ou si taille différente
+        if (not os.path.isfile(abs_dst)) or (os.path.getsize(abs_dst) != os.path.getsize(abs_src)):
+            os.makedirs(os.path.dirname(abs_dst), exist_ok=True)
+            shutil.copy2(abs_src, abs_dst)
+            logger.info("Hashed asset written: %s", abs_dst)
+    except Exception as e:
+        logger.exception("ensure_hashed_asset error for %s -> %s: %s", abs_src, abs_dst, e)
+        return src_rel
+
+    # Nettoyage des anciennes versions
+    try:
+        abs_dir = _abs_path(dirname)
+        for fname in os.listdir(abs_dir):
+            if fname.startswith(name + "-") and fname.endswith(ext) and fname != hashed_name:
+                try:
+                    os.remove(os.path.join(abs_dir, fname))
+                except Exception:
+                    pass
+    except Exception:
+        pass
+
+    return dst_rel
+
 # Expose dans Jinja :
 templates.globals["asset_ver"] = asset_ver
-# Compat avec ton base.html actuel : ASSET_VER = hash du CSS principal
-templates.globals["ASSET_VER"] = asset_ver("static/css/domovra.css")
-# Injecte START_TS partout (peut te servir pour debug)
+templates.globals["ASSET_VER"] = asset_ver("static/css/domovra.css")  # optionnel (affichage/debug)
+CSS_MAIN_REL = "static/css/domovra.css"
+CSS_HASHED_REL = ensure_hashed_asset(CSS_MAIN_REL)
+templates.globals["ASSET_CSS_PATH"] = CSS_HASHED_REL  # <- à utiliser dans base.html
 templates.globals["START_TS"] = START_TS
 
 # -------- Filtre pluralisation FR --------
@@ -291,6 +332,14 @@ def get_low_stock_products(limit: int = 8):
 def _startup():
     logger.info("Domovra starting. DB_PATH=%s", DB_PATH)
     logger.info("WARNING_DAYS=%s CRITICAL_DAYS=%s", WARNING_DAYS, CRITICAL_DAYS)
+
+    # S'assurer que le CSS hashé existe dès le boot (et logguer le nom)
+    try:
+        hashed_rel = ensure_hashed_asset("static/css/domovra.css")
+        logger.info("CSS hashed path ready: %s", hashed_rel)
+    except Exception as e:
+        logger.exception("ensure_hashed_asset at startup failed: %s", e)
+
     init_db()
     _ensure_events_table()
     try:
@@ -306,6 +355,9 @@ def ping(): return "ok"
 @app.get("/_debug/static")
 def debug_static(request: Request):
     css_path = os.path.join(STATIC_DIR, "css", "domovra.css")
+    hashed_rel = CSS_HASHED_REL
+    hashed_path = _abs_path(hashed_rel)
+    hashed_url = str(request.url_for("static", path=hashed_rel.split("static/",1)[1])) if os.path.isfile(hashed_path) else None
     return JSONResponse({
         "STATIC_DIR": STATIC_DIR,
         "exists": os.path.isdir(STATIC_DIR),
@@ -316,6 +368,9 @@ def debug_static(request: Request):
         "url_css": str(request.url_for("static", path="css/domovra.css")),
         "cache_buster_boot": START_TS,
         "asset_ver_css": asset_ver("static/css/domovra.css"),
+        "hashed_css_rel": hashed_rel,
+        "hashed_css_exists": os.path.isfile(hashed_path),
+        "hashed_css_url": hashed_url,
     })
 
 # ---------------- Pages
