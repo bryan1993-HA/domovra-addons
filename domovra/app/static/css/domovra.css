@@ -978,7 +978,7 @@ html[data-theme="light"] .wrap table:has(#locations-body) tbody tr:hover {
 
 .wrap .badge.warn {
     color: var(--toast-warn);
-    border-color: rgba(255, 179, 0, .35);
+    border-color: rgba(255, 177, 0, .35);
 }
 
 .wrap .badge.danger {
