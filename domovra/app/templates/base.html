@@ -47,8 +47,9 @@
     })();
   </script>
 
-  <!-- ⚠️ Lien robuste vers la CSS (Ingress-safe) -->
-  <link rel="stylesheet" href="{{ request.url_for('static', path='css/domovra.css') }}?v={{ START_TS }}">
+  <!-- Précharge la CSS ; si préload annulé par le navigateur, le <link> normal prend le relai -->
+  <link rel="preload" href="{{ BASE }}static/css/domovra.css?v={{ ASSET_VER }}" as="style">
+  <link rel="stylesheet" href="{{ BASE }}static/css/domovra.css?v={{ ASSET_VER }}">
 
   {% block head %}{% endblock %}
 </head>
