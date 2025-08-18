@@ -1,15 +1,15 @@
 {% extends "base.html" %}
 {% block title %}Domovra — Paramètres{% endblock %}
 
-{% block head %}
-{% endblock %}
+{% block head %}{% endblock %}
 
 {% block content %}
 <div class="wrap">
-    <form method="post" action="{{ BASE }}settings/save" class="row" style="flex-direction:column">
+    <form method="post" action="{{ BASE }}settings/save">
 
+        <!-- Apparence -->
         <div class="card">
-            <h2 style="margin:6px 0 12px">Apparence</h2>
+            <h2>Apparence</h2>
             <div class="row">
                 <div class="field">
                     <div class="label">Thème</div>
@@ -19,6 +19,7 @@
                         <option value="dark" {{ 'selected' if SETTINGS.theme=='dark' }}>Sombre</option>
                     </select>
                 </div>
+
                 <div class="field">
                     <div class="label">Affichage des tableaux</div>
                     <select name="table_mode">
@@ -28,6 +29,7 @@
                         </option>
                     </select>
                 </div>
+
                 <div class="field">
                     <div class="label">Menu latéral compact</div>
                     <label style="display:flex;align-items:center;gap:8px">
@@ -38,14 +40,16 @@
             </div>
         </div>
 
+        <!-- Produits / stocks -->
         <div class="card">
-            <h2 style="margin:6px 0 12px">Produits / stocks</h2>
+            <h2>Produits / stocks</h2>
             <div class="row">
                 <div class="field">
                     <div class="label">Durée de conservation par défaut (jours)</div>
                     <input type="number" name="default_shelf_days" value="{{ SETTINGS.default_shelf_days|default(90) }}"
                         min="1">
                 </div>
+
                 <div class="field">
                     <div class="label">Seuil “faible stock” par défaut</div>
                     <input type="number" name="low_stock_default" value="{{ SETTINGS.low_stock_default|default(1) }}"
@@ -54,22 +58,26 @@
             </div>
         </div>
 
+        <!-- Toasts -->
         <div class="card">
-            <h2 style="margin:6px 0 12px">Toasts (notifications)</h2>
+            <h2>Toasts (notifications)</h2>
             <div class="row">
                 <div class="field">
                     <div class="label">Durée d’affichage (ms)</div>
                     <input type="number" name="toast_duration" min="500" step="100"
                         value="{{ SETTINGS.toast_duration|default(3000) }}">
                 </div>
+
                 <div class="field">
                     <div class="label">Couleur “Succès”</div>
                     <input type="color" name="toast_ok" value="{{ SETTINGS.toast_ok|default('#4caf50') }}">
                 </div>
+
                 <div class="field">
                     <div class="label">Couleur “Avertissement”</div>
                     <input type="color" name="toast_warn" value="{{ SETTINGS.toast_warn|default('#ffb300') }}">
                 </div>
+
                 <div class="field">
                     <div class="label">Couleur “Erreur”</div>
                     <input type="color" name="toast_error" value="{{ SETTINGS.toast_error|default('#ef5350') }}">
@@ -77,8 +85,9 @@
             </div>
         </div>
 
+        <!-- Actions -->
         <div class="row" style="justify-content:flex-end">
-            <button class="primary" style="max-width:220px">Enregistrer</button>
+            <button class="primary">Enregistrer</button>
         </div>
 
     </form>
