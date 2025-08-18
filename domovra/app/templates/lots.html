@@ -1,8 +1,7 @@
 {% extends "base.html" %}
 {% block title %}Domovra — Stocks{% endblock %}
 
-{% block head %}
-{% endblock %}
+{% block head %}{% endblock %}
 
 {% block header_right %}
 <span class="chip">🧺 Stocks : <b>{{ items|length }}</b></span>
@@ -88,8 +87,11 @@
         <input name="best_before" id="lot_best_before" type="date">
       </div>
 
-      <button class="primary btn-wide">＋ Ajouter au stock</button>
-      <button id="lot_reset" type="button" class="btn-ghost btn-wide"><span class="ico">↺</span>Réinitialiser</button>
+      <!-- Boutons d'action du formulaire -->
+      <div class="row" style="gap:8px">
+        <button class="secondary btn-wide">＋ Ajouter au stock</button>
+        <button id="lot_reset" type="button" class="btn-ghost btn-wide"><span class="ico">↺</span>Réinitialiser</button>
+      </div>
     </form>
   </div>
 
