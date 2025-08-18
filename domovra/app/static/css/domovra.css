@@ -849,3 +849,43 @@ html[data-theme="light"] .wrap .top8-table tbody tr:hover {
         gap: 10px;
     }
 }
+
+/* 1) iOS/Android WebView : élargir + fiabiliser le breakpoint mobile */
+@media screen and (max-width: 900px),
+(pointer: coarse) {
+    .wrap .top8-table {
+        display: none !important;
+    }
+
+    .wrap .top8-cards {
+        display: grid !important;
+        gap: 10px;
+    }
+}
+
+/* 2) Ha Companion (WebKit iOS) : certains WebView ignorent le (max-width) selon DPR */
+@supports (-webkit-touch-callout: none) {
+    @media (orientation: portrait) {
+        .wrap .top8-table {
+            display: none !important;
+        }
+
+        .wrap .top8-cards {
+            display: grid !important;
+            gap: 10px;
+        }
+    }
+}
+
+/* 3) Neutraliser l'étirement hérité DANS les cartes (évite les chips pleine largeur en mobile) */
+@media (max-width: 900px),
+(pointer: coarse) {
+    .wrap .card .row>* {
+        flex: initial !important;
+        min-width: 0;
+    }
+
+    .wrap .lot-action button {
+        white-space: nowrap;
+    }
+}
