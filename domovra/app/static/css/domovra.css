@@ -889,3 +889,178 @@ html[data-theme="light"] .wrap .top8-table tbody tr:hover {
         white-space: nowrap;
     }
 }
+
+/* ========================================================================== */
+/* ========== Page Emplacements (/locations) ================================ */
+/* ========================================================================== */
+
+/* Ajout express — grille compacte (n'affecte QUE le form d'ajout d'emplacement) */
+.wrap form[action$="location/add"].form-grid {
+    display: grid !important;
+    grid-template-columns: 1fr auto;
+    gap: 12px;
+    align-items: end;
+}
+
+@media (max-width:700px) {
+    .wrap form[action$="location/add"].form-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* Outils (recherche + compteur) */
+.wrap .tools-row {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 12px;
+    align-items: end;
+}
+
+.wrap .tools-search {
+    min-width: 220px;
+}
+
+@media (max-width:700px) {
+    .wrap .tools-row {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* Liste — alignement de la colonne Actions + boutons 50/50 */
+.wrap .t-actions {
+    text-align: right;
+}
+
+.wrap .actions-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    justify-items: stretch;
+}
+
+.wrap .actions-grid button {
+    width: 100% !important;
+    min-width: 0;
+}
+
+/* Table "Liste" (uniquement celle qui contient #locations-body) */
+.wrap table:has(#locations-body) thead th {
+    font-size: 12px;
+    color: var(--text-muted);
+    text-align: left;
+    padding: 6px 8px;
+    border: 0;
+    border-bottom: 1px solid var(--line);
+    background: transparent;
+}
+
+.wrap table:has(#locations-body) tbody td {
+    padding: 10px 8px;
+    border: 0;
+    border-bottom: 1px solid var(--line);
+}
+
+.wrap table:has(#locations-body) tbody tr:hover {
+    background-color: rgba(255, 255, 255, .03);
+}
+
+html[data-theme="light"] .wrap table:has(#locations-body) tbody tr:hover {
+    background-color: rgba(0, 0, 0, .03);
+}
+
+/* Pastilles & badges (complément aux .wrap .pill déjà présentes) */
+.wrap .badge {
+    padding: 2px 8px;
+    border-radius: 999px;
+    font-size: 12px;
+    border: 1px solid transparent;
+}
+
+.wrap .badge.warn {
+    color: var(--toast-warn);
+    border-color: rgba(255, 179, 0, .35);
+}
+
+.wrap .badge.danger {
+    color: var(--toast-error);
+    border-color: rgba(239, 83, 80, .35);
+}
+
+/* Cartes mobiles Emplacements */
+.wrap .loc-cards {
+    display: none;
+}
+
+@media (max-width:700px) {
+
+    /* Cache uniquement la table Emplacements en mobile */
+    .wrap .table-responsive:has(#locations-body) {
+        display: none;
+    }
+
+    .wrap .loc-cards {
+        display: grid;
+        gap: 10px;
+    }
+
+    .wrap .loc-card {
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        padding: 10px;
+        background: transparent;
+        /* harmonisé avec les autres pages */
+        display: grid;
+        grid-template-columns: 1fr auto;
+        gap: 8px;
+        align-items: center;
+    }
+
+    .wrap .loc-main {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+    }
+
+    .wrap .loc-title {
+        font-weight: 600;
+    }
+
+    .wrap .loc-meta {
+        font-size: .9rem;
+        color: var(--text-muted);
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+    }
+
+    .wrap .loc-actions {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+        justify-content: flex-end;
+    }
+
+    .wrap .loc-actions button {
+        width: auto !important;
+        min-width: 40px;
+    }
+
+    .wrap .btn-text {
+        display: none;
+    }
+}
+
+/* Dialog — petits ajustements */
+.wrap dialog input[type="radio"] {
+    width: 16px;
+    height: 16px;
+    accent-color: var(--accent);
+}
+
+.wrap dialog select {
+    min-height: 44px;
+}
+
+.wrap #del-mgmt label {
+    gap: 8px;
+}
