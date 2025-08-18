@@ -878,3 +878,278 @@ html[data-theme="light"] .top8-table tbody tr:hover {
         max-width: 90px;
     }
 }
+
+/* ========== Accueil — styles scoppés pour respecter l'ancien rendu ========== */
+
+/* 0) Variables locales de la page (map vers le thème global) */
+.wrap {
+    --gap: 12px;
+    --radius: 14px;
+    --accent: #00bcd4;
+    --border: var(--line);
+    /* était #263043 en inline ; aligne sur thème */
+    --chip: #1a2230;
+    /* fond chips (dark) */
+    --muted: var(--text-muted);
+    /* map vers variable globale */
+    --ok: var(--toast-ok);
+    --warn: var(--toast-warn);
+    --danger: var(--toast-error);
+}
+
+html[data-theme="light"] .wrap {
+    --chip: #ffffff;
+}
+
+/* 1) Conteneur + rangées */
+.wrap .wrap {
+    /* au cas où .wrap imbriqués */
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 0 12px;
+}
+
+.wrap .row {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+/* Neutralise l'étirement global (.row > * { flex:1 }) pour retrouver les largeurs naturelles */
+.wrap .row>* {
+    flex: initial;
+}
+
+/* 2) Chips */
+.wrap .chip {
+    background: var(--chip);
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    padding: 6px 10px;
+    color: var(--muted);
+    white-space: nowrap;
+}
+
+/* 3) Cartes */
+.wrap .card {
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 12px;
+    margin-bottom: 12px;
+}
+
+/* 4) Titre de section */
+.wrap .title {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin: 6px 0 8px;
+}
+
+.wrap .title h2 {
+    font-size: 16px;
+    margin: 0;
+}
+
+/* 5) Champs et libellés */
+.wrap input,
+.wrap select,
+.wrap button {
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 10px;
+    background: transparent;
+    color: inherit;
+    min-height: 0;
+    /* évite le min-height global si présent */
+    width: auto;
+    /* évite le width:100% global si présent */
+}
+
+.wrap .field {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    min-width: 160px;
+}
+
+.wrap .label {
+    font-size: 12px;
+    color: var(--muted);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+/* 6) Boutons */
+.wrap button.primary {
+    background: var(--accent);
+    border: 0;
+    color: #02222a;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.wrap .btn-add-stock {
+    height: 44px;
+    align-self: end;
+}
+
+/* 7) Grille Ajout express (doit battre .row {display:flex}) */
+.wrap .form-grid {
+    display: grid !important;
+    grid-template-columns: 2fr 2fr 1fr 1fr auto;
+    gap: 12px;
+    align-items: end;
+}
+
+.wrap .form-grid .field {
+    margin: 0;
+}
+
+@media (max-width:1100px) {
+    .wrap .form-grid {
+        grid-template-columns: 2fr 2fr 1fr auto;
+    }
+}
+
+@media (max-width:900px) {
+    .wrap .form-grid {
+        grid-template-columns: 1fr 1fr 1fr;
+    }
+
+    .wrap .btn-add-stock {
+        grid-column: 1 / -1;
+        justify-self: stretch;
+    }
+}
+
+@media (max-width:700px) {
+    .wrap .form-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .wrap .btn-add-stock {
+        width: 100%;
+    }
+}
+
+/* 8) Tableaux Top 8 (annule les bordures complètes du style global) */
+.wrap .top8-table thead th {
+    font-size: 12px;
+    color: var(--muted);
+    text-align: left;
+    padding: 6px 8px;
+    border: 0;
+    border-bottom: 1px solid var(--border);
+    background: transparent;
+}
+
+.wrap .top8-table tbody td {
+    padding: 10px 8px;
+    border: 0;
+    border-bottom: 1px solid var(--border);
+}
+
+.wrap .top8-table tbody tr:hover {
+    background-color: rgba(255, 255, 255, .03);
+}
+
+html[data-theme="light"] .wrap .top8-table tbody tr:hover {
+    background-color: rgba(0, 0, 0, .03);
+}
+
+/* 9) Muted (évite l'opacité globale) */
+.wrap .muted {
+    color: var(--muted);
+    opacity: 1;
+}
+
+/* 10) Pastilles d'état */
+.wrap .pill {
+    padding: 2px 8px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 600;
+    border: 1px solid transparent;
+}
+
+.wrap .ok {
+    color: var(--ok);
+    border-color: rgba(76, 175, 80, .35);
+}
+
+.wrap .warn {
+    color: var(--warn);
+    border-color: rgba(255, 179, 0, .35);
+}
+
+.wrap .danger {
+    color: var(--danger);
+    border-color: rgba(239, 83, 80, .35);
+}
+
+/* 11) Top 8 — bascule desktop/mobile */
+.wrap .top8-table {
+    display: block;
+}
+
+.wrap .top8-cards {
+    display: none;
+}
+
+@media (max-width:700px) {
+    .wrap .top8-table {
+        display: none;
+    }
+
+    .wrap .top8-cards {
+        display: grid;
+        gap: 10px;
+    }
+
+    .wrap .lot-card {
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        padding: 10px;
+        background: transparent;
+        display: grid;
+        grid-template-columns: 1fr auto;
+        gap: 8px;
+        align-items: center;
+    }
+
+    .wrap .lot-main {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+    }
+
+    .wrap .lot-title {
+        font-weight: 600;
+    }
+
+    .wrap .lot-meta {
+        font-size: .9rem;
+        color: var(--muted);
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+    }
+
+    .wrap .lot-action {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+    }
+
+    .wrap .lot-action input {
+        max-width: 90px;
+    }
+}
+
+/* 12) Petits détails d'espacement */
+.wrap .card .row {
+    gap: 12px;
+    flex-wrap: wrap;
+}
