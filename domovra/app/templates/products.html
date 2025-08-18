@@ -62,7 +62,6 @@
     gap: 6px;
   }
 
-  /* Inputs / boutons */
   input,
   select,
   button {
@@ -104,7 +103,7 @@
     margin-right: .4rem
   }
 
-  /* Aides “?” */
+  /* Aide */
   .help {
     display: inline-grid;
     place-items: center;
@@ -148,7 +147,7 @@
     z-index: 60
   }
 
-  /* Grille du formulaire de création */
+  /* Form création */
   .form-grid {
     display: grid;
     grid-template-columns: 2fr 1fr 1fr 1fr 1fr auto auto;
@@ -250,7 +249,7 @@
     border-color: rgba(239, 83, 80, .35);
   }
 
-  /* Mobile : cartes */
+  /* Mobile cartes */
   .cards {
     display: none
   }
@@ -299,7 +298,7 @@
     }
   }
 
-  /* Bloc OFF */
+  /* OFF (input + 2 icônes à droite) */
   #off-box {
     padding: 8px 0
   }
@@ -312,13 +311,18 @@
 
   #off-box .infield input {
     width: 100%;
-    padding-right: 56px
+    padding-right: 98px;
   }
 
-  /* Bouton icône intégré (live) */
-  #off-box .infield-btn {
+  /* place pour 2 boutons */
+  #off-box .infield .btns {
     position: absolute;
     right: 6px;
+    display: flex;
+    gap: 6px;
+  }
+
+  #off-box .infield .btns .infield-btn {
     display: grid;
     place-items: center;
     width: 40px;
@@ -331,31 +335,15 @@
     transition: transform .06s, background .12s;
   }
 
-  #off-box .infield-btn:hover {
+  #off-box .infield .btns .infield-btn:hover {
     background: rgba(255, 255, 255, .06)
   }
 
-  #off-box .infield-btn:active {
+  #off-box .infield .btns .infield-btn:active {
     transform: scale(.97)
   }
 
-  #off-box .infield-btn svg {
-    width: 18px;
-    height: 18px;
-    fill: currentColor
-  }
-
-  /* Bouton caméra icône-seule */
-  .btn-icon {
-    display: grid;
-    place-items: center;
-    width: 40px;
-    height: 40px;
-    padding: 0;
-    border-radius: 10px;
-  }
-
-  .btn-icon svg {
+  #off-box .infield .btns .infield-btn svg {
     width: 18px;
     height: 18px;
     fill: currentColor
@@ -379,7 +367,7 @@
     display: none !important
   }
 
-  /* Actions colonne bureau */
+  /* Actions bureau */
   .actions {
     display: grid;
     gap: 8px;
@@ -406,7 +394,7 @@
     }
   }
 
-  /* --------- Toggle "Plus d'infos" (mobile) --------- */
+  /* Toggle “Plus d’infos” */
   @media (max-width:700px) {
     .card-toggle {
       width: 100%;
@@ -463,35 +451,36 @@
 
     <div id="off-box">
       <div class="row">
+        <!-- Champ + 2 icônes à droite -->
         <div class="infield" style="flex:1;min-width:220px">
           <input id="off_barcode" type="text" inputmode="numeric"
             placeholder="Scanner / saisir un code-barres (EAN/GTIN)…">
-          <!-- icône code-barres pour le live -->
-          <button id="off_scan" type="button" class="infield-btn" title="Scanner (live)">
-            <span class="sr-only">Scanner (live)</span>
-            <svg viewBox="0 0 24 24" aria-hidden="true">
-              <rect x="2" y="4" width="2" height="16" />
-              <rect x="6" y="4" width="1" height="16" />
-              <rect x="9" y="4" width="2" height="16" />
-              <rect x="13" y="4" width="1" height="16" />
-              <rect x="16" y="4" width="2" height="16" />
-              <rect x="20" y="4" width="1" height="16" />
-            </svg>
-          </button>
+          <div class="btns">
+            <!-- live -->
+            <button id="off_scan" type="button" class="infield-btn" title="Scanner (live)">
+              <span class="sr-only">Scanner (live)</span>
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <rect x="2" y="4" width="2" height="16" />
+                <rect x="6" y="4" width="1" height="16" />
+                <rect x="9" y="4" width="2" height="16" />
+                <rect x="13" y="4" width="1" height="16" />
+                <rect x="16" y="4" width="2" height="16" />
+                <rect x="20" y="4" width="1" height="16" />
+              </svg>
+            </button>
+            <!-- photo -->
+            <button id="off_capture" type="button" class="infield-btn" title="Prendre une photo">
+              <span class="sr-only">Prendre une photo</span>
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M4 7h3l1.4-2h6.2L16 7h4a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V9a2 2 0 0 1 2-2z" />
+                <circle cx="12" cy="13" r="3.5" />
+              </svg>
+            </button>
+            <input id="off_file" type="file" accept="image/*" capture="environment" hidden>
+          </div>
         </div>
 
         <button id="off_search" class="secondary">🔎 Rechercher</button>
-
-        <!-- icône caméra seule -->
-        <button id="off_capture" type="button" class="secondary btn-icon" title="Prendre une photo">
-          <span class="sr-only">Prendre une photo</span>
-          <svg viewBox="0 0 24 24" aria-hidden="true">
-            <path d="M4 7h3l1.4-2h6.2L16 7h4a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V9a2 2 0 0 1 2-2z" />
-            <circle cx="12" cy="13" r="3.5" />
-          </svg>
-        </button>
-        <input id="off_file" type="file" accept="image/*" capture="environment" style="display:none">
-
         <button id="off_paste" class="secondary" type="button">📋 Coller</button>
         <button id="off_clear" class="secondary" type="button">✖ Effacer</button>
       </div>
@@ -511,7 +500,6 @@
             <div id="off_brand" class="muted">Marque</div>
             <div class="muted" style="margin-top:.25rem">Quantité indiquée : <span id="off_qty">—</span></div>
             <div class="muted">Source : Open Food Facts</div>
-
             <div style="margin-top:.5rem;display:flex;gap:.5rem;flex-wrap:wrap">
               <button id="off_fill_create" type="button" class="secondary">➕ Préremplir le formulaire d’ajout</button>
             </div>
@@ -702,12 +690,10 @@
           </div>
         </div>
 
-        <!-- Bouton repliable -->
         <button class="card-toggle js-card-toggle" type="button" aria-expanded="false" aria-controls="more-{{ it.id }}">
           <span>Plus d’infos</span><span class="chev">▶</span>
         </button>
 
-        <!-- Détails cachés par défaut -->
         <div class="card-extra" id="more-{{ it.id }}" hidden>
           <div class="card-info">
             {% if it.barcode %}<span class="stat"><span class="k">EAN</span><span> :</span><span class="v">{{ it.barcode
@@ -850,8 +836,7 @@
     const opts = [...sel.options].map(o => o.value);
     if (opts.includes(val)) sel.value = val;
     else if (val) {
-      const o = document.createElement('option');
-      o.value = val; o.textContent = val + ' (autre)'; o.dataset.temp = '1';
+      const o = document.createElement('option'); o.value = val; o.textContent = val + ' (autre)'; o.dataset.temp = '1';
       sel.insertBefore(o, sel.firstChild); sel.value = val;
     }
   }
@@ -941,7 +926,7 @@
     catch { showError('Impossible de lire le presse-papiers.'); }
   });
 
-  /* Scanner live (BarcodeDetector + ZXing) */
+  /* Modale scan live (BarcodeDetector → ZXing) */
   const dlgScan = document.getElementById('scan-modal'), scanVideo = document.getElementById('scan-video'), btnScanClose = document.getElementById('scan-close');
   let scanning = false, zxingReader = null, zxingLiveActive = false;
 
@@ -959,17 +944,17 @@
           if (!scanning) return;
           try {
             const bm = await detector.detect(scanVideo);
-            if (bm && bm[0] && bm[0].rawValue) { await onBarcodeDetected(bm[0].rawValue); return; }
+            if (bm && bm[0]?.rawValue) { await onBarcodeDetected(bm[0].rawValue); return; }
           } catch { }
           requestAnimationFrame(tick);
         }; tick(); return;
-      } catch (e) { /* fallback */ }
+      } catch (e) { }
     }
     startZXingLive();
   }
   async function closeScanModal() {
     scanning = false; if (dlgScan && dlgScan.open) dlgScan.close();
-    const s = scanVideo && (scanVideo.srcObject); if (s && s.getTracks) s.getTracks().forEach(t => t.stop());
+    const s = scanVideo?.srcObject; if (s && s.getTracks) s.getTracks().forEach(t => t.stop());
     if (zxingReader && zxingLiveActive) { try { await zxingReader.reset(); } catch { } zxingLiveActive = false; }
   }
   async function loadZXing() {
@@ -981,13 +966,14 @@
   }
   async function startZXingLive() {
     try {
-      scanVideo.muted = true; scanVideo.playsInline = true; scanVideo.setAttribute('playsinline', ''); scanVideo.setAttribute('webkit-playsinline', '');
+      scanVideo.muted = true; scanVideo.playsInline = true;
+      scanVideo.setAttribute('playsinline', ''); scanVideo.setAttribute('webkit-playsinline', '');
       if (!window.ZXing) await loadZXing();
       if (!zxingReader) zxingReader = new ZXing.BrowserMultiFormatReader();
-      zxingReader.decodeFromVideoDevice(undefined, scanVideo, async (result, err) => {
+      zxingReader.decodeFromVideoDevice(undefined, scanVideo, async (r, err) => {
         if (!scanning) return;
-        if (result && result.getText) {
-          const code = (result.getText() || '').replace(/\D+/g, '');
+        if (r && r.getText) {
+          const code = (r.getText() || '').replace(/\D+/g, '');
           if (code) await onBarcodeDetected(code);
         }
       });
@@ -997,7 +983,7 @@
   document.getElementById('off_scan').addEventListener('click', openScanModal);
   btnScanClose.addEventListener('click', closeScanModal);
 
-  /* ---- Mode Photo universel ---- */
+  /* Mode Photo universel (icône dans l'input) */
   document.getElementById('off_capture').addEventListener('click', () => document.getElementById('off_file').click());
   document.getElementById('off_file').addEventListener('change', async (ev) => {
     const file = ev.target.files && ev.target.files[0]; if (!file) return;
