@@ -1,4 +1,7 @@
 /* ========== Domovra CSS global ========== */
+html {
+    outline: 3px solid red !important;
+}
 
 /* Préférences générales */
 :root {

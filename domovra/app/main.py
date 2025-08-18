@@ -3,7 +3,7 @@ from logging.handlers import RotatingFileHandler
 from datetime import datetime, timezone
 from fastapi import FastAPI, Request, Form, Query
 from fastapi.responses import HTMLResponse, RedirectResponse, JSONResponse, PlainTextResponse, Response
-from fastapi.staticfiles import StaticFiles  # ← NEW
+from fastapi.staticfiles import StaticFiles
 from jinja2 import Environment, FileSystemLoader, select_autoescape
 from urllib.parse import urlencode
 
@@ -64,19 +64,27 @@ WARNING_DAYS  = int(os.environ.get("WARNING_DAYS",  "30"))
 CRITICAL_DAYS = int(os.environ.get("CRITICAL_DAYS", "14"))
 DB_PATH       = os.environ.get("DB_PATH", "/data/domovra.sqlite3")
 
+# Cache-buster injecté dans les templates (permet de forcer le rechargement du CSS)
+START_TS = str(int(time.time()))
+
 app = FastAPI()
 
-# === NEW: Static files mount (robuste avec chemin absolu) ===
-from fastapi.staticfiles import StaticFiles
-
-# --- Static files au même niveau que main.py ---
-HERE = os.path.dirname(__file__)                      # …/app
-STATIC_DIR = os.path.join(HERE, "static")             # …/app/static
+# === Static files : dossier sibling de main.py (Option A) ===
+HERE = os.path.dirname(__file__)                  # …/domovra/app
+STATIC_DIR = os.path.join(HERE, "static")         # …/domovra/app/static
 os.makedirs(os.path.join(STATIC_DIR, "css"), exist_ok=True)
 
 app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 logger.info("Static mounted at %s", STATIC_DIR)
 
+# Debug présence du CSS
+try:
+    _css_path = os.path.join(STATIC_DIR, "css", "domovra.css")
+    logger.info("DEBUG CSS: %s exists=%s size=%s bytes",
+                _css_path, os.path.isfile(_css_path),
+                (os.path.getsize(_css_path) if os.path.isfile(_css_path) else -1))
+except Exception as e:
+    logger.warning("DEBUG CSS: error: %s", e)
 
 # ============================================================
 
@@ -84,6 +92,9 @@ templates = Environment(
     loader=FileSystemLoader("templates"),
     autoescape=select_autoescape()
 )
+
+# Injecte START_TS dans tous les templates (pour le cache-buster ?v=START_TS)
+templates.globals["START_TS"] = START_TS
 
 # -------- Filtre pluralisation FR --------
 def pluralize_fr(unit: str, qty) -> str:
@@ -610,8 +621,6 @@ def product_adjust(request: Request, product_id: int = Form(...), delta: int = F
         log_event("product.adjust", {"id": product_id, "delta": qty, "action": "consume"})
 
     return RedirectResponse(ingress_base(request) + "products", status_code=303)
-
-    
 
 # ---------------- Actions Emplacements
 @app.post("/location/add")
