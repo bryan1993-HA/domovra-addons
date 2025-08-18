@@ -486,3 +486,162 @@ html[data-theme="light"] .chip {
         width: 100%;
     }
 }
+
+/* ========== Page Accueil ========== */
+
+/* Titre de section dans les cartes */
+.title {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin: 6px 0 8px;
+}
+
+.title h2 {
+    font-size: 16px;
+    margin: 0;
+}
+
+/* Champs formulaire */
+.field {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    min-width: 160px;
+}
+
+.label {
+    font-size: 12px;
+    color: var(--text-muted);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+/* Bouton "Ajouter au stock" */
+.btn-add-stock {
+    height: 44px;
+    align-self: end;
+}
+
+/* Grille d’ajout express */
+.form-grid {
+    display: grid;
+    grid-template-columns: 2fr 2fr 1fr 1fr auto;
+    gap: 12px;
+    align-items: end;
+}
+
+.form-grid .field {
+    margin: 0;
+}
+
+@media (max-width:1100px) {
+    .form-grid {
+        grid-template-columns: 2fr 2fr 1fr auto;
+    }
+}
+
+@media (max-width:900px) {
+    .form-grid {
+        grid-template-columns: 1fr 1fr 1fr;
+    }
+
+    .btn-add-stock {
+        grid-column: 1 / -1;
+        justify-self: stretch;
+    }
+}
+
+@media (max-width:700px) {
+    .form-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .btn-add-stock {
+        width: 100%;
+    }
+}
+
+/* États (OK / Bientôt / Urgent) */
+.pill {
+    padding: 2px 8px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 600;
+    border: 1px solid transparent;
+}
+
+.pill.ok {
+    color: var(--toast-ok);
+    border-color: rgba(76, 175, 80, .35);
+}
+
+.pill.warn {
+    color: var(--toast-warn);
+    border-color: rgba(255, 179, 0, .35);
+}
+
+.pill.danger {
+    color: var(--toast-error);
+    border-color: rgba(239, 83, 80, .35);
+}
+
+/* TOP 8 Desktop / Mobile */
+.top8-table {
+    display: block;
+}
+
+.top8-cards {
+    display: none;
+}
+
+@media (max-width:700px) {
+    .top8-table {
+        display: none;
+    }
+
+    .top8-cards {
+        display: grid;
+        gap: 10px;
+    }
+
+    .lot-card {
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        padding: 10px;
+        background: transparent;
+        display: grid;
+        grid-template-columns: 1fr auto;
+        gap: 8px;
+        align-items: center;
+    }
+
+    .lot-main {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+    }
+
+    .lot-title {
+        font-weight: 600;
+    }
+
+    .lot-meta {
+        font-size: .9rem;
+        color: var(--text-muted);
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+    }
+
+    .lot-action {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+    }
+
+    .lot-action input {
+        max-width: 90px;
+    }
+}
