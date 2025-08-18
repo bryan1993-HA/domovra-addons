@@ -1,4 +1,5 @@
-import os, logging, sqlite3, time, json
+import os, logging, sqlite3, time, json, hashlib
+from functools import lru_cache
 from logging.handlers import RotatingFileHandler
 from datetime import datetime, timezone
 from fastapi import FastAPI, Request, Form, Query
@@ -64,7 +65,7 @@ WARNING_DAYS  = int(os.environ.get("WARNING_DAYS",  "30"))
 CRITICAL_DAYS = int(os.environ.get("CRITICAL_DAYS", "14"))
 DB_PATH       = os.environ.get("DB_PATH", "/data/domovra.sqlite3")
 
-# Cache-buster global injecté dans les templates
+# Cache-buster de secours (boot) – encore dispo si besoin
 START_TS = os.environ.get("START_TS") or str(int(time.time()))
 
 app = FastAPI()
@@ -96,7 +97,45 @@ templates = Environment(
     loader=FileSystemLoader("templates"),
     autoescape=select_autoescape()
 )
-# Injecte START_TS partout
+
+# -------------------- Asset versioning automatique (hash fichier) --------------------
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+
+def _abs_path(relpath: str) -> str:
+    """Relatif à la racine du projet (main.py), accepte '/static/...' ou 'static/...'
+       Ex.: 'static/css/domovra.css' """
+    p = relpath.lstrip("/\\")
+    return os.path.join(BASE_DIR, p)
+
+def _file_hash(abs_path: str) -> str:
+    """MD5 court (10 chars) du contenu du fichier – change dès que le fichier change."""
+    h = hashlib.md5()
+    with open(abs_path, "rb") as f:
+        for chunk in iter(lambda: f.read(64 * 1024), b""):
+            h.update(chunk)
+    return h.hexdigest()[:10]
+
+@lru_cache(maxsize=256)
+def _version_for(abs_path: str, mtime: float) -> str:
+    """Cache par (path, mtime). Si mtime change -> nouveau hash recalculé."""
+    return _file_hash(abs_path)
+
+def asset_ver(relpath: str) -> str:
+    """Retourne une version stable (hash) pour un fichier statique.
+       Si le fichier n'existe pas, renvoie 'dev' pour ne pas casser le rendu."""
+    abs_path = _abs_path(relpath)
+    try:
+        mtime = os.path.getmtime(abs_path)
+    except FileNotFoundError:
+        logger.warning("asset_ver: fichier introuvable: %s", abs_path)
+        return "dev"
+    return _version_for(abs_path, mtime)
+
+# Expose dans Jinja :
+templates.globals["asset_ver"] = asset_ver
+# Compat avec ton base.html actuel : ASSET_VER = hash du CSS principal
+templates.globals["ASSET_VER"] = asset_ver("static/css/domovra.css")
+# Injecte START_TS partout (peut te servir pour debug)
 templates.globals["START_TS"] = START_TS
 
 # -------- Filtre pluralisation FR --------
@@ -275,7 +314,8 @@ def debug_static(request: Request):
         "ls_static": sorted(os.listdir(STATIC_DIR)) if os.path.isdir(STATIC_DIR) else [],
         "ls_css": sorted(os.listdir(os.path.join(STATIC_DIR, "css"))) if os.path.isdir(os.path.join(STATIC_DIR, "css")) else [],
         "url_css": str(request.url_for("static", path="css/domovra.css")),
-        "cache_buster": START_TS,
+        "cache_buster_boot": START_TS,
+        "asset_ver_css": asset_ver("static/css/domovra.css"),
     })
 
 # ---------------- Pages
