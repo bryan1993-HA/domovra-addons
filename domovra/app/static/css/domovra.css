@@ -1760,3 +1760,285 @@ html[data-theme="light"] #tbl tbody tr:hover {
         background: transparent;
     }
 }
+
+/* ========================================================================== */
+/* ========== Page Paramètres (/settings) =================================== */
+/* ========================================================================== */
+
+/* Conteneur étroit uniquement pour le formulaire des paramètres */
+.wrap form[action$="settings/save"] {
+    max-width: 900px;
+    margin: 0 auto;
+}
+
+/* Champs en colonnes, largeur mini confortable (évite de casser ailleurs) */
+.wrap form[action$="settings/save"] .field {
+    flex: 1 1 240px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    min-width: 220px;
+}
+
+/* Pastille d’aperçu (couleur toast, etc.) */
+.wrap form[action$="settings/save"] .preview {
+    display: inline-block;
+    min-width: 44px;
+    height: 44px;
+    border-radius: 999px;
+    border: 1px solid var(--line);
+}
+
+/* ========================================================================== */
+/* ========== Page Journal (/journal) ======================================= */
+/* ========================================================================== */
+
+.events-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.events-head h1 {
+    margin: 0;
+}
+
+.events-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.events-table th,
+.events-table td {
+    padding: 8px 10px;
+    border-bottom: 1px solid var(--line);
+    vertical-align: top;
+}
+
+.events-table th {
+    text-align: left;
+    opacity: .8;
+    font-weight: 600;
+}
+
+.nowrap {
+    white-space: nowrap;
+}
+
+.code {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+    font-size: .9rem;
+}
+
+/* Pastille type d'événement (spécifique Journal) */
+.events-table .pill {
+    display: inline-block;
+    padding: .15rem .5rem;
+    border-radius: 999px;
+    border: 1px solid currentColor;
+    font-size: .85rem;
+    background: transparent;
+}
+
+/* Couleurs par type d'événement */
+.kind-settings_update {
+    color: #5fb673;
+    border-color: #5fb673;
+}
+
+.kind-settings_error {
+    color: #ff5a5a;
+    border-color: #ff5a5a;
+}
+
+.kind-journal_clear {
+    color: #7aa7ff;
+    border-color: #7aa7ff;
+}
+
+.kind-product_add {
+    color: #55c46a;
+    border-color: #55c46a;
+}
+
+.kind-product_update {
+    color: #b7a52b;
+    border-color: #b7a52b;
+}
+
+.kind-product_delete {
+    color: #ff6b6b;
+    border-color: #ff6b6b;
+}
+
+.kind-location_add {
+    color: #55c46a;
+    border-color: #55c46a;
+}
+
+.kind-location_update {
+    color: #b7a52b;
+    border-color: #b7a52b;
+}
+
+.kind-location_delete {
+    color: #ff6b6b;
+    border-color: #ff6b6b;
+}
+
+.kind-lot_add {
+    color: #55c46a;
+    border-color: #55c46a;
+}
+
+.kind-lot_update {
+    color: #b7a52b;
+    border-color: #b7a52b;
+}
+
+.kind-lot_consume {
+    color: #7aa7ff;
+    border-color: #7aa7ff;
+}
+
+.kind-lot_delete {
+    color: #ff6b6b;
+    border-color: #ff6b6b;
+}
+
+/* Flash message (ex. ?cleared=1) */
+.flash {
+    display: none;
+    margin: 8px 0 12px;
+    padding: 10px 12px;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+}
+
+/* ========================================================================== */
+/* ========== Page Support (/support) ======================================= */
+/* ========================================================================== */
+
+/* Conteneur étroit */
+.support-wrap {
+    max-width: 880px;
+    margin: 0 auto;
+    padding: 1.25rem;
+}
+
+/* Hero avec dégradés adaptatifs */
+.support-hero {
+    position: relative;
+    border-radius: 16px;
+    padding: 28px;
+    overflow: hidden;
+    border: 1px solid var(--line);
+}
+
+html[data-theme="dark"] .support-hero {
+    background:
+        radial-gradient(1000px 400px at -10% -10%, rgba(79, 70, 229, .28), transparent 50%),
+        radial-gradient(900px 360px at 110% 0%, rgba(16, 185, 129, .22), transparent 50%),
+        linear-gradient(180deg, #141824, #0f1115 40%);
+}
+
+html[data-theme="light"] .support-hero {
+    background:
+        radial-gradient(900px 360px at -10% -10%, rgba(99, 102, 241, .15), transparent 50%),
+        radial-gradient(800px 320px at 110% 0%, rgba(16, 185, 129, .12), transparent 50%),
+        linear-gradient(180deg, #ffffff, #f8fafc 60%);
+}
+
+/* Titres & sous-titre */
+.support-title {
+    font-size: 1.8rem;
+    margin: 0 0 .25rem 0;
+    display: flex;
+    align-items: center;
+    gap: .5rem;
+}
+
+.support-sub {
+    margin: 0;
+    opacity: .9;
+    line-height: 1.6;
+}
+
+/* Zone d’actions */
+.support-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: .75rem;
+    align-items: center;
+    margin: 1.1rem 0 0;
+}
+
+/* Boutons Ko‑fi */
+.kofi-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: .6rem;
+    padding: .75rem 1.1rem;
+    border-radius: 999px;
+    font-weight: 700;
+    text-decoration: none;
+    border: 1px solid transparent;
+    transition: transform .04s ease, filter .15s ease, border-color .15s ease;
+    will-change: transform;
+}
+
+.kofi-btn:active {
+    transform: translateY(1px);
+}
+
+/* Primaire */
+.kofi-primary {
+    background: #29abe0;
+    /* bleu Ko‑fi */
+    color: #0b1016;
+}
+
+/* Secondaire (outline) */
+html[data-theme="dark"] .kofi-outline {
+    border-color: #3b4252;
+    color: #e5e7eb;
+    background: transparent;
+}
+
+html[data-theme="light"] .kofi-outline {
+    border-color: #d1d5db;
+    color: #1f2328;
+    background: transparent;
+}
+
+.kofi-outline:hover {
+    filter: brightness(1.05);
+}
+
+.kofi-logo {
+    width: 22px;
+    height: 22px;
+    display: inline-block;
+}
+
+/* Cartes d’explication */
+.support-card {
+    margin-top: 1rem;
+    border-radius: 12px;
+    border: 1px solid var(--line);
+    padding: 14px 16px;
+    background: var(--bg-card);
+}
+
+.support-list {
+    margin: .4rem 0 0 1.25rem;
+}
+
+/* Note finale */
+.support-note {
+    margin: 1.5rem 0 0;
+    font-size: .95rem;
+    opacity: .8;
+}
