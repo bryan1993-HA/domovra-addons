@@ -1,0 +1,527 @@
+{% extends "base.html" %}
+{% block title %}Domovra — Stocks{% endblock %}
+
+{% block head %}{% endblock %}
+
+{% block header_right %}
+<span class="chip">🧺 Stocks : <b>{{ items|length }}</b></span>
+{% endblock %}
+
+{% block content %}
+<div class="wrap">
+
+  <!-- Ajouter au stock -->
+  <div class="card">
+    <div class="title">
+      <h2>Ajouter au stock</h2>
+      <span class="muted">→ en un geste (scan ou saisie)</span>
+      <span class="help" tabindex="0"
+        data-tip="Scanne un code-barres pour sélectionner le produit. S’il n’existe pas encore, crée-le puis ajoute le lot."></span>
+    </div>
+
+    <form id="lot_create_form" method="post" action="{{ BASE }}lot/add" class="form-grid">
+      <!-- Produit -->
+      <div>
+        <div class="label">Produit</div>
+        <div class="infield">
+          <select name="product_id" id="product_select" required>
+            <option value="" selected disabled>— Choisir —</option>
+            {% for p in products %}
+            <option value="{{ p.id }}" data-barcode="{{ p.barcode or '' }}">
+              {{ p.name }}{% if p.barcode %} ({{ p.barcode }}){% endif %}
+            </option>
+            {% endfor %}
+          </select>
+
+          <!-- Boutons icône -->
+          <div class="infield-buttons">
+            <!-- Live scan -->
+            <button id="prod_scan_btn" type="button" class="icon-btn" title="Scanner (live)">
+              <span class="sr-only">Scanner (live)</span>
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <rect x="2" y="4" width="2" height="16" />
+                <rect x="6" y="4" width="1" height="16" />
+                <rect x="9" y="4" width="2" height="16" />
+                <rect x="13" y="4" width="1" height="16" />
+                <rect x="16" y="4" width="2" height="16" />
+                <rect x="20" y="4" width="1" height="16" />
+              </svg>
+            </button>
+
+            <!-- Photo -->
+            <button id="prod_capture_btn" type="button" class="icon-btn" title="Prendre une photo">
+              <span class="sr-only">Prendre une photo</span>
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M4 7h3l1.4-2h6.2L16 7h4a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V9a2 2 0 0 1 2-2z" />
+                <circle cx="12" cy="13" r="3.5" />
+              </svg>
+            </button>
+            <input id="prod_file" type="file" accept="image/*" capture="environment" hidden>
+          </div>
+        </div>
+      </div>
+
+      <!-- Emplacement -->
+      <div>
+        <div class="label">Emplacement</div>
+        <select name="location_id" id="lot_location_id" required>
+          {% for l in locations %}<option value="{{ l.id }}">{{ l.name }}</option>{% endfor %}
+        </select>
+      </div>
+
+      <!-- Quantité -->
+      <div>
+        <div class="label">Quantité</div>
+        <input name="qty" id="lot_qty" type="number" min="0" step="0.01" placeholder="ex. 1" required>
+      </div>
+
+      <!-- Congelé le -->
+      <div>
+        <div class="label">Congelé le</div>
+        <input name="frozen_on" id="lot_frozen" type="date">
+      </div>
+
+      <!-- À consommer avant -->
+      <div>
+        <div class="label">À consommer avant</div>
+        <input name="best_before" id="lot_best_before" type="date">
+      </div>
+
+      <!-- Boutons d'action du formulaire -->
+      <div class="row" style="gap:8px">
+        <button class="secondary btn-wide">＋ Ajouter au stock</button>
+        <button id="lot_reset" type="button" class="btn-ghost btn-wide"><span class="ico">↺</span>Réinitialiser</button>
+      </div>
+    </form>
+  </div>
+
+  <!-- Outils -->
+  <div class="card">
+    <div class="title">
+      <h2>Outils</h2><span class="muted">Recherche & filtres</span>
+    </div>
+    <div class="filters-row">
+      <input id="q" class="wide" type="search" placeholder="Rechercher (produit, emplacement, EAN)…">
+      <select id="f_loc">
+        <option value="">📍 Tous emplacements</option>
+        {% for l in locations %}<option value="{{ l.name|lower }}">{{ l.name }}</option>{% endfor %}
+      </select>
+      <select id="f_status">
+        <option value="">⚑ Tous états</option>
+        <option value="green">OK</option>
+        <option value="yellow">Bientôt</option>
+        <option value="red">Urgent</option>
+      </select>
+      <span class="chip">🧺 Stocks : <b id="lots-count">{{ items|length }}</b></span>
+    </div>
+  </div>
+
+  <!-- Liste -->
+  <div class="card">
+    <div class="title">
+      <h2>Liste</h2><span class="muted">Table (bureau) / Cartes (mobile)</span>
+    </div>
+
+    <table id="tbl">
+      <colgroup>
+        <col style="width:36%">
+        <col style="width:48%">
+        <col style="width:16%">
+      </colgroup>
+      <thead>
+        <tr>
+          <th>Produit</th>
+          <th>Infos</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody id="tbody">
+        {% if items %}
+        {% for it in items %}
+        <tr data-name="{{ it.product|lower }}" data-loc="{{ it.location|lower }}"
+          data-barcode="{{ (it.barcode or '')|lower }}" data-status="{{ it.status }}">
+          <td>
+            <div class="line">
+              <div style="font-weight:600">{{ it.product }}</div>
+              {% if it.barcode %}<span class="sep">•</span><span class="muted">🏷️ {{ it.barcode }}</span>{% endif %}
+            </div>
+          </td>
+          <td>
+            <div class="line">
+              <div class="meta">
+                <span>Qté <b>{{ '%.2f'|format(it.qty)|trim('0')|trim('.') }} {{ it.unit|pluralize_fr(it.qty)
+                    }}</b></span>
+                <span class="sep">•</span>
+                <span>📍 <b>{{ it.location }}</b></span>
+              </div>
+              <span class="status {{ it.status }}">
+                {{ "OK" if it.status=="green" else ("Bientôt" if it.status=="yellow" else ("Urgent" if it.status=="red"
+                else "—")) }}
+              </span>
+            </div>
+            <details class="dates">
+              <summary>📅 Dates</summary>
+              <div class="timeline">
+                <span class="pill">❄ <span>{{ it.frozen_on or '—' }}</span></span>
+                <span class="pill">⏳ <span>{{ it.best_before or '—' }}</span></span>
+                {% if it.created_on %}<span class="pill">➕ <span>{{ it.created_on }}</span></span>{% endif %}
+              </div>
+            </details>
+          </td>
+          <td>
+            <div class="row" style="gap:8px">
+              <button class="secondary js-edit-open" data-id="{{ it.id }}" data-qty="{{ it.qty }}"
+                data-unit="{{ it.unit }}" data-location_id="{{ it.location_id }}" data-frozen="{{ it.frozen_on or '' }}"
+                data-best_before="{{ it.best_before or '' }}">✏️ Modifier</button>
+              <button class="secondary js-delete-open" data-id="{{ it.id }}" data-product="{{ it.product }}">🗑️
+                Supprimer</button>
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+        {% else %}
+        <tr>
+          <td colspan="3" class="muted">Aucune entrée de stock.</td>
+        </tr>
+        {% endif %}
+      </tbody>
+    </table>
+
+    <!-- Mobile cards -->
+    <div class="cards" id="cards">
+      {% for it in items %}
+      <div class="card-item" data-name="{{ it.product|lower }}" data-loc="{{ it.location|lower }}"
+        data-barcode="{{ (it.barcode or '')|lower }}" data-status="{{ it.status }}">
+        <div class="card-head">
+          <div class="card-title">{{ it.product }}</div>
+          <span class="status {{ it.status }}">{{ "OK" if it.status=="green" else ("Bientôt" if it.status=="yellow" else
+            ("Urgent" if it.status=="red" else "—")) }}</span>
+        </div>
+        <div class="card-sub">
+          {{ '%.2f'|format(it.qty)|trim('0')|trim('.') }} {{ it.unit|pluralize_fr(it.qty) }} • 📍 {{ it.location }}{% if
+          it.barcode %} • 🏷️ {{ it.barcode }}{% endif %}
+        </div>
+        <details class="dates" style="margin-top:6px">
+          <summary>📅 Dates</summary>
+          <div class="timeline">
+            <span class="pill">❄ <span>{{ it.frozen_on or '—' }}</span></span>
+            <span class="pill">⏳ <span>{{ it.best_before or '—' }}</span></span>
+            {% if it.created_on %}<span class="pill">➕ <span>{{ it.created_on }}</span></span>{% endif %}
+          </div>
+        </details>
+        <div class="card-actions">
+          <button class="icon-btn js-edit-open" title="Modifier" data-id="{{ it.id }}" data-qty="{{ it.qty }}"
+            data-unit="{{ it.unit }}" data-location_id="{{ it.location_id }}" data-frozen="{{ it.frozen_on or '' }}"
+            data-best_before="{{ it.best_before or '' }}">✏️</button>
+          <button class="icon-btn js-delete-open" title="Supprimer" data-id="{{ it.id }}"
+            data-product="{{ it.product }}">🗑️</button>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+
+<!-- Dialogs -->
+<dialog id="dlg-edit">
+  <form method="post" action="{{ BASE }}lot/update" style="display:grid;gap:10px;min-width:min(520px,92vw)">
+    <h3 style="margin:0">Modifier le stock</h3>
+    <input type="hidden" name="lot_id" id="dlg-lot-id">
+    <div class="row" style="gap:10px">
+      <div style="flex:1">
+        <div class="label">Quantité</div>
+        <input type="number" name="qty" id="dlg-qty" step="0.01" min="0" required>
+      </div>
+      <div style="flex:1">
+        <div class="label">Emplacement</div>
+        <select name="location_id" id="dlg-location">
+          {% for l in locations %}<option value="{{ l.id }}">{{ l.name }}</option>{% endfor %}
+        </select>
+      </div>
+    </div>
+    <div class="row" style="gap:10px">
+      <div style="flex:1">
+        <div class="label">Congelé le</div><input type="date" name="frozen_on" id="dlg-frozen">
+      </div>
+      <div style="flex:1">
+        <div class="label">À consommer avant</div><input type="date" name="best_before" id="dlg-best-before">
+      </div>
+    </div>
+    <div class="row" style="justify-content:flex-end;gap:8px">
+      <button type="button" onclick="document.getElementById('dlg-edit').close()">Annuler</button>
+      <button class="secondary">Enregistrer</button>
+    </div>
+  </form>
+</dialog>
+
+<dialog id="dlg-delete">
+  <form method="post" action="{{ BASE }}lot/delete" style="display:grid;gap:10px;min-width:min(420px,92vw)">
+    <h3 style="margin:0">Supprimer du stock</h3>
+    <input type="hidden" name="lot_id" id="del-lot-id">
+    <div class="muted" id="del-msg">Supprimer cette entrée de stock ?</div>
+    <div class="row" style="justify-content:flex-end;gap:8px">
+      <button type="button" onclick="document.getElementById('dlg-delete').close()">Annuler</button>
+      <button class="secondary" style="background:var(--danger);border:0;color:#1d0c0c">Supprimer</button>
+    </div>
+  </form>
+</dialog>
+
+<dialog id="scan-modal">
+  <div style="display:grid;gap:10px;min-width:min(520px,96vw)">
+    <h3 style="margin:0">Scanner un code-barres</h3>
+    <video id="scan-video" autoplay playsinline muted playsInline webkit-playsinline
+      style="width:100%;border-radius:12px;border:1px solid var(--border)"></video>
+    <div class="row" style="justify-content:flex-end;gap:8px">
+      <button class="secondary" type="button" id="scan-close">Fermer</button>
+    </div>
+  </div>
+</dialog>
+
+<dialog id="dlg-product-create">
+  <form id="create_product_form" method="post" action="{{ BASE }}product/add"
+    style="display:grid;gap:10px;min-width:min(520px,96vw)">
+    <h3 style="margin:0">Créer le produit</h3>
+    <div class="muted">Aucun produit local avec ce code-barres. Crée-le d’abord, puis ajoute le stock.</div>
+    <div>
+      <div class="label">Nom du produit</div><input type="text" name="name" id="cp_name" required>
+    </div>
+    <div class="row" style="gap:10px">
+      <div style="flex:1">
+        <div class="label">Unité</div>
+        <select name="unit" id="cp_unit">
+          <optgroup label="Comptage">
+            <option value="pièce" selected>pièce</option>
+            <option value="tranche">tranche</option>
+            <option value="paquet">paquet</option>
+            <option value="boîte">boîte</option>
+            <option value="bocal">bocal</option>
+            <option value="bouteille">bouteille</option>
+            <option value="sachet">sachet</option>
+            <option value="lot">lot</option>
+            <option value="barquette">barquette</option>
+            <option value="rouleau">rouleau</option>
+            <option value="dosette">dosette</option>
+          </optgroup>
+          <optgroup label="Poids">
+            <option value="g">g</option>
+            <option value="kg">kg</option>
+          </optgroup>
+          <optgroup label="Volume">
+            <option value="ml">ml</option>
+            <option value="L">L</option>
+          </optgroup>
+        </select>
+      </div>
+      <div style="flex:1">
+        <div class="label">Conservation (jours)</div>
+        <input type="number" name="shelf" id="cp_shelf" min="1" placeholder="ex. 90">
+      </div>
+    </div>
+    <div>
+      <div class="label">Code-barres</div><input type="text" name="barcode" id="cp_barcode" inputmode="numeric">
+    </div>
+    <div class="row" style="justify-content:flex-end;gap:8px">
+      <button type="button" onclick="document.getElementById('dlg-product-create').close()">Annuler</button>
+      <button class="secondary">Créer</button>
+    </div>
+  </form>
+</dialog>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  const $ = s => document.querySelector(s);
+
+  /* Reset */
+  (function () {
+    const r = $('#lot_reset'); if (!r) return;
+    r.addEventListener('click', () => {
+      $('#product_select').value = '';
+      ['lot_qty', 'lot_frozen', 'lot_best_before'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+      const loc = $('#lot_location_id'); if (loc && loc.options.length) loc.selectedIndex = 0;
+    });
+  })();
+
+  /* Lookup produit local par EAN */
+  async function lookupLocalProductByBarcode(code) {
+    try {
+      const res = await fetch(`{{ BASE }}api/product/by_barcode?code=${encodeURIComponent(code)}`, { headers: { 'Accept': 'application/json' } });
+      if (res.ok) return await res.json(); // {id,name,barcode}
+      return null;
+    } catch { return null; }
+  }
+  function selectProductById(pid) {
+    const sel = $('#product_select'); if (!sel) return false;
+    const opt = [...sel.options].find(o => String(o.value) === String(pid));
+    if (opt) { sel.value = opt.value; $('#lot_qty')?.focus(); return true; }
+    return false;
+  }
+
+  /* Scanner live / ZXing */
+  const dlgScan = $('#scan-modal'), scanVideo = $('#scan-video'), btnScanClose = $('#scan-close');
+  let scanning = false, zxingReader = null, zxingLiveActive = false;
+
+  async function onBarcodeDetected(code) {
+    if (!code) return;
+    await closeScanModal();
+    const clean = (code || '').replace(/\D+/g, '');
+    const found = await lookupLocalProductByBarcode(clean);
+    if (found) { selectProductById(found.id); }
+    else {
+      $('#cp_barcode').value = clean;
+      $('#cp_name').value = '';
+      $('#cp_unit').value = 'pièce';
+      $('#cp_shelf').value = '';
+      document.getElementById('dlg-product-create').showModal();
+    }
+  }
+
+  async function openScanModal() {
+    if (!dlgScan) return; dlgScan.showModal(); scanning = true;
+    scanVideo.muted = true; scanVideo.playsInline = true;
+    scanVideo.setAttribute('playsinline', ''); scanVideo.setAttribute('webkit-playsinline', '');
+
+    if ('BarcodeDetector' in window) {
+      try {
+        const detector = new BarcodeDetector({ formats: ['ean_13', 'ean_8', 'upc_a', 'upc_e'] });
+        const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' }, audio: false });
+        scanVideo.srcObject = stream; try { await scanVideo.play(); } catch (_) { }
+        const tick = async () => {
+          if (!scanning) return;
+          try {
+            const bm = await detector.detect(scanVideo);
+            if (bm && bm[0]?.rawValue) { await onBarcodeDetected(bm[0].rawValue); return; }
+          } catch { }
+          requestAnimationFrame(tick);
+        }; tick(); return;
+      } catch (e) { }
+    }
+    startZXingLive();
+  }
+
+  async function closeScanModal() {
+    scanning = false;
+    if (dlgScan && dlgScan.open) dlgScan.close();
+    const s = scanVideo?.srcObject; if (s && s.getTracks) s.getTracks().forEach(t => t.stop());
+    if (zxingReader && zxingLiveActive) { try { await zxingReader.reset(); } catch { } zxingLiveActive = false; }
+  }
+
+  async function loadZXing() {
+    return new Promise((res, rej) => {
+      if (window.ZXing) return res(window.ZXing);
+      const s = document.createElement('script');
+      s.src = 'https://unpkg.com/@zxing/library@latest';
+      s.onload = () => res(window.ZXing);
+      s.onerror = () => rej(new Error('ZXing indisponible'));
+      document.head.appendChild(s);
+    });
+  }
+
+  async function startZXingLive() {
+    try {
+      scanVideo.muted = true; scanVideo.playsInline = true;
+      scanVideo.setAttribute('playsinline', ''); scanVideo.setAttribute('webkit-playsinline', '');
+      if (!window.ZXing) await loadZXing();
+      if (!zxingReader) zxingReader = new ZXing.BrowserMultiFormatReader();
+      zxingReader.decodeFromVideoDevice(undefined, scanVideo, async (r, err) => {
+        if (!scanning) return;
+        if (r && r.getText) {
+          const code = (r.getText() || '').replace(/\D+/g, '');
+          if (code) await onBarcodeDetected(code);
+        }
+      });
+      zxingLiveActive = true; scanning = true;
+    } catch (e) { window.showToast("Impossible de démarrer le flux live.", "error"); }
+  }
+
+  document.getElementById('prod_scan_btn')?.addEventListener('click', openScanModal);
+  btnScanClose?.addEventListener('click', closeScanModal);
+
+  /* Photo → ZXing decodeFromImageElement */
+  const prodCaptureBtn = document.getElementById('prod_capture_btn');
+  const prodFileInput = document.getElementById('prod_file');
+
+  prodCaptureBtn?.addEventListener('click', (ev) => { ev.preventDefault(); ev.stopPropagation(); prodFileInput?.click(); });
+
+  prodFileInput?.addEventListener('change', async (ev) => {
+    const file = ev.target.files && ev.target.files[0]; if (!file) return;
+    try {
+      if (!window.ZXing) await loadZXing();
+      if (!zxingReader) zxingReader = new ZXing.BrowserMultiFormatReader();
+      const imgURL = URL.createObjectURL(file);
+      const img = document.createElement('img'); img.src = imgURL; await img.decode();
+      const res = await zxingReader.decodeFromImageElement(img);
+      const code = res && res.getText ? (res.getText() || '').replace(/\D+/g, '') : '';
+      if (code) await onBarcodeDetected(code);
+      else window.showToast('Aucun code détecté sur la photo.', 'warn');
+    } catch (e) {
+      console.error('Erreur ZXing photo:', e);
+      window.showToast('Erreur lors du décodage de la photo.', 'error');
+    } finally { ev.target.value = ''; }
+  });
+
+  /* Recherche / filtres live */
+  const q = document.getElementById('q'), tbody = document.getElementById('tbody'), cards = document.getElementById('cards'),
+    fLoc = document.getElementById('f_loc'), fStatus = document.getElementById('f_status');
+  const rows = Array.from(tbody ? tbody.children : []), cardsItems = Array.from(cards ? cards.children : []);
+  function passesFilters(ds, txt, loc, st) {
+    const s = (ds.name + ' ' + (ds.loc || '') + ' ' + (ds.barcode || '')).includes(txt);
+    const l = loc ? (ds.loc === loc) : true;
+    const t = st ? ((ds.status || '') === st) : true;
+    return s && l && t;
+  }
+  function applyFilter() {
+    const txt = (q?.value || '').toLowerCase().trim(),
+      loc = (fLoc?.value || '').toLowerCase().trim(),
+      st = (fStatus?.value || '').trim();
+    let shown = 0;
+    rows.forEach(tr => { const m = passesFilters(tr.dataset, txt, loc, st); tr.style.display = m ? '' : 'none'; if (m) shown++; });
+    cardsItems.forEach(c => { const m = passesFilters(c.dataset, txt, loc, st); c.style.display = m ? '' : 'none'; });
+    const lc = document.getElementById('lots-count'); if (lc) lc.textContent = (txt || loc || st) ? shown : rows.length;
+  }
+  [q, fLoc, fStatus].forEach(el => el && el.addEventListener('input', applyFilter));
+
+  /* Auto-sélection après création produit */
+  (function () {
+    const p = new URLSearchParams(location.search);
+    const pid = p.get('product_created');
+    if (pid) { if (selectProductById(pid)) { window.showToast('Produit créé. Tu peux maintenant ajouter le stock.', 'ok'); } }
+  })();
+
+  /* Toasts via querystring */
+  (function () {
+    const p = new URLSearchParams(location.search);
+    if (p.get('added') === '1') window.showToast('Stock ajouté.', 'ok');
+    if (p.get('updated') === '1') window.showToast('Stock mis à jour.', 'ok');
+    if (p.get('deleted') === '1') window.showToast('Stock supprimé.', 'warn');
+  })();
+
+  /* Modales Edit/Supprimer (id best_before corrigé) */
+  (function () {
+    const editDialog = document.getElementById('dlg-edit');
+    const delDialog = document.getElementById('dlg-delete');
+    const setVal = (id, v) => { const el = document.getElementById(id); if (el != null) el.value = v ?? ''; };
+
+    document.querySelectorAll('.js-edit-open').forEach(btn => {
+      btn.addEventListener('click', () => {
+        setVal('dlg-lot-id', btn.getAttribute('data-id'));
+        setVal('dlg-qty', btn.getAttribute('data-qty'));
+        setVal('dlg-location', btn.getAttribute('data-location_id'));
+        setVal('dlg-frozen', btn.getAttribute('data-frozen') || '');
+        setVal('dlg-best-before', btn.getAttribute('data-best_before') || ''); // fix
+        if (editDialog) editDialog.showModal();
+      });
+    });
+
+    document.querySelectorAll('.js-delete-open').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const id = btn.getAttribute('data-id'); const product = btn.getAttribute('data-product') || '';
+        setVal('del-lot-id', id);
+        const msg = document.getElementById('del-msg');
+        if (msg) msg.textContent = product ? `Supprimer "${product}" du stock ?` : 'Supprimer cette entrée de stock ?';
+        if (delDialog) delDialog.showModal();
+      });
+    });
+  })();
+</script>
+{% endblock %}

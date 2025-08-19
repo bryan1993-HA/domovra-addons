@@ -1,0 +1,565 @@
+{% extends "base.html" %}
+{% block title %}Domovra — Produits{% endblock %}
+
+{% block head %}
+{% endblock %}
+
+{% block header_right %}
+<span class="chip">📦 Produits : <b>{{ items|length }}</b></span>
+{% endblock %}
+
+{% block content %}
+<div class="wrap">
+
+  <!-- Open Food Facts & Scanner -->
+  <div class="card">
+    <div class="title" style="margin:0 0 8px 0">
+      <h2>Open Food Facts & Scanner</h2>
+      <span class="muted">→ préremplir le formulaire</span>
+      <span class="help" tabindex="0"
+        data-tip="Scanne/saisis un EAN/GTIN pour récupérer nom/marque et une indication d’unité."></span>
+    </div>
+
+    <div id="off-box">
+      <!-- Rangée contrôlée par spans -->
+      <div class="off-grid">
+        <!-- Champ + 2 icônes -->
+        <div class="infield off-span-8 md-span-6 sm-span-1" style="min-width:220px">
+          <input id="off_barcode" type="text" inputmode="numeric"
+            placeholder="Scanner / saisir un code-barres (EAN/GTIN)…">
+          <div class="btns">
+            <button id="off_scan" type="button" class="infield-btn" title="Scanner (live)">📷</button>
+            <button id="off_capture" type="button" class="infield-btn" title="Prendre une photo">📸</button>
+            <input id="off_file" type="file" accept="image/*" capture="environment" hidden>
+          </div>
+        </div>
+
+        <!-- Boutons -->
+        <button id="off_search" class="secondary off-span-2 md-span-3 sm-span-1">🔎 Rechercher</button>
+        <button id="off_paste" class="secondary off-span-1 md-span-2 sm-span-1">📋 Coller</button>
+        <button id="off_clear" class="secondary off-span-1 md-span-1 sm-span-1">✖ Effacer</button>
+      </div>
+
+      <div class="muted" style="margin-top:.5rem">Astuce : essaie <b>5449000000996</b> (Coca-Cola 1,5 L).</div>
+      <div id="off_error" hidden class="muted" style="color:#ff6b6b;margin-top:.35rem">Erreur</div>
+
+      <div id="off_result" hidden style="margin-top:.6rem">
+        <div style="display:grid;grid-template-columns:80px 1fr;gap:10px;align-items:start">
+          <img id="off_img" alt="photo produit"
+            style="width:80px;height:80px;object-fit:cover;border-radius:8px;border:1px solid var(--border)">
+          <div>
+            <div style="display:flex;align-items:center;gap:6px;">
+              <b id="off_name">Nom</b>
+              <span class="help" tabindex="0" data-tip="Tu peux modifier le nom avant l’ajout."></span>
+            </div>
+            <div id="off_brand" class="muted">Marque</div>
+            <div class="muted" style="margin-top:.25rem">Quantité indiquée : <span id="off_qty">—</span></div>
+            <div class="muted">Source : Open Food Facts</div>
+
+            <div style="margin-top:.5rem;display:flex;gap:.5rem;flex-wrap:wrap">
+              <button id="off_fill_create" type="button" class="secondary">➕ Préremplir le formulaire d’ajout</button>
+            </div>
+          </div>
+        </div>
+        <p class="muted" style="margin:.6rem 0 0">
+          Scanne/saisis un code-barres → « Rechercher » → « Préremplir le formulaire », puis ajuste l’unité/la
+          conservation et valide.
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Ajouter un produit -->
+  <div class="card">
+    <div class="title">
+      <h2>Ajouter un produit</h2><span class="muted">→ créer un nouveau produit</span>
+    </div>
+
+    <form id="create_form" method="post" action="{{ BASE }}product/add" class="form-grid">
+      <div>
+        <div class="label">Nom du produit
+          <span class="help" tabindex="0"
+            data-tip="Nom court et explicite (ex. « Lait demi-écrémé », « Pâtes »)."></span>
+        </div>
+        <input name="name" id="create_name" type="text" required placeholder="ex. Pâtes, Lait demi-écrémé">
+      </div>
+
+      <div>
+        <div class="label">Unité
+          <span class="help" tabindex="0" data-tip="Choisis une unité adaptée (comptage, poids, volume)."></span>
+        </div>
+        <select name="unit" id="create_unit">
+          <optgroup label="Comptage">
+            <option value="pièce" selected>pièce</option>
+            <option value="tranche">tranche</option>
+            <option value="paquet">paquet</option>
+            <option value="boîte">boîte</option>
+            <option value="bocal">bocal</option>
+            <option value="bouteille">bouteille</option>
+            <option value="sachet">sachet</option>
+            <option value="lot">lot</option>
+            <option value="barquette">barquette</option>
+            <option value="rouleau">rouleau</option>
+            <option value="dosette">dosette</option>
+          </optgroup>
+          <optgroup label="Poids">
+            <option value="g">g</option>
+            <option value="kg">kg</option>
+          </optgroup>
+          <optgroup label="Volume">
+            <option value="ml">ml</option>
+            <option value="L">L</option>
+          </optgroup>
+        </select>
+      </div>
+
+      <div>
+        <div class="label">Conservation (jours)
+          <span class="help" tabindex="0"
+            data-tip="Nombre de jours par défaut (sert aux états OK / Bientôt / Urgent)."></span>
+        </div>
+        <input name="shelf" id="create_shelf" type="number" min="1" placeholder="ex. 90">
+      </div>
+
+      <div>
+        <div class="label">Stock faible (min_qty)
+          <span class="help" tabindex="0"
+            data-tip="Seuil d’alerte propre à ce produit. En-dessous, le produit est considéré en stock faible."></span>
+        </div>
+        <input name="min_qty" id="create_min_qty" type="number" min="0" step="0.01" placeholder="ex. 1"
+          value="{{ SETTINGS.low_stock_default }}">
+      </div>
+
+      <div>
+        <div class="label">Code-barres (facultatif)
+          <span class="help" tabindex="0"
+            data-tip="EAN/GTIN du produit. Renseigné automatiquement depuis le scanner."></span>
+        </div>
+        <input name="barcode" id="create_barcode" type="text" inputmode="numeric" placeholder="EAN/GTIN">
+      </div>
+
+      <button class="secondary btn-wide">＋ Ajouter</button>
+      <button id="create_reset" type="button" class="secondary btn-wide"><span
+          class="ico">↺</span>Réinitialiser</button>
+    </form>
+  </div>
+
+  <!-- Outils -->
+  <div class="card">
+    <div class="title">
+      <h2>Outils</h2><span class="muted">Recherche & compteur</span>
+    </div>
+    <div class="row" style="align-items:center">
+      <input id="q" type="search" placeholder="Rechercher un produit…" style="flex:1;min-width:220px">
+      <span class="chip">📦 Produits : <b id="prod-count">{{ items|length }}</b></span>
+    </div>
+  </div>
+
+  <!-- Liste -->
+  <div class="card">
+    <div class="title">
+      <h2>Liste</h2><span class="muted">Table (bureau) / Cartes (mobile)</span>
+    </div>
+
+    <table id="tbl">
+      <colgroup>
+        <col style="width:28%">
+        <col style="width:50%">
+        <col style="width:22%">
+      </colgroup>
+      <thead>
+        <tr>
+          <th>Nom</th>
+          <th>Infos</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody id="tbody">
+        {% if items %}
+        {% for it in items %}
+        {% set threshold = it.min_qty if it.min_qty is not none else SETTINGS.low_stock_default %}
+        {% set is_low = ( it.qty_total < threshold ) %} <tr data-name="{{ it.name|lower }}"
+          data-unit="{{ it.unit|lower }}" data-barcode="{{ (it.barcode or '')|lower }}">
+          <td>
+            <div style="font-weight:600;display:flex;gap:6px;align-items:center;flex-wrap:wrap">
+              <span>{{ it.name }}</span>
+              {% if it.barcode %}<span class="muted">EAN : {{ it.barcode }}</span>{% endif %}
+              {% if is_low %}<span class="pill danger">🔻 Faible stock</span>{% endif %}
+            </div>
+          </td>
+          <td>
+            <div class="stats">
+              <span class="stat"><span class="k">Unité</span><span> :</span><span class="v">{{ it.unit }}</span></span>
+              <span class="stat"><span class="k">Conservation</span><span> :</span><span class="v">{{
+                  it.default_shelf_life_days }} j</span></span>
+              <span class="stat"><span class="k">Stocks</span><span> :</span><span class="v">{{ it.lots_count
+                  }}</span></span>
+              <span class="stat"><span class="k">Qté totale</span><span> :</span><span class="v">{{
+                  '%.2f'|format(it.qty_total) }}</span></span>
+              <span class="stat"><span class="k">Seuil min</span><span> :</span><span class="v">{{ threshold
+                  }}</span></span>
+            </div>
+          </td>
+          <td>
+            <div class="actions" style="display:grid;gap:8px">
+              <div class="row2" style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+                <form method="post" action="{{ BASE }}product/adjust">
+                  <input type="hidden" name="product_id" value="{{ it.id }}">
+                  <input type="hidden" name="delta" value="-1">
+                  <button class="secondary" title="Retirer une étape">➖</button>
+                </form>
+                <form method="post" action="{{ BASE }}product/adjust">
+                  <input type="hidden" name="product_id" value="{{ it.id }}">
+                  <input type="hidden" name="delta" value="1">
+                  <button class="secondary" title="Ajouter une étape">➕</button>
+                </form>
+              </div>
+              <div class="row2" style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+                <button class="secondary js-edit-open" data-id="{{ it.id }}" data-name="{{ it.name }}"
+                  data-unit="{{ it.unit }}" data-shelf="{{ it.default_shelf_life_days }}" data-min="{{ threshold }}">✏️
+                  Modifier</button>
+                <button class="secondary js-delete-open" data-id="{{ it.id }}" data-name="{{ it.name }}"
+                  data-lots="{{ it.lots_count|int }}">🗑️ Supprimer</button>
+              </div>
+            </div>
+          </td>
+          </tr>
+          {% endfor %}
+          {% else %}
+          <tr>
+            <td colspan="3" class="muted">Aucun produit.</td>
+          </tr>
+          {% endif %}
+      </tbody>
+    </table>
+
+    <!-- Mobile cards -->
+    <div class="cards" id="cards">
+      {% for it in items %}
+      {% set threshold = it.min_qty if it.min_qty is not none else SETTINGS.low_stock_default %}
+      {% set is_low = ( it.qty_total < threshold ) %} <div class="card-item" data-name="{{ it.name|lower }}"
+        data-unit="{{ it.unit|lower }}" data-barcode="{{ (it.barcode or '')|lower }}">
+        <div class="card-head">
+          <div class="card-name">{{ it.name }}{% if is_low %} <span class="pill danger">🔻 Faible stock</span>{% endif
+            %}</div>
+        </div>
+
+        <button class="card-toggle js-card-toggle" type="button" aria-expanded="false" aria-controls="more-{{ it.id }}">
+          <span>Plus d’infos</span><span class="chev">▶</span>
+        </button>
+
+        <div class="card-extra" id="more-{{ it.id }}" hidden>
+          <div class="card-info">
+            {% if it.barcode %}<span class="stat"><span class="k">EAN</span><span> :</span><span class="v">{{ it.barcode
+                }}</span></span>{% endif %}
+            <span class="stat"><span class="k">Unité</span><span> :</span><span class="v">{{ it.unit }}</span></span>
+            <span class="stat"><span class="k">Conservation</span><span> :</span><span class="v">{{
+                it.default_shelf_life_days }} j</span></span>
+            <span class="stat"><span class="k">Stocks</span><span> :</span><span class="v">{{ it.lots_count
+                }}</span></span>
+            <span class="stat"><span class="k">Qté</span><span> :</span><span class="v">{{ '%.2f'|format(it.qty_total)
+                }}</span></span>
+            <span class="stat"><span class="k">Seuil min</span><span> :</span><span class="v">{{ threshold
+                }}</span></span>
+          </div>
+        </div>
+
+        <div class="card-actions">
+          <form method="post" action="{{ BASE }}product/adjust">
+            <input type="hidden" name="product_id" value="{{ it.id }}">
+            <input type="hidden" name="delta" value="-1">
+            <button class="secondary" title="Retirer une étape">➖</button>
+          </form>
+          <form method="post" action="{{ BASE }}product/adjust">
+            <input type="hidden" name="product_id" value="{{ it.id }}">
+            <input type="hidden" name="delta" value="1">
+            <button class="secondary" title="Ajouter une étape">➕</button>
+          </form>
+          <button class="secondary js-edit-open" data-id="{{ it.id }}" data-name="{{ it.name }}"
+            data-unit="{{ it.unit }}" data-shelf="{{ it.default_shelf_life_days }}" data-min="{{ threshold }}">✏️
+            Modifier</button>
+          <button class="secondary js-delete-open" data-id="{{ it.id }}" data-name="{{ it.name }}"
+            data-lots="{{ it.lots_count|int }}">🗑️ Supprimer</button>
+        </div>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+</div>
+
+<!-- Dialogs -->
+<dialog id="dlg-edit">
+  <form method="post" action="{{ BASE }}product/update" style="display:grid;gap:10px;min-width:min(520px,92vw)">
+    <h3 style="margin:0">Modifier le produit</h3>
+    <input type="hidden" name="product_id" id="dlg-product-id">
+    <div>
+      <div class="label">Nom</div>
+      <input type="text" name="name" id="dlg-name" required>
+    </div>
+    <div class="row" style="gap:10px">
+      <div style="flex:1">
+        <div class="label">Unité</div>
+        <select name="unit" id="dlg-unit">
+          <optgroup label="Comptage">
+            <option value="pièce">pièce</option>
+            <option value="tranche">tranche</option>
+            <option value="paquet">paquet</option>
+            <option value="boîte">boîte</option>
+            <option value="bocal">bocal</option>
+            <option value="bouteille">bouteille</option>
+            <option value="sachet">sachet</option>
+            <option value="lot">lot</option>
+            <option value="barquette">barquette</option>
+            <option value="rouleau">rouleau</option>
+            <option value="dosette">dosette</option>
+          </optgroup>
+          <optgroup label="Poids">
+            <option value="g">g</option>
+            <option value="kg">kg</option>
+          </optgroup>
+          <optgroup label="Volume">
+            <option value="ml">ml</option>
+            <option value="L">L</option>
+          </optgroup>
+        </select>
+      </div>
+      <div style="flex:1">
+        <div class="label">Conservation (jours)</div>
+        <input type="number" name="shelf" id="dlg-shelf" min="1">
+      </div>
+    </div>
+
+    <div>
+      <div class="label">Stock faible (min_qty)</div>
+      <input type="number" name="min_qty" id="dlg-min" min="0" step="0.01" placeholder="ex. 1">
+    </div>
+
+    <div class="row" style="justify-content:flex-end;gap:8px">
+      <button type="button" onclick="document.getElementById('dlg-edit').close()">Annuler</button>
+      <button class="secondary">Enregistrer</button>
+    </div>
+  </form>
+</dialog>
+
+<dialog id="dlg-delete">
+  <form method="post" action="{{ BASE }}product/delete" style="display:grid;gap:10px;min-width:min(420px,92vw)">
+    <h3 style="margin:0">Supprimer le produit</h3>
+    <input type="hidden" name="product_id" id="del-product-id">
+    <div class="muted" id="del-msg">La suppression retirera aussi les stocks liés à ce produit.</div>
+    <div class="row" style="justify-content:flex-end;gap:8px">
+      <button type="button" onclick="document.getElementById('dlg-delete').close()">Annuler</button>
+      <button class="secondary" style="background:var(--danger);border:0;color:#1d0c0c">Supprimer</button>
+    </div>
+  </form>
+</dialog>
+
+<dialog id="scan-modal">
+  <div style="display:grid;gap:10px;min-width:min(520px,96vw)">
+    <h3 style="margin:0">Scanner un code-barres</h3>
+    <video id="scan-video" autoplay playsinline muted playsInline webkit-playsinline
+      style="width:100%;border-radius:12px;border:1px solid var(--border)"></video>
+    <div class="row" style="justify-content:flex-end;gap:8px">
+      <button class="secondary" type="button" id="scan-close">Fermer</button>
+    </div>
+  </div>
+</dialog>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  /* Recherche live */
+  const q = document.getElementById('q'), tbody = document.getElementById('tbody'), cards = document.getElementById('cards');
+  const rows = Array.from(tbody ? tbody.children : []), cardsItems = Array.from(cards ? cards.children : []);
+  function applyFilter(s) {
+    const t = s.toLowerCase().trim(); let shown = 0;
+    rows.forEach(tr => {
+      const txt = tr.dataset.name + ' ' + tr.dataset.unit + ' ' + (tr.dataset.barcode || '');
+      const m = txt.includes(t); tr.style.display = m ? '' : 'none'; if (m) shown++;
+    });
+    cardsItems.forEach(c => {
+      const txt = c.dataset.name + ' ' + c.dataset.unit + ' ' + (c.dataset.barcode || '');
+      const m = txt.includes(t); c.style.display = m ? '' : 'none';
+    });
+    const pc = document.getElementById('prod-count'); if (pc) pc.textContent = t ? shown : rows.length;
+  }
+  if (q) q.addEventListener('input', e => applyFilter(e.target.value));
+
+  /* Utilitaires */
+  const $ = s => document.querySelector(s);
+  function setSelectValue(sel, val) {
+    if (!sel) return;
+    [...sel.querySelectorAll('option[data-temp="1"]')].forEach(o => o.remove());
+    const opts = [...sel.options].map(o => o.value);
+    if (opts.includes(val)) sel.value = val;
+    else if (val) { const o = document.createElement('option'); o.value = val; o.textContent = val + ' (autre)'; o.dataset.temp = '1'; sel.insertBefore(o, sel.firstChild); sel.value = val; }
+  }
+
+  /* Modales Modifier / Supprimer */
+  document.addEventListener('click', function (e) {
+    const edit = e.target.closest('.js-edit-open'); const del = e.target.closest('.js-delete-open');
+    if (edit) {
+      $('#dlg-product-id').value = edit.dataset.id;
+      $('#dlg-name').value = edit.dataset.name || '';
+      setSelectValue($('#dlg-unit'), edit.dataset.unit || 'pièce');
+      $('#dlg-shelf').value = edit.dataset.shelf || 90;
+      $('#dlg-min').value = (edit.dataset.min || '{{ SETTINGS.low_stock_default }}');
+      $('#dlg-edit').showModal(); return;
+    }
+    if (del) {
+      $('#del-product-id').value = del.dataset.id;
+      const name = del.dataset.name || ''; const lots = parseInt(del.dataset.lots || '0', 10);
+      $('#del-msg').textContent = lots > 0
+        ? `La suppression retirera aussi les ${lots} stock(s) lié(s) à « ${name} ».`
+        : `Supprimer « ${name} » ?`;
+      $('#dlg-delete').showModal(); return;
+    }
+  });
+
+  /* Reset création */
+  (function () {
+    const r = document.getElementById('create_reset'); if (!r) return;
+    r.addEventListener('click', () => {
+      ['create_name', 'create_shelf', 'create_barcode', 'off_barcode', 'create_min_qty'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.value = id === 'create_min_qty' ? '{{ SETTINGS.low_stock_default }}' : '';
+      });
+      const u = document.getElementById('create_unit'); if (u) u.value = 'pièce';
+    });
+  })();
+
+  /* Toasts via ?added=1 */
+  (function () { const p = new URLSearchParams(location.search); if (p.get('added') === '1') window.showToast('Produit ajouté.', 'ok'); })();
+
+  /* OFF + Scanner */
+  const elCode = $('#off_barcode'), elSearch = $('#off_search'), elCapture = $('#off_capture'), elFile = $('#off_file'),
+    elPaste = $('#off_paste'), elClear = $('#off_clear'), elError = $('#off_error'), elRes = $('#off_result'),
+    elImg = $('#off_img'), elName = $('#off_name'), elBrand = $('#off_brand'), elQty = $('#off_qty'), elFillCreate = $('#off_fill_create');
+  const cfName = $('#create_name'), cfUnitSel = $('#create_unit'), cfBarcode = $('#create_barcode');
+
+  function showError(msg) { if (!elError) return; elError.textContent = msg || 'Erreur'; elError.hidden = false; }
+  function clearError() { if (!elError) return; elError.hidden = true; elError.textContent = ''; }
+  function clearResult() { if (!elRes) return; elRes.hidden = true; if (elFillCreate) elFillCreate.dataset.payload = ''; }
+
+  function normalizeOFF(data) {
+    const p = (data && data.product) || {};
+    const nm = p.product_name || p.generic_name || p.brands_tags?.[0] || '';
+    const brand = p.brands || (p.brands_tags && p.brands_tags.join(', ')) || '';
+    const img = p.image_small_url || p.image_front_url || p.image_url || '';
+    const qty = p.quantity || p.serving_quantity || p.serving_size || '';
+    return { name: nm, brand, img, quantity_hint: qty };
+  }
+  function showResult(o) {
+    elImg.src = o.img || ''; elName.textContent = o.name || '—'; elBrand.textContent = o.brand || '—'; elQty.textContent = o.quantity_hint || '—';
+    elRes.hidden = false; if (elFillCreate) elFillCreate.dataset.payload = JSON.stringify(o);
+  }
+
+  async function doLookup() {
+    clearError(); clearResult();
+    const code = (elCode.value || '').replace(/\D+/g, '');
+    if (!code) { showError('Renseigne un code-barres valide.'); return; }
+    elSearch.disabled = true; elSearch.textContent = '…';
+    try {
+      const res = await fetch(`https://world.openfoodfacts.org/api/v0/product/${code}.json`);
+      if (!res.ok) throw new Error('Erreur réseau (' + res.status + ')');
+      const data = await res.json();
+      if (!data || data.status !== 1) {
+        showError('Produit introuvable sur Open Food Facts. Tu peux l’ajouter manuellement (le code-barres sera conservé).');
+        if (cfBarcode) cfBarcode.value = code; return;
+      }
+      const obj = normalizeOFF(data); showResult(obj); if (cfBarcode) cfBarcode.value = code;
+    } catch (e) { console.error(e); showError('Erreur lors de la recherche. Réessaie.'); }
+    finally { elSearch.disabled = false; elSearch.textContent = '🔎 Rechercher'; }
+  }
+
+  document.getElementById('off_search').addEventListener('click', doLookup);
+  elCode.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); doLookup(); } });
+  document.getElementById('off_clear').addEventListener('click', () => { elCode.value = ''; clearError(); clearResult(); });
+  document.getElementById('off_paste').addEventListener('click', async () => {
+    try { const t = await navigator.clipboard.readText(); elCode.value = (t || '').replace(/\D+/g, ''); doLookup(); }
+    catch { showError('Impossible de lire le presse-papiers.'); }
+  });
+
+  /* Scanner live (BarcodeDetector + ZXing) */
+  const dlgScan = document.getElementById('scan-modal'), scanVideo = document.getElementById('scan-video'), btnScanClose = document.getElementById('scan-close');
+  let scanning = false, zxingReader = null, zxingLiveActive = false;
+
+  async function onBarcodeDetected(code) { if (!code) return; elCode.value = code.replace(/\D+/g, ''); await closeScanModal(); doLookup(); }
+
+  async function openScanModal() {
+    if (!dlgScan) return; dlgScan.showModal(); scanning = true;
+    scanVideo.muted = true; scanVideo.playsInline = true; scanVideo.setAttribute('playsinline', ''); scanVideo.setAttribute('webkit-playsinline', '');
+    if ('BarcodeDetector' in window) {
+      try {
+        const detector = new BarcodeDetector({ formats: ['ean_13', 'ean_8', 'upc_a', 'upc_e'] });
+        const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' }, audio: false });
+        scanVideo.srcObject = stream; try { await scanVideo.play(); } catch (_) { }
+        const tick = async () => {
+          if (!scanning) return;
+          try {
+            const bm = await detector.detect(scanVideo);
+            if (bm && bm[0] && bm[0].rawValue) { await onBarcodeDetected(bm[0].rawValue); return; }
+          } catch { }
+          requestAnimationFrame(tick);
+        };
+        tick(); return;
+      } catch (e) { /* fallback */ }
+    }
+    startZXingLive();
+  }
+  async function closeScanModal() {
+    scanning = false; if (dlgScan && dlgScan.open) dlgScan.close();
+    const s = scanVideo && (scanVideo.srcObject); if (s && s.getTracks) s.getTracks().forEach(t => t.stop());
+    if (zxingReader && zxingLiveActive) { try { await zxingReader.reset(); } catch { } zxingLiveActive = false; }
+  }
+  async function loadZXing() {
+    return new Promise((resolve, reject) => {
+      if (window.ZXing) return resolve(window.ZXing);
+      const s = document.createElement('script'); s.src = 'https://unpkg.com/@zxing/library@latest';
+      s.onload = () => resolve(window.ZXing); s.onerror = () => reject(new Error('ZXing indisponible')); document.head.appendChild(s);
+    });
+  }
+  async function startZXingLive() {
+    try {
+      scanVideo.muted = true; scanVideo.playsInline = true; scanVideo.setAttribute('playsinline', ''); scanVideo.setAttribute('webkit-playsinline', '');
+      if (!window.ZXing) await loadZXing();
+      if (!zxingReader) zxingReader = new ZXing.BrowserMultiFormatReader();
+      zxingReader.decodeFromVideoDevice(undefined, scanVideo, async (result, err) => {
+        if (!scanning) return;
+        if (result && result.getText) {
+          const code = (result.getText() || '').replace(/\D+/g, '');
+          if (code) await onBarcodeDetected(code);
+        }
+      });
+      zxingLiveActive = true; scanning = true;
+    } catch (e) { showError("Impossible de démarrer le flux live. Utilise « Prendre une photo »."); }
+  }
+  document.getElementById('off_scan').addEventListener('click', openScanModal);
+  btnScanClose.addEventListener('click', closeScanModal);
+
+  /* Mode Photo universel */
+  document.getElementById('off_capture').addEventListener('click', () => document.getElementById('off_file').click());
+  document.getElementById('off_file').addEventListener('change', async (ev) => {
+    const file = ev.target.files && ev.target.files[0]; if (!file) return;
+    try {
+      if (!window.ZXing) await loadZXing();
+      if (!zxingReader) zxingReader = new ZXing.BrowserMultiFormatReader();
+      const imgURL = URL.createObjectURL(file);
+      const img = document.createElement('img'); img.src = imgURL; await img.decode();
+      const res = await zxingReader.decodeFromImageElement(img);
+      const code = res && res.getText ? (res.getText() || '').replace(/\D+/g, '') : '';
+      if (code) await onBarcodeDetected(code); else showError('Aucun code détecté sur la photo.');
+    } catch (e) { showError('Erreur lecture de la photo.'); }
+    finally { ev.target.value = ''; }
+  });
+
+  /* Toggle "Plus d'infos" mobile */
+  document.addEventListener('click', (e) => {
+    const btn = e.target.closest('.js-card-toggle'); if (!btn) return;
+    const id = btn.getAttribute('aria-controls'); const panel = document.getElementById(id); if (!panel) return;
+    const open = btn.getAttribute('aria-expanded') === 'true';
+    btn.setAttribute('aria-expanded', String(!open));
+    panel.hidden = open;
+    const label = btn.querySelector('span:first-child'); if (label) label.textContent = open ? 'Plus d’infos' : 'Moins d’infos';
+  });
+</script>
+{% endblock %}

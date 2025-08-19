@@ -1,0 +1,2091 @@
+/* *****************************************************************************
+ * Domovra — feuille de styles globale
+ * -----------------------------------------------------------------------------
+ * Table des matières
+ *  01) Variables & thèmes (root, dark/light)
+ *  02) Resets & éléments génériques
+ *  03) Layout général (aside/main/header, menu, cards…)
+ *  04) Formulaires (style global)
+ *  05) Tables (style global)
+ *  06) Grilles utilitaires (grid/row/responsive helpers)
+ *  07) Sidebar (desktop) & off‑canvas (mobile)
+ *  08) Variantes claires (overrides pour data-theme="light")
+ *  09) Header compact mobile
+ *  10) Toasts (notifications)
+ *  11) Page Accueil (/): styles scopés (.wrap …)
+ *  12) Page Emplacements (/locations)
+ *  13) Page Produits (/products)
+ *  14) Page Stocks (/lots)
+ *  15) Page Paramètres (/settings)
+ *  16) Page Journal (/journal)
+ *  17) Page Support (/support)
+ * *****************************************************************************/
+
+/* ========== 01) Variables & thèmes ======================================== */
+
+/* Préférences générales */
+:root {
+    color-scheme: dark;
+
+    /* Largeurs sidebar */
+    --sidebar-w: 260px;
+    --sidebar-mini-w: 72px;
+
+    /* Couleurs globales */
+    --accent: #00bcd4;
+
+    /* Toasts (valeurs par défaut ; override depuis base.html) */
+    --toast-ok: #4caf50;
+    --toast-warn: #ffb300;
+    --toast-error: #ef5350;
+}
+
+/* Thèmes (valeurs pilotées par html[data-theme]) */
+html[data-theme="dark"] {
+    --bg-body: #0f1115;
+    --bg-card: #151922;
+    --line: #2a2f36;
+    --text-muted: #8ea0b7;
+}
+
+html[data-theme="light"] {
+    --bg-body: #ffffff;
+    --bg-card: #ffffff;
+    --line: #e5e7eb;
+    --text-muted: #6b7280;
+}
+
+html[data-theme="dark"] body {
+    background: var(--bg-body);
+    color: #e5e7eb;
+}
+
+html[data-theme="light"] body {
+    background: var(--bg-body);
+    color: #1f2328;
+}
+
+/* ========== 02) Resets & éléments génériques ============================== */
+
+* {
+    box-sizing: border-box;
+}
+
+a {
+    color: inherit;
+    text-decoration: none;
+}
+
+img {
+    max-width: 100%;
+    display: block;
+}
+
+/* ========== 03) Layout général ============================================ */
+
+.layout {
+    min-height: 100dvh;
+    display: block;
+}
+
+aside {
+    background: #111315;
+    border-right: 1px solid var(--line);
+    padding: 12px;
+    position: relative;
+    z-index: 45;
+}
+
+main {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+}
+
+header {
+    position: sticky;
+    top: 0;
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 10px 16px;
+    border-bottom: 1px solid var(--line);
+    background: var(--bg-body);
+}
+
+.header-left,
+.header-right {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+}
+
+.app-title {
+    margin: 0;
+    font-size: 1.1rem;
+    opacity: .9;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.header-chips {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+/* Harmonisée sur les variables de thème */
+.chip {
+    background: var(--bg-card);
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    padding: 6px 10px;
+    white-space: nowrap;
+    color: inherit;
+}
+
+.chip b {
+    font-weight: 700;
+}
+
+.menu {
+    display: grid;
+    gap: 8px;
+}
+
+.menu a {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 12px;
+    border: 1px solid #242932;
+    background: #151922;
+    border-radius: 10px;
+    cursor: pointer;
+}
+
+.menu a:hover {
+    filter: brightness(1.05);
+}
+
+.menu a.active {
+    border-color: #4f46e5;
+    box-shadow: 0 0 0 1px #4f46e5 inset;
+}
+
+.menu .ico {
+    width: 22px;
+    display: inline-grid;
+    place-items: center;
+    opacity: .9;
+}
+
+.page {
+    padding: 16px;
+}
+
+.card {
+    background: var(--bg-card);
+    border: 1px solid #242932;
+    border-radius: 12px;
+    padding: 12px;
+}
+
+.muted {
+    opacity: .7;
+}
+
+/* ========== 04) Formulaires (global) ====================================== */
+
+input,
+select,
+button {
+    width: 100%;
+    min-height: 44px;
+    border-radius: 10px;
+    border: 1px solid #2d3340;
+    background: #0f1320;
+    color: #e5e7eb;
+    padding: 8px 10px;
+}
+
+button {
+    cursor: pointer;
+}
+
+option,
+optgroup {
+    background: #0f1320;
+    color: #e5e7eb;
+}
+
+html[data-theme="light"] option,
+html[data-theme="light"] optgroup {
+    background: #ffffff;
+    color: #111827;
+}
+
+/* ========== 05) Tables (global) =========================================== */
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+th,
+td {
+    border: 1px solid #242932;
+    padding: 8px 10px;
+}
+
+th {
+    background: #121520;
+}
+
+tbody tr:nth-child(even) {
+    background: #121620;
+}
+
+/* ========== 06) Grilles utilitaires ======================================= */
+
+.grid {
+    display: grid;
+    grid-template-columns: repeat(12, 1fr);
+    gap: 16px;
+}
+
+/* Spécifique aux cartes placées DANS .grid */
+.grid>.card {
+    grid-column: span 4;
+}
+
+@media (max-width:1200px) {
+    .grid>.card {
+        grid-column: span 6;
+    }
+}
+
+@media (max-width:768px) {
+    .grid>.card {
+        grid-column: 1/-1;
+    }
+}
+
+.row {
+    display: flex;
+    gap: 16px;
+}
+
+.row>* {
+    flex: 1 1 0;
+    min-width: 0;
+}
+
+@media (max-width:768px) {
+    .row {
+        flex-direction: column;
+    }
+}
+
+.table-responsive {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+}
+
+.table-responsive table {
+    min-width: 720px;
+}
+
+/* ========== 07) Sidebar (desktop) & off‑canvas (mobile) ==================== */
+
+@media (min-width:1025px) {
+    aside {
+        position: fixed;
+        top: 0;
+        left: 0;
+        bottom: 0;
+        width: var(--sidebar-w);
+        overflow: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    main {
+        margin-left: var(--sidebar-w);
+    }
+
+    /* Mode compact */
+    .sidebar-mini aside {
+        width: var(--sidebar-mini-w);
+    }
+
+    .sidebar-mini main {
+        margin-left: var(--sidebar-mini-w);
+    }
+
+    .sidebar-mini .menu a {
+        justify-content: center;
+        gap: 0;
+    }
+
+    .sidebar-mini .menu a span:not(.ico) {
+        display: none;
+    }
+
+    .sidebar-mini aside {
+        padding: 12px 8px;
+    }
+}
+
+@media (max-width:1024px) {
+    .layout {
+        display: block;
+    }
+
+    aside {
+        position: fixed;
+        inset: 0 auto 0 0;
+        width: var(--sidebar-w);
+        transform: translateX(-100%);
+        transition: transform .25s ease;
+        z-index: 2000;
+    }
+
+    body.sidebar-open aside {
+        transform: translateX(0);
+        box-shadow: 0 10px 30px rgba(0, 0, 0, .45);
+    }
+
+    main {
+        margin-left: 0;
+    }
+}
+
+/* Burger */
+.hamburger {
+    display: inline-grid;
+    place-content: center;
+    gap: 4px;
+    width: 40px;
+    height: 40px;
+    border: 0;
+    background: transparent;
+    cursor: pointer;
+    border-radius: 10px;
+}
+
+.hamburger span {
+    display: block;
+    width: 22px;
+    height: 2px;
+    background: currentColor;
+}
+
+@media (min-width:1025px) {
+    .hamburger {
+        display: none;
+    }
+}
+
+/* ========== 08) Variantes claires (overrides) ============================== */
+
+html[data-theme="light"] aside {
+    background: #f7f7f8;
+    border-right: 1px solid var(--line);
+}
+
+html[data-theme="light"] header {
+    background: #ffffff;
+    border-bottom: 1px solid var(--line);
+}
+
+html[data-theme="light"] .muted {
+    color: var(--text-muted);
+}
+
+html[data-theme="light"] .menu a {
+    background: #ffffff;
+    border: 1px solid var(--line);
+    color: #1f2328;
+}
+
+html[data-theme="light"] .menu a.active {
+    background: #eef2ff;
+    border-color: #c7d2fe;
+}
+
+html[data-theme="light"] .card {
+    background: #ffffff;
+    border: 1px solid var(--line);
+}
+
+html[data-theme="light"] input,
+html[data-theme="light"] select {
+    background: #ffffff;
+    color: #111827;
+    border: 1px solid #d1d5db;
+}
+
+html[data-theme="light"] button {
+    background: #f3f4f6;
+    color: #111827;
+    border: 1px solid #d1d5db;
+}
+
+html[data-theme="light"] th,
+html[data-theme="light"] td {
+    border: 1px solid var(--line);
+}
+
+html[data-theme="light"] th {
+    background: #f8fafc;
+    color: #111827;
+}
+
+html[data-theme="light"] tbody tr:nth-child(even) {
+    background: #f9fafb;
+}
+
+html[data-theme="light"] .chip {
+    background: var(--bg-card);
+    border: 1px solid var(--line);
+}
+
+/* ========== 09) Header compact mobile ===================================== */
+
+@media (max-width:640px) {
+    .header-right {
+        display: none;
+    }
+}
+
+/* ========== 10) Toasts ===================================================== */
+
+.toast-stack {
+    position: fixed;
+    top: 12px;
+    right: 12px;
+    display: grid;
+    gap: 8px;
+    z-index: 3000;
+}
+
+.toast {
+    position: relative;
+    border: 1px solid #242932;
+    border-radius: 10px;
+    padding: 10px 12px 10px 16px;
+    box-shadow: 0 6px 16px rgba(0, 0, 0, .25);
+    animation: toast-in .2s ease both;
+    background: rgba(20, 24, 32, .85);
+    backdrop-filter: blur(2px);
+    color: inherit;
+}
+
+.toast .stripe {
+    position: absolute;
+    inset: -1px auto -1px -1px;
+    width: 6px;
+    border-radius: 10px 0 0 10px;
+    background: transparent;
+    pointer-events: none;
+}
+
+@keyframes toast-in {
+    from {
+        opacity: 0;
+        transform: translateY(-8px);
+    }
+
+    to {
+        opacity: 1;
+        transform: none;
+    }
+}
+
+@media (max-width:700px) {
+    .toast-stack {
+        top: auto;
+        right: auto;
+        left: 0;
+        bottom: 12px;
+        width: 100%;
+        padding: 0 12px;
+    }
+
+    .toast {
+        width: 100%;
+    }
+}
+
+/* ========================================================================== */
+/* ========== 11) Page Accueil (styles scopés) =============================== */
+/* ========================================================================== */
+
+.wrap {
+    --gap: 12px;
+    --radius: 14px;
+    --border: var(--line);
+    --chip: #1a2230;
+    /* dark */
+    --muted: var(--text-muted);
+    --accent: var(--accent);
+    --ok: var(--toast-ok);
+    --warn: var(--toast-warn);
+    --danger: var(--toast-error);
+
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 0 12px;
+}
+
+html[data-theme="light"] .wrap {
+    --chip: #ffffff;
+}
+
+.wrap .row {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.wrap .row>* {
+    flex: initial;
+}
+
+.wrap .chip {
+    background: var(--chip);
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    padding: 6px 10px;
+    color: var(--muted);
+    white-space: nowrap;
+}
+
+.wrap .card {
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 12px;
+    margin-bottom: 12px;
+}
+
+.wrap .title {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin: 6px 0 8px;
+}
+
+.wrap .title h2 {
+    font-size: 16px;
+    margin: 0;
+}
+
+/* Champs & labels (scopés) */
+.wrap input,
+.wrap select,
+.wrap button {
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 10px;
+    background: transparent;
+    color: inherit;
+    min-height: 0;
+    /* override global */
+    width: auto;
+    /* override global */
+}
+
+.wrap .field {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    min-width: 160px;
+}
+
+.wrap .label {
+    font-size: 12px;
+    color: var(--muted);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+/* Bouton primaire (UNIQUE définition) */
+.wrap button.primary {
+    background: var(--accent);
+    border: 0;
+    color: #02222a;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.wrap .btn-add-stock {
+    height: 44px;
+    align-self: end;
+}
+
+/* Grille “Ajout express” */
+.wrap .form-grid {
+    display: grid !important;
+    grid-template-columns: 2fr 2fr 1fr 1fr auto;
+    gap: 12px;
+    align-items: end;
+}
+
+.wrap .form-grid .field {
+    margin: 0;
+}
+
+@media (max-width:1100px) {
+    .wrap .form-grid {
+        grid-template-columns: 2fr 2fr 1fr auto;
+    }
+}
+
+@media (max-width:900px) {
+    .wrap .form-grid {
+        grid-template-columns: 1fr 1fr 1fr;
+    }
+
+    .wrap .btn-add-stock {
+        grid-column: 1 / -1;
+        justify-self: stretch;
+    }
+}
+
+@media (max-width:700px) {
+    .wrap .form-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .wrap .btn-add-stock {
+        width: 100%;
+    }
+}
+
+/* Tableaux “Top 8” */
+.wrap .top8-table thead th {
+    font-size: 12px;
+    color: var(--muted);
+    text-align: left;
+    padding: 6px 8px;
+    border: 0;
+    border-bottom: 1px solid var(--border);
+    background: transparent;
+}
+
+.wrap .top8-table tbody td {
+    padding: 10px 8px;
+    border: 0;
+    border-bottom: 1px solid var(--border);
+}
+
+.wrap .top8-table tbody tr:hover {
+    background-color: rgba(255, 255, 255, .03);
+}
+
+html[data-theme="light"] .wrap .top8-table tbody tr:hover {
+    background-color: rgba(0, 0, 0, .03);
+}
+
+.wrap .muted {
+    color: var(--muted);
+    opacity: 1;
+}
+
+/* Pastilles */
+.wrap .pill {
+    padding: 2px 8px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 600;
+    border: 1px solid transparent;
+}
+
+.wrap .ok {
+    color: var(--ok);
+    border-color: rgba(76, 175, 80, .35);
+}
+
+.wrap .warn {
+    color: var(--warn);
+    border-color: rgba(255, 179, 0, .35);
+}
+
+.wrap .danger {
+    color: var(--danger);
+    border-color: rgba(239, 83, 80, .35);
+}
+
+/* Bascule table/cartes (scopée automatiquement via :has) */
+.wrap .top8-table {
+    display: block;
+}
+
+.wrap .top8-cards {
+    display: none;
+}
+
+@media (max-width:700px) {
+    .wrap .top8-table {
+        display: none;
+    }
+
+    .wrap .top8-cards {
+        display: grid;
+        gap: 10px;
+    }
+}
+
+.wrap .lot-card {
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 10px;
+    background: transparent;
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 8px;
+    align-items: center;
+}
+
+.wrap .lot-main {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.wrap .lot-title {
+    font-weight: 600;
+}
+
+.wrap .lot-meta {
+    font-size: .9rem;
+    color: var(--muted);
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.wrap .lot-action {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+.wrap .lot-action input {
+    max-width: 90px;
+}
+
+/* Espacements */
+.wrap .card+.card {
+    margin-top: 12px;
+}
+
+.wrap .card .row {
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+/* Fix Companion (élargit breakpoint mobile cards) */
+@media (max-width: 900px) {
+    .wrap .top8-table {
+        display: none !important;
+    }
+
+    .wrap .top8-cards {
+        display: grid !important;
+        gap: 10px;
+    }
+
+    .wrap .card {
+        display: block;
+        width: 100%;
+        margin: 0 0 12px 0;
+    }
+
+    .wrap .card .row>* {
+        flex: initial !important;
+        min-width: 0;
+    }
+
+    .wrap .lot-card {
+        border: 1px solid var(--border, var(--line));
+        border-radius: 12px;
+        padding: 10px;
+        background: transparent;
+        display: grid;
+        grid-template-columns: 1fr auto;
+        gap: 8px;
+        align-items: center;
+    }
+
+    .wrap .lot-main {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+    }
+
+    .wrap .lot-title {
+        font-weight: 600;
+    }
+
+    .wrap .lot-meta {
+        font-size: .9rem;
+        color: var(--muted, var(--text-muted));
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+    }
+
+    .wrap .lot-action {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+    }
+
+    .wrap .lot-action input {
+        max-width: 90px;
+    }
+
+    .wrap .lot-action button {
+        white-space: nowrap;
+    }
+}
+
+/* Fallback densité tactile */
+@media (pointer: coarse) {
+    .wrap .top8-table {
+        display: none !important;
+    }
+
+    .wrap .top8-cards {
+        display: grid !important;
+        gap: 10px;
+    }
+}
+
+/* WebKit iOS (portrait) */
+@supports (-webkit-touch-callout: none) {
+    @media (orientation: portrait) {
+        .wrap .top8-table {
+            display: none !important;
+        }
+
+        .wrap .top8-cards {
+            display: grid !important;
+            gap: 10px;
+        }
+    }
+}
+
+/* Neutraliser l’étirement dans les cartes */
+@media (max-width: 900px),
+(pointer: coarse) {
+    .wrap .card .row>* {
+        flex: initial !important;
+        min-width: 0;
+    }
+
+    .wrap .lot-action button {
+        white-space: nowrap;
+    }
+}
+
+/* ========================================================================== */
+/* ========== 12) Page Emplacements (/locations) ============================ */
+/* ========================================================================== */
+
+/* Ajout express — grille compacte */
+.wrap form[action$="location/add"].form-grid {
+    display: grid !important;
+    grid-template-columns: 1fr auto;
+    gap: 12px;
+    align-items: end;
+}
+
+/* Grille si on affiche Type + Description */
+@media (min-width:901px) {
+    .wrap form[action$="location/add"].form-grid {
+        grid-template-columns: 2fr 1fr auto;
+        /* Nom (2fr) | Type (1fr) | Bouton */
+    }
+
+    /* La description passe sous Nom+Type pour garder un bouton compact */
+    .wrap form[action$="location/add"].form-grid .field:nth-of-type(3) {
+        grid-column: 1 / 3;
+    }
+}
+
+/* Ajout express : grille spéciale */
+.add-location-form {
+    display: grid;
+    gap: 12px;
+}
+
+/* Desktop → tout sur une ligne */
+@media (min-width: 901px) {
+    .add-location-form {
+        grid-template-columns: 2fr 1fr 2fr auto;
+        /* Nom | Type | Description | Bouton */
+        align-items: end;
+    }
+}
+
+
+@media (max-width:700px) {
+    .wrap form[action$="location/add"].form-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* Outils */
+.wrap .tools-row {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 12px;
+    align-items: end;
+}
+
+.wrap .tools-search {
+    min-width: 220px;
+}
+
+@media (max-width:700px) {
+    .wrap .tools-row {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* Actions */
+.wrap .t-actions {
+    text-align: right;
+}
+
+.wrap .actions-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    justify-items: stretch;
+}
+
+.wrap .actions-grid button {
+    width: 100% !important;
+    min-width: 0;
+}
+
+/* Table (ciblée) */
+.wrap table:has(#locations-body) thead th {
+    font-size: 12px;
+    color: var(--text-muted);
+    text-align: left;
+    padding: 6px 8px;
+    border: 0;
+    border-bottom: 1px solid var(--line);
+    background: transparent;
+}
+
+.wrap table:has(#locations-body) tbody td {
+    padding: 10px 8px;
+    border: 0;
+    border-bottom: 1px solid var(--line);
+}
+
+.wrap table:has(#locations-body) tbody tr:hover {
+    background-color: rgba(255, 255, 255, .03);
+}
+
+html[data-theme="light"] .wrap table:has(#locations-body) tbody tr:hover {
+    background-color: rgba(0, 0, 0, .03);
+}
+
+/* Badges */
+.wrap .badge {
+    padding: 2px 8px;
+    border-radius: 999px;
+    font-size: 12px;
+    border: 1px solid transparent;
+}
+
+.wrap .badge.warn {
+    color: var(--toast-warn);
+    border-color: rgba(255, 177, 0, .35);
+}
+
+.wrap .badge.danger {
+    color: var(--toast-error);
+    border-color: rgba(239, 83, 80, .35);
+}
+
+/* Cartes mobiles */
+.wrap .loc-cards {
+    display: none;
+}
+
+@media (max-width:700px) {
+    .wrap .table-responsive:has(#locations-body) {
+        display: none;
+    }
+
+    .wrap .loc-cards {
+        display: grid;
+        gap: 10px;
+    }
+
+    .wrap .loc-card {
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        padding: 10px;
+        background: transparent;
+        display: grid;
+        grid-template-columns: 1fr auto;
+        gap: 8px;
+        align-items: center;
+    }
+
+    .wrap .loc-main {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+    }
+
+    .wrap .loc-title {
+        font-weight: 600;
+    }
+
+    .wrap .loc-meta {
+        font-size: .9rem;
+        color: var(--text-muted);
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+    }
+
+    .wrap .loc-actions {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+        justify-content: flex-end;
+    }
+
+    .wrap .loc-actions button {
+        width: auto !important;
+        min-width: 40px;
+    }
+
+    .wrap .btn-text {
+        display: none;
+    }
+}
+
+/* Dialog (ajustements) */
+.wrap dialog input[type="radio"] {
+    width: 16px;
+    height: 16px;
+    accent-color: var(--accent);
+}
+
+.wrap dialog select {
+    min-height: 44px;
+}
+
+.wrap #del-mgmt label {
+    gap: 8px;
+}
+
+/* Emplacements — l'input occupe toute sa colonne */
+.wrap form[action$="location/add"].form-grid .field>input,
+.wrap form[action$="location/add"].form-grid .field>select,
+.wrap form[action$="location/add"].form-grid .field>textarea {
+    width: 100%;
+    min-width: 0;
+}
+
+/* Desktop : donner plus d'espace au champ nom */
+@media (min-width:701px) {
+    .wrap form[action$="location/add"].form-grid {
+        grid-template-columns: 2fr auto;
+        /* au lieu de 1fr auto */
+    }
+}
+
+/* === Dialog Supprimer : mise en page propre === */
+#dlg-delete .del-mgmt {
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 12px;
+}
+
+#dlg-delete .del-choices {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    /* 2 colonnes sur desktop */
+    gap: 10px 16px;
+    align-items: center;
+}
+
+#dlg-delete .opt {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-height: 32px;
+    white-space: nowrap;
+}
+
+/* largeur confortable pour le select */
+#dlg-delete .opt select {
+    min-width: 220px;
+}
+
+/* Réinitialiser d’éventuels styles globaux qui gonflent les radios */
+#dlg-delete input[type="radio"] {
+    width: auto;
+    height: auto;
+    transform: none;
+    accent-color: var(--accent);
+    /* joli dans les thèmes modernes */
+    margin: 0;
+}
+
+/* Empiler proprement sur mobile */
+@media (max-width: 700px) {
+    #dlg-delete .del-choices {
+        grid-template-columns: 1fr;
+        /* 1 colonne */
+    }
+
+    #dlg-delete .opt {
+        flex-wrap: wrap;
+    }
+
+    #dlg-delete .opt select {
+        width: 100%;
+    }
+}
+
+
+
+/* ========================================================================== */
+/* ========== 13) Page Produits (/products) ================================= */
+/* ========================================================================== */
+
+/* Variantes de boutons */
+.wrap .btn-ghost {
+    background: transparent;
+    border: 1px solid var(--line);
+    color: inherit;
+}
+
+.wrap .btn-ghost:hover {
+    background: rgba(255, 255, 255, .06);
+}
+
+.wrap .btn-ghost .ico {
+    margin-right: .4rem;
+}
+
+.wrap button.secondary {
+    background: var(--chip, #1a2230);
+    border: 1px solid var(--line);
+    color: inherit;
+}
+
+/* Placeholders */
+.wrap input::placeholder {
+    color: rgba(200, 210, 225, .7);
+}
+
+html[data-theme="light"] .wrap input::placeholder {
+    color: rgba(60, 70, 90, .6);
+}
+
+/* Aide “?” */
+.wrap .help {
+    display: inline-grid;
+    place-items: center;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    font-size: 12px;
+    cursor: help;
+    background: #1f2735;
+    border: 1px solid var(--line);
+    color: #cfe3ff;
+    position: relative;
+    line-height: 1;
+}
+
+.wrap .help::before {
+    content: "?";
+    font-weight: 700;
+}
+
+.wrap .help:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+}
+
+.wrap .help:hover::after,
+.wrap .help:focus-visible::after {
+    content: attr(data-tip);
+    position: absolute;
+    left: 50%;
+    bottom: 100%;
+    transform: translate(-50%, -8px);
+    background: #0f1320;
+    color: #e5e7eb;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 6px 8px;
+    white-space: normal;
+    width: max-content;
+    max-width: 280px;
+    z-index: 60;
+}
+
+html[data-theme="light"] .wrap .help:hover::after,
+html[data-theme="light"] .wrap .help:focus-visible::after {
+    background: #ffffff;
+    color: #111827;
+}
+
+/* OFF (champ + 2 icônes) */
+.wrap #off-box {
+    padding: 8px 0;
+}
+
+.wrap #off-box .infield {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.wrap #off-box .infield input {
+    width: 100%;
+    padding-right: 98px;
+}
+
+.wrap #off-box .infield .btns {
+    position: absolute;
+    right: 6px;
+    display: flex;
+    gap: 6px;
+}
+
+.wrap #off-box .infield .infield-btn {
+    display: grid;
+    place-items: center;
+    width: 40px;
+    height: 40px;
+    border-radius: 10px;
+    border: 1px solid var(--line);
+    background: transparent;
+    cursor: pointer;
+    line-height: 1.1;
+    transition: transform .06s, background .12s;
+}
+
+.wrap #off-box .infield .infield-btn:hover {
+    background: rgba(255, 255, 255, .06);
+}
+
+#off_error[hidden],
+#off_result[hidden] {
+    display: none !important;
+}
+
+/* Grille OFF (spans) */
+.wrap .off-grid {
+    display: grid;
+    grid-template-columns: repeat(12, minmax(0, 1fr));
+    gap: 12px;
+    align-items: center;
+}
+
+.wrap .off-span-12 {
+    grid-column: span 12;
+}
+
+.wrap .off-span-10 {
+    grid-column: span 10;
+}
+
+.wrap .off-span-9 {
+    grid-column: span 9;
+}
+
+.wrap .off-span-8 {
+    grid-column: span 8;
+}
+
+.wrap .off-span-6 {
+    grid-column: span 6;
+}
+
+.wrap .off-span-4 {
+    grid-column: span 4;
+}
+
+.wrap .off-span-3 {
+    grid-column: span 3;
+}
+
+.wrap .off-span-2 {
+    grid-column: span 2;
+}
+
+.wrap .off-span-1 {
+    grid-column: span 1;
+}
+
+@media (max-width:900px) {
+    .wrap .off-grid {
+        grid-template-columns: repeat(6, 1fr);
+    }
+
+    .wrap .md-span-6 {
+        grid-column: span 6;
+    }
+
+    .wrap .md-span-3 {
+        grid-column: span 3;
+    }
+
+    .wrap .md-span-2 {
+        grid-column: span 2;
+    }
+
+    .wrap .md-span-1 {
+        grid-column: span 1;
+    }
+}
+
+@media (max-width:700px) {
+    .wrap .off-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .wrap .sm-span-1 {
+        grid-column: 1 / -1;
+    }
+}
+
+/* Form “Ajouter un produit” */
+.wrap form[action$="product/add"].form-grid {
+    display: grid !important;
+    grid-template-columns: 2fr 1fr 1fr 1fr 1fr auto auto;
+    gap: 12px;
+    align-items: end;
+}
+
+@media (max-width:1100px) {
+    .wrap form[action$="product/add"].form-grid {
+        grid-template-columns: 2fr 1fr 1fr 1fr auto auto;
+    }
+}
+
+@media (max-width:900px) {
+    .wrap form[action$="product/add"].form-grid {
+        grid-template-columns: 1fr 1fr 1fr;
+    }
+
+    .wrap form[action$="product/add"].form-grid .btn-wide {
+        grid-column: 1 / -1;
+        justify-self: stretch;
+    }
+}
+
+@media (max-width:700px) {
+    .wrap form[action$="product/add"].form-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .wrap form[action$="product/add"].form-grid .btn-wide {
+        width: 100%;
+    }
+}
+
+/* Table Liste (produits & stocks — bloc unique) */
+#tbl {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+#tbl thead th {
+    font-size: 12px;
+    color: var(--text-muted);
+    text-align: left;
+    padding: 6px 8px;
+    border: 0;
+    border-bottom: 1px solid var(--line);
+    background: transparent;
+}
+
+#tbl tbody td {
+    padding: 10px 8px;
+    border: 0;
+    border-bottom: 1px solid var(--line);
+    vertical-align: top;
+}
+
+#tbl tbody tr:hover {
+    background: rgba(255, 255, 255, .03);
+}
+
+html[data-theme="light"] #tbl tbody tr:hover {
+    background: rgba(0, 0, 0, .03);
+}
+
+/* Stats (chips) */
+.wrap .stats {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px 10px;
+    white-space: normal;
+    overflow: visible;
+    max-width: 100%;
+}
+
+.wrap .stat {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 10px;
+    border-radius: 999px;
+    border: 1px solid var(--line);
+    background: transparent;
+    flex: 1 1 calc(50% - 10px);
+    min-width: 180px;
+}
+
+.wrap .stat .k {
+    color: var(--text-muted);
+}
+
+.wrap .stat .v {
+    font-weight: 600;
+}
+
+/* Cartes mobiles (PRODUITS) — scopées via :has(#off-box) */
+.wrap:has(#off-box) .cards {
+    display: none;
+}
+
+@media (max-width:700px) {
+
+    .wrap:has(#off-box) #tbl,
+    .wrap:has(#off-box) #tbl thead {
+        display: none;
+    }
+
+    .wrap:has(#off-box) .cards {
+        display: grid;
+        gap: 10px;
+    }
+
+    .wrap:has(#off-box) .card-item {
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        padding: 10px;
+        background: transparent;
+    }
+
+    .wrap:has(#off-box) .card-head {
+        display: flex;
+        justify-content: space-between;
+        gap: 10px;
+    }
+
+    .wrap:has(#off-box) .card-name {
+        font-weight: 600;
+    }
+
+    .wrap:has(#off-box) .card-info {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-top: 6px;
+    }
+
+    .wrap:has(#off-box) .card-actions {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
+        margin-top: 8px;
+    }
+
+    .wrap:has(#off-box) .card-toggle {
+        width: 100%;
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        padding: 8px 10px;
+        background: transparent;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
+    }
+
+    .wrap:has(#off-box) .card-toggle .chev {
+        transition: transform .15s ease;
+    }
+
+    .wrap:has(#off-box) .card-toggle[aria-expanded="true"] .chev {
+        transform: rotate(90deg);
+    }
+
+    .wrap:has(#off-box) .card-extra[hidden] {
+        display: none !important;
+    }
+
+    .wrap:has(#off-box) .card-extra {
+        margin-top: 8px;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .wrap:has(#off-box) .card-toggle .chev {
+        transition: none;
+    }
+}
+
+/* Dialog (produits) */
+.wrap dialog input[type="radio"] {
+    width: 16px;
+    height: 16px;
+    accent-color: var(--accent);
+}
+
+.wrap dialog select {
+    min-height: 44px;
+}
+
+/* ========================================================================== */
+/* ========== 14) Page Stocks (/lots) ======================================= */
+/* ========================================================================== */
+
+/* Infield (select + boutons) */
+.wrap form[action$="lot/add"] .infield {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.wrap form[action$="lot/add"] .infield select {
+    width: 100%;
+    padding-right: 104px;
+    appearance: none;
+    background: linear-gradient(transparent, transparent) padding-box;
+}
+
+.wrap form[action$="lot/add"] .infield-buttons {
+    position: absolute;
+    right: 6px;
+    top: 50%;
+    transform: translateY(-50%);
+    display: flex;
+    gap: 6px;
+}
+
+/* Boutons icône (commun) */
+.wrap .icon-btn {
+    width: 40px;
+    height: 40px;
+    border-radius: 10px;
+    display: grid;
+    place-items: center;
+    border: 1px solid var(--line);
+    background: transparent;
+    color: var(--text-muted);
+    cursor: pointer;
+    transition: transform .06s, background .12s;
+}
+
+.wrap .icon-btn:hover {
+    background: rgba(255, 255, 255, .06);
+}
+
+.wrap .icon-btn:active {
+    transform: scale(.97);
+}
+
+.wrap .icon-btn svg {
+    width: 18px;
+    height: 18px;
+    fill: currentColor;
+}
+
+/* Accessibilité utilitaire */
+.wrap .sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+}
+
+/* Grille Ajout (lot) */
+.wrap form[action$="lot/add"].form-grid {
+    display: grid !important;
+    grid-template-columns: 2fr 1.2fr 1fr 1fr 1fr;
+    gap: 12px;
+    align-items: end;
+}
+
+@media (max-width:1100px) {
+    .wrap form[action$="lot/add"].form-grid {
+        grid-template-columns: 2fr 1.2fr 1fr 1fr;
+    }
+}
+
+@media (max-width:900px) {
+    .wrap form[action$="lot/add"].form-grid {
+        grid-template-columns: 1fr 1fr 1fr;
+    }
+
+    .wrap form[action$="lot/add"].form-grid .btn-wide {
+        grid-column: 1 / -1;
+        justify-self: stretch;
+    }
+}
+
+@media (max-width:700px) {
+    .wrap form[action$="lot/add"].form-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .wrap form[action$="lot/add"].form-grid .btn-wide {
+        width: 100%;
+    }
+}
+
+/* Ligne / meta / status / timeline */
+.wrap .line {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.wrap .meta {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    color: var(--text-muted);
+    font-size: 14px;
+}
+
+.wrap .sep {
+    opacity: .5;
+}
+
+.wrap .status {
+    margin-left: auto;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 10px;
+    border-radius: 999px;
+    border: 1px solid var(--line);
+    font-weight: 600;
+}
+
+.wrap .status.green {
+    background: rgba(76, 175, 80, .12);
+}
+
+.wrap .status.yellow {
+    background: rgba(255, 179, 0, .12);
+}
+
+.wrap .status.red {
+    background: rgba(239, 83, 80, .12);
+}
+
+.wrap details.dates {
+    margin-top: 6px;
+}
+
+.wrap details.dates summary {
+    cursor: pointer;
+    list-style: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--text-muted);
+}
+
+.wrap details.dates summary::-webkit-details-marker {
+    display: none;
+}
+
+.wrap .timeline {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-top: 6px;
+}
+
+.wrap .timeline .pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 8px;
+    border-radius: 999px;
+    border: 1px solid var(--line);
+    background: transparent;
+}
+
+/* Filtres */
+.wrap .filters-row {
+    display: grid;
+    grid-template-columns: 2fr 1fr 1fr 1fr auto;
+    gap: 12px;
+}
+
+@media (max-width:900px) {
+    .wrap .filters-row {
+        grid-template-columns: 1fr 1fr;
+    }
+
+    .wrap .filters-row .wide {
+        grid-column: 1 / -1;
+    }
+}
+
+/* Cartes mobiles (STOCKS) — scopées via :has(form[action$="lot/add"]) */
+.wrap:has(form[action$="lot/add"]) .cards {
+    display: none;
+}
+
+@media (max-width:700px) {
+
+    .wrap:has(form[action$="lot/add"]) #tbl,
+    .wrap:has(form[action$="lot/add"]) #tbl thead {
+        display: none;
+    }
+
+    .wrap:has(form[action$="lot/add"]) .cards {
+        display: grid;
+        gap: 10px;
+    }
+
+    .wrap:has(form[action$="lot/add"]) .card-item {
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        padding: 10px;
+        background: transparent;
+    }
+
+    .wrap:has(form[action$="lot/add"]) .card-head {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .wrap:has(form[action$="lot/add"]) .card-title {
+        font-weight: 600;
+        flex: 1;
+    }
+
+    .wrap:has(form[action$="lot/add"]) .card-sub {
+        color: var(--text-muted);
+        font-size: 14px;
+        margin-top: 4px;
+    }
+
+    .wrap:has(form[action$="lot/add"]) .card-actions {
+        display: flex;
+        gap: 8px;
+        margin-top: 8px;
+    }
+
+    .wrap:has(form[action$="lot/add"]) .card-actions .icon-btn {
+        padding: 8px 10px;
+        border-radius: 10px;
+        border: 1px solid var(--line);
+        background: transparent;
+    }
+}
+
+/* ========================================================================== */
+/* ========== 15) Page Paramètres (/settings) =============================== */
+/* ========================================================================== */
+
+.wrap form[action$="settings/save"] {
+    max-width: 900px;
+    margin: 0 auto;
+}
+
+.wrap form[action$="settings/save"] .field {
+    flex: 1 1 240px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    min-width: 220px;
+}
+
+.wrap form[action$="settings/save"] .preview {
+    display: inline-block;
+    min-width: 44px;
+    height: 44px;
+    border-radius: 999px;
+    border: 1px solid var(--line);
+}
+
+/* ========================================================================== */
+/* ========== 16) Page Journal (/journal) =================================== */
+/* ========================================================================== */
+
+.events-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.events-head h1 {
+    margin: 0;
+}
+
+.events-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.events-table th,
+.events-table td {
+    padding: 8px 10px;
+    border-bottom: 1px solid var(--line);
+    vertical-align: top;
+}
+
+.events-table th {
+    text-align: left;
+    opacity: .8;
+    font-weight: 600;
+}
+
+.nowrap {
+    white-space: nowrap;
+}
+
+.code {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+    font-size: .9rem;
+}
+
+/* Pastille type d'événement */
+.events-table .pill {
+    display: inline-block;
+    padding: .15rem .5rem;
+    border-radius: 999px;
+    border: 1px solid currentColor;
+    font-size: .85rem;
+    background: transparent;
+}
+
+/* Couleurs par type d’événement */
+.kind-settings_update {
+    color: #5fb673;
+    border-color: #5fb673;
+}
+
+.kind-settings_error {
+    color: #ff5a5a;
+    border-color: #ff5a5a;
+}
+
+.kind-journal_clear {
+    color: #7aa7ff;
+    border-color: #7aa7ff;
+}
+
+.kind-product_add {
+    color: #55c46a;
+    border-color: #55c46a;
+}
+
+.kind-product_update {
+    color: #b7a52b;
+    border-color: #b7a52b;
+}
+
+.kind-product_delete {
+    color: #ff6b6b;
+    border-color: #ff6b6b;
+}
+
+.kind-location_add {
+    color: #55c46a;
+    border-color: #55c46a;
+}
+
+.kind-location_update {
+    color: #b7a52b;
+    border-color: #b7a52b;
+}
+
+.kind-location_delete {
+    color: #ff6b6b;
+    border-color: #ff6b6b;
+}
+
+.kind-lot_add {
+    color: #55c46a;
+    border-color: #55c46a;
+}
+
+.kind-lot_update {
+    color: #b7a52b;
+    border-color: #b7a52b;
+}
+
+.kind-lot_consume {
+    color: #7aa7ff;
+    border-color: #7aa7ff;
+}
+
+.kind-lot_delete {
+    color: #ff6b6b;
+    border-color: #ff6b6b;
+}
+
+/* Flash message (?cleared=1) */
+.flash {
+    display: none;
+    margin: 8px 0 12px;
+    padding: 10px 12px;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+}
+
+/* ========================================================================== */
+/* ========== 17) Page Support (/support) =================================== */
+/* ========================================================================== */
+
+.support-wrap {
+    max-width: 880px;
+    margin: 0 auto;
+    padding: 1.25rem;
+}
+
+/* Hero */
+.support-hero {
+    position: relative;
+    border-radius: 16px;
+    padding: 28px;
+    overflow: hidden;
+    border: 1px solid var(--line);
+}
+
+html[data-theme="dark"] .support-hero {
+    background:
+        radial-gradient(1000px 400px at -10% -10%, rgba(79, 70, 229, .28), transparent 50%),
+        radial-gradient(900px 360px at 110% 0%, rgba(16, 185, 129, .22), transparent 50%),
+        linear-gradient(180deg, #141824, #0f1115 40%);
+}
+
+html[data-theme="light"] .support-hero {
+    background:
+        radial-gradient(900px 360px at -10% -10%, rgba(99, 102, 241, .15), transparent 50%),
+        radial-gradient(800px 320px at 110% 0%, rgba(16, 185, 129, .12), transparent 50%),
+        linear-gradient(180deg, #ffffff, #f8fafc 60%);
+}
+
+/* Titres & sous-titre */
+.support-title {
+    font-size: 1.8rem;
+    margin: 0 0 .25rem 0;
+    display: flex;
+    align-items: center;
+    gap: .5rem;
+}
+
+.support-sub {
+    margin: 0;
+    opacity: .9;
+    line-height: 1.6;
+}
+
+/* Actions */
+.support-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: .75rem;
+    align-items: center;
+    margin: 1.1rem 0 0;
+}
+
+/* Ko‑fi */
+.kofi-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: .6rem;
+    padding: .75rem 1.1rem;
+    border-radius: 999px;
+    font-weight: 700;
+    text-decoration: none;
+    border: 1px solid transparent;
+    transition: transform .04s ease, filter .15s ease, border-color .15s ease;
+    will-change: transform;
+}
+
+.kofi-btn:active {
+    transform: translateY(1px);
+}
+
+.kofi-primary {
+    background: #29abe0;
+    color: #0b1016;
+}
+
+html[data-theme="dark"] .kofi-outline {
+    border-color: #3b4252;
+    color: #e5e7eb;
+    background: transparent;
+}
+
+html[data-theme="light"] .kofi-outline {
+    border-color: #d1d5db;
+    color: #1f2328;
+    background: transparent;
+}
+
+.kofi-outline:hover {
+    filter: brightness(1.05);
+}
+
+.kofi-logo {
+    width: 22px;
+    height: 22px;
+    display: inline-block;
+}
+
+/* Carte d’explication */
+.support-card {
+    margin-top: 1rem;
+    border-radius: 12px;
+    border: 1px solid var(--line);
+    padding: 14px 16px;
+    background: var(--bg-card);
+}
+
+.support-list {
+    margin: .4rem 0 0 1.25rem;
+}
+
+/* Note finale */
+.support-note {
+    margin: 1.5rem 0 0;
+    font-size: .95rem;
+    opacity: .8;
+}

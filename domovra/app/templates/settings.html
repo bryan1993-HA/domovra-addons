@@ -1,0 +1,105 @@
+{% extends "base.html" %}
+{% block title %}Domovra — Paramètres{% endblock %}
+
+{% block head %}{% endblock %}
+
+{% block content %}
+<div class="wrap">
+    <form method="post" action="{{ BASE }}settings/save">
+
+        <!-- Apparence -->
+        <div class="card">
+            <h2>Apparence</h2>
+            <div class="row">
+                <div class="field">
+                    <div class="label">Thème</div>
+                    <select name="theme">
+                        <option value="auto" {{ 'selected' if SETTINGS.theme=='auto' }}>Auto</option>
+                        <option value="light" {{ 'selected' if SETTINGS.theme=='light' }}>Clair</option>
+                        <option value="dark" {{ 'selected' if SETTINGS.theme=='dark' }}>Sombre</option>
+                    </select>
+                </div>
+
+                <div class="field">
+                    <div class="label">Affichage des tableaux</div>
+                    <select name="table_mode">
+                        <option value="scroll" {{ 'selected' if SETTINGS.table_mode=='scroll' }}>Défilement horizontal
+                        </option>
+                        <option value="stacked" {{ 'selected' if SETTINGS.table_mode=='stacked' }}>Empilé (mobile)
+                        </option>
+                    </select>
+                </div>
+
+                <div class="field">
+                    <div class="label">Menu latéral compact</div>
+                    <label style="display:flex;align-items:center;gap:8px">
+                        <input type="checkbox" name="sidebar_compact" {{ 'checked' if SETTINGS.sidebar_compact }}>
+                        Activer
+                    </label>
+                </div>
+            </div>
+        </div>
+
+        <!-- Produits / stocks -->
+        <div class="card">
+            <h2>Produits / stocks</h2>
+            <div class="row">
+                <div class="field">
+                    <div class="label">Durée de conservation par défaut (jours)</div>
+                    <input type="number" name="default_shelf_days" value="{{ SETTINGS.default_shelf_days|default(90) }}"
+                        min="1">
+                </div>
+
+                <div class="field">
+                    <div class="label">Seuil “faible stock” par défaut</div>
+                    <input type="number" name="low_stock_default" value="{{ SETTINGS.low_stock_default|default(1) }}"
+                        min="0">
+                </div>
+            </div>
+        </div>
+
+        <!-- Toasts -->
+        <div class="card">
+            <h2>Toasts (notifications)</h2>
+            <div class="row">
+                <div class="field">
+                    <div class="label">Durée d’affichage (ms)</div>
+                    <input type="number" name="toast_duration" min="500" step="100"
+                        value="{{ SETTINGS.toast_duration|default(3000) }}">
+                </div>
+
+                <div class="field">
+                    <div class="label">Couleur “Succès”</div>
+                    <input type="color" name="toast_ok" value="{{ SETTINGS.toast_ok|default('#4caf50') }}">
+                </div>
+
+                <div class="field">
+                    <div class="label">Couleur “Avertissement”</div>
+                    <input type="color" name="toast_warn" value="{{ SETTINGS.toast_warn|default('#ffb300') }}">
+                </div>
+
+                <div class="field">
+                    <div class="label">Couleur “Erreur”</div>
+                    <input type="color" name="toast_error" value="{{ SETTINGS.toast_error|default('#ef5350') }}">
+                </div>
+            </div>
+        </div>
+
+        <!-- Actions -->
+        <div class="row" style="justify-content:flex-end">
+            <button class="secondary">Enregistrer</button>
+        </div>
+
+    </form>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    (function () {
+        const p = new URLSearchParams(location.search);
+        if (p.get('ok') === '1') window.showToast('Paramètres enregistrés.', 'ok');
+        if (p.get('error') === '1') window.showToast('Erreur lors de l’enregistrement.', 'error');
+    })();
+</script>
+{% endblock %}
