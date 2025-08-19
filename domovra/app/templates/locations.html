@@ -12,11 +12,13 @@
       <h2>Ajout express</h2><span class="muted">un nouvel emplacement</span>
     </div>
     <form method="post" action="{{ BASE }}location/add" class="form-grid">
+      <!-- Champ Nom -->
       <div class="field">
         <div class="label">Nom de l’emplacement</div>
         <input name="name" type="text" required placeholder="ex. Frigo, Congélateur, Placard haut">
       </div>
 
+      <!-- Champ Type (case à cocher) -->
       <div class="field">
         <div class="label">Type</div>
         <label style="display:flex;align-items:center;gap:8px;">
@@ -25,12 +27,16 @@
         </label>
       </div>
 
-      <div class="field">
+      <!-- Champ Description -->
+      <div class="field" style="grid-column: 1 / -1">
         <div class="label">Description (optionnel)</div>
         <input type="text" name="description" placeholder="ex. placard haut à gauche">
       </div>
 
-      <button class="secondary">＋ Ajouter</button>
+      <!-- Bouton Ajouter -->
+      <div class="field" style="grid-column: 1 / -1; text-align:center">
+        <button class="secondary">＋ Ajouter</button>
+      </div>
     </form>
 
     <!-- Outils -->
