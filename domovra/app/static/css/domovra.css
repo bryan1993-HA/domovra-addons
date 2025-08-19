@@ -1112,6 +1112,61 @@ html[data-theme="light"] .wrap table:has(#locations-body) tbody tr:hover {
     }
 }
 
+/* === Dialog Supprimer : mise en page propre === */
+#dlg-delete .del-mgmt {
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 12px;
+}
+
+#dlg-delete .del-choices {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    /* 2 colonnes sur desktop */
+    gap: 10px 16px;
+    align-items: center;
+}
+
+#dlg-delete .opt {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-height: 32px;
+    white-space: nowrap;
+}
+
+/* largeur confortable pour le select */
+#dlg-delete .opt select {
+    min-width: 220px;
+}
+
+/* Réinitialiser d’éventuels styles globaux qui gonflent les radios */
+#dlg-delete input[type="radio"] {
+    width: auto;
+    height: auto;
+    transform: none;
+    accent-color: var(--accent);
+    /* joli dans les thèmes modernes */
+    margin: 0;
+}
+
+/* Empiler proprement sur mobile */
+@media (max-width: 700px) {
+    #dlg-delete .del-choices {
+        grid-template-columns: 1fr;
+        /* 1 colonne */
+    }
+
+    #dlg-delete .opt {
+        flex-wrap: wrap;
+    }
+
+    #dlg-delete .opt select {
+        width: 100%;
+    }
+}
+
+
 
 /* ========================================================================== */
 /* ========== 13) Page Produits (/products) ================================= */

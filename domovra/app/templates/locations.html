@@ -219,22 +219,27 @@
     <p id="dlg-delete-text" class="muted" style="margin:0"></p>
     <input type="hidden" name="location_id" id="dlg-delete-id">
 
-    <fieldset id="del-mgmt" style="border:1px solid var(--border);border-radius:10px;padding:10px">
+    <fieldset id="del-mgmt" class="del-mgmt">
       <legend class="muted">Gestion des lots existants</legend>
-      <label style="display:flex;align-items:center;margin-bottom:8px">
-        <input type="radio" name="del_mode" value="remove" checked>
-        <span>Supprimer les lots liés</span>
-      </label>
-      <label style="display:flex;align-items:center">
-        <input type="radio" name="del_mode" value="move">
-        <span>Déplacer les lots vers :</span>
-        <select name="move_to" id="dlg-move-select" style="min-width:160px" disabled>
-          {% for loc in items %}
-          <option value="{{ loc.id }}">{{ loc.name }}</option>
-          {% endfor %}
-        </select>
-      </label>
+
+      <div class="del-choices">
+        <label class="opt">
+          <input type="radio" name="del_mode" value="remove" checked>
+          <span>Supprimer les lots liés</span>
+        </label>
+
+        <label class="opt">
+          <input type="radio" name="del_mode" value="move">
+          <span>Déplacer les lots vers :</span>
+          <select name="move_to" id="dlg-move-select" disabled>
+            {% for loc in items %}
+            <option value="{{ loc.id }}">{{ loc.name }}</option>
+            {% endfor %}
+          </select>
+        </label>
+      </div>
     </fieldset>
+
 
     <div class="row" style="justify-content:flex-end;gap:8px">
       <button type="button" class="secondary" onclick="document.getElementById('dlg-delete').close()">Annuler</button>
