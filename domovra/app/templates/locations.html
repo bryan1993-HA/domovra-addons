@@ -81,10 +81,18 @@
           {% for loc in items %}
           <tr data-id="{{ loc.id }}" data-name="{{ loc.name }}" data-lots="{{ loc.lot_count|int }}">
             <td>
-              <span
-                style="display:inline-block;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">
-                {{ loc.name }}
-              </span>
+              <div style="display:flex;align-items:center;gap:.4rem;max-width:100%">
+                {% if loc.is_freezer %}<span aria-label="Congélateur">❄️</span>{% endif %}
+                <span
+                  style="display:inline-block;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">
+                  {{ loc.name }}
+                </span>
+              </div>
+              {% if loc.description %}
+              <div class="muted" style="margin-top:2px;font-size:.9rem">
+                {{ loc.description }}
+              </div>
+              {% endif %}
             </td>
             <td>
               {% if loc.lot_count is defined %}
@@ -124,12 +132,20 @@
       {% for loc in items %}
       <div class="loc-card" data-id="{{ loc.id }}" data-name="{{ loc.name }}" data-lots="{{ loc.lot_count|int }}">
         <div class="loc-main">
-          <div class="loc-title">{{ loc.name }}</div>
+          <div class="loc-title">
+            {% if loc.is_freezer %}❄️ {% endif %}{{ loc.name }}
+          </div>
+
           <div class="loc-meta">
+            {% if loc.description %}
+            <span>{{ loc.description }}</span>
+            {% endif %}
+
             {% if loc.lot_count is defined %}
+            {% if loc.description %}<span>•</span>{% endif %}
             <span>🧮 {{ loc.lot_count|int }} lot{{ '' if (loc.lot_count|int) == 1 else 's' }}</span>
-            {% if loc.urgent_count|int > 0 %}<span>⚠️ {{ loc.urgent_count|int }} urgent{{ '' if (loc.urgent_count|int)
-              == 1 else 's' }}</span>{% endif %}
+            {% if loc.urgent_count|int > 0 %}<span>⛔ {{ loc.urgent_count|int }} urgent{{ '' if (loc.urgent_count|int)==1
+              else 's' }}</span>{% endif %}
             {% if loc.soon_count|int > 0 %}<span>⏰ {{ loc.soon_count|int }} bientôt</span>{% endif %}
             {% endif %}
           </div>
