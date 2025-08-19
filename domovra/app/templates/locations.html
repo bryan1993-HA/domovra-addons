@@ -65,21 +65,26 @@
     <div class="table-responsive">
       <table>
         <colgroup>
-          <col style="width:37%">
-          <col style="width:37%">
-          <col style="width:26%">
+          <col style="width:30%">
+          <col style="width:30%">
+          <col style="width:20%">
+          <col style="width:20%">
         </colgroup>
+
         <thead>
           <tr>
             <th>Nom</th>
+            <th>Description</th>
             <th>Infos</th>
             <th style="text-align:right">Actions</th>
           </tr>
         </thead>
+
         <tbody id="locations-body">
           {% if items %}
           {% for loc in items %}
           <tr data-id="{{ loc.id }}" data-name="{{ loc.name }}" data-lots="{{ loc.lot_count|int }}">
+            <!-- Nom -->
             <td>
               <div style="display:flex;align-items:center;gap:.4rem;max-width:100%">
                 {% if loc.is_freezer %}<span aria-label="Congélateur">❄️</span>{% endif %}
@@ -88,12 +93,18 @@
                   {{ loc.name }}
                 </span>
               </div>
+            </td>
+
+            <!-- Description -->
+            <td>
               {% if loc.description %}
-              <div class="muted" style="margin-top:2px;font-size:.9rem">
-                {{ loc.description }}
-              </div>
+              {{ loc.description }}
+              {% else %}
+              <span class="muted">—</span>
               {% endif %}
             </td>
+
+            <!-- Infos -->
             <td>
               {% if loc.lot_count is defined %}
               <span class="pill">{{ loc.lot_count|int }} lot{{ '' if (loc.lot_count|int) == 1 else 's' }}</span>
@@ -108,6 +119,8 @@
               <span class="muted">—</span>
               {% endif %}
             </td>
+
+            <!-- Actions -->
             <td class="t-actions">
               <div class="actions-grid">
                 <button type="button" class="secondary js-rename">✏️ <span class="btn-text">Modifier</span></button>
