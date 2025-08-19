@@ -681,18 +681,28 @@ def product_adjust(request: Request, product_id: int = Form(...), delta: int = F
     return RedirectResponse(ingress_base(request) + "products", status_code=303)
 
 @app.post("/location/add")
-def location_add(request: Request, name: str = Form(...)):
+def location_add(request: Request,
+                 name: str = Form(...),
+                 is_freezer: str | None = Form(None),
+                 description: str | None = Form(None)):
     base = ingress_base(request)
     nm = (name or "").strip()
+
     existing = [l["name"].strip().casefold() for l in list_locations()]
     if nm.casefold() in existing:
         log_event("location.duplicate", {"name": nm})
         params = urlencode({"duplicate": 1, "name": nm})
         return RedirectResponse(base + f"locations?{params}", status_code=303, headers={"Cache-Control":"no-store"})
-    lid = add_location(nm)
-    log_event("location.add", {"id": lid, "name": nm})
+
+    freezer = 1 if is_freezer else 0
+    desc = (description or "").strip() or None
+
+    lid = add_location(nm, freezer, desc)
+    log_event("location.add", {"id": lid, "name": nm, "is_freezer": freezer, "description": desc})
+
     params = urlencode({"added": 1, "name": nm})
     return RedirectResponse(base + f"locations?{params}", status_code=303, headers={"Cache-Control":"no-store"})
+
 
 @app.post("/location/update")
 def location_update(request: Request, location_id: int = Form(...), name: str = Form(...)):

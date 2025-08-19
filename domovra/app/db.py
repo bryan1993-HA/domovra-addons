@@ -70,14 +70,27 @@ def init_db():
         if not _column_exists(c, "products", "min_qty"):
             c.execute("ALTER TABLE products ADD COLUMN min_qty REAL")  # nullable
 
+                # ----- Migration : champs supplémentaires pour locations
+        if not _column_exists(c, "locations", "is_freezer"):
+            c.execute("ALTER TABLE locations ADD COLUMN is_freezer INTEGER NOT NULL DEFAULT 0")
+        if not _column_exists(c, "locations", "description"):
+            c.execute("ALTER TABLE locations ADD COLUMN description TEXT")
+
+
         c.commit()
 
 # ---------- Locations
-def add_location(name: str) -> int:
+# ---------- Locations
+def add_location(name: str, is_freezer: int = 0, description: str | None = None) -> int:
     name = name.strip()
+    is_freezer = 1 if is_freezer else 0
+    desc = (description or "").strip() or None
     with _conn() as c:
         try:
-            cur = c.execute("INSERT INTO locations(name) VALUES(?)", (name,))
+            cur = c.execute(
+                "INSERT INTO locations(name, is_freezer, description) VALUES(?, ?, ?)",
+                (name, is_freezer, desc)
+            )
             c.commit()
             return cur.lastrowid
         except sqlite3.IntegrityError:
@@ -86,12 +99,29 @@ def add_location(name: str) -> int:
 
 def list_locations():
     with _conn() as c:
-        return [dict(r) for r in c.execute("SELECT * FROM locations ORDER BY name")]
+        return [dict(r) for r in c.execute(
+            "SELECT id, name, COALESCE(is_freezer,0) AS is_freezer, COALESCE(description,'') AS description "
+            "FROM locations ORDER BY name"
+        )]
 
-def update_location(location_id: int, name: str):
+def update_location(location_id: int, name: str, is_freezer: int | None = None, description: str | None = None):
+    """
+    Rétro‑compat : tu peux appeler avec seulement (id, name).
+    Si is_freezer/description sont fournis (non None), on les met à jour aussi.
+    """
+    sets = ["name=?"]
+    params: list = [name.strip()]
+    if is_freezer is not None:
+        sets.append("is_freezer=?")
+        params.append(1 if is_freezer else 0)
+    if description is not None:
+        sets.append("description=?")
+        params.append((description or "").strip() or None)
+    params.append(int(location_id))
     with _conn() as c:
-        c.execute("UPDATE locations SET name=? WHERE id=?", (name.strip(), location_id))
+        c.execute(f"UPDATE locations SET {', '.join(sets)} WHERE id=?", params)
         c.commit()
+
 
 def delete_location(location_id: int):
     """Supprime un emplacement + ses lots + mouvements liés."""
