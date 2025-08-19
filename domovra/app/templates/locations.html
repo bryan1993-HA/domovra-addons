@@ -83,7 +83,8 @@
         <tbody id="locations-body">
           {% if items %}
           {% for loc in items %}
-          <tr data-id="{{ loc.id }}" data-name="{{ loc.name }}" data-lots="{{ loc.lot_count|int }}">
+          <tr data-id="{{ loc.id }}" data-name="{{ loc.name }}" data-lots="{{ loc.lot_count|int }}"
+            data-freezer="{{ 1 if loc.is_freezer else 0 }}" data-desc="{{ (loc.description or '')|e }}">
             <!-- Nom -->
             <td>
               <div style="display:flex;align-items:center;gap:.4rem;max-width:100%">
@@ -143,7 +144,8 @@
     <div class="loc-cards" id="locations-cards">
       {% if items %}
       {% for loc in items %}
-      <div class="loc-card" data-id="{{ loc.id }}" data-name="{{ loc.name }}" data-lots="{{ loc.lot_count|int }}">
+      <div class="loc-card" data-id="{{ loc.id }}" data-name="{{ loc.name }}" data-lots="{{ loc.lot_count|int }}"
+        data-freezer="{{ 1 if loc.is_freezer else 0 }}" data-desc="{{ (loc.description or '')|e }}">
         <div class="loc-main">
           <div class="loc-title">
             {% if loc.is_freezer %}❄️ {% endif %}{{ loc.name }}
@@ -164,7 +166,7 @@
           </div>
         </div>
         <div class="loc-actions">
-          <button type="button" class="secondary js-rename" title="Renommer">✏️</button>
+          <button type="button" class="secondary js-rename" title="Modifier">✏️</button>
           <button type="button" class="secondary js-delete-open" title="Supprimer">🗑️</button>
         </div>
       </div>
@@ -177,20 +179,38 @@
 </div>
 
 <!-- Dialog Renommer -->
-<dialog id="dlg-rename">
-  <form method="post" action="{{ BASE }}location/update" style="display:grid;gap:10px;min-width:min(420px,92vw)">
-    <h3 style="margin:0">Renommer l’emplacement</h3>
+<!-- Dialog Modifier -->
+<dialog id="dlg-edit">
+  <form method="post" action="{{ BASE }}location/update" style="display:grid;gap:10px;min-width:min(520px,92vw)">
+    <h3 style="margin:0">Modifier l’emplacement</h3>
+
     <input type="hidden" name="location_id" id="dlg-location-id">
-    <div>
-      <div class="label">Nouveau nom</div>
+
+    <div class="field">
+      <div class="label">Nom</div>
       <input type="text" name="name" id="dlg-location-name" required>
     </div>
+
+    <div class="field">
+      <div class="label">Type</div>
+      <label style="display:flex;align-items:center;gap:8px;">
+        <input type="checkbox" name="is_freezer" id="dlg-location-freezer" value="1" style="width:16px;height:16px;">
+        Est un congélateur
+      </label>
+    </div>
+
+    <div class="field">
+      <div class="label">Description</div>
+      <input type="text" name="description" id="dlg-location-desc" placeholder="ex. placard haut à gauche">
+    </div>
+
     <div class="row" style="justify-content:flex-end;gap:8px">
-      <button type="button" class="secondary" onclick="document.getElementById('dlg-rename').close()">Annuler</button>
+      <button type="button" class="secondary" onclick="document.getElementById('dlg-edit').close()">Annuler</button>
       <button class="secondary">Enregistrer</button>
     </div>
   </form>
 </dialog>
+
 
 <!-- Dialog Supprimer (avec déplacement) -->
 <dialog id="dlg-delete">
@@ -242,16 +262,22 @@
     if (search) search.addEventListener('input', (e) => applyFilter(e.target.value));
   })();
 
-  function openRename(btn) {
+  function openEdit(btn) {
     const row = btn.closest('[data-id]');
     const id = row?.dataset.id || btn.dataset.id;
     const name = row?.dataset.name || btn.dataset.name || '';
+    const freezer = (row?.dataset.freezer === '1');
+    const desc = row?.dataset.desc || '';
+
     $('#dlg-location-id').value = id || '';
-    const nameInput = $('#dlg-location-name');
-    nameInput.value = name;
-    $('#dlg-rename').showModal();
-    setTimeout(() => nameInput.focus(), 50);
+    $('#dlg-location-name').value = name;
+    $('#dlg-location-freezer').checked = freezer;
+    $('#dlg-location-desc').value = desc;
+
+    $('#dlg-edit').showModal();
+    setTimeout(() => $('#dlg-location-name').focus(), 50);
   }
+
 
   function openDelete(btn) {
     const row = btn.closest('[data-id]');
@@ -288,9 +314,10 @@
   }
 
   document.addEventListener('click', function (e) {
-    const r = e.target.closest('.js-rename'); if (r) return openRename(r);
+    const r = e.target.closest('.js-rename'); if (r) return openEdit(r);   // même bouton ouvre l’éditeur
     const d = e.target.closest('.js-delete-open'); if (d) return openDelete(d);
   });
+
 
   // Envoi : si "move" non choisi, on vide move_to
   document.querySelector('#dlg-delete form')?.addEventListener('submit', (e) => {

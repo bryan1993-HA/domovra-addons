@@ -705,13 +705,23 @@ def location_add(request: Request,
 
 
 @app.post("/location/update")
-def location_update(request: Request, location_id: int = Form(...), name: str = Form(...)):
+def location_update(
+    request: Request,
+    location_id: int = Form(...),
+    name: str = Form(...),
+    is_freezer: str = Form(""),
+    description: str = Form("")
+):
     base = ingress_base(request)
     nm = (name or "").strip()
-    update_location(location_id, nm)
-    log_event("location.update", {"id": location_id, "name": nm})
+    freezer = 1 if str(is_freezer).lower() in ("1","true","on","yes") else 0
+    desc = (description or "").strip()
+
+    update_location(location_id, nm, freezer, desc)
+    log_event("location.update", {"id": location_id, "name": nm, "is_freezer": freezer, "description": desc})
     params = urlencode({"updated": 1, "name": nm})
     return RedirectResponse(base + f"locations?{params}", status_code=303, headers={"Cache-Control":"no-store"})
+
 
 @app.post("/location/delete")
 def location_delete(request: Request, location_id: int = Form(...), move_to: str = Form("")):
