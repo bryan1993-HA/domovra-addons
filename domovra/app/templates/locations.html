@@ -233,9 +233,12 @@
           <span>Déplacer les lots vers :</span>
           <select name="move_to" id="dlg-move-select" disabled>
             {% for loc in items %}
-            <option value="{{ loc.id }}">{{ loc.name }}</option>
+            <option value="{{ loc.id }}" data-freezer="{{ 1 if loc.is_freezer else 0 }}">
+              {{ loc.name }}
+            </option>
             {% endfor %}
           </select>
+
         </label>
       </div>
     </fieldset>
@@ -297,8 +300,17 @@
     mgmt.style.display = (lots > 0) ? 'block' : 'none';
 
     const sel = $('#dlg-move-select');
-    Array.from(sel.options).forEach(o => o.disabled = (o.value === id));
+    const srcIsFreezer = (row?.dataset.freezer === '1'); // ← source: congélateur ?
+
+    // Désactive soi‑même + toute destination de type différent
+    Array.from(sel.options).forEach(o => {
+      const destIsFreezer = (o.dataset.freezer === '1');
+      const sameType = (destIsFreezer === srcIsFreezer);
+      o.disabled = (o.value === id) || !sameType;
+    });
+
     const firstValid = Array.from(sel.options).find(o => !o.disabled);
+
 
     const radios = document.querySelectorAll('input[name="del_mode"]');
     const toggle = () => {
@@ -342,6 +354,7 @@
     else if (p.get('added') === '1') window.showToast(`Emplacement « ${n} » ajouté.`, 'ok');
     else if (p.get('updated') === '1') window.showToast(`Emplacement renommé en « ${n} ».`, 'ok');
     else if (p.get('deleted') === '1') window.showToast(`Emplacement supprimé.`, 'ok');
+    else if (p.get('move_invalid') === '1') window.showToast(`Déplacement refusé : types incompatibles (congélateur ↔ non congélateur).`, 'warn'); // ← NEW
   })();
 </script>
 {% endblock %}
