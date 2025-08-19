@@ -138,12 +138,14 @@ header {
     flex-wrap: wrap;
 }
 
+/* Harmonisée sur les variables de thème */
 .chip {
-    background: #151922;
-    border: 1px solid #242932;
+    background: var(--bg-card);
+    border: 1px solid var(--line);
     border-radius: 999px;
     padding: 6px 10px;
     white-space: nowrap;
+    color: inherit;
 }
 
 .chip b {
@@ -256,18 +258,19 @@ tbody tr:nth-child(even) {
     gap: 16px;
 }
 
-.card {
+/* Spécifique aux cartes placées DANS .grid */
+.grid>.card {
     grid-column: span 4;
 }
 
 @media (max-width:1200px) {
-    .card {
+    .grid>.card {
         grid-column: span 6;
     }
 }
 
 @media (max-width:768px) {
-    .card {
+    .grid>.card {
         grid-column: 1/-1;
     }
 }
@@ -447,7 +450,7 @@ html[data-theme="light"] tbody tr:nth-child(even) {
 }
 
 html[data-theme="light"] .chip {
-    background: #ffffff;
+    background: var(--bg-card);
     border: 1px solid var(--line);
 }
 
@@ -522,14 +525,12 @@ html[data-theme="light"] .chip {
 /* ========== 11) Page Accueil (styles scopés) =============================== */
 /* ========================================================================== */
 
-/* Conteneur + variables locales */
 .wrap {
     --gap: 12px;
     --radius: 14px;
     --border: var(--line);
-    /* aligné sur le thème */
     --chip: #1a2230;
-    /* fond chips (dark) */
+    /* dark */
     --muted: var(--text-muted);
     --accent: var(--accent);
     --ok: var(--toast-ok);
@@ -545,7 +546,6 @@ html[data-theme="light"] .wrap {
     --chip: #ffffff;
 }
 
-/* Rangées & éléments */
 .wrap .row {
     display: flex;
     gap: 12px;
@@ -556,7 +556,6 @@ html[data-theme="light"] .wrap {
     flex: initial;
 }
 
-/* Chips */
 .wrap .chip {
     background: var(--chip);
     border: 1px solid var(--border);
@@ -566,7 +565,6 @@ html[data-theme="light"] .wrap {
     white-space: nowrap;
 }
 
-/* Cartes & titres */
 .wrap .card {
     border: 1px solid var(--border);
     border-radius: var(--radius);
@@ -596,9 +594,9 @@ html[data-theme="light"] .wrap {
     background: transparent;
     color: inherit;
     min-height: 0;
-    /* bat le min-height global */
+    /* override global */
     width: auto;
-    /* bat le width:100% global */
+    /* override global */
 }
 
 .wrap .field {
@@ -616,7 +614,7 @@ html[data-theme="light"] .wrap {
     gap: 6px;
 }
 
-/* Bouton primaire (scopé) */
+/* Bouton primaire (UNIQUE définition) */
 .wrap button.primary {
     background: var(--accent);
     border: 0;
@@ -723,7 +721,7 @@ html[data-theme="light"] .wrap .top8-table tbody tr:hover {
     border-color: rgba(239, 83, 80, .35);
 }
 
-/* Bascule table/cartes */
+/* Bascule table/cartes (scopée automatiquement via :has) */
 .wrap .top8-table {
     display: block;
 }
@@ -792,7 +790,7 @@ html[data-theme="light"] .wrap .top8-table tbody tr:hover {
     flex-wrap: wrap;
 }
 
-/* Fix “Companion” (élargit le breakpoint pour mobile cards) */
+/* Fix Companion (élargit breakpoint mobile cards) */
 @media (max-width: 900px) {
     .wrap .top8-table {
         display: none !important;
@@ -870,7 +868,7 @@ html[data-theme="light"] .wrap .top8-table tbody tr:hover {
     }
 }
 
-/* WebKit iOS (orientation portrait) */
+/* WebKit iOS (portrait) */
 @supports (-webkit-touch-callout: none) {
     @media (orientation: portrait) {
         .wrap .top8-table {
@@ -1073,21 +1071,7 @@ html[data-theme="light"] .wrap table:has(#locations-body) tbody tr:hover {
 /* ========== 13) Page Produits (/products) ================================= */
 /* ========================================================================== */
 
-/* Variantes de boutons (scopées) */
-.wrap button.primary {
-    background: var(--accent);
-    border: 0;
-    color: #02222a;
-    font-weight: 600;
-    cursor: pointer;
-}
-
-.wrap button.secondary {
-    background: var(--chip, #1a2230);
-    border: 1px solid var(--line);
-    color: inherit;
-}
-
+/* Variantes de boutons */
 .wrap .btn-ghost {
     background: transparent;
     border: 1px solid var(--line);
@@ -1102,7 +1086,13 @@ html[data-theme="light"] .wrap table:has(#locations-body) tbody tr:hover {
     margin-right: .4rem;
 }
 
-/* Placeholders adoucis */
+.wrap button.secondary {
+    background: var(--chip, #1a2230);
+    border: 1px solid var(--line);
+    color: inherit;
+}
+
+/* Placeholders */
 .wrap input::placeholder {
     color: rgba(200, 210, 225, .7);
 }
@@ -1111,7 +1101,7 @@ html[data-theme="light"] .wrap input::placeholder {
     color: rgba(60, 70, 90, .6);
 }
 
-/* Aide “?” (tooltips) */
+/* Aide “?” */
 .wrap .help {
     display: inline-grid;
     place-items: center;
@@ -1282,7 +1272,7 @@ html[data-theme="light"] .wrap .help:focus-visible::after {
     }
 }
 
-/* Form “Ajouter un produit” (grille) */
+/* Form “Ajouter un produit” */
 .wrap form[action$="product/add"].form-grid {
     display: grid !important;
     grid-template-columns: 2fr 1fr 1fr 1fr 1fr auto auto;
@@ -1317,7 +1307,7 @@ html[data-theme="light"] .wrap .help:focus-visible::after {
     }
 }
 
-/* Table Liste (produits) */
+/* Table Liste (produits & stocks — bloc unique) */
 #tbl {
     width: 100%;
     border-collapse: collapse;
@@ -1378,56 +1368,55 @@ html[data-theme="light"] #tbl tbody tr:hover {
     font-weight: 600;
 }
 
-/* Cartes mobiles (produits) */
-.wrap .cards {
+/* Cartes mobiles (PRODUITS) — scopées via :has(#off-box) */
+.wrap:has(#off-box) .cards {
     display: none;
 }
 
 @media (max-width:700px) {
 
-    #tbl,
-    #tbl thead {
+    .wrap:has(#off-box) #tbl,
+    .wrap:has(#off-box) #tbl thead {
         display: none;
     }
 
-    .wrap .cards {
+    .wrap:has(#off-box) .cards {
         display: grid;
         gap: 10px;
     }
 
-    .wrap .card-item {
+    .wrap:has(#off-box) .card-item {
         border: 1px solid var(--line);
         border-radius: 12px;
         padding: 10px;
         background: transparent;
     }
 
-    .wrap .card-head {
+    .wrap:has(#off-box) .card-head {
         display: flex;
         justify-content: space-between;
         gap: 10px;
     }
 
-    .wrap .card-name {
+    .wrap:has(#off-box) .card-name {
         font-weight: 600;
     }
 
-    .wrap .card-info {
+    .wrap:has(#off-box) .card-info {
         display: flex;
         flex-wrap: wrap;
         gap: 8px;
         margin-top: 6px;
     }
 
-    .wrap .card-actions {
+    .wrap:has(#off-box) .card-actions {
         display: grid;
         grid-template-columns: 1fr 1fr;
         gap: 8px;
         margin-top: 8px;
     }
 
-    /* Toggle mobile */
-    .wrap .card-toggle {
+    .wrap:has(#off-box) .card-toggle {
         width: 100%;
         border: 1px solid var(--line);
         border-radius: 10px;
@@ -1439,25 +1428,25 @@ html[data-theme="light"] #tbl tbody tr:hover {
         gap: 8px;
     }
 
-    .wrap .card-toggle .chev {
+    .wrap:has(#off-box) .card-toggle .chev {
         transition: transform .15s ease;
     }
 
-    .wrap .card-toggle[aria-expanded="true"] .chev {
+    .wrap:has(#off-box) .card-toggle[aria-expanded="true"] .chev {
         transform: rotate(90deg);
     }
 
-    .wrap .card-extra[hidden] {
+    .wrap:has(#off-box) .card-extra[hidden] {
         display: none !important;
     }
 
-    .wrap .card-extra {
+    .wrap:has(#off-box) .card-extra {
         margin-top: 8px;
     }
 }
 
 @media (prefers-reduced-motion: reduce) {
-    .wrap .card-toggle .chev {
+    .wrap:has(#off-box) .card-toggle .chev {
         transition: none;
     }
 }
@@ -1653,37 +1642,6 @@ html[data-theme="light"] #tbl tbody tr:hover {
     background: transparent;
 }
 
-/* Table Liste (stocks) */
-#tbl {
-    width: 100%;
-    border-collapse: collapse;
-}
-
-#tbl thead th {
-    font-size: 12px;
-    color: var(--text-muted);
-    text-align: left;
-    padding: 6px 8px;
-    border: 0;
-    border-bottom: 1px solid var(--line);
-    background: transparent;
-}
-
-#tbl tbody td {
-    padding: 10px 8px;
-    border: 0;
-    border-bottom: 1px solid var(--line);
-    vertical-align: top;
-}
-
-#tbl tbody tr:hover {
-    background: rgba(255, 255, 255, .03);
-}
-
-html[data-theme="light"] #tbl tbody tr:hover {
-    background: rgba(0, 0, 0, .03);
-}
-
 /* Filtres */
 .wrap .filters-row {
     display: grid;
@@ -1701,54 +1659,54 @@ html[data-theme="light"] #tbl tbody tr:hover {
     }
 }
 
-/* Cartes mobiles (stocks) */
-.wrap .cards {
+/* Cartes mobiles (STOCKS) — scopées via :has(form[action$="lot/add"]) */
+.wrap:has(form[action$="lot/add"]) .cards {
     display: none;
 }
 
 @media (max-width:700px) {
 
-    #tbl,
-    #tbl thead {
+    .wrap:has(form[action$="lot/add"]) #tbl,
+    .wrap:has(form[action$="lot/add"]) #tbl thead {
         display: none;
     }
 
-    .wrap .cards {
+    .wrap:has(form[action$="lot/add"]) .cards {
         display: grid;
         gap: 10px;
     }
 
-    .wrap .card-item {
+    .wrap:has(form[action$="lot/add"]) .card-item {
         border: 1px solid var(--line);
         border-radius: 12px;
         padding: 10px;
         background: transparent;
     }
 
-    .wrap .card-head {
+    .wrap:has(form[action$="lot/add"]) .card-head {
         display: flex;
         align-items: center;
         gap: 8px;
     }
 
-    .wrap .card-title {
+    .wrap:has(form[action$="lot/add"]) .card-title {
         font-weight: 600;
         flex: 1;
     }
 
-    .wrap .card-sub {
+    .wrap:has(form[action$="lot/add"]) .card-sub {
         color: var(--text-muted);
         font-size: 14px;
         margin-top: 4px;
     }
 
-    .wrap .card-actions {
+    .wrap:has(form[action$="lot/add"]) .card-actions {
         display: flex;
         gap: 8px;
         margin-top: 8px;
     }
 
-    .wrap .card-actions .icon-btn {
+    .wrap:has(form[action$="lot/add"]) .card-actions .icon-btn {
         padding: 8px 10px;
         border-radius: 10px;
         border: 1px solid var(--line);
@@ -1913,14 +1871,13 @@ html[data-theme="light"] #tbl tbody tr:hover {
 /* ========== 17) Page Support (/support) =================================== */
 /* ========================================================================== */
 
-/* Conteneur étroit */
 .support-wrap {
     max-width: 880px;
     margin: 0 auto;
     padding: 1.25rem;
 }
 
-/* Hero avec dégradés adaptatifs */
+/* Hero */
 .support-hero {
     position: relative;
     border-radius: 16px;
@@ -1967,7 +1924,7 @@ html[data-theme="light"] .support-hero {
     margin: 1.1rem 0 0;
 }
 
-/* Boutons Ko‑fi */
+/* Ko‑fi */
 .kofi-btn {
     display: inline-flex;
     align-items: center;
@@ -1985,13 +1942,11 @@ html[data-theme="light"] .support-hero {
     transform: translateY(1px);
 }
 
-/* Primaire */
 .kofi-primary {
     background: #29abe0;
     color: #0b1016;
 }
 
-/* Secondaire (outline) */
 html[data-theme="dark"] .kofi-outline {
     border-color: #3b4252;
     color: #e5e7eb;
