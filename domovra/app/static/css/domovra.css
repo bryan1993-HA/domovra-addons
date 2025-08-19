@@ -920,6 +920,22 @@ html[data-theme="light"] .wrap .top8-table tbody tr:hover {
     }
 }
 
+/* Ajout express : grille spéciale */
+.add-location-form {
+    display: grid;
+    gap: 12px;
+}
+
+/* Desktop → tout sur une ligne */
+@media (min-width: 901px) {
+    .add-location-form {
+        grid-template-columns: 2fr 1fr 2fr auto;
+        /* Nom | Type | Description | Bouton */
+        align-items: end;
+    }
+}
+
+
 @media (max-width:700px) {
     .wrap form[action$="location/add"].form-grid {
         grid-template-columns: 1fr;

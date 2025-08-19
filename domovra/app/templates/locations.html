@@ -11,33 +11,39 @@
     <div class="title">
       <h2>Ajout express</h2><span class="muted">un nouvel emplacement</span>
     </div>
-    <form method="post" action="{{ BASE }}location/add" class="form-grid">
-      <!-- Champ Nom -->
-      <div class="field">
-        <div class="label">Nom de l’emplacement</div>
-        <input name="name" type="text" required placeholder="ex. Frigo, Congélateur, Placard haut">
+    <!-- Ajout express -->
+    <div class="card">
+      <div class="title">
+        <h2>Ajout express</h2><span class="muted">un nouvel emplacement</span>
       </div>
+      <form method="post" action="{{ BASE }}location/add" class="form-grid add-location-form">
+        <!-- Nom -->
+        <div class="field">
+          <div class="label">Nom de l’emplacement</div>
+          <input name="name" type="text" required placeholder="ex. Frigo, Congélateur, Placard haut">
+        </div>
 
-      <!-- Champ Type (case à cocher) -->
-      <div class="field">
-        <div class="label">Type</div>
-        <label style="display:flex;align-items:center;gap:8px;">
-          <input type="checkbox" name="is_freezer" value="1" style="width:16px;height:16px;">
-          Est un congélateur
-        </label>
-      </div>
+        <!-- Type -->
+        <div class="field">
+          <div class="label">Type</div>
+          <label style="display:flex;align-items:center;gap:8px;">
+            <input type="checkbox" name="is_freezer" value="1" style="width:16px;height:16px;">
+            Est un congélateur
+          </label>
+        </div>
 
-      <!-- Champ Description -->
-      <div class="field" style="grid-column: 1 / -1">
-        <div class="label">Description (optionnel)</div>
-        <input type="text" name="description" placeholder="ex. placard haut à gauche">
-      </div>
+        <!-- Description -->
+        <div class="field">
+          <div class="label">Description (optionnel)</div>
+          <input type="text" name="description" placeholder="ex. placard haut à gauche">
+        </div>
 
-      <!-- Bouton Ajouter -->
-      <div class="field" style="grid-column: 1 / -1; text-align:center">
-        <button class="secondary">＋ Ajouter</button>
-      </div>
-    </form>
+        <!-- Bouton -->
+        <div class="field" style="align-self:end">
+          <button class="secondary">＋ Ajouter</button>
+        </div>
+      </form>
+    </div>
 
     <!-- Outils -->
     <div class="card">
