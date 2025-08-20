@@ -1714,6 +1714,11 @@ html[data-theme="light"] .wrap[data-page="product"] #tbl tbody tr:hover {
     font-weight: 600;
 }
 
+/* produit : masque l'aide sous la quantité pour ne pas casser l'alignement */
+.wrap .add-product-form #create_min_hint {
+    display: none;
+}
+
 
 
 
