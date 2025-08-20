@@ -412,8 +412,9 @@
 
 {% block scripts %}
 <script type="application/json" id="loc-map-data">
-  {{ loc_by_id | tojson }}
+  {{ loc_map | tojson }}
 </script>
+
 <script>
   /* ====== Recherche (cartes) ====== */
   const q = document.getElementById('q');

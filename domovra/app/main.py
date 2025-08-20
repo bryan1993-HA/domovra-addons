@@ -398,6 +398,7 @@ def index(request: Request):
                   low_products=low_products,
                   WARNING_DAYS=WARNING_DAYS,
                   CRITICAL_DAYS=CRITICAL_DAYS)
+
 @app.get("/products", response_class=HTMLResponse)
 def products_page(request: Request):
     base = ingress_base(request)
@@ -408,8 +409,8 @@ def products_page(request: Request):
     parents = list_products()
     insights = list_product_insights()
 
-    # clé en str pour éviter les soucis (JSON/JS manipulent des clés string)
-    loc_map = {str(loc.id): loc.name for loc in locations}
+    # -> dictionnaire { id: name } utilisable dans TOUS les blocks Jinja
+    loc_map = { str(loc["id"]): loc["name"] for loc in (locations or []) }
 
     return render(
         "products.html",
@@ -420,7 +421,7 @@ def products_page(request: Request):
         locations=locations,
         parents=parents,
         insights=insights,
-        loc_map=loc_map,  # <-- important
+        loc_map=loc_map,   # <— on passe ça au template
     )
 
 
