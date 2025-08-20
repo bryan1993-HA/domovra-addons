@@ -95,21 +95,21 @@
 
     <form id="create_form" method="post" action="{{ BASE }}product/add" class="form-grid add-product-form">
 
-      <!-- Nom (+ description pleine largeur) -->
-      <div style="grid-column: 1 / -1">
+      <!-- Nom & Description (pleine largeur) -->
+      <div class="field" style="grid-column:1 / -1">
         <div class="label">Nom du produit <span class="help" tabindex="0" data-tip="Nom court et explicite."></span>
         </div>
         <input name="name" id="create_name" type="text" required placeholder="ex. Pâtes, Lait demi-écrémé">
       </div>
 
-      <div style="grid-column: 1 / -1">
+      <div class="field" style="grid-column:1 / -1">
         <div class="label">Description <span class="help" tabindex="0" data-tip="ex. Brique UHT, 6×1 L, marque…"></span>
         </div>
         <textarea name="description" id="create_desc" rows="2" placeholder="ex. Brique UHT, 6×1 L, marque…"></textarea>
       </div>
 
-      <!-- Ligne 1 : emplacement / unité / min / alerte -->
-      <div>
+      <!-- Ligne 1 : emplacement / unité / catégorie -->
+      <div class="field">
         <div class="label">Emplacement par défaut <span class="help" tabindex="0"
             data-tip="Là où tu ranges habituellement ce produit."></span></div>
         <select name="default_location_id" id="create_default_location_id">
@@ -120,9 +120,8 @@
         </select>
       </div>
 
-      <div>
-        <div class="label">Unité par défaut <span class="help" tabindex="0"
-            data-tip="Comptage, poids ou volume."></span></div>
+      <div class="field">
+        <div class="label">Unité par défaut</div>
         <select name="unit" id="create_unit">
           <optgroup label="Comptage">
             <option value="pièce" selected>pièce</option>
@@ -148,10 +147,15 @@
         </select>
       </div>
 
-      <div>
-        <div class="label">Quantité minimum en stock
-          <span class="help" tabindex="0" data-tip="Seuil d’alerte propre à ce produit."></span>
-        </div>
+      <div class="field">
+        <div class="label">Catégorie de produits</div>
+        <input name="category" id="create_category" placeholder="ex. Produits laitiers, Viande, Condiments…">
+      </div>
+
+      <!-- Ligne 2 : min_qty (suffixe), alerte, parent -->
+      <div class="field">
+        <div class="label">Quantité minimum en stock <span class="help" tabindex="0"
+            data-tip="Seuil d’alerte propre à ce produit."></span></div>
         <div class="infield-qty">
           <input name="min_qty" id="create_min_qty" type="number" min="0" step="1" placeholder="ex. 1"
             value="{{ SETTINGS.low_stock_default }}">
@@ -160,8 +164,7 @@
         <div class="hint muted" id="create_min_hint">Conseil : 1, 2, 3 pièces…</div>
       </div>
 
-
-      <div>
+      <div class="field">
         <div class="label">Alerte stock faible actif ?</div>
         <select name="low_stock_enabled" id="create_low_enabled">
           <option value="1" selected>Oui</option>
@@ -169,41 +172,7 @@
         </select>
       </div>
 
-      <!-- Ligne 2 : DLC/DDM / péremption / no-freeze / freeze-shelf / catégorie -->
-      <div>
-        <div class="label">Type d’échéance</div>
-        <div class="segmented">
-          <label><input type="radio" name="expiry_kind" value="DLC" checked><span>DLC</span></label>
-          <label><input type="radio" name="expiry_kind" value="DDM"><span>DDM</span></label>
-        </div>
-      </div>
-
-      <div>
-        <div class="label">Péremption par défaut (jours) <span class="help" tabindex="0"
-            data-tip="Ajoutée à la date d’entrée en stock."></span></div>
-        <input name="shelf" id="create_shelf" type="number" min="1" placeholder="ex. 90">
-      </div>
-
-      <div class="no-freeze-cell">
-        <label class="checkbox-inline">
-          <input type="checkbox" id="create_no_freeze" name="no_freeze" value="1">
-          <span>Ne doit pas être congelé</span>
-        </label>
-      </div>
-
-
-      <div id="create_freeze_group">
-        <div class="label">Péremption après congélation (jours)</div>
-        <input name="default_freeze_shelf_days" id="create_freeze_shelf" type="number" min="1" placeholder="ex. 180">
-      </div>
-
-      <div>
-        <div class="label">Catégorie de produits</div>
-        <input name="category" id="create_category" placeholder="ex. Produits laitiers, Viande, Condiments…">
-      </div>
-
-      <!-- Ligne 3 : parent + boutons -->
-      <div style="grid-column: 1 / -3">
+      <div class="field">
         <div class="label">Produit parent</div>
         <select name="parent_id" id="create_parent">
           <option value="">— Aucun —</option>
@@ -213,10 +182,45 @@
         </select>
       </div>
 
-      <button class="secondary btn-wide">＋ Ajouter</button>
-      <button id="create_reset" type="button" class="secondary btn-wide"><span
-          class="ico">↺</span>Réinitialiser</button>
+      <!-- Ligne 3 : DLC/DDM, shelf, no-freeze, freeze-shelf -->
+      <div class="field">
+        <div class="label">Type d’échéance</div>
+        <div class="segmented">
+          <label><input type="radio" name="expiry_kind" value="DLC" checked><span>DLC</span></label>
+          <label><input type="radio" name="expiry_kind" value="DDM"><span>DDM</span></label>
+        </div>
+      </div>
+
+      <div class="field">
+        <div class="label">Péremption par défaut (jours)</div>
+        <input name="shelf" id="create_shelf" type="number" min="1" placeholder="ex. 90">
+      </div>
+
+      <div class="field no-freeze-cell">
+        <label class="checkbox-inline">
+          <input type="checkbox" id="create_no_freeze" name="no_freeze" value="1">
+          <span>Ne doit pas être congelé</span>
+        </label>
+      </div>
+
+      <div class="field" id="create_freeze_group">
+        <div class="label">Péremption après congélation (jours)</div>
+        <input name="default_freeze_shelf_days" id="create_freeze_shelf" type="number" min="1" placeholder="ex. 180">
+      </div>
+
+      <!-- Ligne boutons -->
+      <div class="field" style="grid-column:1 / -2">
+        <!-- vide: garde l’espace, aligne les boutons à droite comme locations -->
+      </div>
+      <div class="field">
+        <button class="secondary btn-wide">＋ Ajouter</button>
+      </div>
+      <div class="field">
+        <button id="create_reset" type="button" class="secondary btn-wide"><span
+            class="ico">↺</span>Réinitialiser</button>
+      </div>
     </form>
+
 
   </div>
 
