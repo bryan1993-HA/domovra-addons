@@ -398,17 +398,27 @@ def index(request: Request):
                   low_products=low_products,
                   WARNING_DAYS=WARNING_DAYS,
                   CRITICAL_DAYS=CRITICAL_DAYS)
-
 @app.get("/products", response_class=HTMLResponse)
 def products_page(request: Request):
     base = ingress_base(request)
     logger.info("GET /products (BASE=%s)", base)
+
     items = list_products_with_stats()
-    return render("products.html",
-                  BASE=base,
-                  page="products",
-                  request=request,
-                  items=items)
+
+    # 👇 AJOUTS
+    locations = list_locations()        # récupère {id, name, ...} des emplacements
+    parents = list_products()           # (optionnel) pour alimenter "Produit parent"
+    # si tu as une fonction dédiée, utilise-la (ex: list_parent_candidates())
+
+    return render(
+        "products.html",
+        BASE=base,
+        page="products",
+        request=request,
+        items=items,
+        locations=locations,
+        parents=parents,
+    )
 
 @app.get("/locations", response_class=HTMLResponse)
 def locations_page(request: Request):
