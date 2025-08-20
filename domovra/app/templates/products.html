@@ -318,18 +318,6 @@
           <td>
             <div class="actions" style="display:grid;gap:8px">
               <div class="row2" style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
-                <form method="post" action="{{ BASE }}product/adjust">
-                  <input type="hidden" name="product_id" value="{{ it.id }}">
-                  <input type="hidden" name="delta" value="-1">
-                  <button class="secondary" title="Retirer une étape">➖</button>
-                </form>
-                <form method="post" action="{{ BASE }}product/adjust">
-                  <input type="hidden" name="product_id" value="{{ it.id }}">
-                  <input type="hidden" name="delta" value="1">
-                  <button class="secondary" title="Ajouter une étape">➕</button>
-                </form>
-              </div>
-              <div class="row2" style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
                 <button class="secondary js-edit-open" data-id="{{ it.id }}" data-name="{{ it.name }}"
                   data-unit="{{ it.unit }}" data-shelf="{{ it.default_shelf_life_days }}" data-min="{{ threshold }}">✏️
                   Modifier</button>
@@ -338,6 +326,7 @@
               </div>
             </div>
           </td>
+
           </tr>
           {% endfor %}
           {% else %}
@@ -380,22 +369,13 @@
         </div>
 
         <div class="card-actions">
-          <form method="post" action="{{ BASE }}product/adjust">
-            <input type="hidden" name="product_id" value="{{ it.id }}">
-            <input type="hidden" name="delta" value="-1">
-            <button class="secondary" title="Retirer une étape">➖</button>
-          </form>
-          <form method="post" action="{{ BASE }}product/adjust">
-            <input type="hidden" name="product_id" value="{{ it.id }}">
-            <input type="hidden" name="delta" value="1">
-            <button class="secondary" title="Ajouter une étape">➕</button>
-          </form>
           <button class="secondary js-edit-open" data-id="{{ it.id }}" data-name="{{ it.name }}"
             data-unit="{{ it.unit }}" data-shelf="{{ it.default_shelf_life_days }}" data-min="{{ threshold }}">✏️
             Modifier</button>
           <button class="secondary js-delete-open" data-id="{{ it.id }}" data-name="{{ it.name }}"
             data-lots="{{ it.lots_count|int }}">🗑️ Supprimer</button>
         </div>
+
     </div>
     {% endfor %}
   </div>
