@@ -939,3 +939,8 @@ def get_products_with_stats():
         """
         with _conn() as c:
             return [dict(r) for r in c.execute(q)]
+
+def list_product_insights(limit: int = 8):
+    # TODO: calcule “dernier achat”, “dernière utilisation”, etc.
+    # Pour l’instant on renvoie une structure vide.
+    return []
