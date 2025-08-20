@@ -1943,6 +1943,56 @@ html[data-theme="light"] #tbl tbody tr:hover {
     width: 100%;
 }
 
+/* === Fiche produit — fix vue mobile/tablette === */
+
+/* ≤ 900px : on passe DIRECT en 1 colonne (plus lisible en Ingress) */
+@media (max-width: 900px) {
+    .wrap .add-product-form {
+        grid-template-columns: 1fr !important;
+    }
+
+    /* champs plein‑largeur sans surprises */
+    .wrap .add-product-form .field>input,
+    .wrap .add-product-form .field>select,
+    .wrap .add-product-form .field>textarea {
+        width: 100%;
+        min-width: 0;
+    }
+
+    /* radios DLC/DDM: ligne unique, pas de débord */
+    .wrap .add-product-form .segmented {
+        width: 100%;
+        justify-content: space-between;
+    }
+
+    .wrap .add-product-form .segmented label {
+        flex: 1 1 auto;
+        justify-content: center;
+        padding: 10px 8px;
+    }
+
+    /* suffixe quantité bien calé même en petit viewport */
+    .wrap .add-product-form .infield-qty input {
+        padding-right: 56px;
+    }
+
+    .wrap .add-product-form .infield-qty .suffix {
+        right: 10px;
+    }
+
+    /* boutons : pleine largeur et empilés proprement */
+    .wrap .add-product-form .btn-wide {
+        width: 100%;
+        justify-self: stretch;
+    }
+}
+
+/* (optionnel) si tu veux une étape intermédiaire en 2 colonnes: décommente
+@media (min-width: 701px) and (max-width: 900px) {
+  .wrap .add-product-form { grid-template-columns: 1fr 1fr !important; }
+}
+*/
+
 
 
 
