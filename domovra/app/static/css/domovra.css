@@ -1172,37 +1172,29 @@ html[data-theme="light"] .wrap table:has(#locations-body) tbody tr:hover {
 /* ========== 13) Page Produits (/products) ================================= */
 /* ========================================================================== */
 
-/* Variantes de boutons */
-.wrap .btn-ghost {
-    background: transparent;
-    border: 1px solid var(--line);
-    color: inherit;
-}
+/* ========================================================================== */
+/* ========== 13) Fiche produit (/products) — version clean ================== */
+/* ========================================================================== */
 
-.wrap .btn-ghost:hover {
-    background: rgba(255, 255, 255, .06);
-}
-
-.wrap .btn-ghost .ico {
-    margin-right: .4rem;
-}
-
+/* Variantes de boutons (cohérent avec le reste de l’app) */
 .wrap button.secondary {
     background: var(--chip, #1a2230);
     border: 1px solid var(--line);
     color: inherit;
 }
 
-/* Placeholders */
-.wrap input::placeholder {
+/* Placeholders harmonisés */
+.wrap input::placeholder,
+.wrap textarea::placeholder {
     color: rgba(200, 210, 225, .7);
 }
 
-html[data-theme="light"] .wrap input::placeholder {
+html[data-theme="light"] .wrap input::placeholder,
+html[data-theme="light"] .wrap textarea::placeholder {
     color: rgba(60, 70, 90, .6);
 }
 
-/* Aide “?” */
+/* Aide “?” minimaliste */
 .wrap .help {
     display: inline-grid;
     place-items: center;
@@ -1210,22 +1202,17 @@ html[data-theme="light"] .wrap input::placeholder {
     height: 16px;
     border-radius: 50%;
     font-size: 12px;
+    line-height: 1;
     cursor: help;
     background: #1f2735;
     border: 1px solid var(--line);
     color: #cfe3ff;
     position: relative;
-    line-height: 1;
 }
 
 .wrap .help::before {
     content: "?";
     font-weight: 700;
-}
-
-.wrap .help:focus-visible {
-    outline: 2px solid var(--accent);
-    outline-offset: 2px;
 }
 
 .wrap .help:hover::after,
@@ -1248,167 +1235,147 @@ html[data-theme="light"] .wrap input::placeholder {
 
 html[data-theme="light"] .wrap .help:hover::after,
 html[data-theme="light"] .wrap .help:focus-visible::after {
-    background: #ffffff;
+    background: #fff;
     color: #111827;
 }
 
-/* OFF (champ + 2 icônes) */
-.wrap #off-box {
-    padding: 8px 0;
+/* ========== Formulaire d’ajout (GRILLE UNIQUE) ============================ */
+
+/* Utiliser class="add-product-form" sur le <form> */
+.wrap .add-product-form {
+    display: grid;
+    gap: 12px;
+    align-items: end;
+    grid-template-columns: 2fr 1fr 1fr 1fr 1fr;
+    /* desktop : 5 colonnes */
 }
 
-.wrap #off-box .infield {
+/* Champs pleine largeur quand nécessaire (ex. nom/description via grid-column en HTML) */
+.wrap .add-product-form .field>input,
+.wrap .add-product-form .field>select,
+.wrap .add-product-form .field>textarea {
+    width: 100%;
+    min-width: 0;
+}
+
+/* Boutons du bas = pleine largeur */
+.wrap .add-product-form .btn-wide {
+    grid-column: 1 / -1;
+    justify-self: stretch;
+}
+
+/* Suffixe d’unité dans la quantité mini */
+.wrap .add-product-form .infield-qty {
     position: relative;
     display: flex;
     align-items: center;
 }
 
-.wrap #off-box .infield input {
+.wrap .add-product-form .infield-qty input {
     width: 100%;
-    padding-right: 98px;
+    padding-right: 56px;
 }
 
-.wrap #off-box .infield .btns {
+.wrap .add-product-form .infield-qty .suffix {
     position: absolute;
-    right: 6px;
-    display: flex;
-    gap: 6px;
-}
-
-.wrap #off-box .infield .infield-btn {
-    display: grid;
-    place-items: center;
-    width: 40px;
-    height: 40px;
-    border-radius: 10px;
-    border: 1px solid var(--line);
+    right: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    opacity: .8;
+    pointer-events: none;
+    border: 0;
     background: transparent;
-    cursor: pointer;
-    line-height: 1.1;
-    transition: transform .06s, background .12s;
+    padding: 0;
+    line-height: 1;
 }
 
-.wrap #off-box .infield .infield-btn:hover {
-    background: rgba(255, 255, 255, .06);
+/* Aide compacte sous la quantité mini */
+.wrap .add-product-form #create_min_hint {
+    margin-top: 4px;
+    font-size: .88rem;
+    min-height: 1.2em;
 }
 
-#off_error[hidden],
-#off_result[hidden] {
-    display: none !important;
-}
-
-/* Grille OFF (spans) */
-.wrap .off-grid {
-    display: grid;
-    grid-template-columns: repeat(12, minmax(0, 1fr));
-    gap: 12px;
+/* Checkbox “Ne doit pas être congelé” bien alignée */
+.wrap .add-product-form .no-freeze-cell {
+    display: flex;
     align-items: center;
+    min-height: 44px;
 }
 
-.wrap .off-span-12 {
-    grid-column: span 12;
+/* Groupe “après congélation” : colonne verticale sobre */
+.wrap .add-product-form #create_freeze_group {
+    display: flex;
+    flex-direction: column;
 }
 
-.wrap .off-span-10 {
-    grid-column: span 10;
+/* Radios DLC/DDM (segmentés) */
+.wrap .add-product-form .segmented {
+    display: inline-flex;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    overflow: hidden;
+    white-space: nowrap;
 }
 
-.wrap .off-span-9 {
-    grid-column: span 9;
+.wrap .add-product-form .segmented label {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    cursor: pointer;
 }
 
-.wrap .off-span-8 {
-    grid-column: span 8;
+.wrap .add-product-form .segmented label+label {
+    border-left: 1px solid var(--line);
 }
 
-.wrap .off-span-6 {
-    grid-column: span 6;
-}
+/* === Responsive : mobile/tablette ======================================== */
 
-.wrap .off-span-4 {
-    grid-column: span 4;
-}
-
-.wrap .off-span-3 {
-    grid-column: span 3;
-}
-
-.wrap .off-span-2 {
-    grid-column: span 2;
-}
-
-.wrap .off-span-1 {
-    grid-column: span 1;
-}
-
-@media (max-width:900px) {
-    .wrap .off-grid {
-        grid-template-columns: repeat(6, 1fr);
+/* ≤ 900px : monocolonne (Ingress mobile/tablette) */
+@media (max-width: 900px) {
+    .wrap .add-product-form {
+        grid-template-columns: 1fr !important;
     }
 
-    .wrap .md-span-6 {
-        grid-column: span 6;
+    /* radios DLC/DDM : étirer proprement */
+    .wrap .add-product-form .segmented {
+        width: 100%;
+        justify-content: space-between;
     }
 
-    .wrap .md-span-3 {
-        grid-column: span 3;
+    .wrap .add-product-form .segmented label {
+        flex: 1 1 auto;
+        justify-content: center;
+        padding: 10px 8px;
     }
 
-    .wrap .md-span-2 {
-        grid-column: span 2;
-    }
-
-    .wrap .md-span-1 {
-        grid-column: span 1;
-    }
-}
-
-@media (max-width:700px) {
-    .wrap .off-grid {
-        grid-template-columns: 1fr;
-    }
-
-    .wrap .sm-span-1 {
-        grid-column: 1 / -1;
-    }
-}
-
-/* Form “Ajouter un produit” */
-.wrap form[action$="product/add"].form-grid {
-    display: grid !important;
-    grid-template-columns: 2fr 1fr 1fr 1fr 1fr auto auto;
-    gap: 12px;
-    align-items: end;
-}
-
-@media (max-width:1100px) {
-    .wrap form[action$="product/add"].form-grid {
-        grid-template-columns: 2fr 1fr 1fr 1fr auto auto;
-    }
-}
-
-@media (max-width:900px) {
-    .wrap form[action$="product/add"].form-grid {
-        grid-template-columns: 1fr 1fr 1fr;
-    }
-
-    .wrap form[action$="product/add"].form-grid .btn-wide {
-        grid-column: 1 / -1;
+    /* boutons : pleine largeur */
+    .wrap .add-product-form .btn-wide {
+        width: 100%;
         justify-self: stretch;
     }
 }
 
-@media (max-width:700px) {
-    .wrap form[action$="product/add"].form-grid {
-        grid-template-columns: 1fr;
-    }
+/* (optionnel) étape “tablette” en 2 colonnes : décommente si tu préfères
+@media (min-width: 701px) and (max-width: 900px) {
+  .wrap .add-product-form { grid-template-columns: 1fr 1fr !important; }
+}
+*/
 
-    .wrap form[action$="product/add"].form-grid .btn-wide {
-        width: 100%;
-    }
+/* Textarea dans le style global des champs */
+.wrap textarea {
+    width: 100%;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    background: transparent;
+    color: inherit;
+    resize: vertical;
+    min-height: 72px;
 }
 
-/* Table Liste (produits & stocks — bloc unique) */
+/* ========== Liste (table) ================================================= */
+
 #tbl {
     width: 100%;
     border-collapse: collapse;
@@ -1439,7 +1406,7 @@ html[data-theme="light"] #tbl tbody tr:hover {
     background: rgba(0, 0, 0, .03);
 }
 
-/* Stats (chips) */
+/* Stats (petites chips) */
 .wrap .stats {
     display: flex;
     flex-wrap: wrap;
@@ -1469,54 +1436,56 @@ html[data-theme="light"] #tbl tbody tr:hover {
     font-weight: 600;
 }
 
-/* Cartes mobiles (Fiche produit) — scopées via data-page="product" */
-.wrap[data-page="product"] .cards {
+/* ========== Cartes mobiles (liste) ======================================= */
+/* Si tu veux afficher des cartes à la place de la table en petit écran */
+.wrap .cards {
     display: none;
 }
 
 @media (max-width:700px) {
 
-    .wrap[data-page="product"] #tbl,
-    .wrap[data-page="product"] #tbl thead {
+    #tbl,
+    #tbl thead {
         display: none;
     }
 
-    .wrap[data-page="product"] .cards {
+    .wrap .cards {
         display: grid;
+        gap: 10px;
     }
 
-    .wrap[data-page="product"] .card-item {
+    .wrap .card-item {
         border: 1px solid var(--line);
         border-radius: 12px;
         padding: 10px;
         background: transparent;
     }
 
-    .wrap[data-page="product"] .card-head {
+    .wrap .card-head {
         display: flex;
         justify-content: space-between;
         gap: 10px;
     }
 
-    .wrap[data-page="product"] .card-name {
+    .wrap .card-name {
         font-weight: 600;
     }
 
-    .wrap[data-page="product"] .card-info {
+    .wrap .card-info {
         display: flex;
         flex-wrap: wrap;
         gap: 8px;
         margin-top: 6px;
     }
 
-    .wrap[data-page="product"] .card-actions {
+    .wrap .card-actions {
         display: grid;
         grid-template-columns: 1fr 1fr;
         gap: 8px;
         margin-top: 8px;
     }
 
-    .wrap[data-page="product"] .card-toggle {
+    .wrap .card-toggle {
         width: 100%;
         border: 1px solid var(--line);
         border-radius: 10px;
@@ -1528,31 +1497,30 @@ html[data-theme="light"] #tbl tbody tr:hover {
         gap: 8px;
     }
 
-    .wrap[data-page="product"] .card-toggle .chev {
+    .wrap .card-toggle .chev {
         transition: transform .15s ease;
     }
 
-    .wrap[data-page="product"] .card-toggle[aria-expanded="true"] .chev {
+    .wrap .card-toggle[aria-expanded="true"] .chev {
         transform: rotate(90deg);
     }
 
-    .wrap[data-page="product"] .card-extra[hidden] {
+    .wrap .card-extra[hidden] {
         display: none !important;
     }
 
-    .wrap[data-page="product"] .card-extra {
+    .wrap .card-extra {
         margin-top: 8px;
     }
 }
 
-
 @media (prefers-reduced-motion: reduce) {
-    .wrap:has(#off-box) .card-toggle .chev {
+    .wrap .card-toggle .chev {
         transition: none;
     }
 }
 
-/* Dialog (produits) */
+/* ========== Dialogs (édition produit) ==================================== */
 .wrap dialog input[type="radio"] {
     width: 16px;
     height: 16px;
@@ -1563,435 +1531,6 @@ html[data-theme="light"] #tbl tbody tr:hover {
     min-height: 44px;
 }
 
-/* ====== Formulaire Fiche produit (ajouts) ====== */
-
-/* infield quantité + suffixe à droite */
-.wrap .infield-qty {
-    position: relative;
-    display: flex;
-    align-items: center;
-}
-
-.wrap .infield-qty input {
-    width: 100%;
-    padding-right: 56px;
-}
-
-.wrap .infield-qty .suffix {
-    position: absolute;
-    right: 10px;
-    opacity: .8;
-    pointer-events: none;
-}
-
-/* petite ligne d’aide sous l’input */
-.wrap .hint {
-    margin-top: 4px;
-    font-size: .88rem;
-}
-
-/* case à cocher en ligne, alignement propre */
-.wrap .checkbox-inline {
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    min-height: 44px;
-}
-
-/* groupe congélation : même hauteur que les autres cellules */
-.wrap #create_freeze_group {
-    display: flex;
-    flex-direction: column;
-}
-
-/* boutons radio sous forme de segmenté */
-.wrap .segmented {
-    display: inline-flex;
-    border: 1px solid var(--line);
-    border-radius: 10px;
-    overflow: hidden;
-}
-
-.wrap .segmented label {
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    padding: 8px 12px;
-    cursor: pointer;
-}
-
-.wrap .segmented input[type="radio"] {
-    width: 16px;
-    height: 16px;
-    accent-color: var(--accent);
-}
-
-.wrap .segmented label+label {
-    border-left: 1px solid var(--line);
-}
-
-/* textarea compact, même style que inputs */
-.wrap textarea {
-    width: 100%;
-    border: 1px solid var(--border);
-    border-radius: 10px;
-    background: transparent;
-    color: inherit;
-    resize: vertical;
-    min-height: 72px;
-}
-
-/* la cellule de la checkbox prend une largeur "auto" confortable */
-.wrap .no-freeze-cell {
-    display: flex;
-    align-items: end;
-}
-
-/* === Fix grille formulaire Fiche produit === */
-/* On passe à 5 colonnes fixes ; les boutons s’étaleront en bas */
-.wrap form[action$="product/add"].form-grid {
-    grid-template-columns: 2fr 1fr 1fr 1fr 1fr !important;
-}
-
-/* Les deux boutons du bas prennent toute la largeur (ligne entière) */
-.wrap form[action$="product/add"].form-grid .btn-wide {
-    grid-column: 1 / -1 !important;
-    justify-self: stretch;
-}
-
-/* Boîte quantité + suffixe : span discret, pas de pastille */
-.wrap .infield-qty {
-    position: relative;
-    display: flex;
-    align-items: center;
-}
-
-.wrap .infield-qty input {
-    width: 100%;
-    padding-right: 56px;
-    /* place pour le suffixe */
-}
-
-.wrap .infield-qty .suffix {
-    position: absolute;
-    right: 10px;
-    top: 50%;
-    transform: translateY(-50%);
-    opacity: .8;
-    pointer-events: none;
-    border: 0;
-    background: transparent;
-    padding: 0;
-    line-height: 1;
-}
-
-/* Hint compact sous le champ quantité */
-.wrap #create_min_hint {
-    margin-top: 4px;
-    font-size: .88rem;
-    min-height: 1.2em;
-}
-
-/* Case "Ne doit pas être congelé" : la garder dans le flux sans déborder */
-.wrap .no-freeze-cell {
-    display: flex;
-    align-items: end;
-    min-width: 0;
-}
-
-/* Groupe "après congélation" garde une hauteur homogène */
-.wrap #create_freeze_group {
-    display: flex;
-    flex-direction: column;
-}
-
-/* Radios DLC/DDM segmentés : taille compacte, pas d’agrandissement indésirable */
-.wrap .segmented {
-    display: inline-flex;
-    border: 1px solid var(--line);
-    border-radius: 10px;
-    overflow: hidden;
-}
-
-.wrap .segmented label {
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    padding: 8px 12px;
-    cursor: pointer;
-    white-space: nowrap;
-}
-
-.wrap .segmented label+label {
-    border-left: 1px solid var(--line);
-}
-
-/* Responsif : sur <=900px, on retombe sur 3 colonnes (déjà géré) */
-/* Sur <=700px, monobloc (déjà géré par tes règles existantes) */
-@media (max-width: 900px) {
-    .wrap form[action$="product/add"].form-grid {
-        grid-template-columns: 1fr 1fr 1fr !important;
-    }
-}
-
-/* ====== Fiche produit — layout version 'locations' ====== */
-
-/* Grille sobre, même esprit que .add-location-form */
-.wrap .add-product-form {
-    display: grid !important;
-    gap: 12px;
-    align-items: end;
-}
-
-/* Desktop large : 5 colonnes (Nom/Desc restent en plein largeur via grid-column) */
-@media (min-width: 901px) {
-    .wrap .add-product-form {
-        grid-template-columns: 2fr 1fr 1fr 1fr 1fr;
-        /* proche de l’esthétique locations */
-    }
-}
-
-/* Tablet : 3 colonnes */
-@media (max-width: 900px) and (min-width: 701px) {
-    .wrap .add-product-form {
-        grid-template-columns: 1fr 1fr 1fr;
-    }
-}
-
-/* Mobile : 1 colonne */
-@media (max-width: 700px) {
-    .wrap .add-product-form {
-        grid-template-columns: 1fr;
-    }
-}
-
-/* Sections plein-largeur (Nom + Description) */
-.wrap .add-product-form>[style*="grid-column: 1 / -1"] {
-    align-self: start;
-}
-
-/* Boutons plein-largeur en bas (même rendu que locations) */
-.wrap .add-product-form .btn-wide {
-    grid-column: 1 / -1 !important;
-    justify-self: stretch;
-}
-
-/* Infield quantité : suffixe discret (pas de pastille) et alignement parfait */
-.wrap .add-product-form .infield-qty {
-    position: relative;
-    display: flex;
-    align-items: center;
-}
-
-.wrap .add-product-form .infield-qty input {
-    width: 100%;
-    padding-right: 56px;
-    /* place au suffixe */
-}
-
-.wrap .add-product-form .infield-qty .suffix {
-    position: absolute;
-    right: 10px;
-    top: 50%;
-    transform: translateY(-50%);
-    opacity: .8;
-    pointer-events: none;
-    border: 0;
-    background: transparent;
-    padding: 0;
-    line-height: 1;
-}
-
-/* Hint compact sous la quantité (même esprit que locations) */
-.wrap .add-product-form #create_min_hint {
-    margin-top: 4px;
-    font-size: .88rem;
-    min-height: 1.2em;
-}
-
-/* Case “Ne doit pas être congelé” : reste dans la ligne, pas de débord */
-.wrap .add-product-form .no-freeze-cell {
-    display: flex;
-    align-items: center;
-    min-height: 44px;
-}
-
-/* Groupe “après congélation” homogène */
-.wrap .add-product-form #create_freeze_group {
-    display: flex;
-    flex-direction: column;
-}
-
-/* Radios DLC/DDM façon segmenté (déjà utilisés côté produits, on garde le style) */
-.wrap .add-product-form .segmented {
-    display: inline-flex;
-    border: 1px solid var(--line);
-    border-radius: 10px;
-    overflow: hidden;
-    white-space: nowrap;
-}
-
-.wrap .add-product-form .segmented label {
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    padding: 8px 12px;
-    cursor: pointer;
-}
-
-.wrap .add-product-form .segmented label+label {
-    border-left: 1px solid var(--line);
-}
-
-/* ========================================================================== */
-/* ========== 13-bis) Fiche produit — layout « comme locations » ============ */
-/* ========================================================================== */
-
-.wrap .add-product-form {
-    display: grid !important;
-    gap: 12px;
-    align-items: end;
-}
-
-/* Desktop large : 5 colonnes -> 2fr | 1fr | 2fr | auto | auto (comme locations + 2 boutons) */
-@media (min-width: 901px) {
-    .wrap .add-product-form {
-        grid-template-columns: 2fr 1fr 2fr auto auto;
-    }
-}
-
-/* Tablet : 3 colonnes */
-@media (max-width: 900px) and (min-width: 701px) {
-    .wrap .add-product-form {
-        grid-template-columns: 1fr 1fr 1fr;
-    }
-}
-
-/* Mobile : 1 colonne (hérite des règles globales également) */
-@media (max-width: 700px) {
-    .wrap .add-product-form {
-        grid-template-columns: 1fr;
-    }
-}
-
-/* Infield quantité : suffixe discret (pas de pastille) */
-.wrap .add-product-form .infield-qty {
-    position: relative;
-    display: flex;
-    align-items: center;
-}
-
-.wrap .add-product-form .infield-qty input {
-    width: 100%;
-    padding-right: 56px;
-}
-
-.wrap .add-product-form .infield-qty .suffix {
-    position: absolute;
-    right: 10px;
-    top: 50%;
-    transform: translateY(-50%);
-    opacity: .8;
-    pointer-events: none;
-    border: 0;
-    background: transparent;
-    padding: 0;
-    line-height: 1;
-}
-
-.wrap .add-product-form #create_min_hint {
-    margin-top: 4px;
-    font-size: .88rem;
-    min-height: 1.2em;
-}
-
-/* Checkbox congélation : pas de débord */
-.wrap .add-product-form .no-freeze-cell {
-    display: flex;
-    align-items: center;
-    min-height: 44px;
-}
-
-.wrap .add-product-form #create_freeze_group {
-    display: flex;
-    flex-direction: column;
-}
-
-/* Radios segmentés harmonisés */
-.wrap .add-product-form .segmented {
-    display: inline-flex;
-    border: 1px solid var(--line);
-    border-radius: 10px;
-    overflow: hidden;
-    white-space: nowrap;
-}
-
-.wrap .add-product-form .segmented label {
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    padding: 8px 12px;
-    cursor: pointer;
-}
-
-.wrap .add-product-form .segmented label+label {
-    border-left: 1px solid var(--line);
-}
-
-/* Boutons : alignés à droite sur desktop (2 dernières colonnes) */
-.wrap .add-product-form .btn-wide {
-    width: 100%;
-}
-
-/* === Fiche produit — fix vue mobile/tablette === */
-
-/* ≤ 900px : on passe DIRECT en 1 colonne (plus lisible en Ingress) */
-@media (max-width: 900px) {
-    .wrap .add-product-form {
-        grid-template-columns: 1fr !important;
-    }
-
-    /* champs plein‑largeur sans surprises */
-    .wrap .add-product-form .field>input,
-    .wrap .add-product-form .field>select,
-    .wrap .add-product-form .field>textarea {
-        width: 100%;
-        min-width: 0;
-    }
-
-    /* radios DLC/DDM: ligne unique, pas de débord */
-    .wrap .add-product-form .segmented {
-        width: 100%;
-        justify-content: space-between;
-    }
-
-    .wrap .add-product-form .segmented label {
-        flex: 1 1 auto;
-        justify-content: center;
-        padding: 10px 8px;
-    }
-
-    /* suffixe quantité bien calé même en petit viewport */
-    .wrap .add-product-form .infield-qty input {
-        padding-right: 56px;
-    }
-
-    .wrap .add-product-form .infield-qty .suffix {
-        right: 10px;
-    }
-
-    /* boutons : pleine largeur et empilés proprement */
-    .wrap .add-product-form .btn-wide {
-        width: 100%;
-        justify-self: stretch;
-    }
-}
-
-/* (optionnel) si tu veux une étape intermédiaire en 2 colonnes: décommente
-@media (min-width: 701px) and (max-width: 900px) {
-  .wrap .add-product-form { grid-template-columns: 1fr 1fr !important; }
-}
-*/
 
 
 
