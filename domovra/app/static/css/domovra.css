@@ -1469,55 +1469,54 @@ html[data-theme="light"] #tbl tbody tr:hover {
     font-weight: 600;
 }
 
-/* Cartes mobiles (PRODUITS) — scopées via :has(#off-box) */
-.wrap:has(#off-box) .cards {
+/* Cartes mobiles (Fiche produit) — scopées via data-page="product" */
+.wrap[data-page="product"] .cards {
     display: none;
 }
 
 @media (max-width:700px) {
 
-    .wrap:has(#off-box) #tbl,
-    .wrap:has(#off-box) #tbl thead {
+    .wrap[data-page="product"] #tbl,
+    .wrap[data-page="product"] #tbl thead {
         display: none;
     }
 
-    .wrap:has(#off-box) .cards {
+    .wrap[data-page="product"] .cards {
         display: grid;
-        gap: 10px;
     }
 
-    .wrap:has(#off-box) .card-item {
+    .wrap[data-page="product"] .card-item {
         border: 1px solid var(--line);
         border-radius: 12px;
         padding: 10px;
         background: transparent;
     }
 
-    .wrap:has(#off-box) .card-head {
+    .wrap[data-page="product"] .card-head {
         display: flex;
         justify-content: space-between;
         gap: 10px;
     }
 
-    .wrap:has(#off-box) .card-name {
+    .wrap[data-page="product"] .card-name {
         font-weight: 600;
     }
 
-    .wrap:has(#off-box) .card-info {
+    .wrap[data-page="product"] .card-info {
         display: flex;
         flex-wrap: wrap;
         gap: 8px;
         margin-top: 6px;
     }
 
-    .wrap:has(#off-box) .card-actions {
+    .wrap[data-page="product"] .card-actions {
         display: grid;
         grid-template-columns: 1fr 1fr;
         gap: 8px;
         margin-top: 8px;
     }
 
-    .wrap:has(#off-box) .card-toggle {
+    .wrap[data-page="product"] .card-toggle {
         width: 100%;
         border: 1px solid var(--line);
         border-radius: 10px;
@@ -1529,22 +1528,23 @@ html[data-theme="light"] #tbl tbody tr:hover {
         gap: 8px;
     }
 
-    .wrap:has(#off-box) .card-toggle .chev {
+    .wrap[data-page="product"] .card-toggle .chev {
         transition: transform .15s ease;
     }
 
-    .wrap:has(#off-box) .card-toggle[aria-expanded="true"] .chev {
+    .wrap[data-page="product"] .card-toggle[aria-expanded="true"] .chev {
         transform: rotate(90deg);
     }
 
-    .wrap:has(#off-box) .card-extra[hidden] {
+    .wrap[data-page="product"] .card-extra[hidden] {
         display: none !important;
     }
 
-    .wrap:has(#off-box) .card-extra {
+    .wrap[data-page="product"] .card-extra {
         margin-top: 8px;
     }
 }
+
 
 @media (prefers-reduced-motion: reduce) {
     .wrap:has(#off-box) .card-toggle .chev {

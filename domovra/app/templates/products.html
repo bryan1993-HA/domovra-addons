@@ -1,75 +1,16 @@
 {% extends "base.html" %}
-{% block title %}Domovra — Produits{% endblock %}
+{% block title %}Domovra — Fiche produit{% endblock %}
 
 {% block head %}
 {% endblock %}
 
 {% block header_right %}
-<span class="chip">📦 Produits : <b>{{ items|length }}</b></span>
+<span class="chip">🗂️ Fiches produit : <b>{{ items|length }}</b></span>
 {% endblock %}
 
 {% block content %}
-<div class="wrap">
+<div class="wrap" data-page="product">
 
-  <!-- Open Food Facts & Scanner -->
-  <div class="card">
-    <div class="title" style="margin:0 0 8px 0">
-      <h2>Open Food Facts & Scanner</h2>
-      <span class="muted">→ préremplir le formulaire</span>
-      <span class="help" tabindex="0"
-        data-tip="Scanne/saisis un EAN/GTIN pour récupérer nom/marque et une indication d’unité."></span>
-    </div>
-
-    <div id="off-box">
-      <!-- Rangée contrôlée par spans -->
-      <div class="off-grid">
-        <!-- Champ + 2 icônes -->
-        <div class="infield off-span-8 md-span-6 sm-span-1" style="min-width:220px">
-          <input id="off_barcode" type="text" inputmode="numeric"
-            placeholder="Scanner / saisir un code-barres (EAN/GTIN)…">
-          <div class="btns">
-            <button id="off_scan" type="button" class="infield-btn" title="Scanner (live)">📷</button>
-            <button id="off_capture" type="button" class="infield-btn" title="Prendre une photo">📸</button>
-            <input id="off_file" type="file" accept="image/*" capture="environment" hidden>
-          </div>
-        </div>
-
-        <!-- Boutons -->
-        <button id="off_search" class="secondary off-span-2 md-span-3 sm-span-1">🔎 Rechercher</button>
-        <button id="off_paste" class="secondary off-span-1 md-span-2 sm-span-1">📋 Coller</button>
-        <button id="off_clear" class="secondary off-span-1 md-span-1 sm-span-1">✖ Effacer</button>
-      </div>
-
-      <div class="muted" style="margin-top:.5rem">Astuce : essaie <b>5449000000996</b> (Coca-Cola 1,5 L).</div>
-      <div id="off_error" hidden class="muted" style="color:#ff6b6b;margin-top:.35rem">Erreur</div>
-
-      <div id="off_result" hidden style="margin-top:.6rem">
-        <div style="display:grid;grid-template-columns:80px 1fr;gap:10px;align-items:start">
-          <img id="off_img" alt="photo produit"
-            style="width:80px;height:80px;object-fit:cover;border-radius:8px;border:1px solid var(--border)">
-          <div>
-            <div style="display:flex;align-items:center;gap:6px;">
-              <b id="off_name">Nom</b>
-              <span class="help" tabindex="0" data-tip="Tu peux modifier le nom avant l’ajout."></span>
-            </div>
-            <div id="off_brand" class="muted">Marque</div>
-            <div class="muted" style="margin-top:.25rem">Quantité indiquée : <span id="off_qty">—</span></div>
-            <div class="muted">Source : Open Food Facts</div>
-
-            <div style="margin-top:.5rem;display:flex;gap:.5rem;flex-wrap:wrap">
-              <button id="off_fill_create" type="button" class="secondary">➕ Préremplir le formulaire d’ajout</button>
-            </div>
-          </div>
-        </div>
-        <p class="muted" style="margin:.6rem 0 0">
-          Scanne/saisis un code-barres → « Rechercher » → « Préremplir le formulaire », puis ajuste l’unité/la
-          conservation et valide.
-        </p>
-      </div>
-    </div>
-  </div>
-
-  <!-- Ajouter un produit -->
   <!-- Ajouter un produit -->
   <div class="card">
     <div class="title">
@@ -336,15 +277,15 @@
       <h2>Outils</h2><span class="muted">Recherche & compteur</span>
     </div>
     <div class="row" style="align-items:center">
-      <input id="q" type="search" placeholder="Rechercher un produit…" style="flex:1;min-width:220px">
-      <span class="chip">📦 Produits : <b id="prod-count">{{ items|length }}</b></span>
+      <input id="q" placeholder="Rechercher une fiche produit…">
+      <span class="chip">🗂️ Fiches produit : <b id="prod-count">{{ items|length }}</b></span>
     </div>
   </div>
 
   <!-- Liste -->
   <div class="card">
     <div class="title">
-      <h2>Liste</h2><span class="muted">Table (bureau) / Cartes (mobile)</span>
+      <h2>Fiches produit</h2><span class="muted">Table (bureau) / Cartes (mobile)</span>
     </div>
 
     <table id="tbl">
@@ -539,16 +480,6 @@
   </form>
 </dialog>
 
-<dialog id="scan-modal">
-  <div style="display:grid;gap:10px;min-width:min(520px,96vw)">
-    <h3 style="margin:0">Scanner un code-barres</h3>
-    <video id="scan-video" autoplay playsinline muted playsInline webkit-playsinline
-      style="width:100%;border-radius:12px;border:1px solid var(--border)"></video>
-    <div class="row" style="justify-content:flex-end;gap:8px">
-      <button class="secondary" type="button" id="scan-close">Fermer</button>
-    </div>
-  </div>
-</dialog>
 {% endblock %}
 
 {% block scripts %}
@@ -605,7 +536,10 @@
   (function () {
     const r = document.getElementById('create_reset'); if (!r) return;
     r.addEventListener('click', () => {
-      ['create_name', 'create_shelf', 'create_barcode', 'off_barcode', 'create_min_qty'].forEach(id => {
+      ['create_name', 'create_desc', 'create_default_location_id', 'create_min_qty',
+        'create_low_stock_enabled', 'create_shelf', 'create_freeze_shelf', 'create_no_freeze',
+        'create_category', 'create_unit', 'create_parent_id', 'create_barcode'
+      ].forEach(id => {
         const el = document.getElementById(id);
         if (el) el.value = id === 'create_min_qty' ? '{{ SETTINGS.low_stock_default }}' : '';
       });
