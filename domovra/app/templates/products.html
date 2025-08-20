@@ -151,10 +151,7 @@
   </div>
 
   <!-- === Liste (CARTES UNIQUEMENT) ===================================== -->
-  {% set loc_by_id = {} %}
-  {% for loc in locations or [] %}
-  {% set _ = loc_by_id.update({loc.id:loc.name}) %}
-  {% endfor %}
+
 
   <div class="card">
     <div class="title">
@@ -188,8 +185,9 @@
           <div class="stat"><span class="k">Seuil min</span><span class="v">{{ it.min_qty }}</span></div>
           {% endif %}
           {% if it.default_location_id %}
-          <div class="stat"><span class="k">📍 Emplacement</span><span class="v">{{
-              loc_by_id.get(it.default_location_id) or '—' }}</span></div>
+          <div class="stat"><span class="k">📍 Emplacement</span><span class="v">
+              {{ loc_map.get((it.default_location_id|string)) or '—' }}
+            </span></div>
           {% endif %}
           <div class="stat"><span class="k">Conservation (par défaut)</span><span class="v">{{
               it.default_shelf_life_days }} j</span></div>

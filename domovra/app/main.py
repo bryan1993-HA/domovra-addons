@@ -403,11 +403,13 @@ def products_page(request: Request):
     base = ingress_base(request)
     logger.info("GET /products (BASE=%s)", base)
 
-    # tout ce qui suit doit être INDENTÉ dans la fonction
     items = list_products_with_stats()
     locations = list_locations()
     parents = list_products()
-    insights = list_product_insights()  # nouveau
+    insights = list_product_insights()
+
+    # clé en str pour éviter les soucis (JSON/JS manipulent des clés string)
+    loc_map = {str(loc.id): loc.name for loc in locations}
 
     return render(
         "products.html",
@@ -417,8 +419,10 @@ def products_page(request: Request):
         items=items,
         locations=locations,
         parents=parents,
-        insights=insights,  # nouveau
+        insights=insights,
+        loc_map=loc_map,  # <-- important
     )
+
 
 
 @app.get("/locations", response_class=HTMLResponse)
