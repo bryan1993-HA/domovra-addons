@@ -1563,6 +1563,91 @@ html[data-theme="light"] #tbl tbody tr:hover {
     min-height: 44px;
 }
 
+/* ====== Formulaire Fiche produit (ajouts) ====== */
+
+/* infield quantité + suffixe à droite */
+.wrap .infield-qty {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.wrap .infield-qty input {
+    width: 100%;
+    padding-right: 56px;
+}
+
+.wrap .infield-qty .suffix {
+    position: absolute;
+    right: 10px;
+    opacity: .8;
+    pointer-events: none;
+}
+
+/* petite ligne d’aide sous l’input */
+.wrap .hint {
+    margin-top: 4px;
+    font-size: .88rem;
+}
+
+/* case à cocher en ligne, alignement propre */
+.wrap .checkbox-inline {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    min-height: 44px;
+}
+
+/* groupe congélation : même hauteur que les autres cellules */
+.wrap #create_freeze_group {
+    display: flex;
+    flex-direction: column;
+}
+
+/* boutons radio sous forme de segmenté */
+.wrap .segmented {
+    display: inline-flex;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    overflow: hidden;
+}
+
+.wrap .segmented label {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    cursor: pointer;
+}
+
+.wrap .segmented input[type="radio"] {
+    width: 16px;
+    height: 16px;
+    accent-color: var(--accent);
+}
+
+.wrap .segmented label+label {
+    border-left: 1px solid var(--line);
+}
+
+/* textarea compact, même style que inputs */
+.wrap textarea {
+    width: 100%;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    background: transparent;
+    color: inherit;
+    resize: vertical;
+    min-height: 72px;
+}
+
+/* la cellule de la checkbox prend une largeur "auto" confortable */
+.wrap .no-freeze-cell {
+    display: flex;
+    align-items: end;
+}
+
+
 /* ========================================================================== */
 /* ========== 14) Page Stocks (/lots) ======================================= */
 /* ========================================================================== */

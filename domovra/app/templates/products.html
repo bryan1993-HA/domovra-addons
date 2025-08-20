@@ -94,29 +94,24 @@
     </style>
 
     <form id="create_form" method="post" action="{{ BASE }}product/add" class="form-grid">
-      <!-- Nom -->
-      <div class="field full">
-        <div class="label">Nom du produit
-          <span class="help" tabindex="0"
-            data-tip="Nom court et explicite (ex. « Lait demi-écrémé », « Pâtes »)."></span>
+
+      <!-- Nom (+ description pleine largeur) -->
+      <div style="grid-column: 1 / -1">
+        <div class="label">Nom du produit <span class="help" tabindex="0" data-tip="Nom court et explicite."></span>
         </div>
-        <input name="name" id="create_name" type="text" required placeholder="ex. Lait demi-écrémé">
+        <input name="name" id="create_name" type="text" required placeholder="ex. Pâtes, Lait demi-écrémé">
       </div>
 
-      <!-- Description -->
-      <div class="field full">
-        <div class="label">Description
-          <span class="help" tabindex="0" data-tip="Détails libres : marque type/format, notes d’usage, etc."></span>
+      <div style="grid-column: 1 / -1">
+        <div class="label">Description <span class="help" tabindex="0" data-tip="ex. Brique UHT, 6×1 L, marque…"></span>
         </div>
         <textarea name="description" id="create_desc" rows="2" placeholder="ex. Brique UHT, 6×1 L, marque…"></textarea>
       </div>
 
-      <!-- Emplacement par défaut -->
-      <div class="field">
-        <div class="label">Emplacement par défaut
-          <span class="help" tabindex="0"
-            data-tip="Optionnel : sera proposé par défaut lors de l’ajout en stock."></span>
-        </div>
+      <!-- Ligne 1 : emplacement / unité / min / alerte -->
+      <div>
+        <div class="label">Emplacement par défaut <span class="help" tabindex="0"
+            data-tip="Là où tu ranges habituellement ce produit."></span></div>
         <select name="default_location_id" id="create_default_location_id">
           <option value="">— Aucun (choisir à l’ajout en stock) —</option>
           {% for loc in locations or [] %}
@@ -125,11 +120,9 @@
         </select>
       </div>
 
-      <!-- Unité par défaut -->
-      <div class="field">
-        <div class="label">Unité par défaut
-          <span class="help" tabindex="0" data-tip="Comptage / poids / volume selon le produit."></span>
-        </div>
+      <div>
+        <div class="label">Unité par défaut <span class="help" tabindex="0"
+            data-tip="Comptage, poids ou volume."></span></div>
         <select name="unit" id="create_unit">
           <optgroup label="Comptage">
             <option value="pièce" selected>pièce</option>
@@ -155,97 +148,61 @@
         </select>
       </div>
 
-      <!-- Quantité minimum en stock -->
-      <div class="field">
-        <div class="label">Quantité minimum en stock
-          <span class="help" tabindex="0"
-            data-tip="Seuil d’alerte pour ce produit (utilisé si l’alerte est active)."></span>
+      <div>
+        <div class="label">Quantité minimum en stock <span class="help" tabindex="0"
+            data-tip="Seuil d’alerte propre à ce produit."></span></div>
+        <div class="infield-qty">
+          <input name="min_qty" id="create_min_qty" type="number" min="0" step="1" placeholder="ex. 1"
+            value="{{ SETTINGS.low_stock_default }}">
+          <span id="create_min_unit" class="suffix">pièce</span>
         </div>
-        <div class="infield" style="position:relative;display:flex;align-items:center">
-          <input name="min_qty" id="create_min_qty" type="number" min="0" step="1"
-            value="{{ SETTINGS.low_stock_default }}" placeholder="ex. 1">
-          <span id="min_qty_unit" class="muted" style="position:absolute;right:10px;pointer-events:none">pièce</span>
-        </div>
-        <div class="muted" id="min_qty_hint" style="font-size:.9rem;margin-top:4px"></div>
+        <div class="hint muted" id="create_min_hint">Pas conseillé : 1.</div>
       </div>
 
-
-      <!-- Alerte de stock faible actif ? -->
-      <div class="field">
-        <div class="label">Alerte stock faible actif ?
-          <span class="help" tabindex="0"
-            data-tip="Désactive pour ignorer l’alerte faible stock sur ce produit."></span>
-        </div>
-        <select name="low_stock_enabled" id="create_low_stock_enabled">
+      <div>
+        <div class="label">Alerte stock faible actif ?</div>
+        <select name="low_stock_enabled" id="create_low_enabled">
           <option value="1" selected>Oui</option>
           <option value="0">Non</option>
         </select>
       </div>
 
-      <!-- Type d’échéance (DLC / DDM) -->
-      <div class="field">
-        <div class="label">Type d’échéance
-          <span class="help" tabindex="0"
-            data-tip="DLC (date limite de consommation) ou DDM (date de durabilité minimale)."></span>
-        </div>
-        <div class="expiry-kind">
-          <label><input type="radio" name="expiry_kind" value="DLC" checked> DLC</label>
-          <label><input type="radio" name="expiry_kind" value="DDM"> DDM</label>
+      <!-- Ligne 2 : DLC/DDM / péremption / no-freeze / freeze-shelf / catégorie -->
+      <div>
+        <div class="label">Type d’échéance</div>
+        <div class="segmented">
+          <label><input type="radio" name="expiry_kind" value="DLC" checked><span>DLC</span></label>
+          <label><input type="radio" name="expiry_kind" value="DDM"><span>DDM</span></label>
         </div>
       </div>
 
-      <!-- Jours par défaut (à l’ajout) -->
-      <div class="field">
-        <div class="label">Péremption par défaut (jours)
-          <span class="help" tabindex="0" data-tip="Ajouté à la date d’ajout du lot pour estimer la date."></span>
-        </div>
-        <input name="default_shelf_days" id="create_shelf" type="number" min="1" placeholder="ex. 90">
+      <div>
+        <div class="label">Péremption par défaut (jours) <span class="help" tabindex="0"
+            data-tip="Ajoutée à la date d’entrée en stock."></span></div>
+        <input name="shelf" id="create_shelf" type="number" min="1" placeholder="ex. 90">
       </div>
 
-      <!-- Ne doit pas être congelé (checkbox) -->
-      <div class="field">
-        <label class="label" style="display:flex;align-items:center;gap:8px">
-          <input type="checkbox" id="create_no_freeze_chk" name="no_freeze" value="1">
-          Ne doit pas être congelé
+      <div class="no-freeze-cell">
+        <label class="checkbox-inline">
+          <input type="checkbox" id="create_no_freeze" name="no_freeze" value="1">
+          <span>Ne doit pas être congelé</span>
         </label>
       </div>
 
-      <!-- Jours par défaut après congélation -->
-      <div class="field" id="freeze_shelf_group">
-        <div class="label">Péremption après congélation (jours)
-          <span class="help" tabindex="0" data-tip="Ajouté à la date de congélation si le lot est congelé."></span>
-        </div>
+      <div id="create_freeze_group">
+        <div class="label">Péremption après congélation (jours)</div>
         <input name="default_freeze_shelf_days" id="create_freeze_shelf" type="number" min="1" placeholder="ex. 180">
       </div>
 
-
-      <!-- Catégorie -->
-      <div class="field">
-        <div class="label">Catégorie de produits
-          <span class="help" tabindex="0" data-tip="Choisis une catégorie ou saisis la tienne."></span>
-        </div>
-        {# datalist : valeurs par défaut + celles de SETTINGS/CATEGORIES si dispo #}
-        <input name="category" id="create_category" list="categories" placeholder="ex. Produits laitiers">
-        <datalist id="categories">
-          {% set BASE_CATEGORIES = [
-          'Frais','Produits laitiers','Viandes','Poissons',
-          'Fruits & Légumes','Épicerie salée','Épicerie sucrée',
-          'Surgelés','Boissons','Condiments & Sauces',
-          'Petit déjeuner','Bébé','Animaux','Hygiène','Entretien','Autre'
-          ] %}
-          {% for cat in (CATEGORIES or BASE_CATEGORIES) %}
-          <option value="{{ cat }}">
-            {% endfor %}
-        </datalist>
+      <div>
+        <div class="label">Catégorie de produits</div>
+        <input name="category" id="create_category" placeholder="ex. Produits laitiers, Viande, Condiments…">
       </div>
 
-      <!-- Produit parent -->
-      <div class="field">
-        <div class="label">Produit parent
-          <span class="help" tabindex="0"
-            data-tip="Permet de regrouper des variantes (marques/formats) sous une même famille."></span>
-        </div>
-        <select name="parent_id" id="create_parent_id">
+      <!-- Ligne 3 : parent + boutons -->
+      <div style="grid-column: 1 / -3">
+        <div class="label">Produit parent</div>
+        <select name="parent_id" id="create_parent">
           <option value="">— Aucun —</option>
           {% for p in parents or [] %}
           <option value="{{ p.id }}">{{ p.name }}</option>
@@ -253,11 +210,11 @@
         </select>
       </div>
 
-      <!-- Boutons -->
       <button class="secondary btn-wide">＋ Ajouter</button>
       <button id="create_reset" type="button" class="secondary btn-wide"><span
           class="ico">↺</span>Réinitialiser</button>
     </form>
+
   </div>
 
 
@@ -732,6 +689,56 @@
       const u = document.getElementById('create_unit'); if (u) u.value = 'pièce';
     });
   })();
+
+  // === Logique create: min_qty selon unité + suffixe + hint
+  (function () {
+    const unitSel = document.getElementById('create_unit');
+    const minInput = document.getElementById('create_min_qty');
+    const suffix = document.getElementById('create_min_unit');
+    const hint = document.getElementById('create_min_hint');
+
+    function applyUnitLogic() {
+      const u = (unitSel?.value || 'pièce');
+      let step = 1, suf = u, h = '';
+      switch (u) {
+        case 'L': step = 1; suf = 'L'; h = 'Conseil : seuil en litres entiers (1, 2, …)'; break;
+        case 'ml': step = 50; suf = 'ml'; h = 'Conseil : pas de 50 ml (50, 100, …)'; break;
+        case 'kg': step = 0.1; suf = 'kg'; h = 'Conseil : pas de 0,1 kg (0,5 ; 1,0 …)'; break;
+        case 'g': step = 50; suf = 'g'; h = 'Conseil : pas de 50 g (250, 500, …)'; break;
+        default: step = 1; suf = (u || 'pièce'); h = 'Conseil : 1, 2, 3 pièces…';
+      }
+      if (minInput) {
+        minInput.step = String(step);
+        if (!minInput.value) minInput.placeholder = (step === 1 ? 'ex. 1' : `ex. ${step}`);
+      }
+      if (suffix) suffix.textContent = suf;
+      if (hint) hint.textContent = h;
+    }
+
+    if (unitSel) {
+      unitSel.addEventListener('change', applyUnitLogic);
+      applyUnitLogic();
+    }
+  })();
+
+  // === Logique create: masquer "après congélation" si non-congelable
+  (function () {
+    const cb = document.getElementById('create_no_freeze');
+    const grp = document.getElementById('create_freeze_group');
+    function applyFreezeVisibility() {
+      if (!cb || !grp) return;
+      grp.style.display = cb.checked ? 'none' : '';
+      if (cb.checked) {
+        const f = document.getElementById('create_freeze_shelf');
+        if (f) f.value = '';
+      }
+    }
+    if (cb) {
+      cb.addEventListener('change', applyFreezeVisibility);
+      applyFreezeVisibility();
+    }
+  })();
+
 
   /* Toasts via ?added=1 */
   (function () { const p = new URLSearchParams(location.search); if (p.get('added') === '1') window.showToast('Produit ajouté.', 'ok'); })();
