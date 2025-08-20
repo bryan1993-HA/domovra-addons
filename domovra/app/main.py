@@ -403,22 +403,23 @@ def products_page(request: Request):
     base = ingress_base(request)
     logger.info("GET /products (BASE=%s)", base)
 
-items = list_products_with_stats()
-locations = list_locations()
-parents = list_products()
+    # tout ce qui suit doit être INDENTÉ dans la fonction
+    items = list_products_with_stats()
+    locations = list_locations()
+    parents = list_products()
+    insights = list_product_insights()  # nouveau
 
-insights = list_product_insights()  # <— nouveau
+    return render(
+        "products.html",
+        BASE=base,
+        page="products",
+        request=request,
+        items=items,
+        locations=locations,
+        parents=parents,
+        insights=insights,  # nouveau
+    )
 
-return render(
-    "products.html",
-    BASE=base,
-    page="products",
-    request=request,
-    items=items,
-    locations=locations,
-    parents=parents,
-    insights=insights,              # <— nouveau
-)
 
 @app.get("/locations", response_class=HTMLResponse)
 def locations_page(request: Request):
