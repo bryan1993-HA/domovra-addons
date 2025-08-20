@@ -1535,6 +1535,187 @@ html[data-theme="light"] #tbl tbody tr:hover {
 
 
 
+/* =========================
+   PRODUITS — OUTILS & LISTE
+   (scopé à data-page="product")
+   ========================= */
+
+/* ----- Outils / Recherche ----- */
+.wrap[data-page="product"] .tools-row {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 12px;
+    align-items: end;
+}
+
+.wrap[data-page="product"] .tools-row input[type="search"] {
+    width: 100%;
+    min-width: 0;
+}
+
+/* ----- Table desktop ----- */
+.wrap[data-page="product"] #tbl {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.wrap[data-page="product"] #tbl thead th {
+    font-size: 12px;
+    color: var(--text-muted);
+    text-align: left;
+    padding: 6px 8px;
+    border: 0;
+    border-bottom: 1px solid var(--line);
+    background: transparent;
+}
+
+.wrap[data-page="product"] #tbl tbody td {
+    padding: 10px 8px;
+    border: 0;
+    border-bottom: 1px solid var(--line);
+    vertical-align: top;
+}
+
+.wrap[data-page="product"] #tbl tbody tr:hover {
+    background: rgba(255, 255, 255, .03);
+}
+
+html[data-theme="light"] .wrap[data-page="product"] #tbl tbody tr:hover {
+    background: rgba(0, 0, 0, .03);
+}
+
+/* Actions alignées à droite (colonne Actions) */
+.wrap[data-page="product"] .t-actions {
+    text-align: right;
+}
+
+.wrap[data-page="product"] .actions-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    justify-items: stretch;
+}
+
+.wrap[data-page="product"] .actions-grid button {
+    width: 100% !important;
+    min-width: 0;
+}
+
+/* ----- Cartes mobile (remplacent la table uniquement en petit écran) ----- */
+.wrap[data-page="product"] .cards {
+    display: none;
+}
+
+@media (max-width:700px) {
+
+    .wrap[data-page="product"] #tbl,
+    .wrap[data-page="product"] #tbl thead {
+        display: none;
+    }
+
+    .wrap[data-page="product"] .cards {
+        display: grid;
+        gap: 10px;
+    }
+
+    .wrap[data-page="product"] .card-item {
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        padding: 10px;
+        background: transparent;
+    }
+
+    .wrap[data-page="product"] .card-head {
+        display: flex;
+        justify-content: space-between;
+        gap: 10px;
+    }
+
+    .wrap[data-page="product"] .card-name {
+        font-weight: 600;
+    }
+
+    .wrap[data-page="product"] .card-info {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-top: 6px;
+    }
+
+    .wrap[data-page="product"] .card-actions {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
+        margin-top: 8px;
+    }
+
+    .wrap[data-page="product"] .card-toggle {
+        width: 100%;
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        padding: 8px 10px;
+        background: transparent;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
+    }
+
+    .wrap[data-page="product"] .card-toggle .chev {
+        transition: transform .15s ease;
+    }
+
+    .wrap[data-page="product"] .card-toggle[aria-expanded="true"] .chev {
+        transform: rotate(90deg);
+    }
+
+    .wrap[data-page="product"] .card-extra[hidden] {
+        display: none !important;
+    }
+
+    .wrap[data-page="product"] .card-extra {
+        margin-top: 8px;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .wrap[data-page="product"] .card-toggle .chev {
+        transition: none;
+    }
+}
+
+/* ----- Stats (petites chips sous infos) ----- */
+.wrap[data-page="product"] .stats {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px 10px;
+    white-space: normal;
+    overflow: visible;
+    max-width: 100%;
+}
+
+.wrap[data-page="product"] .stat {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 10px;
+    border-radius: 999px;
+    border: 1px solid var(--line);
+    background: transparent;
+    flex: 1 1 calc(50% - 10px);
+    min-width: 180px;
+}
+
+.wrap[data-page="product"] .stat .k {
+    color: var(--text-muted);
+}
+
+.wrap[data-page="product"] .stat .v {
+    font-weight: 600;
+}
+
+
+
 
 
 /* ========================================================================== */
