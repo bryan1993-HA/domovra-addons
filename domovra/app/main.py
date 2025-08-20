@@ -581,16 +581,29 @@ def settings_save(request: Request,
                                 headers={"Cache-Control":"no-store"})
 
 @app.post("/product/add")
-def product_add(request: Request,
-                name: str = Form(...),
-                unit: str = Form("pièce"),
-                shelf: int = Form(90),
-                barcode: str = Form(""),
-                min_qty: str = Form("")):
+def product_add(
+    request: Request,
+    name: str = Form(...),
+    unit: str = Form("pièce"),
+    shelf: int = Form(90),
+    # champs étendus
+    description: str = Form(""),
+    default_location_id: str = Form(""),
+    low_stock_enabled: str = Form("1"),
+    expiry_kind: str = Form("DLC"),
+    default_freeze_shelf_days: str = Form(""),
+    no_freeze: str = Form(""),          # checkbox
+    category: str = Form(""),
+    parent_id: str = Form(""),
+    # compat (présents dans l’API, même si absents du formulaire)
+    barcode: str = Form(""),
+    min_qty: str = Form(""),
+):
     try:
         shelf = int(shelf)
     except Exception:
         shelf = 90
+
     bid = (barcode or "").strip() or None
     mq = None
     if isinstance(min_qty, str) and min_qty.strip():
@@ -600,8 +613,33 @@ def product_add(request: Request,
         except Exception:
             mq = None
 
-    pid = add_product(name, unit or "pièce", shelf, bid, mq)
-    log_event("product.add", {"id": pid, "name": name, "unit": unit, "shelf": shelf, "barcode": bid, "min_qty": mq})
+    pid = add_product(
+        name=name,
+        unit=unit or "pièce",
+        shelf=shelf,
+        barcode=bid,
+        min_qty=mq,
+        description=description,
+        default_location_id=default_location_id or None,
+        low_stock_enabled=low_stock_enabled,
+        expiry_kind=expiry_kind,
+        default_freeze_shelf_days=default_freeze_shelf_days or None,
+        no_freeze=(no_freeze or "0"),
+        category=category,
+        parent_id=parent_id or None,
+    )
+
+    log_event("product.add", {
+        "id": pid, "name": name, "unit": unit, "shelf": shelf, "min_qty": mq,
+        "description": description or None,
+        "default_location_id": default_location_id or None,
+        "low_stock_enabled": 0 if str(low_stock_enabled).lower() in ("0","false","off","no") else 1,
+        "expiry_kind": (expiry_kind or "DLC").upper(),
+        "default_freeze_shelf_days": default_freeze_shelf_days or None,
+        "no_freeze": 1 if str(no_freeze).lower() in ("1","true","on","yes") else 0,
+        "category": category or None,
+        "parent_id": parent_id or None,
+    })
 
     base = ingress_base(request)
     referer = (request.headers.get("referer") or "").lower()
@@ -613,18 +651,30 @@ def product_add(request: Request,
                             headers={"Cache-Control": "no-store"})
 
 @app.post("/product/update")
-def product_update(request: Request,
-                   product_id: int = Form(...),
-                   name: str = Form(...),
-                   unit: str = Form("pièce"),
-                   shelf: int = Form(90),
-                   barcode: str = Form(""),
-                   min_qty: str = Form("")):
+def product_update(
+    request: Request,
+    product_id: int = Form(...),
+    name: str = Form(...),
+    unit: str = Form("pièce"),
+    shelf: int = Form(90),
+    # étendus
+    description: str = Form(""),
+    default_location_id: str = Form(""),
+    low_stock_enabled: str = Form("1"),
+    expiry_kind: str = Form("DLC"),
+    default_freeze_shelf_days: str = Form(""),
+    no_freeze: str = Form(""),
+    category: str = Form(""),
+    parent_id: str = Form(""),
+    # compat
+    barcode: str = Form(""),
+    min_qty: str = Form(""),
+):
     try:
         shelf = int(shelf)
     except Exception:
         shelf = 90
-    bid = (barcode or "").strip() or None
+
     mq = None
     if isinstance(min_qty, str) and min_qty.strip():
         try:
@@ -633,9 +683,37 @@ def product_update(request: Request,
         except Exception:
             mq = None
 
-    update_product(product_id, name, unit, shelf, mq, bid)
-    log_event("product.update", {"id": product_id, "name": name, "unit": unit, "shelf": shelf, "barcode": bid, "min_qty": mq})
+    update_product(
+        product_id=product_id,
+        name=name,
+        unit=unit,
+        default_shelf_life_days=shelf,
+        min_qty=mq,
+        barcode=(barcode or "").strip() or None,
+        description=description,
+        default_location_id=default_location_id or None,
+        low_stock_enabled=low_stock_enabled,
+        expiry_kind=expiry_kind,
+        default_freeze_shelf_days=default_freeze_shelf_days or None,
+        no_freeze=(no_freeze or "0"),
+        category=category,
+        parent_id=parent_id or None,
+    )
+
+    log_event("product.update", {
+        "id": product_id, "name": name, "unit": unit, "shelf": shelf, "min_qty": mq,
+        "description": description or None,
+        "default_location_id": default_location_id or None,
+        "low_stock_enabled": 0 if str(low_stock_enabled).lower() in ("0","false","off","no") else 1,
+        "expiry_kind": (expiry_kind or "DLC").upper(),
+        "default_freeze_shelf_days": default_freeze_shelf_days or None,
+        "no_freeze": 1 if str(no_freeze).lower() in ("1","true","on","yes") else 0,
+        "category": category or None,
+        "parent_id": parent_id or None,
+    })
+
     return RedirectResponse(ingress_base(request)+"products", status_code=303, headers={"Cache-Control":"no-store"})
+
 
 @app.post("/product/delete")
 def product_delete(request: Request, product_id: int = Form(...)):

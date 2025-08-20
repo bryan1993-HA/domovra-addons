@@ -76,6 +76,24 @@ def init_db():
         if not _column_exists(c, "locations", "description"):
             c.execute("ALTER TABLE locations ADD COLUMN description TEXT")
 
+        # ----- Produits : nouvelles colonnes (idempotent)
+        if not _column_exists(c, "products", "description"):
+            c.execute("ALTER TABLE products ADD COLUMN description TEXT")
+        if not _column_exists(c, "products", "default_location_id"):
+            c.execute("ALTER TABLE products ADD COLUMN default_location_id INTEGER")
+        if not _column_exists(c, "products", "low_stock_enabled"):
+            c.execute("ALTER TABLE products ADD COLUMN low_stock_enabled INTEGER NOT NULL DEFAULT 1")
+        if not _column_exists(c, "products", "expiry_kind"):
+            c.execute("ALTER TABLE products ADD COLUMN expiry_kind TEXT DEFAULT 'DLC'")
+        if not _column_exists(c, "products", "default_freeze_shelf_days"):
+            c.execute("ALTER TABLE products ADD COLUMN default_freeze_shelf_days INTEGER")
+        if not _column_exists(c, "products", "no_freeze"):
+            c.execute("ALTER TABLE products ADD COLUMN no_freeze INTEGER NOT NULL DEFAULT 0")
+        if not _column_exists(c, "products", "category"):
+            c.execute("ALTER TABLE products ADD COLUMN category TEXT")
+        if not _column_exists(c, "products", "parent_id"):
+            c.execute("ALTER TABLE products ADD COLUMN parent_id INTEGER")
+
 
         c.commit()
 
@@ -143,30 +161,76 @@ def move_lots_from_location(src_location_id: int, dest_location_id: int):
         c.commit()
 
 # ---------- Products
-def add_product(name: str, unit: str = 'pièce', shelf: int = 90,
-                barcode: str | None = None,
-                min_qty: float | None = None) -> int:
-    """
-    Ajoute un produit. Unicité sur name (héritée) et sur barcode (si non NULL).
-    Si conflit, renvoie l'id existant (par name ou barcode).
-    """
+def add_product(
+    name: str,
+    unit: str = 'pièce',
+    shelf: int = 90,
+    barcode: str | None = None,                 # compat
+    min_qty: float | None = None,
+    description: str | None = None,
+    default_location_id: int | None = None,
+    low_stock_enabled: int | None = 1,
+    expiry_kind: str | None = 'DLC',
+    default_freeze_shelf_days: int | None = None,
+    no_freeze: int | None = 0,
+    category: str | None = None,
+    parent_id: int | None = None,
+) -> int:
     name = name.strip()
-    unit = (unit.strip() or 'pièce')
-    shelf = int(shelf)
+    unit = (unit or 'pièce').strip()
+    try:
+        shelf = int(shelf)
+    except Exception:
+        shelf = 90
+
     barcode = (barcode.strip() or None) if isinstance(barcode, str) else None
-    min_qty = float(min_qty) if (min_qty is not None and str(min_qty).strip() != "") else None
-    if min_qty is not None and min_qty < 0: min_qty = 0.0
+
+    def _float_or_none(x):
+        if x is None: return None
+        s = str(x).strip()
+        if not s: return None
+        try:
+            v = float(s)
+            return 0.0 if v < 0 else v
+        except Exception:
+            return None
+
+    min_qty = _float_or_none(min_qty)
+
+    description = (description or "").strip() or None
+    try:
+        default_location_id = int(default_location_id) if default_location_id not in (None, "",) else None
+    except Exception:
+        default_location_id = None
+    low_stock_enabled = 0 if str(low_stock_enabled).strip() in ("0","false","off","no") else 1
+    expiry_kind = (expiry_kind or "DLC").upper()
+    if expiry_kind not in ("DLC", "DDM"): expiry_kind = "DLC"
+    try:
+        default_freeze_shelf_days = int(default_freeze_shelf_days) if str(default_freeze_shelf_days or "").strip() else None
+    except Exception:
+        default_freeze_shelf_days = None
+    no_freeze = 1 if str(no_freeze).strip() in ("1","true","on","yes") else 0
+    category = (category or "").strip() or None
+    try:
+        parent_id = int(parent_id) if parent_id not in (None, "",) else None
+    except Exception:
+        parent_id = None
 
     with _conn() as c:
         try:
             cur = c.execute(
-                "INSERT INTO products(name,unit,default_shelf_life_days,barcode,min_qty) VALUES (?,?,?,?,?)",
-                (name, unit, shelf, barcode, min_qty)
+                """INSERT INTO products
+                   (name, unit, default_shelf_life_days, barcode, min_qty,
+                    description, default_location_id, low_stock_enabled,
+                    expiry_kind, default_freeze_shelf_days, no_freeze, category, parent_id)
+                   VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+                (name, unit, shelf, barcode, min_qty,
+                 description, default_location_id, low_stock_enabled,
+                 expiry_kind, default_freeze_shelf_days, no_freeze, category, parent_id)
             )
             c.commit()
             return cur.lastrowid
         except sqlite3.IntegrityError:
-            # Conflit : on tente par name, puis par barcode
             row = c.execute("SELECT id FROM products WHERE name=?", (name,)).fetchone()
             if row:
                 return int(row["id"])
@@ -176,6 +240,7 @@ def add_product(name: str, unit: str = 'pièce', shelf: int = 90,
                     return int(row["id"])
             return 0
 
+
 def list_products():
     with _conn() as c:
         return [dict(r) for r in c.execute(
@@ -183,13 +248,6 @@ def list_products():
         )]
 
 def list_products_with_stats():
-    """
-    Retourne les produits avec:
-      - qty_total (somme des lots)
-      - lots_count
-      - min_qty
-      - delta = qty_total - min_qty (NULL si min_qty NULL)
-    """
     with _conn() as c:
         q = """
         WITH totals AS (
@@ -199,6 +257,14 @@ def list_products_with_stats():
         )
         SELECT
           p.id, p.name, p.unit, p.default_shelf_life_days, p.barcode, p.min_qty,
+          COALESCE(p.description,'') AS description,
+          p.default_location_id,
+          COALESCE(p.low_stock_enabled,1) AS low_stock_enabled,
+          COALESCE(p.expiry_kind,'DLC') AS expiry_kind,
+          p.default_freeze_shelf_days,
+          COALESCE(p.no_freeze,0) AS no_freeze,
+          COALESCE(p.category,'') AS category,
+          p.parent_id,
           COALESCE(t.qty_total,0) AS qty_total,
           COALESCE(t.lots_count,0) AS lots_count,
           CASE WHEN p.min_qty IS NULL THEN NULL ELSE COALESCE(t.qty_total,0) - p.min_qty END AS delta
@@ -207,6 +273,7 @@ def list_products_with_stats():
         ORDER BY p.name
         """
         return [dict(r) for r in c.execute(q)]
+
 
 def list_low_stock_products(limit: int = 8):
     """
@@ -233,41 +300,89 @@ def list_low_stock_products(limit: int = 8):
         """
         return [dict(r) for r in c.execute(q, (int(limit),))]
 
-def update_product(product_id: int, name: str, unit: str,
-                   default_shelf_life_days: int,
-                   min_qty: float | None = None,
-                   barcode: str | None = None):
-    """
-    Mise à jour produit. Les anciens appels continuent de marcher
-    (min_qty/barcode sont optionnels).
-    """
+def update_product(
+    product_id: int,
+    name: str,
+    unit: str,
+    default_shelf_life_days: int,
+    min_qty: float | None = None,
+    barcode: str | None = None,
+    description: str | None = None,
+    default_location_id: int | None = None,
+    low_stock_enabled: int | None = None,
+    expiry_kind: str | None = None,
+    default_freeze_shelf_days: int | None = None,
+    no_freeze: int | None = None,
+    category: str | None = None,
+    parent_id: int | None = None,
+):
     name = name.strip()
-    unit = unit.strip() or 'pièce'
-    default_shelf_life_days = int(default_shelf_life_days)
-    if min_qty is not None and str(min_qty).strip() != "":
+    unit = (unit or 'pièce').strip()
+    try:
+        default_shelf_life_days = int(default_shelf_life_days)
+    except Exception:
+        default_shelf_life_days = 90
+
+    def _float_or_none(x):
+        if x is None: return None
+        s = str(x).strip()
+        if not s: return None
         try:
-            min_qty = float(min_qty)
-            if min_qty < 0: min_qty = 0.0
-        except ValueError:
-            min_qty = None
-    else:
-        # On respecte 'None' = pas de seuil
-        min_qty = None
+            v = float(s)
+            return 0.0 if v < 0 else v
+        except Exception:
+            return None
+
+    min_qty = _float_or_none(min_qty)
+
+    payload = {
+        "name": name,
+        "unit": unit,
+        "default_shelf_life_days": default_shelf_life_days,
+        "min_qty": min_qty,
+        "description": (description or "").strip() or None,
+        "category": (category or "").strip() or None,
+    }
+
+    if barcode is not None:
+        payload["barcode"] = (barcode.strip() or None)
+
+    try:
+        payload["default_location_id"] = int(default_location_id) if default_location_id not in (None,"") else None
+    except Exception:
+        payload["default_location_id"] = None
+
+    if low_stock_enabled is not None:
+        payload["low_stock_enabled"] = 0 if str(low_stock_enabled).lower() in ("0","false","off","no") else 1
+
+    if expiry_kind is not None:
+        ek = (expiry_kind or "DLC").upper()
+        payload["expiry_kind"] = ek if ek in ("DLC","DDM") else "DLC"
+
+    try:
+        payload["default_freeze_shelf_days"] = int(default_freeze_shelf_days) if str(default_freeze_shelf_days or "").strip() else None
+    except Exception:
+        payload["default_freeze_shelf_days"] = None
+
+    if no_freeze is not None:
+        payload["no_freeze"] = 1 if str(no_freeze).lower() in ("1","true","on","yes") else 0
+
+    try:
+        payload["parent_id"] = int(parent_id) if parent_id not in (None,"") else None
+    except Exception:
+        payload["parent_id"] = None
+
+    sets = []
+    params = []
+    for k, v in payload.items():
+        sets.append(f"{k}=?")
+        params.append(v)
+    params.append(int(product_id))
 
     with _conn() as c:
-        # Si barcode est fourni, on l’inclut ; sinon on ne le touche pas
-        if barcode is not None:
-            barcode = (barcode.strip() or None)
-            c.execute(
-                "UPDATE products SET name=?, unit=?, default_shelf_life_days=?, barcode=?, min_qty=? WHERE id=?",
-                (name, unit, default_shelf_life_days, barcode, min_qty, product_id)
-            )
-        else:
-            c.execute(
-                "UPDATE products SET name=?, unit=?, default_shelf_life_days=?, min_qty=? WHERE id=?",
-                (name, unit, default_shelf_life_days, min_qty, product_id)
-            )
+        c.execute(f"UPDATE products SET {', '.join(sets)} WHERE id=?", params)
         c.commit()
+
 
 def delete_product(product_id: int):
     """Supprime un produit + lots + mouvements liés."""
