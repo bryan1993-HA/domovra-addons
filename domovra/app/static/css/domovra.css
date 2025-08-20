@@ -1734,6 +1734,116 @@ html[data-theme="light"] #tbl tbody tr:hover {
     }
 }
 
+/* ====== Fiche produit — layout version 'locations' ====== */
+
+/* Grille sobre, même esprit que .add-location-form */
+.wrap .add-product-form {
+    display: grid !important;
+    gap: 12px;
+    align-items: end;
+}
+
+/* Desktop large : 5 colonnes (Nom/Desc restent en plein largeur via grid-column) */
+@media (min-width: 901px) {
+    .wrap .add-product-form {
+        grid-template-columns: 2fr 1fr 1fr 1fr 1fr;
+        /* proche de l’esthétique locations */
+    }
+}
+
+/* Tablet : 3 colonnes */
+@media (max-width: 900px) and (min-width: 701px) {
+    .wrap .add-product-form {
+        grid-template-columns: 1fr 1fr 1fr;
+    }
+}
+
+/* Mobile : 1 colonne */
+@media (max-width: 700px) {
+    .wrap .add-product-form {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* Sections plein-largeur (Nom + Description) */
+.wrap .add-product-form>[style*="grid-column: 1 / -1"] {
+    align-self: start;
+}
+
+/* Boutons plein-largeur en bas (même rendu que locations) */
+.wrap .add-product-form .btn-wide {
+    grid-column: 1 / -1 !important;
+    justify-self: stretch;
+}
+
+/* Infield quantité : suffixe discret (pas de pastille) et alignement parfait */
+.wrap .add-product-form .infield-qty {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.wrap .add-product-form .infield-qty input {
+    width: 100%;
+    padding-right: 56px;
+    /* place au suffixe */
+}
+
+.wrap .add-product-form .infield-qty .suffix {
+    position: absolute;
+    right: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    opacity: .8;
+    pointer-events: none;
+    border: 0;
+    background: transparent;
+    padding: 0;
+    line-height: 1;
+}
+
+/* Hint compact sous la quantité (même esprit que locations) */
+.wrap .add-product-form #create_min_hint {
+    margin-top: 4px;
+    font-size: .88rem;
+    min-height: 1.2em;
+}
+
+/* Case “Ne doit pas être congelé” : reste dans la ligne, pas de débord */
+.wrap .add-product-form .no-freeze-cell {
+    display: flex;
+    align-items: center;
+    min-height: 44px;
+}
+
+/* Groupe “après congélation” homogène */
+.wrap .add-product-form #create_freeze_group {
+    display: flex;
+    flex-direction: column;
+}
+
+/* Radios DLC/DDM façon segmenté (déjà utilisés côté produits, on garde le style) */
+.wrap .add-product-form .segmented {
+    display: inline-flex;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    overflow: hidden;
+    white-space: nowrap;
+}
+
+.wrap .add-product-form .segmented label {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    cursor: pointer;
+}
+
+.wrap .add-product-form .segmented label+label {
+    border-left: 1px solid var(--line);
+}
+
+
 
 /* ========================================================================== */
 /* ========== 14) Page Stocks (/lots) ======================================= */
