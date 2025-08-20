@@ -125,15 +125,50 @@
         </select>
       </div>
 
+      <!-- Unité par défaut -->
+      <div class="field">
+        <div class="label">Unité par défaut
+          <span class="help" tabindex="0" data-tip="Comptage / poids / volume selon le produit."></span>
+        </div>
+        <select name="unit" id="create_unit">
+          <optgroup label="Comptage">
+            <option value="pièce" selected>pièce</option>
+            <option value="tranche">tranche</option>
+            <option value="paquet">paquet</option>
+            <option value="boîte">boîte</option>
+            <option value="bocal">bocal</option>
+            <option value="bouteille">bouteille</option>
+            <option value="sachet">sachet</option>
+            <option value="lot">lot</option>
+            <option value="barquette">barquette</option>
+            <option value="rouleau">rouleau</option>
+            <option value="dosette">dosette</option>
+          </optgroup>
+          <optgroup label="Poids">
+            <option value="g">g</option>
+            <option value="kg">kg</option>
+          </optgroup>
+          <optgroup label="Volume">
+            <option value="ml">ml</option>
+            <option value="L">L</option>
+          </optgroup>
+        </select>
+      </div>
+
       <!-- Quantité minimum en stock -->
       <div class="field">
         <div class="label">Quantité minimum en stock
           <span class="help" tabindex="0"
-            data-tip="En‑dessous de ce seuil, le produit est considéré en stock faible."></span>
+            data-tip="Seuil d’alerte pour ce produit (utilisé si l’alerte est active)."></span>
         </div>
-        <input name="min_qty" id="create_min_qty" type="number" min="0" step="0.01"
-          value="{{ SETTINGS.low_stock_default }}" placeholder="ex. 1">
+        <div class="infield" style="position:relative;display:flex;align-items:center">
+          <input name="min_qty" id="create_min_qty" type="number" min="0" step="1"
+            value="{{ SETTINGS.low_stock_default }}" placeholder="ex. 1">
+          <span id="min_qty_unit" class="muted" style="position:absolute;right:10px;pointer-events:none">pièce</span>
+        </div>
+        <div class="muted" id="min_qty_hint" style="font-size:.9rem;margin-top:4px"></div>
       </div>
+
 
       <!-- Alerte de stock faible actif ? -->
       <div class="field">
@@ -167,25 +202,22 @@
         <input name="default_shelf_days" id="create_shelf" type="number" min="1" placeholder="ex. 90">
       </div>
 
-      <!-- Jours par défaut après congélation -->
+      <!-- Ne doit pas être congelé (checkbox) -->
       <div class="field">
+        <label class="label" style="display:flex;align-items:center;gap:8px">
+          <input type="checkbox" id="create_no_freeze_chk" name="no_freeze" value="1">
+          Ne doit pas être congelé
+        </label>
+      </div>
+
+      <!-- Jours par défaut après congélation -->
+      <div class="field" id="freeze_shelf_group">
         <div class="label">Péremption après congélation (jours)
           <span class="help" tabindex="0" data-tip="Ajouté à la date de congélation si le lot est congelé."></span>
         </div>
         <input name="default_freeze_shelf_days" id="create_freeze_shelf" type="number" min="1" placeholder="ex. 180">
       </div>
 
-      <!-- Ne doit pas être congelé -->
-      <div class="field">
-        <div class="label">Ne doit pas être congelé
-          <span class="help" tabindex="0"
-            data-tip="Empêchera la saisie d’une date de congélation pour ce produit."></span>
-        </div>
-        <select name="no_freeze" id="create_no_freeze">
-          <option value="0" selected>Non</option>
-          <option value="1">Oui</option>
-        </select>
-      </div>
 
       <!-- Catégorie -->
       <div class="field">
@@ -205,36 +237,6 @@
           <option value="{{ cat }}">
             {% endfor %}
         </datalist>
-      </div>
-
-      <!-- Unité par défaut -->
-      <div class="field">
-        <div class="label">Unité par défaut
-          <span class="help" tabindex="0" data-tip="Comptage / poids / volume selon le produit."></span>
-        </div>
-        <select name="unit" id="create_unit">
-          <optgroup label="Comptage">
-            <option value="pièce" selected>pièce</option>
-            <option value="tranche">tranche</option>
-            <option value="paquet">paquet</option>
-            <option value="boîte">boîte</option>
-            <option value="bocal">bocal</option>
-            <option value="bouteille">bouteille</option>
-            <option value="sachet">sachet</option>
-            <option value="lot">lot</option>
-            <option value="barquette">barquette</option>
-            <option value="rouleau">rouleau</option>
-            <option value="dosette">dosette</option>
-          </optgroup>
-          <optgroup label="Poids">
-            <option value="g">g</option>
-            <option value="kg">kg</option>
-          </optgroup>
-          <optgroup label="Volume">
-            <option value="ml">ml</option>
-            <option value="L">L</option>
-          </optgroup>
-        </select>
       </div>
 
       <!-- Produit parent -->
@@ -262,13 +264,13 @@
   <!-- Outils -->
   <div class="card">
     <div class="title">
-      <h2>Outils</h2><span class="muted">Recherche & compteur</span>
+      <h2>Outils</h2><span class="muted">Recherche</span>
     </div>
     <div class="row" style="align-items:center">
-      <input id="q" placeholder="Rechercher une fiche produit…">
-      <span class="chip">🗂️ Fiches produit : <b id="prod-count">{{ items|length }}</b></span>
+      <input id="q" type="search" placeholder="Rechercher une fiche produit…" style="flex:1;min-width:220px">
     </div>
   </div>
+
 
   <!-- Liste -->
   <div class="card">
@@ -478,6 +480,67 @@
     if (opts.includes(val)) sel.value = val;
     else if (val) { const o = document.createElement('option'); o.value = val; o.textContent = val + ' (autre)'; o.dataset.temp = '1'; sel.insertBefore(o, sel.firstChild); sel.value = val; }
   }
+
+  /* === Logique min_qty selon l'unité === */
+  (function () {
+    const unitSel = document.getElementById('create_unit');
+    const minInput = document.getElementById('create_min_qty');
+    const unitSuffix = document.getElementById('min_qty_unit');
+    const hint = document.getElementById('min_qty_hint');
+
+    if (!unitSel || !minInput || !unitSuffix || !hint) return;
+
+    function applyUnitLogic(u) {
+      let step = 1, placeholder = 'ex. 1', suffix = u || '';
+      let hintTxt = '';
+
+      switch (u) {
+        case 'L':
+          step = 1; placeholder = 'ex. 1 (→ 1 L, 2 L ...)'; suffix = 'L';
+          hintTxt = 'Pas conseillé : 1 L. Valeurs entières.';
+          break;
+        case 'ml':
+          step = 50; placeholder = 'ex. 500 (→ 500 ml, 550 ml ...)'; suffix = 'ml';
+          hintTxt = 'Pas conseillé : 50 ml.';
+          break;
+        case 'kg':
+          step = 0.1; placeholder = 'ex. 0.5 (→ 0,5 kg, 0,6 kg ...)'; suffix = 'kg';
+          hintTxt = 'Pas conseillé : 0,1 kg.';
+          break;
+        case 'g':
+          step = 50; placeholder = 'ex. 500 (→ 500 g, 550 g ...)'; suffix = 'g';
+          hintTxt = 'Pas conseillé : 50 g.';
+          break;
+        default:
+          // unités de comptage (pièce, paquet, bouteille, etc.)
+          step = 1; placeholder = 'ex. 1'; suffix = u || 'pièce';
+          hintTxt = 'Pas conseillé : 1.';
+          break;
+      }
+
+      minInput.step = String(step);
+      minInput.placeholder = placeholder;
+      unitSuffix.textContent = suffix;
+      hint.textContent = hintTxt;
+    }
+
+    unitSel.addEventListener('change', e => applyUnitLogic(e.target.value));
+    // init au chargement
+    applyUnitLogic(unitSel.value || 'pièce');
+  })();
+
+  /* === Afficher/Masquer 'Après congélation (jours)' === */
+  (function () {
+    const chk = document.getElementById('create_no_freeze_chk');
+    const grp = document.getElementById('freeze_shelf_group');
+    if (!chk || !grp) return;
+
+    function apply() { grp.style.display = chk.checked ? 'none' : ''; }
+    chk.addEventListener('change', apply);
+    // init
+    apply();
+  })();
+
 
   /* Modales Modifier / Supprimer */
   document.addEventListener('click', function (e) {
