@@ -213,151 +213,148 @@
         <!-- vide: garde l’espace, aligne les boutons à droite comme locations -->
       </div>
       <div class="field">
-        <button class="secondary btn-wide">＋ Ajouter</button>
+        <button class="secondary btn-wide" type="submit">＋ Ajouter</button>
       </div>
-      <div class="field">
-        <button id="create_reset" type="button" class="secondary btn-wide"><span
-            class="ico">↺</span>Réinitialiser</button>
-      </div>
-    </form>
+  </div>
+  </form>
 
 
+</div>
+
+
+<!-- Outils -->
+<div class="card">
+  <div class="title">
+    <h2>Outils</h2><span class="muted">Recherche</span>
+  </div>
+  <div class="row" style="align-items:center">
+    <input id="q" type="search" placeholder="Rechercher une fiche produit…" style="flex:1;min-width:220px">
+  </div>
+</div>
+
+
+<!-- Liste -->
+<div class="card">
+  <div class="title">
+    <h2>Fiches produit</h2><span class="muted">Table (bureau) / Cartes (mobile)</span>
   </div>
 
-
-  <!-- Outils -->
-  <div class="card">
-    <div class="title">
-      <h2>Outils</h2><span class="muted">Recherche</span>
-    </div>
-    <div class="row" style="align-items:center">
-      <input id="q" type="search" placeholder="Rechercher une fiche produit…" style="flex:1;min-width:220px">
-    </div>
-  </div>
-
-
-  <!-- Liste -->
-  <div class="card">
-    <div class="title">
-      <h2>Fiches produit</h2><span class="muted">Table (bureau) / Cartes (mobile)</span>
-    </div>
-
-    <table id="tbl">
-      <colgroup>
-        <col style="width:28%">
-        <col style="width:50%">
-        <col style="width:22%">
-      </colgroup>
-      <thead>
-        <tr>
-          <th>Nom</th>
-          <th>Infos</th>
-          <th>Actions</th>
-        </tr>
-      </thead>
-      <tbody id="tbody">
-        {% if items %}
-        {% for it in items %}
-        {% set threshold = it.min_qty if it.min_qty is not none else SETTINGS.low_stock_default %}
-        {% set is_low = ( it.qty_total < threshold ) %} <tr data-name="{{ it.name|lower }}"
-          data-unit="{{ it.unit|lower }}" data-barcode="{{ (it.barcode or '')|lower }}">
-          <td>
-            <div style="font-weight:600;display:flex;gap:6px;align-items:center;flex-wrap:wrap">
-              <span>{{ it.name }}</span>
-              {% if it.barcode %}<span class="muted">EAN : {{ it.barcode }}</span>{% endif %}
-              {% if is_low %}<span class="pill danger">🔻 Faible stock</span>{% endif %}
-            </div>
-          </td>
-          <td>
-            <div class="stats">
-              <span class="stat"><span class="k">Unité</span><span> :</span><span class="v">{{ it.unit }}</span></span>
-              <span class="stat"><span class="k">Conservation</span><span> :</span><span class="v">{{
-                  it.default_shelf_life_days }} j</span></span>
-              <span class="stat"><span class="k">Stocks</span><span> :</span><span class="v">{{ it.lots_count
-                  }}</span></span>
-              <span class="stat"><span class="k">Qté totale</span><span> :</span><span class="v">{{
-                  '%.2f'|format(it.qty_total) }}</span></span>
-              <span class="stat"><span class="k">Seuil min</span><span> :</span><span class="v">{{ threshold
-                  }}</span></span>
-            </div>
-          </td>
-          <td>
-            <div class="actions" style="display:grid;gap:8px">
-              <div class="row2" style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
-                <button class="secondary js-edit-open" data-id="{{ it.id }}" data-name="{{ it.name }}"
-                  data-desc="{{ it.description or '' }}" data-default-location="{{ it.default_location_id or '' }}"
-                  data-min="{{ it.min_qty if it.min_qty is not none else '' }}"
-                  data-low-enabled="{{ 1 if (it.low_stock_enabled is not none and it.low_stock_enabled!=0) else 0 }}"
-                  data-expiry-kind="{{ (it.expiry_kind or 'DLC') }}" data-shelf="{{ it.default_shelf_life_days or '' }}"
-                  data-freeze-shelf="{{ it.default_freeze_shelf_days or '' }}"
-                  data-no-freeze="{{ 1 if (it.no_freeze is not none and it.no_freeze!=0) else 0 }}"
-                  data-category="{{ it.category or '' }}" data-unit="{{ it.unit or 'pièce' }}"
-                  data-parent="{{ it.parent_id or '' }}">✏️ Modifier</button>
-
-                <button class="secondary js-delete-open" data-id="{{ it.id }}" data-name="{{ it.name }}"
-                  data-lots="{{ it.lots_count|int }}">🗑️ Supprimer</button>
-              </div>
-            </div>
-          </td>
-
-          </tr>
-          {% endfor %}
-          {% else %}
-          <tr>
-            <td colspan="3" class="muted">Aucun produit.</td>
-          </tr>
-          {% endif %}
-      </tbody>
-    </table>
-
-    <!-- Mobile cards -->
-    <div class="cards" id="cards">
+  <table id="tbl">
+    <colgroup>
+      <col style="width:28%">
+      <col style="width:50%">
+      <col style="width:22%">
+    </colgroup>
+    <thead>
+      <tr>
+        <th>Nom</th>
+        <th>Infos</th>
+        <th>Actions</th>
+      </tr>
+    </thead>
+    <tbody id="tbody">
+      {% if items %}
       {% for it in items %}
       {% set threshold = it.min_qty if it.min_qty is not none else SETTINGS.low_stock_default %}
-      {% set is_low = ( it.qty_total < threshold ) %} <div class="card-item" data-name="{{ it.name|lower }}"
+      {% set is_low = ( it.qty_total < threshold ) %} <tr data-name="{{ it.name|lower }}"
         data-unit="{{ it.unit|lower }}" data-barcode="{{ (it.barcode or '')|lower }}">
-        <div class="card-head">
-          <div class="card-name">{{ it.name }}{% if is_low %} <span class="pill danger">🔻 Faible stock</span>{% endif
-            %}</div>
-        </div>
-
-        <button class="card-toggle js-card-toggle" type="button" aria-expanded="false" aria-controls="more-{{ it.id }}">
-          <span>Plus d’infos</span><span class="chev">▶</span>
-        </button>
-
-        <div class="card-extra" id="more-{{ it.id }}" hidden>
-          <div class="card-info">
-            {% if it.barcode %}<span class="stat"><span class="k">EAN</span><span> :</span><span class="v">{{ it.barcode
-                }}</span></span>{% endif %}
+        <td>
+          <div style="font-weight:600;display:flex;gap:6px;align-items:center;flex-wrap:wrap">
+            <span>{{ it.name }}</span>
+            {% if it.barcode %}<span class="muted">EAN : {{ it.barcode }}</span>{% endif %}
+            {% if is_low %}<span class="pill danger">🔻 Faible stock</span>{% endif %}
+          </div>
+        </td>
+        <td>
+          <div class="stats">
             <span class="stat"><span class="k">Unité</span><span> :</span><span class="v">{{ it.unit }}</span></span>
             <span class="stat"><span class="k">Conservation</span><span> :</span><span class="v">{{
                 it.default_shelf_life_days }} j</span></span>
             <span class="stat"><span class="k">Stocks</span><span> :</span><span class="v">{{ it.lots_count
                 }}</span></span>
-            <span class="stat"><span class="k">Qté</span><span> :</span><span class="v">{{ '%.2f'|format(it.qty_total)
-                }}</span></span>
+            <span class="stat"><span class="k">Qté totale</span><span> :</span><span class="v">{{
+                '%.2f'|format(it.qty_total) }}</span></span>
             <span class="stat"><span class="k">Seuil min</span><span> :</span><span class="v">{{ threshold
                 }}</span></span>
           </div>
-        </div>
+        </td>
+        <td>
+          <div class="actions" style="display:grid;gap:8px">
+            <div class="row2" style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+              <button class="secondary js-edit-open" data-id="{{ it.id }}" data-name="{{ it.name }}"
+                data-desc="{{ it.description or '' }}" data-default-location="{{ it.default_location_id or '' }}"
+                data-min="{{ it.min_qty if it.min_qty is not none else '' }}"
+                data-low-enabled="{{ 1 if (it.low_stock_enabled is not none and it.low_stock_enabled!=0) else 0 }}"
+                data-expiry-kind="{{ (it.expiry_kind or 'DLC') }}" data-shelf="{{ it.default_shelf_life_days or '' }}"
+                data-freeze-shelf="{{ it.default_freeze_shelf_days or '' }}"
+                data-no-freeze="{{ 1 if (it.no_freeze is not none and it.no_freeze!=0) else 0 }}"
+                data-category="{{ it.category or '' }}" data-unit="{{ it.unit or 'pièce' }}"
+                data-parent="{{ it.parent_id or '' }}">✏️ Modifier</button>
 
-        <div class="card-actions">
-          <button class="secondary js-edit-open" data-id="{{ it.id }}" data-name="{{ it.name }}"
-            data-desc="{{ it.description or '' }}" data-default-location="{{ it.default_location_id or '' }}"
-            data-min="{{ it.min_qty if it.min_qty is not none else '' }}"
-            data-low-enabled="{{ 1 if (it.low_stock_enabled is not none and it.low_stock_enabled!=0) else 0 }}"
-            data-expiry-kind="{{ (it.expiry_kind or 'DLC') }}" data-shelf="{{ it.default_shelf_life_days or '' }}"
-            data-freeze-shelf="{{ it.default_freeze_shelf_days or '' }}"
-            data-no-freeze="{{ 1 if (it.no_freeze is not none and it.no_freeze!=0) else 0 }}"
-            data-category="{{ it.category or '' }}" data-unit="{{ it.unit or 'pièce' }}"
-            data-parent="{{ it.parent_id or '' }}">✏️ Modifier</button>
-          <button class="secondary js-delete-open" data-id="{{ it.id }}" data-name="{{ it.name }}"
-            data-lots="{{ it.lots_count|int }}">🗑️ Supprimer</button>
-        </div>
+              <button class="secondary js-delete-open" data-id="{{ it.id }}" data-name="{{ it.name }}"
+                data-lots="{{ it.lots_count|int }}">🗑️ Supprimer</button>
+            </div>
+          </div>
+        </td>
 
-    </div>
-    {% endfor %}
+        </tr>
+        {% endfor %}
+        {% else %}
+        <tr>
+          <td colspan="3" class="muted">Aucun produit.</td>
+        </tr>
+        {% endif %}
+    </tbody>
+  </table>
+
+  <!-- Mobile cards -->
+  <div class="cards" id="cards">
+    {% for it in items %}
+    {% set threshold = it.min_qty if it.min_qty is not none else SETTINGS.low_stock_default %}
+    {% set is_low = ( it.qty_total < threshold ) %} <div class="card-item" data-name="{{ it.name|lower }}"
+      data-unit="{{ it.unit|lower }}" data-barcode="{{ (it.barcode or '')|lower }}">
+      <div class="card-head">
+        <div class="card-name">{{ it.name }}{% if is_low %} <span class="pill danger">🔻 Faible stock</span>{% endif
+          %}</div>
+      </div>
+
+      <button class="card-toggle js-card-toggle" type="button" aria-expanded="false" aria-controls="more-{{ it.id }}">
+        <span>Plus d’infos</span><span class="chev">▶</span>
+      </button>
+
+      <div class="card-extra" id="more-{{ it.id }}" hidden>
+        <div class="card-info">
+          {% if it.barcode %}<span class="stat"><span class="k">EAN</span><span> :</span><span class="v">{{ it.barcode
+              }}</span></span>{% endif %}
+          <span class="stat"><span class="k">Unité</span><span> :</span><span class="v">{{ it.unit }}</span></span>
+          <span class="stat"><span class="k">Conservation</span><span> :</span><span class="v">{{
+              it.default_shelf_life_days }} j</span></span>
+          <span class="stat"><span class="k">Stocks</span><span> :</span><span class="v">{{ it.lots_count
+              }}</span></span>
+          <span class="stat"><span class="k">Qté</span><span> :</span><span class="v">{{ '%.2f'|format(it.qty_total)
+              }}</span></span>
+          <span class="stat"><span class="k">Seuil min</span><span> :</span><span class="v">{{ threshold
+              }}</span></span>
+        </div>
+      </div>
+
+      <div class="card-actions">
+        <button class="secondary js-edit-open" data-id="{{ it.id }}" data-name="{{ it.name }}"
+          data-desc="{{ it.description or '' }}" data-default-location="{{ it.default_location_id or '' }}"
+          data-min="{{ it.min_qty if it.min_qty is not none else '' }}"
+          data-low-enabled="{{ 1 if (it.low_stock_enabled is not none and it.low_stock_enabled!=0) else 0 }}"
+          data-expiry-kind="{{ (it.expiry_kind or 'DLC') }}" data-shelf="{{ it.default_shelf_life_days or '' }}"
+          data-freeze-shelf="{{ it.default_freeze_shelf_days or '' }}"
+          data-no-freeze="{{ 1 if (it.no_freeze is not none and it.no_freeze!=0) else 0 }}"
+          data-category="{{ it.category or '' }}" data-unit="{{ it.unit or 'pièce' }}"
+          data-parent="{{ it.parent_id or '' }}">✏️ Modifier</button>
+        <button class="secondary js-delete-open" data-id="{{ it.id }}" data-name="{{ it.name }}"
+          data-lots="{{ it.lots_count|int }}">🗑️ Supprimer</button>
+      </div>
+
   </div>
+  {% endfor %}
+</div>
 </div>
 </div>
 
@@ -415,13 +412,17 @@
         </select>
       </div>
 
-      <div style="flex:1">
-        <div class="label">Quantité minimum en stock</div>
-        <div class="infield" style="position:relative;display:flex;align-items:center">
-          <input name="min_qty" id="dlg-min" type="number" min="0" step="1" placeholder="ex. 1">
-          <span id="dlg_min_unit" class="muted" style="position:absolute;right:10px;pointer-events:none">pièce</span>
+      <div class="field">
+        <div class="label">
+          Quantité minimum en stock
+          <span class="help" tabindex="0" data-tip="Conseil : commence par 1, 2 ou 3 selon le produit."></span>
+        </div>
+        <div class="infield-qty">
+          <input id="create_min_qty" ...>
+          <span class="suffix" id="create_min_suffix">pièce</span>
         </div>
       </div>
+
     </div>
 
     <div class="row" style="gap:10px">

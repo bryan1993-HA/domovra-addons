@@ -1152,17 +1152,17 @@ html[data-theme="light"] .wrap table:has(#locations-body) tbody tr:hover {
 
 /* Empiler proprement sur mobile */
 @media (max-width: 700px) {
-    #dlg-delete .del-choices {
-        grid-template-columns: 1fr;
-        /* 1 colonne */
-    }
-
-    #dlg-delete .opt {
-        flex-wrap: wrap;
-    }
-
-    #dlg-delete .opt select {
+    .wrap .add-product-form .infield-qty {
         width: 100%;
+    }
+
+    .wrap .add-product-form .infield-qty input {
+        width: 100%;
+        padding-right: 56px;
+    }
+
+    .wrap .add-product-form .infield-qty .suffix {
+        right: 12px;
     }
 }
 
@@ -1260,8 +1260,14 @@ html[data-theme="light"] .wrap .help:focus-visible::after {
 
 /* Boutons du bas = pleine largeur */
 .wrap .add-product-form .btn-wide {
-    grid-column: 1 / -1;
+    grid-column: 1 / -1 !important;
+    width: 100%;
     justify-self: stretch;
+}
+
+/* Nettoyage : si la classe .hint existait encore, on la neutralise côté produits */
+.wrap[data-page="product"] .hint {
+    display: none;
 }
 
 /* Suffixe d’unité dans la quantité mini */
