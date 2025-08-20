@@ -1235,7 +1235,9 @@ html[data-theme="light"] .wrap .help:focus-visible::after {
     color: #111827;
 }
 
-/* ========== Formulaire d’ajout (GRILLE UNIQUE) ============================ */
+/* ======================= */
+/* FORMULAIRE D’AJOUT      */
+/* ======================= */
 
 /* Utiliser class="add-product-form" sur le <form> */
 .wrap .add-product-form {
@@ -1246,7 +1248,7 @@ html[data-theme="light"] .wrap .help:focus-visible::after {
     /* desktop : 5 colonnes */
 }
 
-/* Champs pleine largeur quand nécessaire (ex. nom/description via grid-column en HTML) */
+/* Champs pleine largeur */
 .wrap .add-product-form .field>input,
 .wrap .add-product-form .field>select,
 .wrap .add-product-form .field>textarea {
@@ -1254,19 +1256,14 @@ html[data-theme="light"] .wrap .help:focus-visible::after {
     min-width: 0;
 }
 
-/* Boutons du bas = pleine largeur */
+/* Bouton du bas sur toute la largeur */
 .wrap .add-product-form .btn-wide {
     grid-column: 1 / -1 !important;
     width: 100%;
     justify-self: stretch;
 }
 
-/* Nettoyage : si la classe .hint existait encore, on la neutralise côté produits */
-/*.wrap[data-page="product"] .hint {
-    display: none;
-}*/
-
-/* Suffixe d’unité dans la quantité mini */
+/* Suffixe d’unité (quantité mini) */
 .wrap .add-product-form .infield-qty {
     position: relative;
     display: flex;
@@ -1285,27 +1282,25 @@ html[data-theme="light"] .wrap .help:focus-visible::after {
     transform: translateY(-50%);
     opacity: .8;
     pointer-events: none;
-    border: 0;
     background: transparent;
+    border: 0;
     padding: 0;
     line-height: 1;
 }
 
-/* Aide compacte sous la quantité mini */
+/* Aide compacte sous la quantité — masquée pour l’alignement */
 .wrap .add-product-form #create_min_hint {
-    margin-top: 4px;
-    font-size: .88rem;
-    min-height: 1.2em;
+    display: none;
 }
 
-/* Checkbox “Ne doit pas être congelé” bien alignée */
+/* Checkbox “Ne doit pas être congelé” alignée */
 .wrap .add-product-form .no-freeze-cell {
     display: flex;
     align-items: center;
     min-height: 44px;
 }
 
-/* Groupe “après congélation” : colonne verticale sobre */
+/* Groupe “après congélation” */
 .wrap .add-product-form #create_freeze_group {
     display: flex;
     flex-direction: column;
@@ -1332,15 +1327,12 @@ html[data-theme="light"] .wrap .help:focus-visible::after {
     border-left: 1px solid var(--line);
 }
 
-/* === Responsive : mobile/tablette ======================================== */
-
-/* ≤ 900px : monocolonne (Ingress mobile/tablette) */
-@media (max-width: 900px) {
+/* Responsive ≤900px : mono‑colonne */
+@media (max-width:900px) {
     .wrap .add-product-form {
         grid-template-columns: 1fr !important;
     }
 
-    /* radios DLC/DDM : étirer proprement */
     .wrap .add-product-form .segmented {
         width: 100%;
         justify-content: space-between;
@@ -1352,20 +1344,13 @@ html[data-theme="light"] .wrap .help:focus-visible::after {
         padding: 10px 8px;
     }
 
-    /* boutons : pleine largeur */
     .wrap .add-product-form .btn-wide {
         width: 100%;
         justify-self: stretch;
     }
 }
 
-/* (optionnel) étape “tablette” en 2 colonnes : décommente si tu préfères
-@media (min-width: 701px) and (max-width: 900px) {
-  .wrap .add-product-form { grid-template-columns: 1fr 1fr !important; }
-}
-*/
-
-/* Textarea dans le style global des champs */
+/* Textarea dans le style global */
 .wrap textarea {
     width: 100%;
     border: 1px solid var(--border);
@@ -1376,171 +1361,10 @@ html[data-theme="light"] .wrap .help:focus-visible::after {
     min-height: 72px;
 }
 
-/* ========== Liste (table) ================================================= */
+/* ======================= */
+/* OUTILS & TABLE DESKTOP  */
+/* ======================= */
 
-#tbl {
-    width: 100%;
-    border-collapse: collapse;
-}
-
-#tbl thead th {
-    font-size: 12px;
-    color: var(--text-muted);
-    text-align: left;
-    padding: 6px 8px;
-    border: 0;
-    border-bottom: 1px solid var(--line);
-    background: transparent;
-}
-
-#tbl tbody td {
-    padding: 10px 8px;
-    border: 0;
-    border-bottom: 1px solid var(--line);
-    vertical-align: top;
-}
-
-#tbl tbody tr:hover {
-    background: rgba(255, 255, 255, .03);
-}
-
-html[data-theme="light"] #tbl tbody tr:hover {
-    background: rgba(0, 0, 0, .03);
-}
-
-/* Stats (petites chips) */
-.wrap .stats {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px 10px;
-    white-space: normal;
-    overflow: visible;
-    max-width: 100%;
-}
-
-.wrap .stat {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    padding: 6px 10px;
-    border-radius: 999px;
-    border: 1px solid var(--line);
-    background: transparent;
-    flex: 1 1 calc(50% - 10px);
-    min-width: 180px;
-}
-
-.wrap .stat .k {
-    color: var(--text-muted);
-}
-
-.wrap .stat .v {
-    font-weight: 600;
-}
-
-/* ========== Cartes mobiles (liste) ======================================= */
-/* Si tu veux afficher des cartes à la place de la table en petit écran */
-.wrap .cards {
-    display: none;
-}
-
-@media (max-width:700px) {
-
-    #tbl,
-    #tbl thead {
-        display: none;
-    }
-
-    .wrap .cards {
-        display: grid;
-        gap: 10px;
-    }
-
-    .wrap .card-item {
-        border: 1px solid var(--line);
-        border-radius: 12px;
-        padding: 10px;
-        background: transparent;
-    }
-
-    .wrap .card-head {
-        display: flex;
-        justify-content: space-between;
-        gap: 10px;
-    }
-
-    .wrap .card-name {
-        font-weight: 600;
-    }
-
-    .wrap .card-info {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 8px;
-        margin-top: 6px;
-    }
-
-    .wrap .card-actions {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 8px;
-        margin-top: 8px;
-    }
-
-    .wrap .card-toggle {
-        width: 100%;
-        border: 1px solid var(--line);
-        border-radius: 10px;
-        padding: 8px 10px;
-        background: transparent;
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        gap: 8px;
-    }
-
-    .wrap .card-toggle .chev {
-        transition: transform .15s ease;
-    }
-
-    .wrap .card-toggle[aria-expanded="true"] .chev {
-        transform: rotate(90deg);
-    }
-
-    .wrap .card-extra[hidden] {
-        display: none !important;
-    }
-
-    .wrap .card-extra {
-        margin-top: 8px;
-    }
-}
-
-@media (prefers-reduced-motion: reduce) {
-    .wrap .card-toggle .chev {
-        transition: none;
-    }
-}
-
-/* ========== Dialogs (édition produit) ==================================== */
-.wrap dialog input[type="radio"] {
-    width: 16px;
-    height: 16px;
-    accent-color: var(--accent);
-}
-
-.wrap dialog select {
-    min-height: 44px;
-}
-
-
-
-/* =========================
-   PRODUITS — OUTILS & LISTE
-   (scopé à data-page="product")
-   ========================= */
-
-/* ----- Outils / Recherche ----- */
 .wrap[data-page="product"] .tools-row {
     display: grid;
     grid-template-columns: 1fr;
@@ -1553,7 +1377,7 @@ html[data-theme="light"] #tbl tbody tr:hover {
     min-width: 0;
 }
 
-/* ----- Table desktop ----- */
+/* Table (si tu l’utilises encore quelque part) */
 .wrap[data-page="product"] #tbl {
     width: 100%;
     border-collapse: collapse;
@@ -1601,127 +1425,176 @@ html[data-theme="light"] .wrap[data-page="product"] #tbl tbody tr:hover {
     min-width: 0;
 }
 
-/* ----- Cartes mobile (remplacent la table uniquement en petit écran) ----- */
-.wrap[data-page="product"] .cards {
-    display: none;
+/* ========================================================================== */
+/* PRODUITS — Cartes (grille responsive)                                      */
+/* ========================================================================== */
+
+/* Grille : colonnes fluides */
+.cards-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 16px;
 }
 
-@media (max-width:700px) {
-
-    .wrap[data-page="product"] #tbl,
-    .wrap[data-page="product"] #tbl thead {
-        display: none;
-    }
-
-    .wrap[data-page="product"] .cards {
-        display: grid;
-        gap: 10px;
-    }
-
-    .wrap[data-page="product"] .card-item {
-        border: 1px solid var(--line);
-        border-radius: 12px;
-        padding: 10px;
-        background: transparent;
-    }
-
-    .wrap[data-page="product"] .card-head {
-        display: flex;
-        justify-content: space-between;
-        gap: 10px;
-    }
-
-    .wrap[data-page="product"] .card-name {
-        font-weight: 600;
-    }
-
-    .wrap[data-page="product"] .card-info {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 8px;
-        margin-top: 6px;
-    }
-
-    .wrap[data-page="product"] .card-actions {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 8px;
-        margin-top: 8px;
-    }
-
-    .wrap[data-page="product"] .card-toggle {
-        width: 100%;
-        border: 1px solid var(--line);
-        border-radius: 10px;
-        padding: 8px 10px;
-        background: transparent;
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        gap: 8px;
-    }
-
-    .wrap[data-page="product"] .card-toggle .chev {
-        transition: transform .15s ease;
-    }
-
-    .wrap[data-page="product"] .card-toggle[aria-expanded="true"] .chev {
-        transform: rotate(90deg);
-    }
-
-    .wrap[data-page="product"] .card-extra[hidden] {
-        display: none !important;
-    }
-
-    .wrap[data-page="product"] .card-extra {
-        margin-top: 8px;
-    }
-}
-
-@media (prefers-reduced-motion: reduce) {
-    .wrap[data-page="product"] .card-toggle .chev {
-        transition: none;
-    }
-}
-
-/* ----- Stats (petites chips sous infos) ----- */
-.wrap[data-page="product"] .stats {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px 10px;
-    white-space: normal;
-    overflow: visible;
-    max-width: 100%;
-}
-
-.wrap[data-page="product"] .stat {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    padding: 6px 10px;
-    border-radius: 999px;
+/* Carte */
+.prod-card {
     border: 1px solid var(--line);
+    border-radius: 14px;
     background: transparent;
-    flex: 1 1 calc(50% - 10px);
-    min-width: 180px;
+    padding: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    height: 100%;
+    min-width: 0;
+    /* évite débordements */
 }
 
-.wrap[data-page="product"] .stat .k {
-    color: var(--text-muted);
+/* En‑tête */
+.pc-head {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
 }
 
-.wrap[data-page="product"] .stat .v {
+.pc-title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    min-width: 0;
+}
+
+.pc-name {
+    margin: 0;
+    font-size: 1.05rem;
+    font-weight: 700;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.pc-sub {
+    color: var(--muted);
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* Pills */
+.prod-card .pill {
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    padding: 3px 8px;
+}
+
+.prod-card .pill.danger {
+    color: #ffb4b4;
+    border-color: var(--danger);
+}
+
+/* Corps : 2 colonnes (tombe à 1 en mobile) */
+.pc-body {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+}
+
+.stat {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 10px 12px;
+    min-height: 48px;
+}
+
+.stat.full {
+    grid-column: 1 / -1;
+}
+
+.stat .k {
+    display: block;
+    font-size: .85rem;
+    opacity: .8;
+    line-height: 1.05;
+}
+
+.stat .v {
+    display: block;
     font-weight: 600;
 }
 
-/* produit : masque l'aide sous la quantité pour ne pas casser l'alignement */
-.wrap .add-product-form #create_min_hint {
-    display: none;
+/* Actions */
+.pc-actions {
+    margin-top: auto;
+    /* colle en bas */
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 10px;
 }
 
+.pc-actions .secondary,
+.pc-actions button {
+    width: 100%;
+    justify-content: center;
+}
 
-/* Sécurité : s'il existe des styles de debug qui dessinent des traits,
-   on les neutralise pour éviter les “légendes flottantes” vues sur ta capture. */
+/* Breakpoints */
+@media (max-width:900px) {
+    .cards-grid {
+        grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    }
+}
+
+@media (max-width:640px) {
+    .pc-body {
+        grid-template-columns: 1fr;
+    }
+
+    .pc-actions {
+        grid-template-columns: 1fr;
+    }
+
+    .pc-sub {
+        white-space: normal;
+    }
+
+    /* autorise le retour à la ligne */
+}
+
+/* Modale “Aperçu” (layout façon Grocy) */
+.kv {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px 16px;
+}
+
+@media (max-width:700px) {
+    .kv {
+        grid-template-columns: 1fr;
+    }
+}
+
+.tabs.compact {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+}
+
+.tabs.compact .tab {
+    border: 1px solid var(--line);
+    background: transparent;
+    border-radius: 8px;
+    padding: 6px 10px;
+}
+
+.tabs.compact .tab.active {
+    background: rgba(255, 255, 255, .04);
+}
+
+/* Sécurité : neutralise d’éventuels styles de debug sur .stat */
 .stat::before,
 .stat::after {
     content: none !important;
