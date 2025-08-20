@@ -149,15 +149,17 @@
       </div>
 
       <div>
-        <div class="label">Quantité minimum en stock <span class="help" tabindex="0"
-            data-tip="Seuil d’alerte propre à ce produit."></span></div>
+        <div class="label">Quantité minimum en stock
+          <span class="help" tabindex="0" data-tip="Seuil d’alerte propre à ce produit."></span>
+        </div>
         <div class="infield-qty">
           <input name="min_qty" id="create_min_qty" type="number" min="0" step="1" placeholder="ex. 1"
             value="{{ SETTINGS.low_stock_default }}">
           <span id="create_min_unit" class="suffix">pièce</span>
         </div>
-        <div class="hint muted" id="create_min_hint">Pas conseillé : 1.</div>
+        <div class="hint muted" id="create_min_hint">Conseil : 1, 2, 3 pièces…</div>
       </div>
+
 
       <div>
         <div class="label">Alerte stock faible actif ?</div>
@@ -188,6 +190,7 @@
           <span>Ne doit pas être congelé</span>
         </label>
       </div>
+
 
       <div id="create_freeze_group">
         <div class="label">Péremption après congélation (jours)</div>

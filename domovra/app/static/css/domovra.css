@@ -1647,6 +1647,93 @@ html[data-theme="light"] #tbl tbody tr:hover {
     align-items: end;
 }
 
+/* === Fix grille formulaire Fiche produit === */
+/* On passe à 5 colonnes fixes ; les boutons s’étaleront en bas */
+.wrap form[action$="product/add"].form-grid {
+    grid-template-columns: 2fr 1fr 1fr 1fr 1fr !important;
+}
+
+/* Les deux boutons du bas prennent toute la largeur (ligne entière) */
+.wrap form[action$="product/add"].form-grid .btn-wide {
+    grid-column: 1 / -1 !important;
+    justify-self: stretch;
+}
+
+/* Boîte quantité + suffixe : span discret, pas de pastille */
+.wrap .infield-qty {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.wrap .infield-qty input {
+    width: 100%;
+    padding-right: 56px;
+    /* place pour le suffixe */
+}
+
+.wrap .infield-qty .suffix {
+    position: absolute;
+    right: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    opacity: .8;
+    pointer-events: none;
+    border: 0;
+    background: transparent;
+    padding: 0;
+    line-height: 1;
+}
+
+/* Hint compact sous le champ quantité */
+.wrap #create_min_hint {
+    margin-top: 4px;
+    font-size: .88rem;
+    min-height: 1.2em;
+}
+
+/* Case "Ne doit pas être congelé" : la garder dans le flux sans déborder */
+.wrap .no-freeze-cell {
+    display: flex;
+    align-items: end;
+    min-width: 0;
+}
+
+/* Groupe "après congélation" garde une hauteur homogène */
+.wrap #create_freeze_group {
+    display: flex;
+    flex-direction: column;
+}
+
+/* Radios DLC/DDM segmentés : taille compacte, pas d’agrandissement indésirable */
+.wrap .segmented {
+    display: inline-flex;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    overflow: hidden;
+}
+
+.wrap .segmented label {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    cursor: pointer;
+    white-space: nowrap;
+}
+
+.wrap .segmented label+label {
+    border-left: 1px solid var(--line);
+}
+
+/* Responsif : sur <=900px, on retombe sur 3 colonnes (déjà géré) */
+/* Sur <=700px, monobloc (déjà géré par tes règles existantes) */
+@media (max-width: 900px) {
+    .wrap form[action$="product/add"].form-grid {
+        grid-template-columns: 1fr 1fr 1fr !important;
+    }
+}
+
 
 /* ========================================================================== */
 /* ========== 14) Page Stocks (/lots) ======================================= */
