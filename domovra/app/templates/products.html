@@ -70,23 +70,206 @@
   </div>
 
   <!-- Ajouter un produit -->
+  <!-- Ajouter un produit -->
   <div class="card">
     <div class="title">
-      <h2>Ajouter un produit</h2><span class="muted">→ créer un nouveau produit</span>
+      <h2>Ajouter un produit</h2>
+      <span class="muted">→ créer une fiche produit complète</span>
     </div>
 
+    {# Styles de grille spécifiques à CE formulaire (scopés) #}
+    <style>
+      /* Grille dense mais lisible sur desktop ; se replie proprement en mobile */
+      .wrap form#create_form.form-grid {
+        display: grid !important;
+        grid-template-columns: 2fr 1fr 1fr 1fr 1fr 1fr auto;
+        gap: 12px;
+        align-items: end;
+      }
+
+      /* Forcer certains champs à occuper toute la ligne */
+      .wrap form#create_form .full {
+        grid-column: 1 / -1;
+      }
+
+      .wrap form#create_form .half {
+        grid-column: auto / span 3;
+      }
+
+      .wrap form#create_form .third {
+        grid-column: auto / span 2;
+      }
+
+      @media (max-width: 1200px) {
+        .wrap form#create_form.form-grid {
+          grid-template-columns: 2fr 1fr 1fr 1fr auto;
+        }
+      }
+
+      @media (max-width: 900px) {
+        .wrap form#create_form.form-grid {
+          grid-template-columns: 1fr 1fr 1fr;
+        }
+
+        .wrap form#create_form .btn-wide {
+          grid-column: 1 / -1;
+          justify-self: stretch;
+        }
+
+        .wrap form#create_form .full,
+        .wrap form#create_form .half,
+        .wrap form#create_form .third {
+          grid-column: 1 / -1;
+        }
+      }
+
+      @media (max-width: 700px) {
+        .wrap form#create_form.form-grid {
+          grid-template-columns: 1fr;
+        }
+      }
+
+      /* Radios “DLC / DDM” compacts */
+      .expiry-kind {
+        display: grid;
+        grid-auto-flow: column;
+        gap: 10px;
+        align-items: center;
+      }
+
+      .expiry-kind label {
+        display: inline-flex;
+        gap: 6px;
+        align-items: center;
+        white-space: nowrap;
+      }
+
+      /* Ligne d’aide plus fine sous les fieldsets */
+      .field-hint {
+        margin-top: 4px;
+        font-size: .9rem;
+        color: var(--muted);
+      }
+    </style>
+
     <form id="create_form" method="post" action="{{ BASE }}product/add" class="form-grid">
-      <div>
+      <!-- Nom -->
+      <div class="field full">
         <div class="label">Nom du produit
           <span class="help" tabindex="0"
             data-tip="Nom court et explicite (ex. « Lait demi-écrémé », « Pâtes »)."></span>
         </div>
-        <input name="name" id="create_name" type="text" required placeholder="ex. Pâtes, Lait demi-écrémé">
+        <input name="name" id="create_name" type="text" required placeholder="ex. Lait demi-écrémé">
       </div>
 
-      <div>
-        <div class="label">Unité
-          <span class="help" tabindex="0" data-tip="Choisis une unité adaptée (comptage, poids, volume)."></span>
+      <!-- Description -->
+      <div class="field full">
+        <div class="label">Description
+          <span class="help" tabindex="0" data-tip="Détails libres : marque type/format, notes d’usage, etc."></span>
+        </div>
+        <textarea name="description" id="create_desc" rows="2" placeholder="ex. Brique UHT, 6×1 L, marque…"></textarea>
+      </div>
+
+      <!-- Emplacement par défaut -->
+      <div class="field">
+        <div class="label">Emplacement par défaut
+          <span class="help" tabindex="0"
+            data-tip="Optionnel : sera proposé par défaut lors de l’ajout en stock."></span>
+        </div>
+        <select name="default_location_id" id="create_default_location_id">
+          <option value="">— Aucun (choisir à l’ajout en stock) —</option>
+          {% for loc in locations or [] %}
+          <option value="{{ loc.id }}">{{ loc.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <!-- Quantité minimum en stock -->
+      <div class="field">
+        <div class="label">Quantité minimum en stock
+          <span class="help" tabindex="0"
+            data-tip="En‑dessous de ce seuil, le produit est considéré en stock faible."></span>
+        </div>
+        <input name="min_qty" id="create_min_qty" type="number" min="0" step="0.01"
+          value="{{ SETTINGS.low_stock_default }}" placeholder="ex. 1">
+      </div>
+
+      <!-- Alerte de stock faible actif ? -->
+      <div class="field">
+        <div class="label">Alerte stock faible actif ?
+          <span class="help" tabindex="0"
+            data-tip="Désactive pour ignorer l’alerte faible stock sur ce produit."></span>
+        </div>
+        <select name="low_stock_enabled" id="create_low_stock_enabled">
+          <option value="1" selected>Oui</option>
+          <option value="0">Non</option>
+        </select>
+      </div>
+
+      <!-- Type d’échéance (DLC / DDM) -->
+      <div class="field">
+        <div class="label">Type d’échéance
+          <span class="help" tabindex="0"
+            data-tip="DLC (date limite de consommation) ou DDM (date de durabilité minimale)."></span>
+        </div>
+        <div class="expiry-kind">
+          <label><input type="radio" name="expiry_kind" value="DLC" checked> DLC</label>
+          <label><input type="radio" name="expiry_kind" value="DDM"> DDM</label>
+        </div>
+      </div>
+
+      <!-- Jours par défaut (à l’ajout) -->
+      <div class="field">
+        <div class="label">Péremption par défaut (jours)
+          <span class="help" tabindex="0" data-tip="Ajouté à la date d’ajout du lot pour estimer la date."></span>
+        </div>
+        <input name="default_shelf_days" id="create_shelf" type="number" min="1" placeholder="ex. 90">
+      </div>
+
+      <!-- Jours par défaut après congélation -->
+      <div class="field">
+        <div class="label">Péremption après congélation (jours)
+          <span class="help" tabindex="0" data-tip="Ajouté à la date de congélation si le lot est congelé."></span>
+        </div>
+        <input name="default_freeze_shelf_days" id="create_freeze_shelf" type="number" min="1" placeholder="ex. 180">
+      </div>
+
+      <!-- Ne doit pas être congelé -->
+      <div class="field">
+        <div class="label">Ne doit pas être congelé
+          <span class="help" tabindex="0"
+            data-tip="Empêchera la saisie d’une date de congélation pour ce produit."></span>
+        </div>
+        <select name="no_freeze" id="create_no_freeze">
+          <option value="0" selected>Non</option>
+          <option value="1">Oui</option>
+        </select>
+      </div>
+
+      <!-- Catégorie -->
+      <div class="field">
+        <div class="label">Catégorie de produits
+          <span class="help" tabindex="0" data-tip="Choisis une catégorie ou saisis la tienne."></span>
+        </div>
+        {# datalist : valeurs par défaut + celles de SETTINGS/CATEGORIES si dispo #}
+        <input name="category" id="create_category" list="categories" placeholder="ex. Produits laitiers">
+        <datalist id="categories">
+          {% set BASE_CATEGORIES = [
+          'Frais','Produits laitiers','Viandes','Poissons',
+          'Fruits & Légumes','Épicerie salée','Épicerie sucrée',
+          'Surgelés','Boissons','Condiments & Sauces',
+          'Petit déjeuner','Bébé','Animaux','Hygiène','Entretien','Autre'
+          ] %}
+          {% for cat in (CATEGORIES or BASE_CATEGORIES) %}
+          <option value="{{ cat }}">
+            {% endfor %}
+        </datalist>
+      </div>
+
+      <!-- Unité par défaut -->
+      <div class="field">
+        <div class="label">Unité par défaut
+          <span class="help" tabindex="0" data-tip="Comptage / poids / volume selon le produit."></span>
         </div>
         <select name="unit" id="create_unit">
           <optgroup label="Comptage">
@@ -113,36 +296,39 @@
         </select>
       </div>
 
-      <div>
-        <div class="label">Conservation (jours)
+      <!-- Produit parent -->
+      <div class="field">
+        <div class="label">Produit parent
           <span class="help" tabindex="0"
-            data-tip="Nombre de jours par défaut (sert aux états OK / Bientôt / Urgent)."></span>
+            data-tip="Permet de regrouper des variantes (marques/formats) sous une même famille."></span>
         </div>
-        <input name="shelf" id="create_shelf" type="number" min="1" placeholder="ex. 90">
+        <select name="parent_id" id="create_parent_id">
+          <option value="">— Aucun —</option>
+          {% for p in parents or [] %}
+          <option value="{{ p.id }}">{{ p.name }}</option>
+          {% endfor %}
+        </select>
       </div>
 
-      <div>
-        <div class="label">Stock faible (min_qty)
-          <span class="help" tabindex="0"
-            data-tip="Seuil d’alerte propre à ce produit. En-dessous, le produit est considéré en stock faible."></span>
-        </div>
-        <input name="min_qty" id="create_min_qty" type="number" min="0" step="0.01" placeholder="ex. 1"
-          value="{{ SETTINGS.low_stock_default }}">
-      </div>
-
-      <div>
-        <div class="label">Code-barres (facultatif)
-          <span class="help" tabindex="0"
-            data-tip="EAN/GTIN du produit. Renseigné automatiquement depuis le scanner."></span>
-        </div>
-        <input name="barcode" id="create_barcode" type="text" inputmode="numeric" placeholder="EAN/GTIN">
-      </div>
-
+      <!-- Boutons -->
       <button class="secondary btn-wide">＋ Ajouter</button>
       <button id="create_reset" type="button" class="secondary btn-wide"><span
           class="ico">↺</span>Réinitialiser</button>
+
+      <!-- Avancé : Code‑barres (on le garde pour compat avec OFF + scanner) -->
+      <div class="field full">
+        <details>
+          <summary style="cursor:pointer">Options avancées</summary>
+          <div class="field-hint">Tu peux laisser vide : le scanner OFF le remplira si présent.</div>
+          <div class="field" style="margin-top:8px; max-width:320px">
+            <div class="label">Code‑barres (facultatif)</div>
+            <input name="barcode" id="create_barcode" type="text" inputmode="numeric" placeholder="EAN/GTIN">
+          </div>
+        </details>
+      </div>
     </form>
   </div>
+
 
   <!-- Outils -->
   <div class="card">
