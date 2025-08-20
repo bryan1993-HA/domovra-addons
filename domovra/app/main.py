@@ -14,7 +14,7 @@ from db import (
     add_location, list_locations, update_location, delete_location, move_lots_from_location,
     # Products
     add_product, list_products, update_product, delete_product,
-    list_products_with_stats, list_low_stock_products,
+    list_products_with_stats, list_low_stock_products, list_product_insights,
     # Lots
     add_lot, list_lots, update_lot, delete_lot, consume_lot,
     # Helper
@@ -403,22 +403,22 @@ def products_page(request: Request):
     base = ingress_base(request)
     logger.info("GET /products (BASE=%s)", base)
 
-    items = list_products_with_stats()
+items = list_products_with_stats()
+locations = list_locations()
+parents = list_products()
 
-    # 👇 AJOUTS
-    locations = list_locations()        # récupère {id, name, ...} des emplacements
-    parents = list_products()           # (optionnel) pour alimenter "Produit parent"
-    # si tu as une fonction dédiée, utilise-la (ex: list_parent_candidates())
+insights = list_product_insights()  # <— nouveau
 
-    return render(
-        "products.html",
-        BASE=base,
-        page="products",
-        request=request,
-        items=items,
-        locations=locations,
-        parents=parents,
-    )
+return render(
+    "products.html",
+    BASE=base,
+    page="products",
+    request=request,
+    items=items,
+    locations=locations,
+    parents=parents,
+    insights=insights,              # <— nouveau
+)
 
 @app.get("/locations", response_class=HTMLResponse)
 def locations_page(request: Request):

@@ -487,3 +487,47 @@ def status_for(best_before: str | None, warn_days: int, crit_days: int):
     if days <= warn_days:
         return "yellow"
     return "green"
+
+def list_product_insights():
+    """
+    { product_id: {
+        'last_in': 'YYYY-MM-DD'|None,
+        'last_out': 'YYYY-MM-DD'|None,
+        'avg_shelf_days': float|None,
+        'expired_rate': float|None  # 0..100
+    } }
+    """
+    with _conn() as c:
+        q = """
+        SELECT
+          p.id AS product_id,
+          (SELECT MAX(m.ts)
+             FROM movements m
+             JOIN stock_lots l ON l.id = m.lot_id
+            WHERE l.product_id = p.id AND m.type='IN')  AS last_in,
+          (SELECT MAX(m.ts)
+             FROM movements m
+             JOIN stock_lots l ON l.id = m.lot_id
+            WHERE l.product_id = p.id AND m.type='OUT') AS last_out,
+          (SELECT AVG(julianday(l.best_before) - julianday(l.created_on))
+             FROM stock_lots l
+            WHERE l.product_id = p.id
+              AND l.best_before IS NOT NULL
+              AND l.created_on  IS NOT NULL)            AS avg_shelf_days,
+          (SELECT CASE WHEN COUNT(*)=0 THEN NULL
+                       ELSE 100.0 * SUM(CASE WHEN l.best_before IS NOT NULL AND l.best_before < DATE('now') THEN 1 ELSE 0 END) / COUNT(*)
+                  END
+             FROM stock_lots l
+            WHERE l.product_id = p.id)                  AS expired_rate
+        FROM products p
+        """
+        rows = c.execute(q).fetchall()
+        out = {}
+        for r in rows:
+            out[int(r["product_id"])] = {
+                "last_in": r["last_in"],
+                "last_out": r["last_out"],
+                "avg_shelf_days": float(r["avg_shelf_days"]) if r["avg_shelf_days"] is not None else None,
+                "expired_rate": float(r["expired_rate"]) if r["expired_rate"] is not None else None,
+            }
+        return out

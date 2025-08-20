@@ -238,27 +238,41 @@
 
 <!-- Voir (fiche complète, lecture seule) -->
 <dialog id="dlg-view">
-  <div style="display:grid;gap:10px;min-width:min(720px,96vw)">
-    <h3 id="v-name" style="margin:0">Fiche produit</h3>
-    <div class="row" style="flex-wrap:wrap;gap:10px">
-      <div class="stat"><span class="k">Catégorie</span><span class="v" id="v-category">—</span></div>
-      <div class="stat"><span class="k">Unité</span><span class="v" id="v-unit">—</span></div>
-      <div class="stat"><span class="k">Type d’échéance</span><span class="v" id="v-kind">DLC</span></div>
-      <div class="stat"><span class="k">Conservation (j)</span><span class="v" id="v-shelf">—</span></div>
-      <div class="stat"><span class="k">Ne pas congeler</span><span class="v" id="v-nf">—</span></div>
-      <div class="stat"><span class="k">Seuil min</span><span class="v" id="v-min">—</span></div>
-      <div class="stat"><span class="k">📍 Emplacement par défaut</span><span class="v" id="v-loc">—</span></div>
-      <div class="stat"><span class="k">EAN</span><span class="v" id="v-barcode">—</span></div>
-      <div class="stat"><span class="k">Lots</span><span class="v" id="v-lots">0</span></div>
-      <div class="stat"><span class="k">Qté totale</span><span class="v" id="v-qty">0</span></div>
+  <div style="display:grid;gap:14px;min-width:min(820px,96vw)">
+    <div class="tabs compact">
+      <button class="tab active" type="button">Aperçu du produit</button>
+      <a class="tab" id="v-tab-in" href="#">Entrées du stock</a>
+      <a class="tab" id="v-tab-journal" href="#">Journal du stock</a>
+      <span style="margin-left:auto" class="muted">🛒 🧾</span>
     </div>
-    <div id="v-desc" class="muted">—</div>
+
+    <h2 id="v-name" style="text-align:center;margin:0">—</h2>
+
+    <div class="kv">
+      <div><b>Quantité en stock :</b> <span id="v-qty">—</span></div>
+      <div><b>Valeur du stock :</b> <span class="muted">— (non suivi)</span></div>
+      <div><b>Emplacement par défaut :</b> <span id="v-loc">—</span></div>
+      <div><b>Dernier achat :</b> <span id="v-last-in">Jamais</span></div>
+      <div><b>Dernière utilisation :</b> <span id="v-last-out">Jamais</span></div>
+      <div><b>Dernier prix :</b> <span class="muted">—</span></div>
+      <div><b>stock moyen :</b> <span class="muted">—</span></div>
+      <div><b>Durée moyenne de conservation :</b> <span id="v-avg-shelf">—</span></div>
+      <div><b>Taux de péremption :</b> <span id="v-expired-rate">—</span></div>
+    </div>
+
+    <div>
+      <h3 style="margin:8px 0 6px">Historique des prix</h3>
+      <div class="muted" style="border:1px dashed var(--line);border-radius:10px;padding:12px">
+        Suivi des prix non activé dans Domovra V1 (sera alimenté via la page Stock).
+      </div>
+    </div>
+
     <div class="row" style="justify-content:flex-end;gap:8px">
-      <a id="v-open-lots" class="secondary" href="#" target="_self">📦 Voir le stock (redirige vers /stocks)</a>
-      <button type="button" class="" onclick="document.getElementById('dlg-view').close()">Fermer</button>
+      <button type="button" onclick="document.getElementById('dlg-view').close()">Fermer</button>
     </div>
   </div>
 </dialog>
+
 
 <!-- Éditer -->
 <dialog id="dlg-edit">
@@ -399,6 +413,9 @@
 {% endblock %}
 
 {% block scripts %}
+<script type="application/json" id="loc-map-data">
+  {{ loc_by_id | tojson }}
+</script>
 <script>
   /* ====== Recherche (cartes) ====== */
   const q = document.getElementById('q');
@@ -414,33 +431,62 @@
       if (ok) shown++;
     });
     const chip = document.querySelector('[data-page="product"] .chip b');
-    if (chip) chip.textContent = String(shown || cards.length);
+    if (chip) chip.textContent = String(t ? shown : cards.length);
   }
   if (q) q.addEventListener('input', e => applyFilterCards(e.target.value));
 
   /* ====== Voir (fiche complète, lecture seule) ====== */
-  const locMap = {
-    {% for loc in locations or[] %} "{{ loc.id }}": "{{ (loc.name|string).replace('"',' & quot; ') }}",{% endfor %}
-  };
+
+  // Map des emplacements fournie depuis le tag JSON
+  let locMap = {};
+  try {
+    const raw = document.getElementById('loc-map-data')?.textContent || '{}';
+    locMap = JSON.parse(raw);
+  } catch { locMap = {}; }
+
+
+  function humanizeDate(iso) {
+    if (!iso) return 'Jamais';
+    const d = new Date(iso);
+    if (isNaN(d)) return iso;
+    const today = new Date();
+    const diff = Math.floor((today - d) / 86400000);
+    if (diff <= 0) return "aujourd’hui";
+    if (diff === 1) return "hier";
+    return `${iso}  ·  il y a ${diff} jour${diff > 1 ? 's' : ''}`;
+  }
+
   document.addEventListener('click', (e) => {
     const btn = e.target.closest('.js-view-open');
     if (!btn) return;
-    const $ = s => document.querySelector(s);
-    $('#v-name').textContent = btn.dataset.name || 'Fiche produit';
-    $('#v-category').textContent = btn.dataset.category || '—';
-    $('#v-unit').textContent = btn.dataset.unit || '—';
-    $('#v-kind').textContent = (btn.dataset.expiryKind || 'DLC');
-    $('#v-shelf').textContent = btn.dataset.shelf || '—';
-    $('#v-nf').textContent = (btn.dataset.noFreeze === '1' ? 'Oui' : 'Non');
-    $('#v-min').textContent = btn.dataset.min || '—';
-    $('#v-loc').textContent = locMap[btn.dataset.defaultLocation || ''] || '—';
-    $('#v-barcode').textContent = btn.dataset.barcode || '—';
-    $('#v-lots').textContent = btn.dataset.lots || '0';
-    $('#v-qty').textContent = btn.dataset.qty || '0';
-    const desc = btn.dataset.desc || '';
-    const d = document.getElementById('v-desc'); d.textContent = desc || '—';
-    const a = document.getElementById('v-open-lots');
-    a.href = '{{ BASE }}lots?product=' + encodeURIComponent(btn.dataset.name || '');
+
+    const name = btn.dataset.name || 'Fiche produit';
+    const unit = btn.dataset.unit || '';
+    const qty = btn.dataset.qty || '0';
+    const lots = btn.dataset.lots || '0';
+    const loc = locMap[btn.dataset.defaultLocation || ''] || '—';
+
+    const lastIn = humanizeDate(btn.dataset.lastIn || '');
+    const lastOut = humanizeDate(btn.dataset.lastOut || '');
+
+    const avgShelf = btn.dataset.avgShelf && btn.dataset.avgShelf !== '0' ? `${btn.dataset.avgShelf} j` : '—';
+    const expRate = btn.dataset.expiredRate && btn.dataset.expiredRate !== '0' ? `${btn.dataset.expiredRate}%` : '0 %';
+
+    document.getElementById('v-name').textContent = name;
+    document.getElementById('v-qty').textContent = `${qty} ${unit}${Number(qty) == 1 ? '' : 's'} (${lots} lot${Number(lots) == 1 ? '' : 's'})`;
+    document.getElementById('v-loc').textContent = loc;
+    document.getElementById('v-last-in').textContent = lastIn;
+    document.getElementById('v-last-out').textContent = lastOut;
+    document.getElementById('v-avg-shelf').textContent = avgShelf;
+    document.getElementById('v-expired-rate').textContent = expRate;
+
+    // liens des onglets
+    const encoded = encodeURIComponent(name);
+    const linkIn = document.getElementById('v-tab-in');
+    const linkJ = document.getElementById('v-tab-journal');
+    if (linkIn) linkIn.href = '{{ BASE }}lots?product=' + encoded;
+    if (linkJ) linkJ.href = '{{ BASE }}journal';
+
     document.getElementById('dlg-view').showModal();
   });
 
@@ -478,36 +524,30 @@
       $('#dlg-product-id').value = edit.dataset.id || '';
       $('#dlg-name').value = edit.dataset.name || '';
       $('#dlg-desc').value = edit.dataset.desc || '';
-      // selects
       setSelectValue($('#dlg-default-location'), edit.dataset.defaultLocation || '');
       setSelectValue($('#dlg-unit'), edit.dataset.unit || 'pièce');
       setSelectValue($('#dlg-low-enabled'), (edit.dataset.lowEnabled === '0' ? '0' : '1'));
       setSelectValue($('#dlg-category'), edit.dataset.category || '');
       setSelectValue($('#dlg-parent'), edit.dataset.parent || '');
-      // numbers
       $('#dlg-min').value = (edit.dataset.min || '');
       $('#dlg-shelf').value = (edit.dataset.shelf || '');
       $('#dlg-freeze-shelf').value = (edit.dataset.freezeShelf || '');
-      // radios
       const kind = (edit.dataset.expiryKind || 'DLC').toUpperCase();
       $('#dlg-exp-dlc').checked = (kind === 'DLC');
       $('#dlg-exp-ddm').checked = (kind === 'DDM');
-      // checkbox
       const nf = $('#dlg-no-freeze'); nf.checked = (edit.dataset.noFreeze === '1');
       applyDlgFreezeVisibility();
-      // unit logic
       applyDlgMinUnitLogic();
-      $('#dlg-unit').addEventListener('change', applyDlgMinUnitLogic, { once: false });
-      nf.addEventListener('change', applyDlgFreezeVisibility, { once: false });
-
+      $('#dlg-unit').addEventListener('change', applyDlgMinUnitLogic);
+      nf.addEventListener('change', applyDlgFreezeVisibility);
       $('#dlg-edit').showModal();
       return;
     }
     if (del) {
       $('#del-product-id').value = del.dataset.id;
       const name = del.dataset.name || ''; const lots = parseInt(del.dataset.lots || '0', 10);
-      $('#del-msg').textContent = lots > 0
-        ? `La suppression retirera aussi les ${lots} stock(s) lié(s) à « ${name} ».`
+      document.getElementById('del-msg').textContent = lots > 0
+        ? `La suppression retirera aussi les ${lots} stock(s) lié(s) à « ${name} » .`
         : `Supprimer « ${name} » ?`;
       document.getElementById('dlg-delete').showModal(); return;
     }
@@ -518,9 +558,11 @@
     [...sel.querySelectorAll('option[data-temp="1"]')].forEach(o => o.remove());
     const opts = [...sel.options].map(o => o.value);
     if (opts.includes(val)) sel.value = val;
-    else if (val) { const o = document.createElement('option'); o.value = val; o.textContent = val + ' (autre)'; o.dataset.temp = '1'; sel.insertBefore(o, sel.firstChild); sel.value = val; }
+    else if (val) {
+      const o = document.createElement('option');
+      o.value = val; o.textContent = val + ' (autre)'; o.dataset.temp = '1';
+      sel.insertBefore(o, sel.firstChild); sel.value = val;
+    }
   }
-
-  /* ====== Ton code existant (OFF, scanner, create logic, etc.) reste inchangé ====== */
 </script>
 {% endblock %}

@@ -1823,6 +1823,139 @@ html[data-theme="light"] .wrap[data-page="product"] #tbl tbody tr:hover {
     }
 }
 
+/* ===== PRODUITS — Cartes (grille) ===== */
+.cards-grid {
+    display: grid;
+    gap: 12px;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+@media (max-width:1200px) {
+    .cards-grid {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+}
+
+@media (max-width:900px) {
+    .cards-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+@media (max-width:600px) {
+    .cards-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+.prod-card {
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    background: transparent;
+    padding: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.pc-head .pc-title {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: center;
+}
+
+.pc-name {
+    font-size: 16px;
+    font-weight: 700;
+    margin: 0;
+}
+
+.pc-sub {
+    font-size: .92rem;
+}
+
+.prod-card .pill {
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    padding: 3px 8px;
+}
+
+.prod-card .pill.danger {
+    color: #ffb4b4;
+    border-color: var(--danger);
+}
+
+.pc-body {
+    display: grid;
+    gap: 8px;
+    grid-template-columns: 1fr 1fr;
+}
+
+.pc-body .stat {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 10px;
+    border: 1px solid var(--line);
+    border-radius: 999px;
+}
+
+.pc-body .stat.full {
+    grid-column: 1 / -1;
+}
+
+.pc-body .k {
+    color: var(--text-muted);
+}
+
+.pc-body .v {
+    font-weight: 600;
+}
+
+.pc-actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 8px;
+}
+
+@media (max-width:700px) {
+    .pc-actions {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* ===== Modale Aperçu — layout façon Grocy ===== */
+.kv {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px 16px;
+}
+
+@media (max-width:700px) {
+    .kv {
+        grid-template-columns: 1fr;
+    }
+}
+
+.tabs.compact {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+}
+
+.tabs.compact .tab {
+    border: 1px solid var(--line);
+    background: transparent;
+    border-radius: 8px;
+    padding: 6px 10px;
+}
+
+.tabs.compact .tab.active {
+    background: rgba(255, 255, 255, .04);
+}
+
+
 
 
 
