@@ -255,18 +255,6 @@
       <button class="secondary btn-wide">＋ Ajouter</button>
       <button id="create_reset" type="button" class="secondary btn-wide"><span
           class="ico">↺</span>Réinitialiser</button>
-
-      <!-- Avancé : Code‑barres (on le garde pour compat avec OFF + scanner) -->
-      <div class="field full">
-        <details>
-          <summary style="cursor:pointer">Options avancées</summary>
-          <div class="field-hint">Tu peux laisser vide : le scanner OFF le remplira si présent.</div>
-          <div class="field" style="margin-top:8px; max-width:320px">
-            <div class="label">Code‑barres (facultatif)</div>
-            <input name="barcode" id="create_barcode" type="text" inputmode="numeric" placeholder="EAN/GTIN">
-          </div>
-        </details>
-      </div>
     </form>
   </div>
 
@@ -538,8 +526,9 @@
     r.addEventListener('click', () => {
       ['create_name', 'create_desc', 'create_default_location_id', 'create_min_qty',
         'create_low_stock_enabled', 'create_shelf', 'create_freeze_shelf', 'create_no_freeze',
-        'create_category', 'create_unit', 'create_parent_id', 'create_barcode'
+        'create_category', 'create_unit', 'create_parent_id'
       ].forEach(id => {
+
         const el = document.getElementById(id);
         if (el) el.value = id === 'create_min_qty' ? '{{ SETTINGS.low_stock_default }}' : '';
       });
