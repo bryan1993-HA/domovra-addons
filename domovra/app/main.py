@@ -632,7 +632,7 @@ def product_add(
     log_event("product.add", {
         "id": pid, "name": name, "unit": unit, "shelf": shelf, "min_qty": mq,
         "description": description or None,
-        "default_location_id": default_location_id or None,
+        "default_location_id": (int(default_location_id) if str(default_location_id).strip() else None),
         "low_stock_enabled": 0 if str(low_stock_enabled).lower() in ("0","false","off","no") else 1,
         "expiry_kind": (expiry_kind or "DLC").upper(),
         "default_freeze_shelf_days": default_freeze_shelf_days or None,
