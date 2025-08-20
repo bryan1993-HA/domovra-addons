@@ -1172,10 +1172,6 @@ html[data-theme="light"] .wrap table:has(#locations-body) tbody tr:hover {
 /* ========== 13) Page Produits (/products) ================================= */
 /* ========================================================================== */
 
-/* ========================================================================== */
-/* ========== 13) Fiche produit (/products) — version clean ================== */
-/* ========================================================================== */
-
 /* Variantes de boutons (cohérent avec le reste de l’app) */
 .wrap button.secondary {
     background: var(--chip, #1a2230);
@@ -1266,9 +1262,9 @@ html[data-theme="light"] .wrap .help:focus-visible::after {
 }
 
 /* Nettoyage : si la classe .hint existait encore, on la neutralise côté produits */
-.wrap[data-page="product"] .hint {
+/*.wrap[data-page="product"] .hint {
     display: none;
-}
+}*/
 
 /* Suffixe d’unité dans la quantité mini */
 .wrap .add-product-form .infield-qty {
