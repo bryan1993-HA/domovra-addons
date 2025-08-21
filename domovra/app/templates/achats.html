@@ -124,154 +124,220 @@
 
         </form>
     </div>
-</div>
-{% endblock %}
+    <!-- DEBUG PANEL (caché par défaut, activé via JS) -->
+    <div id="dbg_panel" style="display:none; margin-top:1rem;">
+        <div class="card" style="background:var(--bg-soft,#1f2937); color:var(--fg,#e5e7eb);">
+            <div class="title">
+                <h3>Debug scan</h3>
+            </div>
+            <pre id="dbg_log"
+                style="white-space:pre-wrap; max-height:220px; overflow:auto; font-family:ui-monospace, SFMono-Regular, Menlo, monospace; font-size:12px;"></pre>
+        </div>
+    </div>
 
+</div>
 {% block scripts %}
 <script src="https://unpkg.com/@zxing/library@0.20.0"></script>
 <script>
     (function () {
-        const $ = (s, p = document) => p.querySelector(s);
-        const toast = (m, t = 'ok') => window.showToast?.(m, t);
-        const setText = (el, txt) => { if (el) el.textContent = txt || ''; };
+        // ====== DEBUG ======
+        const DEBUG = true; // passe à false pour masquer le panneau
+        const dbgPanel = document.getElementById('dbg_panel');
+        const dbgLogEl = document.getElementById('dbg_log');
+        function log(...args) {
+            const msg = args.map(x => (typeof x === 'object' ? JSON.stringify(x) : String(x))).join(' ');
+            if (DEBUG && dbgLogEl) {
+                dbgPanel.style.display = 'block';
+                const ts = new Date().toISOString().substring(11, 19);
+                dbgLogEl.textContent += `[${ts}] ${msg}\n`;
+                dbgLogEl.scrollTop = dbgLogEl.scrollHeight;
+            }
+            console?.log?.('[ACHATS]', ...args);
+        }
+        function toast(msg, type = 'ok') { window.showToast?.(msg, type); log('TOAST', type, msg); }
 
-        // Champs
+        const $ = (s, p = document) => p.querySelector(s);
+        const isIframe = window.top !== window.self;
+        const isSecure = window.isSecureContext === true;
+        const hasBarDet = 'BarcodeDetector' in window;
+        const hasMedia = !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia);
+
+        log('Page load',
+            { href: location.href, isIframe, isSecure, hasBarDet, hasMedia, ua: navigator.userAgent });
+
+        // Essaie d’inspecter la permission caméra (pas dispo partout)
+        (async () => {
+            if (navigator.permissions && navigator.permissions.query) {
+                try {
+                    const st = await navigator.permissions.query({ name: 'camera' });
+                    log('permissions.camera', { state: st.state });
+                } catch (e) { log('permissions.camera error', String(e)); }
+            } else {
+                log('permissions API not available');
+            }
+        })();
+
+        // ====== Références éléments
         const eanInput = $('#ean'), eanHint = $('#ean_hint');
         const nameSuggest = $('#name_suggest'), offQtyHint = $('#off_qty_hint');
+
         const productSelect = $('#product_select'), productHint = $('#product_hint');
+
         const qtyInput = $('#qty'), unitSel = $('#unit'), btnPlus1 = $('#btn_plus1'), btnPack = $('#btn_pack');
 
-        // Vidéo
-        const liveBox = $('#live_scanner');
+        const liveBox = $('#live_scanner');            // sera peut-être absent si tu ne l'as pas ajouté
         const videoEl = $('#video_preview');
         const btnLive = $('#btn_scan_live');
         const btnLiveStop = $('#btn_live_stop');
         const btnLiveFlip = $('#btn_live_flip');
+
         let currentStream = null;
         let currentDeviceId = null;
         let zxingReader = null;
         let liveRunning = false;
 
+        function setHint(el, text) { if (el) el.textContent = text || ''; }
+
         function applyProductDefaults(opt) {
-            if (!opt) { btnPack.hidden = true; setText(productHint, ''); setText(offQtyHint, ''); return; }
+            if (!opt) { btnPack && (btnPack.hidden = true); setHint(productHint, ''); setHint(offQtyHint, ''); return; }
             const unit = opt.dataset.unit || 'pièce';
             const pack = parseFloat(opt.dataset.pack || '0');
             unitSel.value = Array.from(unitSel.options).some(o => o.value === unit) ? unit : 'pièce';
-            if (pack && pack > 1 && unitSel.value === 'pièce') {
-                btnPack.hidden = false; setText(offQtyHint, `Pack de ${pack} ${pack > 1 ? 'unités' : ''}`);
-                btnPack.onclick = () => { const cur = +qtyInput.value || 0; qtyInput.value = String(cur + pack); };
-            } else { btnPack.hidden = true; setText(offQtyHint, ''); }
-            const bc = opt.dataset.barcode || ''; setText(productHint, bc ? `EAN: ${bc}` : '');
+            if (btnPack) {
+                if (pack && pack > 1 && unitSel.value === 'pièce') {
+                    btnPack.hidden = false; setHint(offQtyHint, `Pack de ${pack} ${pack > 1 ? 'unités' : ''}`);
+                    btnPack.onclick = () => { const cur = +qtyInput.value || 0; qtyInput.value = String(cur + pack); };
+                } else { btnPack.hidden = true; setHint(offQtyHint, ''); }
+            }
+            const bc = opt.dataset.barcode || ''; setHint(productHint, bc ? `EAN: ${bc}` : '');
         }
-        productSelect.addEventListener('change', () => applyProductDefaults(productSelect.selectedOptions[0]));
-        btnPlus1?.addEventListener('click', () => { const cur = +qtyInput.value || 0; qtyInput.value = String(cur + 1); });
+
+        productSelect?.addEventListener('change', () => {
+            const opt = productSelect.selectedOptions[0];
+            applyProductDefaults(opt);
+        });
+
+        btnPlus1?.addEventListener('click', () => {
+            const cur = parseFloat(qtyInput.value || '0') || 0;
+            qtyInput.value = (cur + 1).toString();
+        });
 
         async function lookupByEAN(ean) {
-            const code = (ean || '').trim().replace(/\s+/g, ''); if (!code) { toast('EAN vide.', 'warn'); return; }
+            const code = (ean || '').trim().replace(/\s+/g, '');
+            if (!code) { toast('EAN vide.', 'warn'); return; }
             eanInput.value = code;
+            log('lookupByEAN', code);
 
             // 1) Domovra
             try {
                 const r = await fetch(`{{ BASE }}api/product/by_barcode?code=${encodeURIComponent(code)}`);
+                log('by_barcode status', r.status);
                 if (r.ok) {
                     const p = await r.json();
+                    log('by_barcode result', p);
                     const opt = Array.from(productSelect.options).find(o => (o.dataset.barcode || '').replace(/\s+/g, '') === code);
                     productSelect.value = opt ? opt.value : String(p.id);
                     productSelect.dispatchEvent(new Event('change'));
-                    setText(eanHint, `Produit trouvé : ${p.name}`);
+                    setHint(eanHint, `Produit trouvé : ${p.name}`);
                     if (!qtyInput.value) qtyInput.value = '1';
                     toast('Produit sélectionné depuis le stock.', 'ok');
                     return;
                 }
-            } catch { }
+            } catch (e) { log('by_barcode error', String(e)); }
 
             // 2) OFF
             try {
                 const r = await fetch(`{{ BASE }}api/off?barcode=${encodeURIComponent(code)}`);
+                log('OFF status', r.status);
                 const data = await r.json();
+                log('OFF data', data);
                 if (data && data.ok) {
-                    setText(eanHint, "Produit non connu dans Domovra (OFF consulté).");
+                    setHint(eanHint, "Produit non connu dans Domovra (OFF consulté).");
                     nameSuggest.value = data.name || '';
-                    setText(offQtyHint, data.quantity ? `Quantité OFF : ${data.quantity}` : '');
+                    setHint(offQtyHint, data.quantity ? `Quantité OFF : ${data.quantity}` : '');
                     if (!qtyInput.value || qtyInput.value === '0') qtyInput.value = '1';
                     toast(`OFF → ${data.name || 'Nom inconnu'}`, 'warn');
                 } else {
-                    setText(eanHint, "Ni Domovra ni OFF n’ont trouvé ce code.");
-                    nameSuggest.value = ''; setText(offQtyHint, ''); toast("Aucun résultat pour cet EAN.", "warn");
+                    setHint(eanHint, "Ni Domovra ni OFF n’ont trouvé ce code.");
+                    nameSuggest.value = ''; setHint(offQtyHint, ''); toast("Aucun résultat pour cet EAN.", "warn");
                 }
-            } catch {
-                setText(eanHint, "Erreur OFF."); toast("Erreur lors de la récupération OFF.", "error");
+            } catch (e) {
+                setHint(eanHint, "Erreur OFF."); toast("Erreur lors de la récupération OFF.", "error");
+                log('OFF fetch error', String(e));
             }
         }
 
-        // Recherche EAN
         $('#btn_check_ean')?.addEventListener('click', () => lookupByEAN(eanInput.value));
-        eanInput?.addEventListener('keydown', ev => {
+        eanInput?.addEventListener('keydown', (ev) => {
             if (ev.key === 'Enter') { ev.preventDefault(); lookupByEAN(eanInput.value); }
         });
 
-        // ---- SCAN PHOTO (OK HTTP/HTTPS)
+        // ====== SCAN PHOTO ======
         $('#btn_scan')?.addEventListener('click', async () => {
-            const CAN_SECURE = window.isSecureContext === true;
-            const HAS_DET = 'BarcodeDetector' in window;
-            // 1) BarcodeDetector sur photo (si dispo)
-            if (CAN_SECURE && HAS_DET) {
+            log('scan: click', { isSecure, hasBarDet });
+            // 1) BarcodeDetector si dispo
+            if (isSecure && hasBarDet) {
                 try {
-                    const file = await pickImageFromCamera(); if (!file) return;
+                    const file = await pickImageFromCamera(); if (!file) { log('scan: no file'); return; }
+                    log('scan: file picked', { size: file.size, type: file.type });
                     const bmp = await createImageBitmap(file);
                     const det = new BarcodeDetector({ formats: ['ean_13', 'ean_8', 'upc_e', 'upc_a'] });
                     const found = await det.detect(bmp);
-                    if (found?.length) { const code = found[0].rawValue; eanInput.value = code; lookupByEAN(code); return; }
-                } catch { }
+                    log('scan: BD found', found?.map(f => f.rawValue));
+                    if (found?.length) {
+                        const code = found[0].rawValue;
+                        eanInput.value = code;
+                        lookupByEAN(code);
+                        return;
+                    }
+                } catch (e) { log('scan: BD error', String(e)); }
             }
-            // 2) Fallback ZXing sur photo
+            // 2) Fallback ZXing
             try {
-                const file = await pickImageFromCamera(); if (!file) return;
+                const file = await pickImageFromCamera(); if (!file) { log('scan: no file (fallback)'); return; }
+                log('scan: fallback file', { size: file.size, type: file.type });
                 const code = await decodeImageWithZXing(file);
+                log('scan: ZXing result', code);
                 if (code) { eanInput.value = code; lookupByEAN(code); }
                 else toast('Aucun code‑barres détecté sur la photo.', 'warn');
-            } catch { toast('Scan indisponible. Utilisez une douchette ou saisissez l’EAN.', 'warn'); }
+            } catch (e) { toast('Scan indisponible. Utilisez une douchette ou saisissez l’EAN.', 'warn'); log('scan: fallback error', String(e)); }
         });
 
-        // ---- SCAN VIDÉO (HTTPS + autorisation + iframe)
+        // ====== SCAN VIDÉO (si tu as ajouté les éléments) ======
         btnLive?.addEventListener('click', async () => {
-            if (liveRunning) return;
+            log('live: click', { isSecure, hasMedia });
+            if (!hasMedia) { toast('getUserMedia indisponible.', 'warn'); return; }
             try {
-                // Choisir la caméra arrière si possible
                 const constraints = { video: currentDeviceId ? { deviceId: { exact: currentDeviceId } } : { facingMode: 'environment' }, audio: false };
                 const stream = await navigator.mediaDevices.getUserMedia(constraints);
                 currentStream = stream;
-                videoEl.srcObject = stream;
-                liveBox.style.display = 'block';
+                if (videoEl) videoEl.srcObject = stream;
+                if (liveBox) liveBox.style.display = 'block';
                 liveRunning = true;
 
-                // ZXing live
                 if (!zxingReader) zxingReader = new ZXing.BrowserMultiFormatReader();
                 const devices = await ZXing.BrowserMultiFormatReader.listVideoInputDevices();
+                log('live: devices', devices?.map(d => ({ id: d.deviceId, label: d.label })));
                 if (!currentDeviceId && devices?.length) {
-                    // essaie de trouver "back" dans le label
                     const back = devices.find(d => /back|rear|environment/i.test(d.label));
                     currentDeviceId = (back || devices[0]).deviceId;
                 }
-                // Démarre le décodage en continu
                 startZXingContinuous();
                 setText($('#live_hint'), 'Pointe un code‑barres vers la caméra…');
             } catch (err) {
-                // Messages utiles selon le cas
+                log('live: getUserMedia error', { name: err?.name, message: err?.message });
                 if (err && (err.name === 'NotAllowedError' || err.name === 'SecurityError')) {
-                    toast("Accès caméra refusé par le navigateur. Autorise la caméra pour *.ui.nabu.casa.", "error");
+                    toast("Accès caméra refusé. Autorise la caméra pour *.ui.nabu.casa.", "error");
                 } else if (err && err.name === 'NotFoundError') {
-                    toast("Aucune caméra détectée sur cet appareil.", "error");
+                    toast("Aucune caméra détectée.", "error");
                 } else {
-                    // Cas typique Ingress: l’iframe parent n’autorise pas camera (Permissions-Policy)
-                    toast("Caméra indisponible dans cette vue (Ingress). Utilise le bouton 📷 (photo) ou une douchette.", "warn");
+                    toast("Caméra indisponible dans cette vue (Ingress). Utilise 📷 (photo) ou une douchette.", "warn");
                 }
                 stopLive();
             }
         });
 
         btnLiveStop?.addEventListener('click', stopLive);
-
         btnLiveFlip?.addEventListener('click', async () => {
             try {
                 const devices = await ZXing.BrowserMultiFormatReader.listVideoInputDevices();
@@ -281,7 +347,7 @@
                     currentDeviceId = next.deviceId;
                     await restartLive();
                 }
-            } catch { }
+            } catch (e) { log('live: flip error', String(e)); }
         });
 
         async function startZXingContinuous() {
@@ -290,22 +356,22 @@
                 await zxingReader.decodeFromVideoDevice(currentDeviceId || null, videoEl, (result, err) => {
                     if (result && liveRunning) {
                         const code = result.text;
+                        log('live: detected', code);
                         eanInput.value = code;
                         toast('Code détecté : ' + code, 'ok');
-                        // On arrête dès la 1re détection
                         stopLive();
                         lookupByEAN(code);
                     }
                 });
             } catch (e) {
-                // Si ça échoue, on affiche un message mais on laisse la vidéo
+                log('live: zxing start error', String(e));
                 setText($('#live_hint'), 'Impossible de décoder en continu. Essaie le mode 📷 (photo).');
             }
         }
 
         async function restartLive() {
             stopLive(false);
-            btnLive.click();
+            btnLive?.click();
         }
 
         function stopLive(hide = true) {
@@ -315,22 +381,46 @@
                 for (const tr of currentStream.getTracks()) tr.stop();
             }
             currentStream = null;
-            if (hide) liveBox.style.display = 'none';
+            if (hide && liveBox) liveBox.style.display = 'none';
         }
 
-        // --- Helpers photo
+        // ===== Helpers photo
         function pickImageFromCamera() {
+            log('pickImageFromCamera: open');
             return new Promise(resolve => {
                 const input = document.createElement('input');
                 input.type = 'file';
                 input.accept = 'image/*';
                 input.setAttribute('capture', 'environment');
-                input.onchange = () => resolve(input.files?.[0] || null);
+                // variantes iOS/Android
+                const ua = navigator.userAgent || '';
+                const isiOS = /iPad|iPhone|iPod/.test(ua);
+                const isAndroid = /Android/.test(ua);
+                if (isiOS) {
+                    input.accept = 'image/*;capture=camera';
+                    input.setAttribute('capture', 'camera');
+                }
+                let triedAlt = false;
+                input.onchange = () => { log('pickImageFromCamera: change', input.files?.[0]?.type, input.files?.[0]?.size); resolve(input.files?.[0] || null); };
+                input.addEventListener('click', () => {
+                    setTimeout(() => {
+                        if (!input.files?.length && !triedAlt && isAndroid) {
+                            triedAlt = true;
+                            const alt = document.createElement('input');
+                            alt.type = 'file';
+                            alt.accept = 'image/*';
+                            alt.setAttribute('capture', 'camera');
+                            alt.onchange = () => { log('pickImageFromCamera: alt change', alt.files?.[0]?.type, alt.files?.[0]?.size); resolve(alt.files?.[0] || null); };
+                            alt.click();
+                        }
+                    }, 700);
+                });
                 input.click();
             });
         }
 
         async function decodeImageWithZXing(file) {
+            log('decodeImageWithZXing: start');
             return new Promise((resolve) => {
                 const fr = new FileReader();
                 fr.onload = () => {
@@ -339,13 +429,14 @@
                         try {
                             const reader = new ZXing.BrowserMultiFormatReader();
                             const res = await reader.decodeFromImage(img);
+                            log('decodeImageWithZXing: ok', res?.text);
                             resolve(res?.text || null);
-                        } catch { resolve(null); }
+                        } catch (e) { log('decodeImageWithZXing: fail', String(e)); resolve(null); }
                     };
-                    img.onerror = () => resolve(null);
+                    img.onerror = (e) => { log('decodeImageWithZXing: img error'); resolve(null); };
                     img.src = fr.result;
                 };
-                fr.onerror = () => resolve(null);
+                fr.onerror = (e) => { log('decodeImageWithZXing: file read error'); resolve(null); };
                 fr.readAsDataURL(file);
             });
         }
@@ -358,7 +449,7 @@
             window.location.href = url;
         });
 
-        // Toast post-ajout
+        // Toast après ajout
         if (new URLSearchParams(location.search).has('added')) {
             toast("Ajout enregistré dans le stock.", "ok");
             history.replaceState({}, "", location.pathname);
