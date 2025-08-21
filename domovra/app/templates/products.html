@@ -128,16 +128,6 @@
         </select>
       </div>
 
-      <div class="field">
-        <div class="label">Produit parent</div>
-        <select name="parent_id" id="create_parent">
-          <option value="">— Aucun —</option>
-          {% for p in parents or [] %}
-          <option value="{{ p.id }}">{{ p.name }}</option>
-          {% endfor %}
-        </select>
-      </div>
-
       <!-- Ligne 3 -->
       <div class="field">
         <div class="label">Type d’échéance</div>
@@ -145,11 +135,6 @@
           <label><input type="radio" name="expiry_kind" value="DLC" checked><span>DLC</span></label>
           <label><input type="radio" name="expiry_kind" value="DDM"><span>DDM</span></label>
         </div>
-      </div>
-
-      <div class="field">
-        <div class="label">Péremption par défaut (jours)</div>
-        <input name="shelf" id="create_shelf" type="number" min="1" placeholder="ex. 90">
       </div>
 
       <div class="field no-freeze-cell">
@@ -162,6 +147,11 @@
       <div class="field" id="create_freeze_group">
         <div class="label">Péremption après congélation (jours)</div>
         <input name="default_freeze_shelf_days" id="create_freeze_shelf" type="number" min="1" placeholder="ex. 180">
+      </div>
+
+      <div class="field">
+        <div class="label">Péremption par défaut (jours)</div>
+        <input name="shelf" id="create_shelf" type="number" min="1" placeholder="ex. 90">
       </div>
 
       <!-- Bouton -->
@@ -460,17 +450,6 @@ Astuce : tu peux combiner (ex. « ddm produits laitiers »)."></span>
             <option>Bébé</option>
             <option>Autre</option>
           </optgroup>
-        </select>
-      </div>
-
-
-      <div>
-        <div class="label">Produit parent</div>
-        <select name="parent_id" id="dlg-parent">
-          <option value="">— Aucun —</option>
-          {% for p in parents or [] %}
-          <option value="{{ p.id }}">{{ p.name }}</option>
-          {% endfor %}
         </select>
       </div>
 
@@ -844,7 +823,6 @@ Astuce : tu peux combiner (ex. « ddm produits laitiers »)."></span>
       setSelectValue($('#dlg-unit'), edit.dataset.unit || 'pièce');
       setSelectValue($('#dlg-low-enabled'), (edit.dataset.lowEnabled === '0' ? '0' : '1'));
       const cat = $('#dlg-category'); if (cat) cat.value = edit.dataset.category || '';
-      setSelectValue($('#dlg-parent'), edit.dataset.parent || '');
 
       $('#dlg-min').value = (edit.dataset.min || '');
       $('#dlg-shelf').value = (edit.dataset.shelf || '');
