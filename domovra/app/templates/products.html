@@ -174,25 +174,26 @@
   <!-- Outils -->
   <div class="card">
     <div class="title">
-      <h2>Outils</h2><span class="muted">Recherche</span>
+      <h2>Outils</h2>
+      <span class="muted">
+        Recherche
+        <span class="help" tabindex="0" aria-label="Aide recherche" data-tip="
+Exemples :
+• nom : lait, chorizo, pâtes
+• catégorie : produits laitiers
+• unité : g, L, ml
+• péremption : dlc, ddm
+• congélation : interdit
+• code-barres : 3029330003533
+Astuce : tu peux combiner (ex. « ddm produits laitiers »)."></span>
+      </span>
     </div>
 
     <div class="row tools-row" style="align-items:center">
-      <div class="field" style="display:flex;align-items:center;gap:10px;width:100%">
-        <input id="q" type="search" placeholder="Rechercher… (clique sur le ? pour l’aide)" />
-        <!-- Le même “?” que dans tes formulaires -->
-        <span class="help" tabindex="0" aria-label="Aide recherche" data-tip="
-Exemples rapides :
-• nom : lait, chorizo, pâtes
-• catégorie : produits laitiers, épicerie sucrée
-• unité : g, kg, ml, L
-• péremption : dlc, ddm
-• congélation : interdit
-• code‑barres : 3029330003533
-Astuce : tu peux combiner (ex. « ddm produits laitiers »)."></span>
-      </div>
+      <input id="q" type="search" placeholder="Rechercher une fiche produit…" />
     </div>
   </div>
+
 
 
   <dialog id="q-help">
