@@ -1,0 +1,228 @@
+{% extends "base.html" %}
+{% block title %}Domovra — Achats{% endblock %}
+{% block head %}{% endblock %}
+
+{% block header_right %}
+<span class="chip">🛒 Achats</span>
+{% endblock %}
+
+{% block content %}
+<div class="wrap" data-page="achats">
+
+    <div class="card">
+        <div class="title">
+            <h2>Ajouter au stock</h2>
+            <span class="muted">→ page dédiée aux entrées (scan ou saisie)</span>
+            <span class="help" tabindex="0"
+                data-tip="Scanne un code-barres pour sélectionner le produit. S’il est inconnu, crée-le puis reviens ici."></span>
+        </div>
+
+        <form id="achats_form" method="post" action="{{ BASE }}achats/add" class="form-grid">
+
+            <!-- Produit -->
+            <div>
+                <div class="label">Produit</div>
+                <div class="infield">
+                    <select name="product_id" id="product_select" required>
+                        <option value="" disabled selected>— Choisir ou scanner —</option>
+                        {% for p in products %}
+                        <option value="{{ p.id }}" data-barcode="{{ p.barcode or '' }}"
+                            data-unit="{{ p.unit_base or 'piece' }}" data-pack="{{ p.pack_of or '' }}"
+                            data-unitsize="{{ p.unit_size or '' }}">
+                            {{ p.name }}{% if p.brand %} — {{ p.brand }}{% endif %}
+                        </option>
+                        {% endfor %}
+                    </select>
+                    <button type="button" class="btn scan" id="btn_scan" title="Scanner">📷</button>
+                    <button type="button" class="btn" id="btn_create" title="Créer produit">➕</button>
+                </div>
+                <div class="hint" id="product_hint"></div>
+            </div>
+
+            <!-- Quantité / unité / pack -->
+            <div>
+                <div class="label">Quantité</div>
+                <div class="infield">
+                    <input type="number" step="0.001" min="0.001" name="qty" id="qty" value="1" required>
+                    <select name="unit" id="unit" style="max-width:140px">
+                        <option value="piece">pièce</option>
+                        <option value="g">g</option>
+                        <option value="kg">kg</option>
+                        <option value="ml">ml</option>
+                        <option value="l">l</option>
+                    </select>
+                    <button type="button" class="btn" id="btn_plus1">+1</button>
+                    <button type="button" class="btn" id="btn_pack" hidden>+1 pack</button>
+                </div>
+                <div class="hint" id="qty_hint"></div>
+            </div>
+
+            <!-- Emplacement -->
+            <div>
+                <div class="label">Emplacement</div>
+                <select name="location_id" required>
+                    {% for loc in locations %}
+                    <option value="{{ loc.id }}">{{ loc.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <!-- Dates -->
+            <div>
+                <div class="label">DLC (optionnel)</div>
+                <input type="date" name="best_before" id="best_before">
+            </div>
+
+            <div>
+                <div class="label">Date de congélation (optionnel)</div>
+                <input type="date" name="frozen_on" id="frozen_on">
+            </div>
+
+            <!-- Note -->
+            <div style="grid-column:1/-1">
+                <div class="label">Note (optionnel)</div>
+                <textarea name="note" rows="2"
+                    placeholder="Infos complémentaires (lot fournisseur, promo, etc.)"></textarea>
+            </div>
+
+            <!-- Actions -->
+            <div style="grid-column:1/-1; display:flex; gap:.5rem; justify-content:flex-end">
+                <button type="reset" class="btn ghost">Réinitialiser</button>
+                <button type="submit" class="btn primary">Ajouter</button>
+            </div>
+
+        </form>
+    </div>
+
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    (function () {
+        const $ = (s, p = document) => p.querySelector(s);
+
+        const productSelect = $('#product_select');
+        const unitSel = $('#unit');
+        const qtyInput = $('#qty');
+        const btnPlus1 = $('#btn_plus1');
+        const btnPack = $('#btn_pack');
+        const hint = $('#product_hint');
+        const qtyHint = $('#qty_hint');
+
+        // Applique les defaults du produit (unité, +1 pack…)
+        function applyProductDefaults(opt) {
+            if (!opt) { btnPack.hidden = true; hint.textContent = ''; qtyHint.textContent = ''; return; }
+            const unit = opt.dataset.unit || 'piece';
+            const pack = parseFloat(opt.dataset.pack || '0');
+
+            // Unité par défaut issue du produit
+            unitSel.value = Array.from(unitSel.options).some(o => o.value === unit) ? unit : 'piece';
+
+            // Bouton +1 pack si pertinent (et unité en "pièce")
+            if (pack && pack > 1 && unitSel.value === 'piece') {
+                btnPack.hidden = false;
+                qtyHint.textContent = `Pack de ${pack} ${pack > 1 ? 'unités' : ''}`;
+                btnPack.onclick = () => {
+                    const cur = parseFloat(qtyInput.value || '0') || 0;
+                    qtyInput.value = (cur + pack).toString();
+                }
+            } else {
+                btnPack.hidden = true;
+                qtyHint.textContent = '';
+            }
+
+            const barcode = opt.dataset.barcode || '';
+            hint.textContent = barcode ? `EAN: ${barcode}` : '';
+        }
+
+        productSelect.addEventListener('change', () => applyProductDefaults(productSelect.selectedOptions[0]));
+
+        // +1
+        $('#btn_plus1')?.addEventListener('click', () => {
+            const cur = parseFloat(qtyInput.value || '0') || 0;
+            qtyInput.value = (cur + 1).toString();
+        });
+
+        // --- SCAN ---
+        const btnScan = $('#btn_scan');
+        btnScan?.addEventListener('click', async () => {
+            if ('BarcodeDetector' in window) {
+                try {
+                    const detector = new BarcodeDetector({ formats: ['ean_13', 'ean_8', 'upc_e', 'upc_a'] });
+                    const file = await pickImageFromCamera();
+                    if (!file) return;
+                    const img = await createImageBitmap(file);
+                    const barcodes = await detector.detect(img);
+                    if (barcodes.length) {
+                        selectByBarcode(barcodes[0].rawValue);
+                    } else {
+                        window.showToast?.("Aucun code-barres détecté.", "warn");
+                    }
+                } catch (e) {
+                    window.showToast?.("Scan non supporté, utilisez une douchette USB ou la recherche.", "warn");
+                }
+            } else {
+                window.showToast?.("Scan non supporté sur ce navigateur.", "warn");
+            }
+        });
+
+        async function pickImageFromCamera() {
+            return new Promise(resolve => {
+                const input = document.createElement('input');
+                input.type = 'file';
+                input.accept = 'image/*';
+                input.capture = 'environment';
+                input.onchange = () => resolve(input.files[0]);
+                input.click();
+            });
+        }
+
+        function selectByBarcode(ean) {
+            // 1) tente de sélectionner un produit existant
+            const opt = Array.from(productSelect.options).find(o => o.dataset.barcode === ean);
+            if (opt) {
+                productSelect.value = opt.value;
+                productSelect.dispatchEvent(new Event('change'));
+                window.showToast?.("Produit trouvé et sélectionné.", "ok");
+                return;
+            }
+            // 2) inconnu → ouvre ta modale de création produit (préremplie OFF si possible)
+            openProductCreate(ean);
+        }
+
+        // Création produit (branche sur ta modale existante côté Produits)
+        const btnCreate = $('#btn_create');
+        btnCreate?.addEventListener('click', () => openProductCreate(null));
+
+        function openProductCreate(ean) {
+            // 👉 Si tu as déjà une modale globale : appelle-la ici.
+            //   window.openProductCreateModal?.(ean, { onCreated: (p)=>insertAndSelect(p) });
+            // 👉 Sinon, redirige vers /product/new?ean=... puis retour vers /achats
+            const url = ean ? `{{ BASE }}product/new?ean=${encodeURIComponent(ean)}&next={{ BASE }}achats`
+                : `{{ BASE }}product/new?next={{ BASE }}achats`;
+            window.location.href = url;
+        }
+
+        // Insertion dynamique de l’option après création (si tu utilises une modale SPA)
+        function insertAndSelect(p) {
+            const opt = document.createElement('option');
+            opt.value = p.id;
+            opt.dataset.barcode = p.barcode || '';
+            opt.dataset.unit = p.unit_base || 'piece';
+            opt.dataset.pack = p.pack_of || '';
+            opt.dataset.unitsize = p.unit_size || '';
+            opt.textContent = p.brand ? `${p.name} — ${p.brand}` : p.name;
+            productSelect.appendChild(opt);
+            productSelect.value = p.id;
+            productSelect.dispatchEvent(new Event('change'));
+        }
+
+        // Toast post-redirection
+        if (new URLSearchParams(location.search).has('added')) {
+            window.showToast?.("Ajout enregistré dans le stock.", "ok");
+            history.replaceState({}, "", location.pathname);
+        }
+    })();
+</script>
+{% endblock %}

@@ -296,6 +296,34 @@ def _conn():
     c.row_factory = sqlite3.Row
     return c
 
+# --- Helper Achats : ajouter OU fusionner un lot existant
+def add_or_merge_lot(product_id: int, location_id: int, qty_delta: float,
+                     best_before: str | None, frozen_on: str | None) -> dict:
+    """
+    Si un lot existe avec la même 'signature' (product_id, location_id, best_before, frozen_on),
+    on incrémente sa quantité. Sinon on crée un nouveau lot.
+    Retourne {"action": "merge"|"insert", "lot_id": int, "new_qty": float}
+    """
+    bb = best_before or None
+    fr = frozen_on or None
+
+    # Cherche un lot équivalent
+    for lot in list_lots():
+        if int(lot["product_id"]) != int(product_id):
+            continue
+        if int(lot["location_id"]) != int(location_id):
+            continue
+        if (lot.get("best_before") or None) == bb and (lot.get("frozen_on") or None) == fr:
+            # Fusion -> on additionne
+            new_qty = float(lot.get("qty") or 0) + float(qty_delta or 0)
+            update_lot(int(lot["id"]), new_qty, int(location_id), fr, bb)
+            return {"action": "merge", "lot_id": int(lot["id"]), "new_qty": new_qty}
+
+    # Pas trouvé -> insertion d’un nouveau lot
+    lid = add_lot(int(product_id), int(location_id), float(qty_delta or 0), fr, bb)
+    return {"action": "insert", "lot_id": int(lid), "new_qty": float(qty_delta or 0)}
+
+
 # ---------------- Journal (events)
 def _ensure_events_table():
     with _conn() as c:
@@ -381,6 +409,49 @@ def get_low_stock_products(limit: int = 8):
         return items
 
 # ---------------- Lifecycle
+# ---------------- Page Achats (entrées de stock)
+@app.get("/achats", response_class=HTMLResponse)
+def achats_page(request: Request):
+    base = ingress_base(request)
+    logger.info("GET /achats (BASE=%s)", base)
+    return render(
+        "achats.html",
+        BASE=base,
+        page="achats",
+        request=request,
+        products=list_products(),
+        locations=list_locations(),
+    )
+
+@app.post("/achats/add")
+def achats_add_action(request: Request,
+                      product_id: int = Form(...),
+                      location_id: int = Form(...),
+                      qty: float = Form(...),
+                      best_before: str = Form(""),
+                      frozen_on: str = Form(""),
+                      note: str = Form("")):
+    res = add_or_merge_lot(product_id, location_id, float(qty), best_before or None, frozen_on or None)
+
+    # Journal (traçabilité même en fusion)
+    log_event("achats.add", {
+        "product_id": int(product_id),
+        "location_id": int(location_id),
+        "qty_delta": float(qty),
+        "best_before": best_before or None,
+        "frozen_on": frozen_on or None,
+        "note": (note or None),
+        "result": res["action"],
+        "lot_id": res["lot_id"],
+        "new_qty": res["new_qty"],
+    })
+
+    # Rester sur /achats pour enchaîner les saisies
+    base = ingress_base(request)
+    return RedirectResponse(base + "achats?added=1", status_code=303,
+                            headers={"Cache-Control": "no-store"})
+
+
 @app.on_event("startup")
 def _startup():
     logger.info("Domovra starting. DB_PATH=%s", DB_PATH)

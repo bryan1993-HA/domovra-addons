@@ -60,13 +60,15 @@
       <nav class="menu">
         <a href="{{ BASE }}" class="{% if request.path == BASE %}active{% endif %}"><span
             class="ico">🏠</span><span>Accueil</span></a>
+        <a href="{{ BASE }}products" class="{% if request.path.startswith(BASE ~ 'products')  %}active{% endif %}"><span
+            class="ico">📦</span><span>Fiche produit</span></a>
+        <a href="{{ BASE }}achats" class="{% if request.path.startswith(BASE ~ 'achats') %}active{% endif %}">
+          <span class="ico">🛒</span><span>Achats</span></a>
+        <a href="{{ BASE }}lots" class="{% if request.path.startswith(BASE ~ 'lots')       %}active{% endif %}"><span
+            class="ico">🧮</span><span>Mon stocks</span></a>
         <a href="{{ BASE }}locations"
           class="{% if request.path.startswith(BASE ~ 'locations') %}active{% endif %}"><span
             class="ico">📍</span><span>Emplacements</span></a>
-        <a href="{{ BASE }}products" class="{% if request.path.startswith(BASE ~ 'products')  %}active{% endif %}"><span
-            class="ico">📦</span><span>Fiche produit</span></a>
-        <a href="{{ BASE }}lots" class="{% if request.path.startswith(BASE ~ 'lots')       %}active{% endif %}"><span
-            class="ico">🧮</span><span>Stocks</span></a>
         <a href="{{ BASE }}settings"
           class="{% if request.path.startswith(BASE ~ 'settings')   %}active{% endif %}"><span
             class="ico">⚙️</span><span>Paramètres</span></a>
