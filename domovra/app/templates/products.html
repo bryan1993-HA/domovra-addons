@@ -526,7 +526,8 @@
       setSelectValue($('#dlg-default-location'), edit.dataset.defaultLocation || '');
       setSelectValue($('#dlg-unit'), edit.dataset.unit || 'pièce');
       setSelectValue($('#dlg-low-enabled'), (edit.dataset.lowEnabled === '0' ? '0' : '1'));
-      setSelectValue($('#dlg-category'), edit.dataset.category || '');
+      const cat = $('#dlg-category');
+      if (cat) cat.value = edit.dataset.category || '';
       setSelectValue($('#dlg-parent'), edit.dataset.parent || '');
       $('#dlg-min').value = (edit.dataset.min || '');
       $('#dlg-shelf').value = (edit.dataset.shelf || '');
@@ -553,7 +554,7 @@
   });
 
   function setSelectValue(sel, val) {
-    if (!sel) return;
+    if (!sel || sel.tagName !== 'SELECT') return; // sécurité
     [...sel.querySelectorAll('option[data-temp="1"]')].forEach(o => o.remove());
     const opts = [...sel.options].map(o => o.value);
     if (opts.includes(val)) sel.value = val;
