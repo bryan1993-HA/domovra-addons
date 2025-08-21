@@ -194,47 +194,7 @@ Astuce : tu peux combiner (ex. « ddm produits laitiers »)."></span>
     </div>
   </div>
 
-
-
-  <dialog id="q-help">
-    <div class="qhelp">
-      <header>
-        <h3 style="margin:0">Aide recherche</h3>
-        <button type="button" class="icon-btn" id="q-help-close" title="Fermer">✕</button>
-      </header>
-
-      <p>Tu peux taper des mots simples <em>(ex. “lait riz”)</em> ou des filtres :</p>
-
-      <ul class="help-list">
-        <li><b>cat:</b><code>cat:"Produits laitiers"</code>, <code>cat:céréales</code></li>
-        <li><b>unit:</b><code>unit:g</code>, <code>unit:ml</code>, <code>unit:pièce</code></li>
-        <li><b>expiry:</b><code>expiry:DLC</code>, <code>expiry:DDM</code></li>
-        <li><b>freeze:</b><code>freeze:interdit</code> ou <code>freeze:ok</code></li>
-        <li><b>loc:</b><code>loc:Frigo</code> (par emplacement par défaut)</li>
-        <li><b>barcode:</b><code>barcode:7622210</code></li>
-        <li><b>stock:</b><code>stock:low</code> (sous le seuil), <code>stock:zero</code>, <code>stock:gt0</code></li>
-        <li><b>qty:</b><code>qty:&lt;5</code>, <code>qty:&gt;=2</code> (quantité totale)</li>
-        <li><b>min:</b><code>min:&gt;=3</code> (seuil mini défini sur le produit)</li>
-        <li><b>texte exact:</b><code>"lait demi écrémé"</code></li>
-        <li><b>OU / NON:</b><code>pâtes | riz</code> (OU), <code>-sucré</code> (exclure)</li>
-      </ul>
-
-      <p style="margin-top:8px" class="muted">Astuce : combine librement (ex.
-        <code>cat:"Produits laitiers" expiry:DLC stock:low</code>).
-      </p>
-
-      <div class="quick-ex">
-        <button type="button" data-q='cat:"Produits laitiers" expiry:DLC stock:low'>🧪 Laitiers DLC en faible
-          stock</button>
-        <button type="button" data-q='unit:g qty:<500'>🧪 Produits en grammes &lt; 500 g</button>
-        <button type="button" data-q='freeze:interdit'>🧪 Interdit congélation</button>
-      </div>
-    </div>
-  </dialog>
-
-
   <!-- === Liste (CARTES UNIQUEMENT) ===================================== -->
-
 
   <div class="card">
     <div class="title">
@@ -923,36 +883,6 @@ Astuce : tu peux combiner (ex. « ddm produits laitiers »)."></span>
     if (e.key === 'ArrowUp') { e.preventDefault(); input.value = (cur + step).toString(); }
     if (e.key === 'ArrowDown') { e.preventDefault(); input.value = (cur - step).toString(); }
   });
-
-  // ===== Aide "?" pour la recherche =====
-  (() => {
-    const btn = document.getElementById('q-help-btn');
-    const dlg = document.getElementById('q-help');
-    const close = document.getElementById('q-help-close');
-    const input = document.getElementById('q');
-
-    if (!btn || !dlg) return;
-
-    function openHelp() { dlg.showModal(); btn.setAttribute('aria-expanded', 'true'); }
-    function closeHelp() { dlg.close(); btn.setAttribute('aria-expanded', 'false'); }
-
-    btn.addEventListener('click', openHelp);
-    if (close) close.addEventListener('click', closeHelp);
-    dlg.addEventListener('click', (e) => {
-      if (e.target === dlg) closeHelp(); // clic hors de la boîte
-    });
-
-    // Exemples rapides : click => remplit le champ et déclenche la recherche
-    dlg.addEventListener('click', (e) => {
-      const b = e.target.closest('button[data-q]');
-      if (!b) return;
-      if (input) {
-        input.value = b.dataset.q || '';
-        input.dispatchEvent(new Event('input', { bubbles: true }));
-      }
-      closeHelp();
-    });
-  })();
 
 </script>
 

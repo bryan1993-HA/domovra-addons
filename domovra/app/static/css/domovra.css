@@ -1601,99 +1601,39 @@ html[data-theme="light"] .wrap[data-page="product"] #tbl tbody tr:hover {
 }
 
 /* Input + bouton ? collé */
-.qwrap {
-    position: relative;
-    display: flex;
-    align-items: center;
-}
-
-.qwrap input[type="search"] {
-    width: 100%;
-    padding-right: 40px;
-}
-
+.qwrap { position: relative; display:flex; align-items:center; }
+.qwrap input[type="search"] { width:100%; padding-right:40px; }
 .qwrap .icon-btn {
-    position: absolute;
-    right: 6px;
-    top: 50%;
-    transform: translateY(-50%);
-    width: 28px;
-    height: 28px;
-    border-radius: 999px;
-    border: 1px solid var(--line);
-    background: transparent;
-    color: inherit;
-    cursor: pointer;
-    display: grid;
-    place-items: center;
-    font-weight: 700;
+  position:absolute; right:6px; top:50%; transform:translateY(-50%);
+  width:28px; height:28px; border-radius:999px;
+  border:1px solid var(--line); background:transparent; color:inherit; cursor:pointer;
+  display:grid; place-items:center; font-weight:700;
 }
 
 /* Dialog d’aide */
-#q-help {
-    border: 0;
-    padding: 0;
-    background: transparent;
-}
-
-#q-help::backdrop {
-    backdrop-filter: blur(2px);
-    background: rgba(0, 0, 0, .4);
-}
+#q-help { border:0; padding:0; background:transparent; }
+#q-help::backdrop { backdrop-filter: blur(2px); background: rgba(0,0,0,.4); }
 
 .qhelp {
-    min-width: min(720px, 96vw);
-    border: 1px solid var(--line);
-    border-radius: 12px;
-    background: var(--panel);
-    padding: 14px;
+  min-width:min(720px, 96vw);
+  border:1px solid var(--line); border-radius:12px; background:var(--panel);
+  padding:14px;
 }
+.qhelp header { display:flex; align-items:center; gap:8px; }
+.qhelp header .icon-btn { margin-left:auto; }
 
-.qhelp header {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-}
-
-.qhelp header .icon-btn {
-    margin-left: auto;
-}
-
-.qhelp .help-list {
-    margin: 8px 0;
-    padding-left: 18px;
-}
-
-.qhelp code {
-    background: rgba(255, 255, 255, .06);
-    padding: 1px 6px;
-    border-radius: 6px;
-}
-
-html[data-theme="light"] .qhelp code {
-    background: rgba(0, 0, 0, .06);
-}
+.qhelp .help-list { margin:8px 0; padding-left:18px; }
+.qhelp code { background:rgba(255,255,255,.06); padding:1px 6px; border-radius:6px; }
+html[data-theme="light"] .qhelp code { background:rgba(0,0,0,.06); }
 
 .qhelp .quick-ex {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
-    margin-top: 10px;
+  display:flex; flex-wrap:wrap; gap:8px; margin-top:10px;
 }
-
 .qhelp .quick-ex button {
-    border: 1px solid var(--line);
-    background: transparent;
-    border-radius: 999px;
-    padding: 6px 10px;
-    cursor: pointer;
+  border:1px solid var(--line); background:transparent; border-radius:999px;
+  padding:6px 10px; cursor:pointer;
 }
-
-@media (max-width:640px) {
-    .qhelp {
-        min-width: min(520px, 96vw);
-    }
-}
+@media (max-width:640px){ .qhelp{ min-width:min(520px, 96vw);} }
 
 
 
