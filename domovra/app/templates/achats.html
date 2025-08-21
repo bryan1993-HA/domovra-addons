@@ -122,6 +122,27 @@
                 </div>
             </div>
 
+            <!-- MODALE SCAN -->
+            <div id="scan_modal" class="scan-modal hidden" aria-hidden="true">
+                <div class="scan-box">
+                    <video id="scan_video" playsinline autoplay muted></video>
+                    <canvas id="scan_overlay"></canvas>
+
+                    <!-- HUD -->
+                    <div class="scan-hud">
+                        <button type="button" class="btn ghost" id="scan_flip" title="Changer de caméra">🔁</button>
+                        <button type="button" class="btn" id="scan_close" title="Fermer">✖</button>
+                    </div>
+
+                    <!-- Tip -->
+                    <div class="scan-tip">Alignez le code-barres dans le cadre</div>
+
+                    <!-- Cadre de guidage (statique) -->
+                    <div class="scan-frame"></div>
+                </div>
+            </div>
+
+
         </form>
         <!-- DEBUG PANEL (caché par défaut, activé via JS) -->
         <div id="dbg_panel" style="display:none; margin-top:1rem;">
@@ -142,6 +163,153 @@
 https://unpkg.com/@zxing/library@0.20.0 #}
 
 <script>
+
+    // ====== MODALE SCAN (vidéo) ======
+    const modal = document.getElementById('scan_modal');
+    const vEl = document.getElementById('scan_video');
+    const cvs = document.getElementById('scan_overlay');
+    const ctx = cvs?.getContext('2d');
+    const btnFlip2 = document.getElementById('scan_flip');
+    const btnClose = document.getElementById('scan_close');
+
+    let rafId = null;
+
+    function openScanModal() { modal.classList.remove('hidden'); modal.setAttribute('aria-hidden', 'false'); }
+    function closeScanModal() { modal.classList.add('hidden'); modal.setAttribute('aria-hidden', 'true'); stopLive(); clearOverlay(); }
+
+    function fitCanvasToVideo() {
+        if (!cvs || !vEl) return;
+        const r = vEl.getBoundingClientRect();
+        cvs.width = r.width * devicePixelRatio;
+        cvs.height = r.height * devicePixelRatio;
+    }
+
+    function clearOverlay() { if (ctx) { ctx.clearRect(0, 0, cvs.width, cvs.height); } }
+
+    function drawDetection(result) {
+        if (!ctx || !result) return;
+        clearOverlay();
+        const pts = result.resultPoints || []; // ZXing renvoie souvent 2 points (gauche/droite) en 1D
+        const vw = vEl.videoWidth, vh = vEl.videoHeight;
+        const rw = cvs.width, rh = cvs.height;
+        if (!vw || !vh) return;
+
+        const sx = rw / vw, sy = rh / vh;
+
+        ctx.lineWidth = 4 * devicePixelRatio;
+        ctx.strokeStyle = 'rgba(0,255,128,0.95)';
+        ctx.fillStyle = 'rgba(0,255,128,0.18)';
+
+        if (pts.length >= 2) {
+            // Ligne entre 2 points
+            const p0 = { x: pts[0].x * sx, y: pts[0].y * sy };
+            const p1 = { x: pts[1].x * sx, y: pts[1].y * sy };
+            ctx.beginPath();
+            ctx.moveTo(p0.x, p0.y); ctx.lineTo(p1.x, p1.y);
+            ctx.stroke();
+
+            // Boîte englobante grossière autour de la ligne
+            const pad = 24 * devicePixelRatio;
+            const minx = Math.min(p0.x, p1.x) - pad, maxx = Math.max(p0.x, p1.x) + pad;
+            const miny = Math.min(p0.y, p1.y) - pad, maxy = Math.max(p0.y, p1.y) + pad;
+            ctx.strokeRect(minx, miny, maxx - minx, maxy - miny);
+        } else {
+            // Fallback : un rectangle centré
+            const w = rw * 0.6, h = rh * 0.18;
+            const x = (rw - w) / 2, y = (rh - h) / 2;
+            ctx.strokeRect(x, y, w, h);
+        }
+    }
+
+    async function getVideoInputs() {
+        if (!navigator.mediaDevices?.enumerateDevices) return [];
+        const all = await navigator.mediaDevices.enumerateDevices();
+        return all.filter(d => d.kind === 'videoinput');
+    }
+
+    // Ouvre la modale et démarre le live
+    document.getElementById('btn_scan_live')?.addEventListener('click', async () => {
+        if (!navigator.mediaDevices?.getUserMedia) { window.showToast?.("getUserMedia indisponible.", "warn"); return; }
+        openScanModal();
+        await startScanLive();
+    });
+
+    btnClose?.addEventListener('click', closeScanModal);
+    modal?.addEventListener('click', (e) => { if (e.target === modal) closeScanModal(); });
+
+    // Flip caméra
+    btnFlip2?.addEventListener('click', async () => {
+        const devices = await getVideoInputs();
+        if (!devices.length) return;
+        const idx = devices.findIndex(d => d.deviceId === currentDeviceId);
+        currentDeviceId = devices[(idx + 1 + devices.length) % devices.length].deviceId;
+        await restartLive();
+    });
+
+    // Démarre le flux + ZXing
+    async function startScanLive() {
+        try {
+            fitCanvasToVideo();
+            window.addEventListener('resize', fitCanvasToVideo, { passive: true });
+
+            const constraints = {
+                video: currentDeviceId ? { deviceId: { exact: currentDeviceId } } : { facingMode: 'environment' },
+                audio: false
+            };
+            const stream = await navigator.mediaDevices.getUserMedia(constraints);
+            currentStream = stream;
+            vEl.srcObject = stream;
+
+            // Choix caméra arrière si possible
+            const devs = await getVideoInputs();
+            if (!currentDeviceId && devs.length) {
+                const back = devs.find(d => /back|rear|environment|arrière/i.test(d.label));
+                currentDeviceId = (back || devs[0]).deviceId;
+            }
+
+            // ZXing live
+            if (!zxingReader) zxingReader = new ZXing.BrowserMultiFormatReader();
+            liveRunning = true;
+
+            // Petit raf de nettoyage overlay
+            const loop = () => {
+                if (!liveRunning) return; // laisser la scanline du CSS; on nettoie doucement
+                rafId = requestAnimationFrame(loop);
+            };
+            rafId = requestAnimationFrame(loop);
+
+            await zxingReader.decodeFromVideoDevice(currentDeviceId || null, vEl, (result, err) => {
+                if (result && liveRunning) {
+                    drawDetection(result);
+                    const code = result.text;
+                    // stop → remplir EAN + lookup
+                    liveRunning = false;
+                    stopLive(false); // garde la modale ouverte 150ms pour voir le cadre
+                    setTimeout(() => { closeScanModal(); }, 150);
+                    document.getElementById('ean').value = code;
+                    window.showToast?.('Code détecté : ' + code, 'ok');
+                    // réutilise ta fonction existante :
+                    if (typeof lookupByEAN === 'function') lookupByEAN(code);
+                }
+            });
+        } catch (err) {
+            window.showToast?.("Caméra indisponible. Essaie le mode 📷 (photo).", "warn");
+            closeScanModal();
+        }
+    }
+
+    async function restartLive() { stopLive(false); await startScanLive(); }
+
+    function stopLive(hide = true) {
+        try { zxingReader?.reset(); } catch { }
+        if (currentStream) { for (const t of currentStream.getTracks()) t.stop(); }
+        currentStream = null;
+        cancelAnimationFrame(rafId); rafId = null;
+        if (hide) closeScanModal();
+        window.removeEventListener('resize', fitCanvasToVideo);
+        clearOverlay();
+    }
+
     (function () {
         // ====== DEBUG minimal (tu peux mettre false après tests) ======
         const DEBUG = true;
