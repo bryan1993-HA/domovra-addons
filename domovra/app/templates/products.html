@@ -74,8 +74,39 @@
 
       <div class="field">
         <div class="label">Catégorie de produits</div>
-        <input name="category" id="create_category" placeholder="ex. Produits laitiers, Viande, Condiments…">
+        <select name="category" id="create_category">
+          <option value="">— Choisir une catégorie —</option>
+
+          <optgroup label="Alimentation">
+            <option>Fruits & légumes</option>
+            <option>Viande</option>
+            <option>Poisson & fruits de mer</option>
+            <option>Produits laitiers</option>
+            <option>Œufs</option>
+            <option>Charcuterie</option>
+            <option>Fromages</option>
+            <option>Boulangerie & pâtisserie</option>
+            <option>Céréales, pâtes & riz</option>
+            <option>Épicerie salée</option>
+            <option>Épicerie sucrée</option>
+            <option>Conserves & bocaux</option>
+            <option>Condiments & sauces</option>
+            <option>Huiles & vinaigres</option>
+            <option>Boissons</option>
+            <option>Surgelés</option>
+            <option>Bio / Sans gluten</option>
+          </optgroup>
+
+          <optgroup label="Non alimentaire">
+            <option>Hygiène & beauté</option>
+            <option>Entretien & ménager</option>
+            <option>Animaux</option>
+            <option>Bébé</option>
+            <option>Autre</option>
+          </optgroup>
+        </select>
       </div>
+
 
       <!-- Ligne 2 -->
       <div class="field">
@@ -374,24 +405,54 @@
 
       <div style="flex:1">
         <div class="label">Catégorie</div>
-        <input name="category" id="dlg-category" placeholder="ex. Produits laitiers">
+        <select name="category" id="dlg-category">
+          <option value="">— Choisir une catégorie —</option>
+
+          <optgroup label="Alimentation">
+            <option>Fruits & légumes</option>
+            <option>Viande</option>
+            <option>Poisson & fruits de mer</option>
+            <option>Produits laitiers</option>
+            <option>Œufs</option>
+            <option>Charcuterie</option>
+            <option>Fromages</option>
+            <option>Boulangerie & pâtisserie</option>
+            <option>Céréales, pâtes & riz</option>
+            <option>Épicerie salée</option>
+            <option>Épicerie sucrée</option>
+            <option>Conserves & bocaux</option>
+            <option>Condiments & sauces</option>
+            <option>Huiles & vinaigres</option>
+            <option>Boissons</option>
+            <option>Surgelés</option>
+            <option>Bio / Sans gluten</option>
+          </optgroup>
+
+          <optgroup label="Non alimentaire">
+            <option>Hygiène & beauté</option>
+            <option>Entretien & ménager</option>
+            <option>Animaux</option>
+            <option>Bébé</option>
+            <option>Autre</option>
+          </optgroup>
+        </select>
       </div>
-    </div>
 
-    <div>
-      <div class="label">Produit parent</div>
-      <select name="parent_id" id="dlg-parent">
-        <option value="">— Aucun —</option>
-        {% for p in parents or [] %}
-        <option value="{{ p.id }}">{{ p.name }}</option>
-        {% endfor %}
-      </select>
-    </div>
 
-    <div class="row" style="justify-content:flex-end;gap:8px">
-      <button type="button" onclick="document.getElementById('dlg-edit').close()">Annuler</button>
-      <button class="secondary">Enregistrer</button>
-    </div>
+      <div>
+        <div class="label">Produit parent</div>
+        <select name="parent_id" id="dlg-parent">
+          <option value="">— Aucun —</option>
+          {% for p in parents or [] %}
+          <option value="{{ p.id }}">{{ p.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="row" style="justify-content:flex-end;gap:8px">
+        <button type="button" onclick="document.getElementById('dlg-edit').close()">Annuler</button>
+        <button class="secondary">Enregistrer</button>
+      </div>
   </form>
 </dialog>
 
@@ -526,8 +587,7 @@
       setSelectValue($('#dlg-default-location'), edit.dataset.defaultLocation || '');
       setSelectValue($('#dlg-unit'), edit.dataset.unit || 'pièce');
       setSelectValue($('#dlg-low-enabled'), (edit.dataset.lowEnabled === '0' ? '0' : '1'));
-      const cat = $('#dlg-category');
-      if (cat) cat.value = edit.dataset.category || '';
+      setSelectValue($('#dlg-category'), edit.dataset.category || '');
       setSelectValue($('#dlg-parent'), edit.dataset.parent || '');
       $('#dlg-min').value = (edit.dataset.min || '');
       $('#dlg-shelf').value = (edit.dataset.shelf || '');
