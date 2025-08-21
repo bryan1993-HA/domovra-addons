@@ -1,11 +1,6 @@
 {% extends "base.html" %}
 {% block title %}Domovra — Achats{% endblock %}
-{% block head %}{% endblock %}
-
-{% block header_right %}
-<span class="chip">🛒 Achats</span>
-{% endblock %}
-
+{% block head %}
 <style>
     .scan-modal {
         position: fixed;
@@ -93,6 +88,11 @@
         }
     }
 </style>
+{% endblock %}
+
+{% block header_right %}
+<span class="chip">🛒 Achats</span>
+{% endblock %}
 
 
 {% block content %}
