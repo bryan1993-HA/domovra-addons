@@ -113,7 +113,7 @@
         <div class="label">Quantité minimum en stock <span class="help" tabindex="0"
             data-tip="Seuil d’alerte propre à ce produit."></span></div>
         <div class="infield-qty">
-          <input name="min_qty" id="create_min_qty" type="number" min="0" step="1" placeholder="ex. 1"
+          <input name="min_qty" id="create_min_qty" type="number" min="0" step="any" placeholder="ex. 1"
             value="{{ SETTINGS.low_stock_default }}">
           <span id="create_min_unit" class="suffix">pièce</span>
         </div>
@@ -360,7 +360,7 @@
       <div style="flex:1">
         <div class="label">Quantité minimum en stock</div>
         <div class="infield-qty">
-          <input name="min_qty" id="dlg-min" type="number" min="0" step="1" placeholder="ex. 1">
+          <input name="min_qty" id="dlg-min" type="number" min="0" step="any" placeholder="ex. 1">
           <span class="suffix" id="dlg_min_unit">pièce</span>
         </div>
       </div>
@@ -476,6 +476,10 @@
   {{ loc_map | tojson }}
 </script>
 
+<script type="application/json" id="loc-map-data">
+  {{ loc_map | tojson }}
+</script>
+
 <script>
   /* ====== Recherche (cartes) ====== */
   const q = document.getElementById('q');
@@ -525,7 +529,7 @@
   }
 
   function setSelectValue(sel, val) {
-    if (!sel || sel.tagName !== 'SELECT') return; // sécurité
+    if (!sel || sel.tagName !== 'SELECT') return;
     [...sel.querySelectorAll('option[data-temp="1"]')].forEach(o => o.remove());
     const opts = [...sel.options].map(o => o.value);
     if (opts.includes(val)) sel.value = val;
@@ -537,8 +541,6 @@
   }
 
   /* ====== Voir (fiche complète, lecture seule) ====== */
-
-  // Map des emplacements fournie depuis le tag JSON
   let locMap = {};
   try {
     const raw = document.getElementById('loc-map-data')?.textContent || '{}';
@@ -581,7 +583,6 @@
     document.getElementById('v-avg-shelf').textContent = avgShelf;
     document.getElementById('v-expired-rate').textContent = expRate;
 
-    // liens des onglets
     const encoded = encodeURIComponent(name);
     const linkIn = document.getElementById('v-tab-in');
     const linkJ = document.getElementById('v-tab-journal');
@@ -591,7 +592,7 @@
     document.getElementById('dlg-view').showModal();
   });
 
-  /* ====== AJOUT : logique d’unité -> min_qty (step/suffix/placeholder/hint) ====== */
+  /* ====== AJOUT : logique d’unité -> min_qty (step visuel + hint) ====== */
   (function setupCreateFormUnitLogic() {
     const unitSel = document.getElementById('create_unit');
     const minInput = document.getElementById('create_min_qty');
@@ -603,8 +604,11 @@
     function applyCreateMinUnitLogic() {
       const u = unitSel?.value || 'pièce';
       const cfg = cfgForUnit(u);
+
+      // autorise tout mais mémorise le pas à utiliser avec les flèches
       if (minInput) {
-        minInput.step = String(cfg.step);
+        minInput.setAttribute('step', 'any');
+        minInput.dataset.stepCustom = String(cfg.step);
         minInput.placeholder = cfg.placeholder;
       }
       if (minSuffix) minSuffix.textContent = cfg.suffix;
@@ -619,12 +623,11 @@
     if (unitSel) unitSel.addEventListener('change', applyCreateMinUnitLogic);
     if (noFreeze) noFreeze.addEventListener('change', applyCreateFreezeVisibility);
 
-    // init à l’ouverture de page
     applyCreateMinUnitLogic();
     applyCreateFreezeVisibility();
   })();
 
-  /* ====== ÉDITION : logique d’unité -> min_qty (step/suffix/placeholder) ====== */
+  /* ====== ÉDITION : logique d’unité -> min_qty (step visuel) ====== */
   function applyDlgMinUnitLogic() {
     const unit = $('#dlg-unit')?.value || 'pièce';
     const minInput = $('#dlg-min');
@@ -632,7 +635,8 @@
     if (!minInput || !unitSuffix) return;
 
     const cfg = cfgForUnit(unit);
-    minInput.step = String(cfg.step);
+    minInput.setAttribute('step', 'any');        // autorise tout
+    minInput.dataset.stepCustom = String(cfg.step); // pas pour flèches
     minInput.placeholder = cfg.placeholder;
     unitSuffix.textContent = cfg.suffix;
   }
@@ -655,7 +659,6 @@
       setSelectValue($('#dlg-default-location'), edit.dataset.defaultLocation || '');
       setSelectValue($('#dlg-unit'), edit.dataset.unit || 'pièce');
       setSelectValue($('#dlg-low-enabled'), (edit.dataset.lowEnabled === '0' ? '0' : '1'));
-      // champ "category" est un <input>, pas un <select>
       const cat = $('#dlg-category'); if (cat) cat.value = edit.dataset.category || '';
       setSelectValue($('#dlg-parent'), edit.dataset.parent || '');
 
@@ -669,7 +672,6 @@
 
       const nf = $('#dlg-no-freeze'); if (nf) nf.checked = (edit.dataset.noFreeze === '1');
 
-      // logique UI
       applyDlgFreezeVisibility();
       applyDlgMinUnitLogic();
 
@@ -686,10 +688,28 @@
       const name = del.dataset.name || '';
       const lots = parseInt(del.dataset.lots || '0', 10);
       document.getElementById('del-msg').textContent = lots > 0
-        ? `La suppression retirera aussi les ${lots} stock(s) lié(s) à « ${name} ».`
+        ? `La suppression retirera aussi les ${lots} stock(s) lié(s) à « ${name} » .`
         : `Supprimer « ${name} » ?`;
       document.getElementById('dlg-delete').showModal();
       return;
+    }
+  });
+
+  /* ====== Pas personnalisés via flèches ↑/↓ (sans bloquer la saisie) ====== */
+  document.addEventListener('keydown', (e) => {
+    const input = e.target.closest('input[type=number][data-step-custom]');
+    if (!input) return;
+    const step = parseFloat(input.dataset.stepCustom || '1');
+    if (isNaN(step) || step <= 0) return;
+
+    const cur = parseFloat(input.value || '0') || 0;
+
+    if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      input.value = (cur + step).toString();
+    } else if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      input.value = (cur - step).toString();
     }
   });
 </script>
