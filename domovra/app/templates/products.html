@@ -176,15 +176,24 @@
     <div class="title">
       <h2>Outils</h2><span class="muted">Recherche</span>
     </div>
+
     <div class="row tools-row" style="align-items:center">
-      <div class="qwrap">
-        <input id="q" type="search" placeholder="Rechercher… (clique le ? pour l’aide)" />
-        <button type="button" id="q-help-btn" class="icon-btn" aria-controls="q-help" aria-expanded="false"
-          title="Aide recherche">?</button>
+      <div class="field" style="display:flex;align-items:center;gap:10px;width:100%">
+        <input id="q" type="search" placeholder="Rechercher… (clique sur le ? pour l’aide)" />
+        <!-- Le même “?” que dans tes formulaires -->
+        <span class="help" tabindex="0" aria-label="Aide recherche" data-tip="
+Exemples rapides :
+• nom : lait, chorizo, pâtes
+• catégorie : produits laitiers, épicerie sucrée
+• unité : g, kg, ml, L
+• péremption : dlc, ddm
+• congélation : interdit
+• code‑barres : 3029330003533
+Astuce : tu peux combiner (ex. « ddm produits laitiers »)."></span>
       </div>
     </div>
-
   </div>
+
 
   <dialog id="q-help">
     <div class="qhelp">
