@@ -38,7 +38,7 @@
         <div class="label">Emplacement par défaut <span class="help" tabindex="0"
             data-tip="Là où tu ranges habituellement ce produit."></span></div>
         <select name="default_location_id" id="create_default_location_id">
-          <option value="">— Aucun (choisir à l’ajout en stock) —</option>
+          <option value="">— Aucun —</option>
           {% for loc in locations or [] %}
           <option value="{{ loc.id }}">{{ loc.name }}</option>
           {% endfor %}
@@ -75,7 +75,7 @@
       <div class="field">
         <div class="label">Catégorie de produits</div>
         <select name="category" id="create_category">
-          <option value="">— Choisir une catégorie —</option>
+          <option value="">— Choisir —</option>
 
           <optgroup label="Alimentation">
             <option>Fruits & légumes</option>
@@ -466,9 +466,9 @@ Astuce : tu peux combiner (ex. « ddm produits laitiers »)."></span>
     <h3 style="margin:0">Supprimer le produit</h3>
     <input type="hidden" name="product_id" id="del-product-id">
     <div class="muted" id="del-msg">La suppression retirera aussi les stocks liés à ce produit.</div>
-    <div class="row" style="justify-content:flex-end;gap:8px">
-      <button type="button" onclick="document.getElementById('dlg-delete').close()">Annuler</button>
-      <button class="secondary" style="background:var(--danger);border:0;color:#1d0c0c">Supprimer</button>
+    <div class="dlg-actions">
+      <button type="button" class="btn-cancel" onclick="document.getElementById('dlg-edit').close()">Annuler</button>
+      <button class="secondary btn-save">Enregistrer</button>
     </div>
   </form>
 </dialog>

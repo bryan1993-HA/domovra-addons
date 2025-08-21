@@ -1601,39 +1601,246 @@ html[data-theme="light"] .wrap[data-page="product"] #tbl tbody tr:hover {
 }
 
 /* Input + bouton ? collé */
-.qwrap { position: relative; display:flex; align-items:center; }
-.qwrap input[type="search"] { width:100%; padding-right:40px; }
+.qwrap {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.qwrap input[type="search"] {
+    width: 100%;
+    padding-right: 40px;
+}
+
 .qwrap .icon-btn {
-  position:absolute; right:6px; top:50%; transform:translateY(-50%);
-  width:28px; height:28px; border-radius:999px;
-  border:1px solid var(--line); background:transparent; color:inherit; cursor:pointer;
-  display:grid; place-items:center; font-weight:700;
+    position: absolute;
+    right: 6px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 28px;
+    height: 28px;
+    border-radius: 999px;
+    border: 1px solid var(--line);
+    background: transparent;
+    color: inherit;
+    cursor: pointer;
+    display: grid;
+    place-items: center;
+    font-weight: 700;
 }
 
 /* Dialog d’aide */
-#q-help { border:0; padding:0; background:transparent; }
-#q-help::backdrop { backdrop-filter: blur(2px); background: rgba(0,0,0,.4); }
+#q-help {
+    border: 0;
+    padding: 0;
+    background: transparent;
+}
+
+#q-help::backdrop {
+    backdrop-filter: blur(2px);
+    background: rgba(0, 0, 0, .4);
+}
 
 .qhelp {
-  min-width:min(720px, 96vw);
-  border:1px solid var(--line); border-radius:12px; background:var(--panel);
-  padding:14px;
+    min-width: min(720px, 96vw);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    background: var(--panel);
+    padding: 14px;
 }
-.qhelp header { display:flex; align-items:center; gap:8px; }
-.qhelp header .icon-btn { margin-left:auto; }
 
-.qhelp .help-list { margin:8px 0; padding-left:18px; }
-.qhelp code { background:rgba(255,255,255,.06); padding:1px 6px; border-radius:6px; }
-html[data-theme="light"] .qhelp code { background:rgba(0,0,0,.06); }
+.qhelp header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.qhelp header .icon-btn {
+    margin-left: auto;
+}
+
+.qhelp .help-list {
+    margin: 8px 0;
+    padding-left: 18px;
+}
+
+.qhelp code {
+    background: rgba(255, 255, 255, .06);
+    padding: 1px 6px;
+    border-radius: 6px;
+}
+
+html[data-theme="light"] .qhelp code {
+    background: rgba(0, 0, 0, .06);
+}
 
 .qhelp .quick-ex {
-  display:flex; flex-wrap:wrap; gap:8px; margin-top:10px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 10px;
 }
+
 .qhelp .quick-ex button {
-  border:1px solid var(--line); background:transparent; border-radius:999px;
-  padding:6px 10px; cursor:pointer;
+    border: 1px solid var(--line);
+    background: transparent;
+    border-radius: 999px;
+    padding: 6px 10px;
+    cursor: pointer;
 }
-@media (max-width:640px){ .qhelp{ min-width:min(520px, 96vw);} }
+
+@media (max-width:640px) {
+    .qhelp {
+        min-width: min(520px, 96vw);
+    }
+}
+
+/* ===== Modale Éditer : style propre, sombre/clair cohérent ===== */
+.wrap dialog.modal {
+    border: 0;
+    padding: 0;
+    background: transparent;
+}
+
+.wrap dialog.modal::backdrop {
+    backdrop-filter: blur(3px);
+    background: rgba(0, 0, 0, .4);
+}
+
+.wrap dialog.modal .edit-form {
+    display: grid;
+    gap: 12px;
+    /* largeur confortable, responsive */
+    width: min(860px, 96vw);
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    padding: 14px;
+    background: var(--bg-card);
+}
+
+/* Titre */
+.wrap dialog.modal .dlg-title {
+    margin: 0 0 2px 0;
+    font-size: 1.05rem;
+    font-weight: 700;
+    text-align: left;
+}
+
+/* Grille 2 colonnes fluide pour les lignes multi‑champs */
+.wrap dialog.modal .row {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 10px;
+}
+
+@media (max-width: 760px) {
+    .wrap dialog.modal .row {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* Champs : mêmes codes que .wrap */
+.wrap dialog.modal .label {
+    font-size: 12px;
+    color: var(--text-muted);
+    display: flex;
+    gap: 6px;
+}
+
+.wrap dialog.modal input,
+.wrap dialog.modal select,
+.wrap dialog.modal textarea {
+    width: 100%;
+    min-width: 0;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    background: transparent;
+    color: inherit;
+    padding: 10px;
+}
+
+/* Suffixe de quantité mini */
+.wrap dialog.modal .infield-qty {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.wrap dialog.modal .infield-qty input {
+    padding-right: 56px;
+}
+
+.wrap dialog.modal .infield-qty .suffix {
+    position: absolute;
+    right: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    opacity: .8;
+    pointer-events: none;
+}
+
+/* Radios DLC/DDM en pastilles */
+.wrap dialog.modal [type="radio"] {
+    appearance: auto;
+    width: auto;
+    height: auto;
+    margin: 0;
+    accent-color: var(--accent);
+}
+
+.wrap dialog.modal .segmented,
+/* si tu veux réutiliser le style segmenté */
+.wrap dialog.modal .radio-row {
+    display: inline-flex;
+    gap: 14px;
+    align-items: center;
+}
+
+.wrap dialog.modal .radio-row label {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+/* Groupe “après congélation” masqué proprement quand interdit */
+.wrap dialog.modal #dlg-freeze-group {
+    display: flex;
+    flex-direction: column;
+}
+
+/* Actions */
+.wrap dialog.modal .dlg-actions {
+    display: flex;
+    gap: 8px;
+    justify-content: flex-end;
+    margin-top: 4px;
+}
+
+.wrap dialog.modal .btn-cancel {
+    background: transparent;
+    border: 1px solid var(--line);
+}
+
+.wrap dialog.modal .btn-save {
+    font-weight: 600;
+}
+
+/* Petits polissages visuels */
+.wrap dialog.modal select optgroup {
+    color: var(--text-muted);
+}
+
+.wrap dialog.modal textarea {
+    resize: vertical;
+    min-height: 72px;
+}
+
+/* Évite la “pastille” bleue sur les radios (cf. screenshot) venant de styles globaux */
+.wrap dialog.modal input[type="radio"]::before,
+.wrap dialog.modal input[type="radio"]::after {
+    content: none !important;
+}
+
 
 
 
