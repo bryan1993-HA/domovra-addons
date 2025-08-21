@@ -247,139 +247,100 @@
 </div>
 {% endblock %}
 {% block scripts %}
-<!-- Librairie ZXing pour le décodage (photo + vidéo) -->
-<script src="https://unpkg.com/@zxing/library@0.20.0"></script>
-
 <script>
-    (() => {
-        // =========================
-        //   DEBUG (console + pane)
-        // =========================
+    // =========================
+    //  ACHATS – Scanner JS
+    // =========================
+    (function () {
+        // --- Debug minimal (passe à false pour masquer le panneau)
         const DEBUG = true;
         const dbgPanel = document.getElementById('dbg_panel');
         const dbgLogEl = document.getElementById('dbg_log');
-        function log(...args) {
+        const log = (...a) => {
             if (!DEBUG) return;
-            const msg = args.map(x => (typeof x === 'object' ? JSON.stringify(x) : String(x))).join(' ');
+            const msg = a.map(x => (typeof x === 'object' ? JSON.stringify(x) : String(x))).join(' ');
             if (dbgLogEl) {
                 dbgPanel.style.display = 'block';
                 const ts = new Date().toISOString().substring(11, 19);
                 dbgLogEl.textContent += `[${ts}] ${msg}\n`;
                 dbgLogEl.scrollTop = dbgLogEl.scrollHeight;
             }
-            console?.log?.('[ACHATS]', ...args);
-        }
-        function toast(msg, type = 'ok') { window.showToast?.(msg, type); log('TOAST', type, msg); }
+            console?.log?.('[ACHATS]', ...a);
+        };
+        const toast = (m, t = 'ok') => window.showToast?.(m, t);
 
-        // =========================
-        //   Raccourcis DOM & état
-        // =========================
+        // --- Refs DOM
         const $ = (s, p = document) => p.querySelector(s);
+        const eanInput = $('#ean');
+        const productSelect = $('#product_select');
+        const eanHint = $('#ean_hint');
+        const nameSuggest = $('#name_suggest');
+        const offQtyHint = $('#off_qty_hint');
+        const qtyInput = $('#qty');
+        const productHint = $('#product_hint');
+        const unitSel = $('#unit');
+        const btnPack = $('#btn_pack');
+        const btnPlus1 = $('#btn_plus1');
 
-        // Form
-        const eanInput = $('#ean'), eanHint = $('#ean_hint');
-        const nameSuggest = $('#name_suggest'), offQtyHint = $('#off_qty_hint');
-        const productSel = $('#product_select'), productHint = $('#product_hint');
-        const qtyInput = $('#qty'), unitSel = $('#unit'), btnPlus1 = $('#btn_plus1'), btnPack = $('#btn_pack');
-
-        // Boutons scan
-        const btnPhoto = $('#btn_scan');       // 📷 (photo)
-        const btnLive = $('#btn_scan_live');  // 🎥 (vidéo + modale)
-
-        // Live « aperçu » (bloc sous le formulaire – optionnel, on le garde)
-        const liveBox = $('#live_scanner');
-        const liveVideo = $('#video_preview');
+        const btnPhoto = $('#btn_scan');
+        const btnLive = $('#btn_scan_live');
+        const liveBox = $('#live_scanner'); // (petit aperçu si tu l’utilises)
+        const videoEl = $('#video_preview');
         const btnLiveStop = $('#btn_live_stop');
         const btnLiveFlip = $('#btn_live_flip');
 
-        // Modale scan plein écran
-        const modal = $('#scan_modal');
-        const modalVideo = $('#scan_video');
-        const modalCvs = $('#scan_overlay');
-        const modalCtx = modalCvs?.getContext('2d');
-        const btnFlip2 = $('#scan_flip');
-        const btnClose = $('#scan_close');
+        // Modale plein écran (caméra live)
+        const modal = document.getElementById('scan_modal');
+        const vEl = document.getElementById('scan_video');
+        const btnFlip2 = document.getElementById('scan_flip');
+        const btnClose = document.getElementById('scan_close');
 
-        // Capacités navigateur
-        const isSecure = window.isSecureContext === true;
-        const hasBarDet = 'BarcodeDetector' in window;
-        const hasMedia = !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia);
-
-        // État caméra/ZXing
+        // --- État
         let currentStream = null;
-        let currentDeviceId = null;
+        let currentDeviceId = null;       // on essaiera de pointer la caméra arrière
         let zxingReader = null;
         let liveRunning = false;
-        let rafId = null;
 
-        log('Page load', { href: location.href, isSecure, hasBarDet, hasMedia, ua: navigator.userAgent });
+        const hasMedia = !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia);
+        const hasBarDet = 'BarcodeDetector' in window;
+        log('Page load', { hasMedia, hasBarDet, href: location.href, ua: navigator.userAgent });
 
-        // Best‑effort : permission caméra
-        (async () => {
-            if (navigator.permissions?.query) {
-                try { const st = await navigator.permissions.query({ name: 'camera' }); log('permissions.camera', { state: st.state }); } catch { }
-            }
-        })();
-
-        // =========================
-        //   UI helpers
-        // =========================
+        // =============== UI helpers ===============
         function setHint(el, text) { if (el) el.textContent = text || ''; }
 
         function applyProductDefaults(opt) {
-            if (!opt) {
-                if (btnPack) btnPack.hidden = true;
-                setHint(productHint, ''); setHint(offQtyHint, ''); return;
-            }
+            if (!opt) { if (btnPack) btnPack.hidden = true; setHint(productHint, ''); setHint(offQtyHint, ''); return; }
             const unit = opt.dataset.unit || 'pièce';
             const pack = parseFloat(opt.dataset.pack || '0');
-
-            // Unité par défaut
             unitSel.value = Array.from(unitSel.options).some(o => o.value === unit) ? unit : 'pièce';
-
-            // Bouton +1 pack
             if (btnPack) {
                 if (pack && pack > 1 && unitSel.value === 'pièce') {
                     btnPack.hidden = false;
                     setHint(offQtyHint, `Pack de ${pack} ${pack > 1 ? 'unités' : ''}`);
                     btnPack.onclick = () => { const cur = parseFloat(qtyInput.value || '0') || 0; qtyInput.value = String(cur + pack); };
-                } else {
-                    btnPack.hidden = true; setHint(offQtyHint, '');
-                }
+                } else { btnPack.hidden = true; setHint(offQtyHint, ''); }
             }
-
             const bc = opt.dataset.barcode || '';
             setHint(productHint, bc ? `EAN: ${bc}` : '');
         }
+        productSelect?.addEventListener('change', () => applyProductDefaults(productSelect.selectedOptions[0]));
+        btnPlus1?.addEventListener('click', () => { const v = +qtyInput.value || 0; qtyInput.value = String(v + 1); });
 
-        productSel?.addEventListener('change', () => {
-            const opt = productSel.selectedOptions[0];
-            applyProductDefaults(opt);
-        });
-
-        btnPlus1?.addEventListener('click', () => {
-            const cur = parseFloat(qtyInput.value || '0') || 0;
-            qtyInput.value = String(cur + 1);
-        });
-
-        // =========================
-        //   Lookup EAN (DB -> OFF)
-        // =========================
+        // =============== Lookup EAN ===============
         async function lookupByEAN(ean) {
             const code = (ean || '').trim().replace(/\s+/g, '');
             if (!code) { toast('EAN vide.', 'warn'); return; }
             eanInput.value = code;
             log('lookupByEAN', code);
 
-            // 1) BDD locale
+            // 1) DB locale
             try {
                 const r = await fetch(`{{ BASE }}api/product/by_barcode?code=${encodeURIComponent(code)}`);
-                log('by_barcode status', r.status);
                 if (r.ok) {
                     const p = await r.json();
-                    const opt = Array.from(productSel.options).find(o => (o.dataset.barcode || '').replace(/\s+/g, '') === code);
-                    productSel.value = opt ? opt.value : String(p.id);
-                    productSel.dispatchEvent(new Event('change'));
+                    const opt = Array.from(productSelect.options).find(o => (o.dataset.barcode || '').replace(/\s+/g, '') === code);
+                    productSelect.value = opt ? opt.value : String(p.id);
+                    productSelect.dispatchEvent(new Event('change'));
                     setHint(eanHint, `Produit trouvé : ${p.name}`);
                     if (!qtyInput.value) qtyInput.value = '1';
                     toast('Produit sélectionné depuis le stock.', 'ok');
@@ -390,9 +351,7 @@
             // 2) OFF
             try {
                 const r = await fetch(`{{ BASE }}api/off?barcode=${encodeURIComponent(code)}`);
-                log('OFF status', r.status);
                 const data = await r.json();
-                log('OFF data', data);
                 if (data?.ok) {
                     setHint(eanHint, "Produit non connu dans Domovra (OFF consulté).");
                     nameSuggest.value = data.name || '';
@@ -401,40 +360,28 @@
                     toast(`OFF → ${data.name || 'Nom inconnu'}`, 'warn');
                 } else {
                     setHint(eanHint, "Ni Domovra ni OFF n’ont trouvé ce code.");
-                    nameSuggest.value = ''; setHint(offQtyHint, '');
-                    toast("Aucun résultat pour cet EAN.", "warn");
+                    nameSuggest.value = ''; setHint(offQtyHint, ''); toast("Aucun résultat pour cet EAN.", "warn");
                 }
             } catch (e) {
-                setHint(eanHint, "Erreur OFF.");
-                toast("Erreur lors de la récupération OFF.", "error");
+                setHint(eanHint, "Erreur OFF."); toast("Erreur lors de la récupération OFF.", "error");
                 log('OFF fetch error', String(e));
             }
         }
-
         $('#btn_check_ean')?.addEventListener('click', () => lookupByEAN(eanInput.value));
-        eanInput?.addEventListener('keydown', (ev) => {
-            if (ev.key === 'Enter') { ev.preventDefault(); lookupByEAN(eanInput.value); }
-        });
+        eanInput?.addEventListener('keydown', (ev) => { if (ev.key === 'Enter') { ev.preventDefault(); lookupByEAN(eanInput.value); } });
 
-        // =========================
-        //   Scan PHOTO (📷)
-        // =========================
+        // =============== Mode PHOTO (📷) ===============
         function pickImageFromCamera() {
-            log('pickImageFromCamera: open');
             return new Promise(resolve => {
                 const input = document.createElement('input');
                 input.type = 'file';
                 input.accept = 'image/*';
                 input.setAttribute('capture', 'environment');
-
-                // iOS aime mieux "camera"
                 const ua = navigator.userAgent || '';
-                if (/iPad|iPhone|iPod/.test(ua)) {
+                if (/iPad|iPhone|iPod/.test(ua)) { // iOS
                     input.accept = 'image/*;capture=camera';
                     input.setAttribute('capture', 'camera');
                 }
-
-                // Android: re‑tentative en "camera" si la première fois ouvre la galerie
                 let triedAlt = false;
                 input.onchange = () => resolve(input.files?.[0] || null);
                 input.addEventListener('click', () => {
@@ -448,11 +395,9 @@
                         }
                     }, 700);
                 });
-
                 input.click();
             });
         }
-
         async function decodeImageWithZXing(file) {
             return new Promise((resolve) => {
                 const fr = new FileReader();
@@ -472,258 +417,171 @@
                 fr.readAsDataURL(file);
             });
         }
-
         btnPhoto?.addEventListener('click', async () => {
-            log('scan(photo): click', { isSecure, hasBarDet });
-            // 1) BarcodeDetector (si dispo) — rapide et précis
-            if (isSecure && hasBarDet) {
+            // 1) BarcodeDetector (rapide) si dispo + contexte sécurisé
+            if (window.isSecureContext && hasBarDet) {
                 try {
                     const file = await pickImageFromCamera(); if (!file) return;
                     const bmp = await createImageBitmap(file);
                     const det = new BarcodeDetector({ formats: ['ean_13', 'ean_8', 'upc_e', 'upc_a'] });
                     const found = await det.detect(bmp);
-                    log('scan(photo): BD found', found?.map(f => f.rawValue));
                     if (found?.length) {
                         const code = found[0].rawValue;
-                        eanInput.value = code;
-                        return lookupByEAN(code);
+                        eanInput.value = code;  // <<< injecte le code
+                        lookupByEAN(code);
+                        return;
                     }
-                } catch (e) { log('scan(photo): BD error', String(e)); }
+                } catch (e) { log('BD error', String(e)); }
             }
-            // 2) ZXing fallback (offline)
+            // 2) Fallback ZXing
             try {
                 const file = await pickImageFromCamera(); if (!file) return;
                 const code = await decodeImageWithZXing(file);
-                log('scan(photo): ZXing result', code);
                 if (code) { eanInput.value = code; lookupByEAN(code); }
                 else toast('Aucun code‑barres détecté sur la photo.', 'warn');
-            } catch (e) {
-                toast('Scan indisponible. Utilisez une douchette ou saisissez l’EAN.', 'warn');
-                log('scan(photo): fallback error', String(e));
-            }
+            } catch (e) { toast('Scan indisponible. Utilisez une douchette ou saisissez l’EAN.', 'warn'); }
         });
 
-        // =========================
-        //   Aide vidéo (commune)
-        // =========================
-        async function getVideoInputs() {
+        // =============== Helpers vidéo (🎥) ===============
+        async function listVideoInputs() {
             if (!navigator.mediaDevices?.enumerateDevices) return [];
             const all = await navigator.mediaDevices.enumerateDevices();
             return all.filter(d => d.kind === 'videoinput');
         }
-        function stopStream(hidePreview = true) {
-            liveRunning = false;
+        function stopStream() {
             try { zxingReader?.reset(); } catch { }
             if (currentStream) {
                 for (const t of currentStream.getTracks()) t.stop();
             }
             currentStream = null;
-            cancelAnimationFrame(rafId); rafId = null;
-            if (hidePreview && liveBox) liveBox.style.display = 'none';
+            liveRunning = false;
         }
 
-        // =========================
-        //   Live « aperçu » (dans le form) – optionnel
-        // =========================
-        async function startZXingContinuous(videoEl) {
-            if (!zxingReader) zxingReader = new ZXing.BrowserMultiFormatReader();
+        // Ouvre un flux vers la caméra. Essaie l'arrière d'abord, sinon flip possible.
+        async function openCameraInto(videoEl, preferDeviceId) {
+            const constraints = {
+                audio: false,
+                video: preferDeviceId
+                    ? { deviceId: { exact: preferDeviceId } }
+                    : { facingMode: { ideal: 'environment' } } // ← arrière si possible
+            };
+            const stream = await navigator.mediaDevices.getUserMedia(constraints);
+            currentStream = stream;
+            videoEl.srcObject = stream;
+
+            // Après 1er flux, on peut lister les devices (labels dispo après permission)
+            const devs = await listVideoInputs();
+            if (!preferDeviceId && devs.length) {
+                // Essaie de repérer la "back"
+                const back = devs.find(d => /back|rear|environment|arrière/i.test(d.label));
+                if (back && (!currentDeviceId || currentDeviceId !== back.deviceId)) {
+                    currentDeviceId = back.deviceId;
+                    // Si la back n'était pas déjà choisie, on redémarre dessus
+                    stopStream();
+                    return openCameraInto(videoEl, currentDeviceId);
+                }
+                // Sinon, fixe sur la première dispo
+                if (!currentDeviceId) currentDeviceId = (back || devs[0]).deviceId;
+            }
+            return stream;
+        }
+
+        async function startLiveScan(videoEl, onDetected) {
+            if (!hasMedia) { toast('getUserMedia indisponible.', 'warn'); return; }
+            // Ouvre la caméra (essaie l’arrière)
             try {
-                await zxingReader.decodeFromVideoDevice(currentDeviceId || null, videoEl, (result, err) => {
+                await openCameraInto(videoEl, currentDeviceId || null);
+            } catch (err) {
+                // Ingress/iOS/permissions → fallback photo
+                toast("Caméra live indisponible ici. Passage en mode photo…", "warn");
+                // fallback photo direct
+                const file = await pickImageFromCamera();
+                if (!file) return;
+                if (window.isSecureContext && hasBarDet) {
+                    try {
+                        const bmp = await createImageBitmap(file);
+                        const det = new BarcodeDetector({ formats: ['ean_13', 'ean_8', 'upc_e', 'upc_a'] });
+                        const found = await det.detect(bmp);
+                        if (found?.length) { onDetected(found[0].rawValue); return; }
+                    } catch { }
+                }
+                const code = await decodeImageWithZXing(file);
+                if (code) onDetected(code);
+                else toast("Aucun code‑barres détecté sur la photo.", "warn");
+                return;
+            }
+
+            // Démarre ZXing
+            if (!zxingReader) zxingReader = new ZXing.BrowserMultiFormatReader();
+            liveRunning = true;
+            await zxingReader.decodeFromVideoDevice(currentDeviceId || null, videoEl, (result, err) => {
+                if (result && liveRunning) {
+                    const code = result.text;
+                    stopStream();
+                    onDetected(code);
+                }
+            });
+        }
+
+        // =============== Boutons LIVE ===============
+        function openModal() { modal?.classList.remove('hidden'); modal?.setAttribute('aria-hidden', 'false'); }
+        function closeModal() { modal?.classList.add('hidden'); modal?.setAttribute('aria-hidden', 'true'); stopStream(); }
+
+        btnLive?.addEventListener('click', async () => {
+            openModal();
+            await startLiveScan(vEl, (code) => {
+                eanInput.value = code;           // <<< injecte le code
+                toast('Code détecté : ' + code, 'ok');
+                closeModal();
+                lookupByEAN(code);               // <<< lance la recherche
+            });
+        });
+
+        btnClose?.addEventListener('click', closeModal);
+        modal?.addEventListener('click', (e) => { if (e.target === modal) closeModal(); });
+
+        // Flip (alterne entre les caméras détectées)
+        async function flipCamera(targetVideo) {
+            try {
+                const devs = await listVideoInputs();
+                if (!devs.length) return toast("Aucune autre caméra détectée.", "warn");
+                if (!currentDeviceId) currentDeviceId = devs[0].deviceId;
+                const idx = devs.findIndex(d => d.deviceId === currentDeviceId);
+                const next = devs[(idx + 1) % devs.length];
+                currentDeviceId = next.deviceId;
+                stopStream();
+                await openCameraInto(targetVideo, currentDeviceId);
+                // relance le décodage
+                if (!zxingReader) zxingReader = new ZXing.BrowserMultiFormatReader();
+                liveRunning = true;
+                await zxingReader.decodeFromVideoDevice(currentDeviceId, targetVideo, (result) => {
                     if (result && liveRunning) {
                         const code = result.text;
+                        stopStream();
                         eanInput.value = code;
                         toast('Code détecté : ' + code, 'ok');
-                        stopStream();
+                        closeModal();
                         lookupByEAN(code);
                     }
                 });
-            } catch (e) {
-                setHint($('#live_hint'), 'Impossible de décoder en continu. Essaie le mode 📷 (photo).');
-            }
+            } catch (e) { log('flip error', String(e)); }
         }
-
-        btnLive?.addEventListener('click', async () => {
-            log('live(apercu): click', { isSecure, hasMedia });
-            if (!hasMedia) { toast('getUserMedia indisponible.', 'warn'); return; }
-            try {
-                const constraints = { video: currentDeviceId ? { deviceId: { exact: currentDeviceId } } : true, audio: false };
-                const stream = await navigator.mediaDevices.getUserMedia(constraints);
-                currentStream = stream;
-                if (liveVideo) liveVideo.srcObject = stream;
-                if (liveBox) liveBox.style.display = 'block';
-                liveRunning = true;
-
-                const devices = await getVideoInputs();
-                if (!currentDeviceId && devices.length) {
-                    const back = devices.find(d => /back|rear|environment|arrière/i.test(d.label));
-                    currentDeviceId = (back || devices[0]).deviceId;
-                }
-                startZXingContinuous(liveVideo);
-                setHint($('#live_hint'), 'Pointe un code‑barres vers la caméra…');
-            } catch (err) {
-                if (err?.name === 'NotAllowedError' || err?.name === 'SecurityError')
-                    toast("Accès caméra refusé. Autorise la caméra pour *.ui.nabu.casa.", "error");
-                else if (err?.name === 'NotFoundError')
-                    toast("Aucune caméra détectée.", "error");
-                else
-                    toast("Caméra indisponible dans cette vue (Ingress). Utilise 📷 (photo) ou une douchette.", "warn");
-                stopStream();
-            }
-        });
-
-        btnLiveStop?.addEventListener('click', () => stopStream());
+        btnFlip2?.addEventListener('click', () => flipCamera(vEl));
         btnLiveFlip?.addEventListener('click', async () => {
-            try {
-                const devices = await getVideoInputs();
-                if (devices.length) {
-                    const idx = devices.findIndex(d => d.deviceId === currentDeviceId);
-                    const next = devices[(idx + 1 + devices.length) % devices.length];
-                    currentDeviceId = next.deviceId;
-                    // relance l’aperçu
-                    stopStream(false);
-                    btnLive?.click();
-                } else {
-                    toast("Aucune autre caméra détectée.", "warn");
-                }
-            } catch (e) { log('live(apercu): flip error', String(e)); }
+            // flip sur le petit aperçu (si tu l'utilises)
+            if (!videoEl) return;
+            await flipCamera(videoEl);
         });
 
-        // =========================
-        //   Modale plein écran (🎥)
-        // =========================
-        function openModal() { modal?.classList.remove('hidden'); modal?.setAttribute('aria-hidden', 'false'); }
-        function closeModal() { modal?.classList.add('hidden'); modal?.setAttribute('aria-hidden', 'true'); stopStream(); clearOverlay(); }
-
-        function fitCanvasToVideo() {
-            if (!modalCvs || !modalVideo) return;
-            const r = modalVideo.getBoundingClientRect();
-            modalCvs.width = r.width * devicePixelRatio;
-            modalCvs.height = r.height * devicePixelRatio;
-        }
-        function clearOverlay() { if (modalCtx) modalCtx.clearRect(0, 0, modalCvs.width, modalCvs.height); }
-        function drawDetection(result) {
-            if (!modalCtx || !result) return;
-            clearOverlay();
-            const pts = result.resultPoints || []; // souvent 2 points pour code 1D
-            const vw = modalVideo.videoWidth, vh = modalVideo.videoHeight;
-            const rw = modalCvs.width, rh = modalCvs.height;
-            if (!vw || !vh) return;
-            const sx = rw / vw, sy = rh / vh;
-
-            modalCtx.lineWidth = 4 * devicePixelRatio;
-            modalCtx.strokeStyle = 'rgba(0,255,128,0.95)';
-            if (pts.length >= 2) {
-                const p0 = { x: pts[0].x * sx, y: pts[0].y * sy };
-                const p1 = { x: pts[1].x * sx, y: pts[1].y * sy };
-                modalCtx.beginPath(); modalCtx.moveTo(p0.x, p0.y); modalCtx.lineTo(p1.x, p1.y); modalCtx.stroke();
-                const pad = 24 * devicePixelRatio;
-                const minx = Math.min(p0.x, p1.x) - pad, maxx = Math.max(p0.x, p1.x) + pad;
-                const miny = Math.min(p0.y, p1.y) - pad, maxy = Math.max(p0.y, p1.y) + pad;
-                modalCtx.strokeRect(minx, miny, maxx - minx, maxy - miny);
-            } else {
-                const w = rw * 0.6, h = rh * 0.18, x = (rw - w) / 2, y = (rh - h) / 2;
-                modalCtx.strokeRect(x, y, w, h);
-            }
-        }
-
-        async function startScanLive(videoEl, onDetected) {
-            const constraints = {
-                audio: false,
-                video: currentDeviceId ? { deviceId: { exact: currentDeviceId } }
-                    : { facingMode: { ideal: 'environment' } }
-            };
-
-            try {
-                fitCanvasToVideo();
-                window.addEventListener('resize', fitCanvasToVideo, { passive: true });
-
-                const stream = await navigator.mediaDevices.getUserMedia(constraints);
-                currentStream = stream;
-                videoEl.srcObject = stream;
-
-                const devs = await getVideoInputs();
-                if (!currentDeviceId && devs.length) {
-                    const back = devs.find(d => /back|rear|environment|arrière/i.test(d.label));
-                    currentDeviceId = (back || devs[0]).deviceId;
-                }
-
-                if (!zxingReader) zxingReader = new ZXing.BrowserMultiFormatReader();
-                liveRunning = true;
-
-                // petit raf pour garder le canvas dimensionné
-                const loop = () => { if (!liveRunning) return; rafId = requestAnimationFrame(loop); };
-                rafId = requestAnimationFrame(loop);
-
-                await zxingReader.decodeFromVideoDevice(currentDeviceId || null, videoEl, (result, err) => {
-                    if (result && liveRunning) {
-                        drawDetection(result);
-                        const code = result.text;
-                        liveRunning = false;
-                        // arrête proprement et laisse 150ms le cadre visible
-                        stopStream(false);
-                        setTimeout(() => closeModal(), 150);
-                        eanInput.value = code;
-                        toast('Code détecté : ' + code, 'ok');
-                        onDetected?.(code);
-                    }
-                });
-            } catch (err) {
-                // Fallback auto → mode photo
-                toast("Caméra live indisponible ici. Passage en mode photo…", "warn");
-                try {
-                    const file = await pickImageFromCamera();
-                    if (!file) return;
-                    if (isSecure && hasBarDet) {
-                        try {
-                            const bmp = await createImageBitmap(file);
-                            const det = new BarcodeDetector({ formats: ['ean_13', 'ean_8', 'upc_e', 'upc_a'] });
-                            const found = await det.detect(bmp);
-                            if (found?.length) { onDetected(found[0].rawValue); closeModal(); return; }
-                        } catch { }
-                    }
-                    const code = await decodeImageWithZXing(file);
-                    if (code) { onDetected(code); closeModal(); return; }
-                    toast("Aucun code‑barres détecté sur la photo.", "warn");
-                } catch (e) {
-                    toast("Impossible d’accéder à la caméra. Utilise la saisie ou une douchette.", "error");
-                    closeModal();
-                }
-            }
-        }
-
-        // Ouvrir la modale et démarrer le live
-        btnLive?.addEventListener('click', async () => {
-            if (!hasMedia) { toast("getUserMedia indisponible.", "warn"); return; }
-            openModal();
-            const onDetected = (code) => lookupByEAN(code);
-            await startScanLive(modalVideo, onDetected);
-        });
-
-        // Fermer / cliquer en dehors / flip dans la modale
-        btnClose?.addEventListener('click', closeModal);
-        modal?.addEventListener('click', (e) => { if (e.target === modal) closeModal(); });
-        btnFlip2?.addEventListener('click', async () => {
-            const devices = await getVideoInputs();
-            if (!devices.length) return;
-            const idx = devices.findIndex(d => d.deviceId === currentDeviceId);
-            currentDeviceId = devices[(idx + 1 + devices.length) % devices.length].deviceId;
-            stopStream(false);
-            await startScanLive(modalVideo, (code) => lookupByEAN(code));
-        });
-
-        // =========================
-        //   Bouton "Créer produit"
-        // =========================
+        // =============== Créer produit ===============
         $('#btn_create_prod')?.addEventListener('click', () => {
             const ean = (eanInput.value || '').trim();
             const next = encodeURIComponent("{{ BASE }}achats");
             const url = `{{ BASE }}products?ean=${encodeURIComponent(ean)}&next=${next}`;
-            window.location.href = url;
+            location.href = url;
         });
 
-        // =========================
-        //   Toast après ajout
-        // =========================
+        // =============== Toast post-ajout ===============
         if (new URLSearchParams(location.search).has('added')) {
             toast("Ajout enregistré dans le stock.", "ok");
             history.replaceState({}, "", location.pathname);
