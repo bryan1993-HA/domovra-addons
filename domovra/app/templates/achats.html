@@ -10,42 +10,61 @@
 <div class="wrap" data-page="achats">
 
     <div class="card">
-        <div class="title">
-            <h2>Ajouter au stock</h2>
-            <span class="muted">→ page dédiée aux entrées (scan ou saisie)</span>
-            <span class="help" tabindex="0"
-                data-tip="Scanne un code-barres pour sélectionner le produit. S’il est inconnu, crée-le puis reviens ici."></span>
+        <!-- Titre + bouton Scan à droite -->
+        <div class="title" style="display:flex; align-items:center; justify-content:space-between; gap:.5rem;">
+            <div>
+                <h2>Ajouter au stock</h2>
+                <span class="muted">→ page dédiée aux entrées (scan ou saisie)</span>
+            </div>
+            <button type="button" class="btn" id="btn_scan" title="Scanner un code-barres">📷</button>
         </div>
 
         <form id="achats_form" method="post" action="{{ BASE }}achats/add" class="form-grid">
 
-            <!-- Produit -->
+            <!-- EAN -->
+            <div>
+                <div class="label">Code‑barres (EAN)</div>
+                <div class="infield">
+                    <input type="text" name="ean" id="ean" placeholder="Scanner ou saisir" inputmode="numeric"
+                        autocomplete="off">
+                    <button type="button" class="btn" id="btn_check_ean"
+                        title="Rechercher le produit par EAN">🔎</button>
+                    <button type="button" class="btn" id="btn_create_prod" title="Créer le produit"
+                        style="white-space:nowrap;">➕</button>
+                </div>
+                <div class="hint" id="ean_hint"></div>
+            </div>
+
+            <!-- Produit (sélection si déjà existant) -->
             <div>
                 <div class="label">Produit</div>
-                <div class="infield">
-                    <select name="product_id" id="product_select" required>
-                        <option value="" disabled selected>— Choisir ou scanner —</option>
-                        {% for p in products %}
-                        <option value="{{ p.id }}" data-barcode="{{ p.barcode or '' }}"
-                            data-unit="{{ p.unit_base or 'piece' }}" data-pack="{{ p.pack_of or '' }}"
-                            data-unitsize="{{ p.unit_size or '' }}">
-                            {{ p.name }}{% if p.brand %} — {{ p.brand }}{% endif %}
-                        </option>
-                        {% endfor %}
-                    </select>
-                    <button type="button" class="btn scan" id="btn_scan" title="Scanner">📷</button>
-                    <button type="button" class="btn" id="btn_create" title="Créer produit">➕</button>
-                </div>
+                <select name="product_id" id="product_select" required>
+                    <option value="" disabled selected>— Choisir ou scanner —</option>
+                    {% for p in products %}
+                    <option value="{{ p.id }}" data-barcode="{{ p.barcode or '' }}" data-unit="{{ p.unit or 'pièce' }}"
+                        data-pack="" {# pack_of si tu l’ajoutes plus tard #}>
+                        {{ p.name }}{% if p.brand %} — {{ p.brand }}{% endif %}
+                    </option>
+                    {% endfor %}
+                </select>
                 <div class="hint" id="product_hint"></div>
             </div>
 
-            <!-- Quantité / unité / pack -->
+            <!-- Nom suggéré (si produit inconnu via OFF) -->
+            <div>
+                <div class="label">Nom (suggéré par OFF)</div>
+                <input type="text" id="name_suggest" placeholder="Rempli après scan si produit inconnu"
+                    autocomplete="off">
+                <div class="hint" id="off_qty_hint"></div>
+            </div>
+
+            <!-- Quantité + unité + raccourcis -->
             <div>
                 <div class="label">Quantité</div>
                 <div class="infield">
                     <input type="number" step="0.001" min="0.001" name="qty" id="qty" value="1" required>
                     <select name="unit" id="unit" style="max-width:140px">
-                        <option value="piece">pièce</option>
+                        <option value="pièce">pièce</option>
                         <option value="g">g</option>
                         <option value="kg">kg</option>
                         <option value="ml">ml</option>
@@ -60,7 +79,7 @@
             <!-- Emplacement -->
             <div>
                 <div class="label">Emplacement</div>
-                <select name="location_id" required>
+                <select name="location_id" id="location_id" required>
                     {% for loc in locations %}
                     <option value="{{ loc.id }}">{{ loc.name }}</option>
                     {% endfor %}
@@ -93,7 +112,6 @@
 
         </form>
     </div>
-
 </div>
 {% endblock %}
 
@@ -102,125 +120,168 @@
     (function () {
         const $ = (s, p = document) => p.querySelector(s);
 
+        // Elts
+        const eanInput = $('#ean');
+        const eanHint = $('#ean_hint');
+        const nameSuggest = $('#name_suggest');
+        const offQtyHint = $('#off_qty_hint');
+
         const productSelect = $('#product_select');
-        const unitSel = $('#unit');
+        const productHint = $('#product_hint');
+
         const qtyInput = $('#qty');
+        const unitSel = $('#unit');
         const btnPlus1 = $('#btn_plus1');
         const btnPack = $('#btn_pack');
-        const hint = $('#product_hint');
-        const qtyHint = $('#qty_hint');
 
-        // Applique les defaults du produit (unité, +1 pack…)
+        // ----- UI helpers
+        function toast(msg, type = 'ok') { window.showToast?.(msg, type); }
+        function setHint(el, text) { if (el) el.textContent = text || ''; }
+
         function applyProductDefaults(opt) {
-            if (!opt) { btnPack.hidden = true; hint.textContent = ''; qtyHint.textContent = ''; return; }
-            const unit = opt.dataset.unit || 'piece';
+            if (!opt) { btnPack.hidden = true; setHint(productHint, ''); setHint(offQtyHint, ''); return; }
+            const unit = opt.dataset.unit || 'pièce';
             const pack = parseFloat(opt.dataset.pack || '0');
 
-            // Unité par défaut issue du produit
-            unitSel.value = Array.from(unitSel.options).some(o => o.value === unit) ? unit : 'piece';
+            // unité par défaut issue du produit
+            unitSel.value = Array.from(unitSel.options).some(o => o.value === unit) ? unit : 'pièce';
 
-            // Bouton +1 pack si pertinent (et unité en "pièce")
-            if (pack && pack > 1 && unitSel.value === 'piece') {
+            // +1 pack si connu (et unité "pièce")
+            if (pack && pack > 1 && unitSel.value === 'pièce') {
                 btnPack.hidden = false;
-                qtyHint.textContent = `Pack de ${pack} ${pack > 1 ? 'unités' : ''}`;
+                setHint(offQtyHint, `Pack de ${pack} ${pack > 1 ? 'unités' : ''}`);
                 btnPack.onclick = () => {
                     const cur = parseFloat(qtyInput.value || '0') || 0;
                     qtyInput.value = (cur + pack).toString();
-                }
+                };
             } else {
                 btnPack.hidden = true;
-                qtyHint.textContent = '';
+                setHint(offQtyHint, '');
             }
 
-            const barcode = opt.dataset.barcode || '';
-            hint.textContent = barcode ? `EAN: ${barcode}` : '';
+            const bc = opt.dataset.barcode || '';
+            setHint(productHint, bc ? `EAN: ${bc}` : '');
         }
 
-        productSelect.addEventListener('change', () => applyProductDefaults(productSelect.selectedOptions[0]));
+        productSelect.addEventListener('change', () => {
+            const opt = productSelect.selectedOptions[0];
+            applyProductDefaults(opt);
+        });
 
         // +1
-        $('#btn_plus1')?.addEventListener('click', () => {
+        btnPlus1?.addEventListener('click', () => {
             const cur = parseFloat(qtyInput.value || '0') || 0;
             qtyInput.value = (cur + 1).toString();
         });
 
-        // --- SCAN ---
-        const btnScan = $('#btn_scan');
-        btnScan?.addEventListener('click', async () => {
+        // ----- Recherche par EAN : 1) DB locale, 2) OFF
+        async function lookupByEAN(ean) {
+            const code = (ean || '').trim().replace(/\s+/g, '');
+            if (!code) { toast("EAN vide.", "warn"); return; }
+            eanInput.value = code;
+
+            // 1) Essaie de retrouver un produit existant
+            try {
+                const r1 = await fetch(`{{ BASE }}api/product/by_barcode?code=${encodeURIComponent(code)}`);
+                if (r1.ok) {
+                    const p = await r1.json();
+                    // Sélectionne le produit correspondant dans la liste
+                    const opt = Array.from(productSelect.options).find(o => (o.dataset.barcode || '').replace(/\s+/g, '') === code);
+                    if (opt) {
+                        productSelect.value = opt.value;
+                        productSelect.dispatchEvent(new Event('change'));
+                    } else {
+                        // S’il n’a pas le data-barcode côté HTML, on le sélectionne par id retourné
+                        productSelect.value = String(p.id);
+                        productSelect.dispatchEvent(new Event('change'));
+                    }
+                    setHint(eanHint, `Produit trouvé : ${p.name}`);
+                    if (!qtyInput.value) qtyInput.value = '1';
+                    toast("Produit sélectionné depuis le stock.", "ok");
+                    return;
+                }
+            } catch (e) {
+                // ignore → on tentera OFF
+            }
+
+            // 2) Sinon, tentative depuis OFF (nom + quantité indic.)
+            try {
+                const r2 = await fetch(`{{ BASE }}api/off?barcode=${encodeURIComponent(code)}`);
+                const data = await r2.json();
+                if (data && data.ok) {
+                    setHint(eanHint, "Produit non connu dans Domovra (OFF consulté).");
+                    nameSuggest.value = data.name || '';
+                    setHint(offQtyHint, data.quantity ? `Quantité OFF : ${data.quantity}` : '');
+                    if (!qtyInput.value || qtyInput.value === '0') qtyInput.value = '1';
+                    toast(`OFF → ${data.name || 'Nom inconnu'}`, "warn");
+                } else {
+                    setHint(eanHint, "Ni Domovra ni OFF n’ont trouvé ce code.");
+                    nameSuggest.value = '';
+                    setHint(offQtyHint, '');
+                    toast("Aucun résultat pour cet EAN.", "warn");
+                }
+            } catch (e) {
+                setHint(eanHint, "Erreur OFF.");
+                toast("Erreur lors de la récupération OFF.", "error");
+            }
+        }
+
+        // Bouton recherche EAN
+        $('#btn_check_ean')?.addEventListener('click', () => lookupByEAN(eanInput.value));
+
+        // Entrée clavier dans EAN → Enter lance la recherche
+        eanInput?.addEventListener('keydown', (ev) => {
+            if (ev.key === 'Enter') { ev.preventDefault(); lookupByEAN(eanInput.value); }
+        });
+
+        // ----- Bouton SCAN (caméra)
+        $('#btn_scan')?.addEventListener('click', async () => {
             if ('BarcodeDetector' in window) {
                 try {
                     const detector = new BarcodeDetector({ formats: ['ean_13', 'ean_8', 'upc_e', 'upc_a'] });
                     const file = await pickImageFromCamera();
                     if (!file) return;
                     const img = await createImageBitmap(file);
-                    const barcodes = await detector.detect(img);
-                    if (barcodes.length) {
-                        selectByBarcode(barcodes[0].rawValue);
+                    const codes = await detector.detect(img);
+                    if (codes.length) {
+                        const code = codes[0].rawValue;
+                        eanInput.value = code;
+                        lookupByEAN(code);
                     } else {
-                        window.showToast?.("Aucun code-barres détecté.", "warn");
+                        toast("Aucun code‑barres détecté.", "warn");
                     }
                 } catch (e) {
-                    window.showToast?.("Scan non supporté, utilisez une douchette USB ou la recherche.", "warn");
+                    toast("Scan non supporté sur ce navigateur.", "warn");
                 }
             } else {
-                window.showToast?.("Scan non supporté sur ce navigateur.", "warn");
+                toast("Scan non supporté (utilisez une douchette USB).", "warn");
             }
         });
 
-        async function pickImageFromCamera() {
+        function pickImageFromCamera() {
             return new Promise(resolve => {
                 const input = document.createElement('input');
                 input.type = 'file';
                 input.accept = 'image/*';
                 input.capture = 'environment';
-                input.onchange = () => resolve(input.files[0]);
+                input.onchange = () => resolve(input.files?.[0]);
                 input.click();
             });
         }
 
-        function selectByBarcode(ean) {
-            // 1) tente de sélectionner un produit existant
-            const opt = Array.from(productSelect.options).find(o => o.dataset.barcode === ean);
-            if (opt) {
-                productSelect.value = opt.value;
-                productSelect.dispatchEvent(new Event('change'));
-                window.showToast?.("Produit trouvé et sélectionné.", "ok");
-                return;
-            }
-            // 2) inconnu → ouvre ta modale de création produit (préremplie OFF si possible)
-            openProductCreate(ean);
-        }
-
-        // Création produit (branche sur ta modale existante côté Produits)
-        const btnCreate = $('#btn_create');
-        btnCreate?.addEventListener('click', () => openProductCreate(null));
-
-        function openProductCreate(ean) {
-            // 👉 Si tu as déjà une modale globale : appelle-la ici.
-            //   window.openProductCreateModal?.(ean, { onCreated: (p)=>insertAndSelect(p) });
-            // 👉 Sinon, redirige vers /product/new?ean=... puis retour vers /achats
-            const url = ean ? `{{ BASE }}product/new?ean=${encodeURIComponent(ean)}&next={{ BASE }}achats`
-                : `{{ BASE }}product/new?next={{ BASE }}achats`;
+        // ----- Créer produit (redirige vers Fiche produit avec EAN pré-rempli)
+        $('#btn_create_prod')?.addEventListener('click', () => {
+            const ean = (eanInput.value || '').trim();
+            // Redirige vers la page Fiche produit (où se trouve le formulaire de création),
+            // en passant l’EAN et une intention de retour éventuelle.
+            const next = encodeURIComponent("{{ BASE }}achats");
+            const url = `{{ BASE }}products?ean=${encodeURIComponent(ean)}&next=${next}`;
             window.location.href = url;
-        }
+        });
 
-        // Insertion dynamique de l’option après création (si tu utilises une modale SPA)
-        function insertAndSelect(p) {
-            const opt = document.createElement('option');
-            opt.value = p.id;
-            opt.dataset.barcode = p.barcode || '';
-            opt.dataset.unit = p.unit_base || 'piece';
-            opt.dataset.pack = p.pack_of || '';
-            opt.dataset.unitsize = p.unit_size || '';
-            opt.textContent = p.brand ? `${p.name} — ${p.brand}` : p.name;
-            productSelect.appendChild(opt);
-            productSelect.value = p.id;
-            productSelect.dispatchEvent(new Event('change'));
-        }
-
-        // Toast post-redirection
+        // Toast après ajout
         if (new URLSearchParams(location.search).has('added')) {
-            window.showToast?.("Ajout enregistré dans le stock.", "ok");
+            toast("Ajout enregistré dans le stock.", "ok");
             history.replaceState({}, "", location.pathname);
         }
     })();
