@@ -495,6 +495,47 @@
   }
   if (q) q.addEventListener('input', e => applyFilterCards(e.target.value));
 
+  /* ====== Helpers communs ====== */
+  const $ = s => document.querySelector(s);
+
+  // Config par unité (step, suffixe, placeholder, hint)
+  const UNIT_CFG = {
+    'pièce': { step: 1, suffix: 'pièce', placeholder: 'ex. 1', hint: 'Conseil : 1, 2, 3 pièces…' },
+    'tranche': { step: 1, suffix: 'tranche', placeholder: 'ex. 1', hint: 'Conseil : 1, 2, 3 tranches…' },
+    'paquet': { step: 1, suffix: 'paquet', placeholder: 'ex. 1', hint: 'Conseil : 1, 2, 3 paquets…' },
+    'boîte': { step: 1, suffix: 'boîte', placeholder: 'ex. 1', hint: 'Conseil : 1, 2, 3 boîtes…' },
+    'boite': { step: 1, suffix: 'boîte', placeholder: 'ex. 1', hint: 'Conseil : 1, 2, 3 boîtes…' },
+    'bocal': { step: 1, suffix: 'bocal', placeholder: 'ex. 1', hint: 'Conseil : 1, 2, 3 bocaux…' },
+    'bouteille': { step: 1, suffix: 'bouteille', placeholder: 'ex. 1', hint: 'Conseil : 1, 2, 3 bouteilles…' },
+    'sachet': { step: 1, suffix: 'sachet', placeholder: 'ex. 1', hint: 'Conseil : 1, 2, 3 sachets…' },
+    'lot': { step: 1, suffix: 'lot', placeholder: 'ex. 1', hint: 'Conseil : 1, 2, 3 lots…' },
+    'barquette': { step: 1, suffix: 'barquette', placeholder: 'ex. 1', hint: 'Conseil : 1, 2, 3 barquettes…' },
+    'rouleau': { step: 1, suffix: 'rouleau', placeholder: 'ex. 1', hint: 'Conseil : 1, 2, 3 rouleaux…' },
+    'dosette': { step: 1, suffix: 'dosette', placeholder: 'ex. 1', hint: 'Conseil : 1, 2, 3 dosettes…' },
+
+    'g': { step: 50, suffix: 'g', placeholder: 'ex. 500', hint: 'Par 50 g (500 g, 750 g, …)' },
+    'kg': { step: 0.1, suffix: 'kg', placeholder: 'ex. 0.5', hint: 'Par 0,1 kg (0,5 kg, 1,0 kg, …)' },
+    'ml': { step: 50, suffix: 'ml', placeholder: 'ex. 500', hint: 'Par 50 ml (500 ml, 750 ml, …)' },
+    'L': { step: 1, suffix: 'L', placeholder: 'ex. 1', hint: 'Par 1 L (1 L, 2 L, …)' },
+    'l': { step: 1, suffix: 'L', placeholder: 'ex. 1', hint: 'Par 1 L (1 L, 2 L, …)' },
+  };
+  function cfgForUnit(u) {
+    const key = String(u || 'pièce');
+    return UNIT_CFG[key] || { step: 1, suffix: (u || 'pièce'), placeholder: 'ex. 1', hint: '' };
+  }
+
+  function setSelectValue(sel, val) {
+    if (!sel || sel.tagName !== 'SELECT') return; // sécurité
+    [...sel.querySelectorAll('option[data-temp="1"]')].forEach(o => o.remove());
+    const opts = [...sel.options].map(o => o.value);
+    if (opts.includes(val)) sel.value = val;
+    else if (val) {
+      const o = document.createElement('option');
+      o.value = val; o.textContent = val + ' (autre)'; o.dataset.temp = '1';
+      sel.insertBefore(o, sel.firstChild); sel.value = val;
+    }
+  }
+
   /* ====== Voir (fiche complète, lecture seule) ====== */
 
   // Map des emplacements fournie depuis le tag JSON
@@ -503,7 +544,6 @@
     const raw = document.getElementById('loc-map-data')?.textContent || '{}';
     locMap = JSON.parse(raw);
   } catch { locMap = {}; }
-
 
   function humanizeDate(iso) {
     if (!iso) return 'Jamais';
@@ -533,7 +573,8 @@
     const expRate = btn.dataset.expiredRate && btn.dataset.expiredRate !== '0' ? `${btn.dataset.expiredRate}%` : '0 %';
 
     document.getElementById('v-name').textContent = name;
-    document.getElementById('v-qty').textContent = `${qty} ${unit}${Number(qty) == 1 ? '' : 's'} (${lots} lot${Number(lots) == 1 ? '' : 's'})`;
+    document.getElementById('v-qty').textContent =
+      `${qty} ${unit}${Number(qty) == 1 ? '' : 's'} (${lots} lot${Number(lots) == 1 ? '' : 's'})`;
     document.getElementById('v-loc').textContent = loc;
     document.getElementById('v-last-in').textContent = lastIn;
     document.getElementById('v-last-out').textContent = lastOut;
@@ -550,25 +591,50 @@
     document.getElementById('dlg-view').showModal();
   });
 
-  /* ====== Édition : logique d’unité -> suffixe/step pour min ====== */
-  const $ = s => document.querySelector(s);
+  /* ====== AJOUT : logique d’unité -> min_qty (step/suffix/placeholder/hint) ====== */
+  (function setupCreateFormUnitLogic() {
+    const unitSel = document.getElementById('create_unit');
+    const minInput = document.getElementById('create_min_qty');
+    const minSuffix = document.getElementById('create_min_unit');
+    const minHint = document.getElementById('create_min_hint');
+    const noFreeze = document.getElementById('create_no_freeze');
+    const freezeGrp = document.getElementById('create_freeze_group');
+
+    function applyCreateMinUnitLogic() {
+      const u = unitSel?.value || 'pièce';
+      const cfg = cfgForUnit(u);
+      if (minInput) {
+        minInput.step = String(cfg.step);
+        minInput.placeholder = cfg.placeholder;
+      }
+      if (minSuffix) minSuffix.textContent = cfg.suffix;
+      if (minHint) minHint.textContent = cfg.hint || '';
+    }
+
+    function applyCreateFreezeVisibility() {
+      if (!noFreeze || !freezeGrp) return;
+      freezeGrp.style.display = noFreeze.checked ? 'none' : '';
+    }
+
+    if (unitSel) unitSel.addEventListener('change', applyCreateMinUnitLogic);
+    if (noFreeze) noFreeze.addEventListener('change', applyCreateFreezeVisibility);
+
+    // init à l’ouverture de page
+    applyCreateMinUnitLogic();
+    applyCreateFreezeVisibility();
+  })();
+
+  /* ====== ÉDITION : logique d’unité -> min_qty (step/suffix/placeholder) ====== */
   function applyDlgMinUnitLogic() {
     const unit = $('#dlg-unit')?.value || 'pièce';
     const minInput = $('#dlg-min');
     const unitSuffix = $('#dlg_min_unit');
     if (!minInput || !unitSuffix) return;
 
-    let step = 1, suffix = unit, placeholder = 'ex. 1';
-    switch (unit) {
-      case 'L': step = 1; suffix = 'L'; placeholder = 'ex. 1'; break;
-      case 'ml': step = 50; suffix = 'ml'; placeholder = 'ex. 500'; break;
-      case 'kg': step = 0.1; suffix = 'kg'; placeholder = 'ex. 0.5'; break;
-      case 'g': step = 50; suffix = 'g'; placeholder = 'ex. 500'; break;
-      default: step = 1; suffix = unit || 'pièce'; placeholder = 'ex. 1';
-    }
-    minInput.step = String(step);
-    minInput.placeholder = placeholder;
-    unitSuffix.textContent = suffix;
+    const cfg = cfgForUnit(unit);
+    minInput.step = String(cfg.step);
+    minInput.placeholder = cfg.placeholder;
+    unitSuffix.textContent = cfg.suffix;
   }
   function applyDlgFreezeVisibility() {
     const nf = $('#dlg-no-freeze');
@@ -580,49 +646,52 @@
   document.addEventListener('click', function (e) {
     const edit = e.target.closest('.js-edit-open');
     const del = e.target.closest('.js-delete-open');
+
     if (edit) {
       $('#dlg-product-id').value = edit.dataset.id || '';
       $('#dlg-name').value = edit.dataset.name || '';
       $('#dlg-desc').value = edit.dataset.desc || '';
+
       setSelectValue($('#dlg-default-location'), edit.dataset.defaultLocation || '');
       setSelectValue($('#dlg-unit'), edit.dataset.unit || 'pièce');
       setSelectValue($('#dlg-low-enabled'), (edit.dataset.lowEnabled === '0' ? '0' : '1'));
-      setSelectValue($('#dlg-category'), edit.dataset.category || '');
+      // champ "category" est un <input>, pas un <select>
+      const cat = $('#dlg-category'); if (cat) cat.value = edit.dataset.category || '';
       setSelectValue($('#dlg-parent'), edit.dataset.parent || '');
+
       $('#dlg-min').value = (edit.dataset.min || '');
       $('#dlg-shelf').value = (edit.dataset.shelf || '');
       $('#dlg-freeze-shelf').value = (edit.dataset.freezeShelf || '');
+
       const kind = (edit.dataset.expiryKind || 'DLC').toUpperCase();
       $('#dlg-exp-dlc').checked = (kind === 'DLC');
       $('#dlg-exp-ddm').checked = (kind === 'DDM');
-      const nf = $('#dlg-no-freeze'); nf.checked = (edit.dataset.noFreeze === '1');
+
+      const nf = $('#dlg-no-freeze'); if (nf) nf.checked = (edit.dataset.noFreeze === '1');
+
+      // logique UI
       applyDlgFreezeVisibility();
       applyDlgMinUnitLogic();
-      $('#dlg-unit').addEventListener('change', applyDlgMinUnitLogic);
-      nf.addEventListener('change', applyDlgFreezeVisibility);
+
+      const unitSel = $('#dlg-unit');
+      if (unitSel) unitSel.addEventListener('change', applyDlgMinUnitLogic);
+      if (nf) nf.addEventListener('change', applyDlgFreezeVisibility);
+
       $('#dlg-edit').showModal();
       return;
     }
+
     if (del) {
       $('#del-product-id').value = del.dataset.id;
-      const name = del.dataset.name || ''; const lots = parseInt(del.dataset.lots || '0', 10);
+      const name = del.dataset.name || '';
+      const lots = parseInt(del.dataset.lots || '0', 10);
       document.getElementById('del-msg').textContent = lots > 0
-        ? `La suppression retirera aussi les ${lots} stock(s) lié(s) à « ${name} » .`
+        ? `La suppression retirera aussi les ${lots} stock(s) lié(s) à « ${name} ».`
         : `Supprimer « ${name} » ?`;
-      document.getElementById('dlg-delete').showModal(); return;
+      document.getElementById('dlg-delete').showModal();
+      return;
     }
   });
-
-  function setSelectValue(sel, val) {
-    if (!sel || sel.tagName !== 'SELECT') return; // sécurité
-    [...sel.querySelectorAll('option[data-temp="1"]')].forEach(o => o.remove());
-    const opts = [...sel.options].map(o => o.value);
-    if (opts.includes(val)) sel.value = val;
-    else if (val) {
-      const o = document.createElement('option');
-      o.value = val; o.textContent = val + ' (autre)'; o.dataset.temp = '1';
-      sel.insertBefore(o, sel.firstChild); sel.value = val;
-    }
-  }
 </script>
+
 {% endblock %}
