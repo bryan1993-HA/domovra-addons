@@ -220,6 +220,59 @@ def pluralize_fr(unit: str, qty) -> str:
 
 templates.filters["pluralize_fr"] = pluralize_fr
 
+
+# -------- Pretty numbers & smart quantity formatting --------
+def _pretty_num(x) -> str:
+    try:
+        f = float(x)
+    except Exception:
+        return str(x)
+    if abs(f - round(f)) < 1e-9:
+        return str(int(round(f)))
+    s = f"{f:.2f}".rstrip("0").rstrip(".")
+    return s if s else "0"
+
+def fmt_qty(qty, unit: str) -> dict:
+    """
+    Return a dict {'v': <pretty value>, 'u': <unit possibly converted>}
+    - g -> kg when >= 1000
+    - ml -> L when >= 1000
+    - keep kg/L as is
+    - other units unchanged
+    """
+    try:
+        q = float(qty or 0)
+    except Exception:
+        q = 0.0
+
+    u = (unit or "").strip()
+
+    # Normalize liter casing
+    if u == "l":
+        u = "L"
+
+    if u == "g":
+        if q >= 1000:
+            q = q / 1000.0
+            u = "kg"
+        return {"v": _pretty_num(q), "u": u}
+
+    if u == "ml":
+        if q >= 1000:
+            q = q / 1000.0
+            u = "L"
+        return {"v": _pretty_num(q), "u": u}
+
+    if u in ("kg", "L"):
+        return {"v": _pretty_num(q), "u": u}
+
+    # Counting units etc.
+    return {"v": _pretty_num(q), "u": u}
+
+templates.filters["pretty_num"] = _pretty_num
+templates.globals["fmt_qty"] = fmt_qty
+
+
 # -------- Helpers
 def nocache_html(html: str) -> Response:
     return HTMLResponse(html, headers={

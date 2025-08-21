@@ -228,10 +228,13 @@ Astuce : tu peux combiner (ex. « ddm produits laitiers »)."></span>
 
         <div class="pc-body">
           <div class="stat"><span class="k">Stocks</span><span class="v">{{ it.lots_count }}</span></div>
-          <div class="stat"><span class="k">Qté totale</span><span class="v">{{ '%.2f'|format(it.qty_total) }} {{
-              it.unit|pluralize_fr(it.qty_total) }}</span></div>
+          {% set Q = fmt_qty(it.qty_total, it.unit) %}
+          <div class="stat">
+            <span class="k">Qté totale</span>
+            <span class="v">{{ Q.v }} {{ (Q.u or it.unit)|pluralize_fr(Q.v) }}</span>
+          </div>
           {% if it.min_qty is not none %}
-          <div class="stat"><span class="k">Seuil min</span><span class="v">{{ it.min_qty }}</span></div>
+          <div class="stat"><span class="k">Seuil min</span><span class="v">{{ it.min_qty|pretty_num }}</span></div>
           {% endif %}
           {% if it.default_location_id %}
           <div class="stat"><span class="k">📍 Emplacement</span><span class="v">
