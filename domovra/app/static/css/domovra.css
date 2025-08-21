@@ -1841,6 +1841,17 @@ html[data-theme="light"] .qhelp code {
     content: none !important;
 }
 
+/* Taille discrète pour la case à cocher et bon espacement du label au‑dessus */
+#dlg-edit .chk {
+    width: 16px;
+    height: 16px;
+    margin: 0;
+}
+
+/* Harmonise la hauteur des <select> de la modale (y compris Type d’échéance) */
+#dlg-edit select {
+    min-height: 40px;
+}
 
 
 

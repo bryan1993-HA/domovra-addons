@@ -337,12 +337,39 @@ Astuce : tu peux combiner (ex. « ddm produits laitiers »)."></span>
     <div class="row">
       <div>
         <div class="label">Emplacement par défaut</div>
-        <select name="default_location_id" id="dlg-default-location"> … </select>
+        <select name="default_location_id" id="dlg-default-location">
+          <option value="">— Aucun —</option>
+          {% for loc in locations or [] %}
+          <option value="{{ loc.id }}">{{ loc.name }}</option>
+          {% endfor %}
+        </select>
       </div>
 
       <div>
         <div class="label">Unité</div>
-        <select name="unit" id="dlg-unit"> … </select>
+        <select name="unit" id="dlg-unit">
+          <optgroup label="Comptage">
+            <option value="pièce">pièce</option>
+            <option value="tranche">tranche</option>
+            <option value="paquet">paquet</option>
+            <option value="boîte">boîte</option>
+            <option value="bocal">bocal</option>
+            <option value="bouteille">bouteille</option>
+            <option value="sachet">sachet</option>
+            <option value="lot">lot</option>
+            <option value="barquette">barquette</option>
+            <option value="rouleau">rouleau</option>
+            <option value="dosette">dosette</option>
+          </optgroup>
+          <optgroup label="Poids">
+            <option value="g">g</option>
+            <option value="kg">kg</option>
+          </optgroup>
+          <optgroup label="Volume">
+            <option value="ml">ml</option>
+            <option value="L">L</option>
+          </optgroup>
+        </select>
       </div>
 
       <div>
@@ -357,15 +384,18 @@ Astuce : tu peux combiner (ex. « ddm produits laitiers »)."></span>
     <div class="row">
       <div>
         <div class="label">Alerte stock faible actif ?</div>
-        <select name="low_stock_enabled" id="dlg-low-enabled"> … </select>
+        <select name="low_stock_enabled" id="dlg-low-enabled">
+          <option value="1">Oui</option>
+          <option value="0">Non</option>
+        </select>
       </div>
 
       <div>
         <div class="label">Type d’échéance</div>
-        <div class="radio-row">
-          <label><input type="radio" name="expiry_kind" id="dlg-exp-dlc" value="DLC"> DLC</label>
-          <label><input type="radio" name="expiry_kind" id="dlg-exp-ddm" value="DDM"> DDM</label>
-        </div>
+        <select name="expiry_kind" id="dlg-exp-kind">
+          <option value="DLC">DLC</option>
+          <option value="DDM">DDM</option>
+        </select>
       </div>
 
       <div>
@@ -376,10 +406,8 @@ Astuce : tu peux combiner (ex. « ddm produits laitiers »)."></span>
 
     <div class="row">
       <div>
-        <label class="label">
-          <input type="checkbox" id="dlg-no-freeze" name="no_freeze" value="1">
-          Ne doit pas être congelé
-        </label>
+        <div class="label">Ne doit pas être congelé</div>
+        <input type="checkbox" id="dlg-no-freeze" name="no_freeze" value="1" class="chk">
       </div>
 
       <div id="dlg-freeze-group">
@@ -389,17 +417,45 @@ Astuce : tu peux combiner (ex. « ddm produits laitiers »)."></span>
 
       <div>
         <div class="label">Catégorie</div>
-        <select name="category" id="dlg-category"> … </select>
+        <select name="category" id="dlg-category">
+          <option value="">— Choisir —</option>
+          <optgroup label="Alimentation">
+            <option>Fruits & légumes</option>
+            <option>Viande</option>
+            <option>Poisson & fruits de mer</option>
+            <option>Produits laitiers</option>
+            <option>Œufs</option>
+            <option>Charcuterie</option>
+            <option>Fromages</option>
+            <option>Boulangerie & pâtisserie</option>
+            <option>Céréales, pâtes & riz</option>
+            <option>Épicerie salée</option>
+            <option>Épicerie sucrée</option>
+            <option>Conserves & bocaux</option>
+            <option>Condiments & sauces</option>
+            <option>Huiles & vinaigres</option>
+            <option>Boissons</option>
+            <option>Surgelés</option>
+            <option>Bio / Sans gluten</option>
+          </optgroup>
+          <optgroup label="Non alimentaire">
+            <option>Hygiène & beauté</option>
+            <option>Entretien & ménager</option>
+            <option>Animaux</option>
+            <option>Bébé</option>
+            <option>Autre</option>
+          </optgroup>
+        </select>
       </div>
     </div>
 
-    <!-- Actions -->
     <div class="dlg-actions">
       <button type="button" class="btn-cancel" onclick="document.getElementById('dlg-edit').close()">Annuler</button>
       <button class="secondary btn-save">Enregistrer</button>
     </div>
   </form>
 </dialog>
+
 
 
 <!-- Supprimer -->
@@ -764,15 +820,14 @@ Astuce : tu peux combiner (ex. « ddm produits laitiers »)."></span>
       setSelectValue($('#dlg-default-location'), edit.dataset.defaultLocation || '');
       setSelectValue($('#dlg-unit'), edit.dataset.unit || 'pièce');
       setSelectValue($('#dlg-low-enabled'), (edit.dataset.lowEnabled === '0' ? '0' : '1'));
-      const cat = $('#dlg-category'); if (cat) cat.value = edit.dataset.category || '';
+      setSelectValue($('#dlg-exp-kind'), (edit.dataset.expiryKind || 'DLC').toUpperCase());
+
+      const cat = $('#dlg-category');
+      if (cat) setSelectValue(cat, edit.dataset.category || '');
 
       $('#dlg-min').value = (edit.dataset.min || '');
       $('#dlg-shelf').value = (edit.dataset.shelf || '');
       $('#dlg-freeze-shelf').value = (edit.dataset.freezeShelf || '');
-
-      const kind = (edit.dataset.expiryKind || 'DLC').toUpperCase();
-      $('#dlg-exp-dlc').checked = (kind === 'DLC');
-      $('#dlg-exp-ddm').checked = (kind === 'DDM');
 
       const nf = $('#dlg-no-freeze'); if (nf) nf.checked = (edit.dataset.noFreeze === '1');
 
