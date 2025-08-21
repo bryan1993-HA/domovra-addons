@@ -116,11 +116,14 @@
 {% endblock %}
 
 {% block scripts %}
+<!-- 1) ZXing pour le fallback qui marche aussi en HTTP -->
+<script src="https://unpkg.com/@zxing/library@0.20.0"></script>
+
 <script>
     (function () {
         const $ = (s, p = document) => p.querySelector(s);
 
-        // Elts
+        // --- Références éléments
         const eanInput = $('#ean');
         const eanHint = $('#ean_hint');
         const nameSuggest = $('#name_suggest');
@@ -134,7 +137,7 @@
         const btnPlus1 = $('#btn_plus1');
         const btnPack = $('#btn_pack');
 
-        // ----- UI helpers
+        // --- Helpers
         function toast(msg, type = 'ok') { window.showToast?.(msg, type); }
         function setHint(el, text) { if (el) el.textContent = text || ''; }
 
@@ -143,10 +146,10 @@
             const unit = opt.dataset.unit || 'pièce';
             const pack = parseFloat(opt.dataset.pack || '0');
 
-            // unité par défaut issue du produit
+            // Unité par défaut issue du produit
             unitSel.value = Array.from(unitSel.options).some(o => o.value === unit) ? unit : 'pièce';
 
-            // +1 pack si connu (et unité "pièce")
+            // +1 pack (si connu) et unité "pièce"
             if (pack && pack > 1 && unitSel.value === 'pièce') {
                 btnPack.hidden = false;
                 setHint(offQtyHint, `Pack de ${pack} ${pack > 1 ? 'unités' : ''}`);
@@ -174,37 +177,32 @@
             qtyInput.value = (cur + 1).toString();
         });
 
-        // ----- Recherche par EAN : 1) DB locale, 2) OFF
+        // ------ Recherche par EAN : 1) DB locale, 2) OFF
         async function lookupByEAN(ean) {
             const code = (ean || '').trim().replace(/\s+/g, '');
             if (!code) { toast("EAN vide.", "warn"); return; }
             eanInput.value = code;
 
-            // 1) Essaie de retrouver un produit existant
+            // 1) Domovra (produit existant)
             try {
                 const r1 = await fetch(`{{ BASE }}api/product/by_barcode?code=${encodeURIComponent(code)}`);
                 if (r1.ok) {
                     const p = await r1.json();
-                    // Sélectionne le produit correspondant dans la liste
                     const opt = Array.from(productSelect.options).find(o => (o.dataset.barcode || '').replace(/\s+/g, '') === code);
                     if (opt) {
                         productSelect.value = opt.value;
-                        productSelect.dispatchEvent(new Event('change'));
                     } else {
-                        // S’il n’a pas le data-barcode côté HTML, on le sélectionne par id retourné
                         productSelect.value = String(p.id);
-                        productSelect.dispatchEvent(new Event('change'));
                     }
+                    productSelect.dispatchEvent(new Event('change'));
                     setHint(eanHint, `Produit trouvé : ${p.name}`);
                     if (!qtyInput.value) qtyInput.value = '1';
                     toast("Produit sélectionné depuis le stock.", "ok");
                     return;
                 }
-            } catch (e) {
-                // ignore → on tentera OFF
-            }
+            } catch (e) { /* on tente OFF après */ }
 
-            // 2) Sinon, tentative depuis OFF (nom + quantité indic.)
+            // 2) OFF
             try {
                 const r2 = await fetch(`{{ BASE }}api/off?barcode=${encodeURIComponent(code)}`);
                 const data = await r2.json();
@@ -228,15 +226,18 @@
 
         // Bouton recherche EAN
         $('#btn_check_ean')?.addEventListener('click', () => lookupByEAN(eanInput.value));
-
-        // Entrée clavier dans EAN → Enter lance la recherche
+        // Enter dans le champ EAN
         eanInput?.addEventListener('keydown', (ev) => {
             if (ev.key === 'Enter') { ev.preventDefault(); lookupByEAN(eanInput.value); }
         });
 
-        // ----- Bouton SCAN (caméra)
+        // ------ SCAN caméra (HTTP-friendly) ------
         $('#btn_scan')?.addEventListener('click', async () => {
-            if ('BarcodeDetector' in window) {
+            const CAN_SECURE = window.isSecureContext === true;
+            const HAS_BARCODE_DET = 'BarcodeDetector' in window;
+
+            // 1) En HTTPS + API native dispo → on tente BarcodeDetector
+            if (CAN_SECURE && HAS_BARCODE_DET) {
                 try {
                     const detector = new BarcodeDetector({ formats: ['ean_13', 'ean_8', 'upc_e', 'upc_a'] });
                     const file = await pickImageFromCamera();
@@ -247,33 +248,66 @@
                         const code = codes[0].rawValue;
                         eanInput.value = code;
                         lookupByEAN(code);
-                    } else {
-                        toast("Aucun code‑barres détecté.", "warn");
+                        return;
                     }
-                } catch (e) {
-                    toast("Scan non supporté sur ce navigateur.", "warn");
+                    // sinon on passe au fallback ZXing
+                } catch (e) { /* fallback */ }
+            }
+
+            // 2) Fallback qui MARCHE en HTTP : photo + ZXing (sans getUserMedia)
+            try {
+                const file = await pickImageFromCamera();
+                if (!file) return;
+                const code = await decodeImageWithZXing(file);
+                if (code) {
+                    eanInput.value = code;
+                    lookupByEAN(code);
+                } else {
+                    toast("Aucun code‑barres détecté sur la photo.", "warn");
                 }
-            } else {
-                toast("Scan non supporté (utilisez une douchette USB).", "warn");
+            } catch (e) {
+                toast("Scan indisponible. Utilisez une douchette ou saisissez l’EAN.", "warn");
             }
         });
 
+        // Ouvre la caméra comme sélecteur de fichier (OK en HTTP)
         function pickImageFromCamera() {
             return new Promise(resolve => {
                 const input = document.createElement('input');
                 input.type = 'file';
                 input.accept = 'image/*';
                 input.capture = 'environment';
-                input.onchange = () => resolve(input.files?.[0]);
+                input.onchange = () => resolve(input.files?.[0] || null);
                 input.click();
             });
         }
 
-        // ----- Créer produit (redirige vers Fiche produit avec EAN pré-rempli)
+        // ZXing : décodage d'une photo (File) sans flux vidéo
+        async function decodeImageWithZXing(file) {
+            return new Promise((resolve) => {
+                const reader = new FileReader();
+                reader.onload = async () => {
+                    try {
+                        const img = new Image();
+                        img.onload = async () => {
+                            try {
+                                const codeReader = new ZXing.BrowserMultiFormatReader();
+                                const result = await codeReader.decodeFromImage(img);
+                                resolve(result?.text || null);
+                            } catch (err) { resolve(null); }
+                        };
+                        img.onerror = () => resolve(null);
+                        img.src = reader.result;
+                    } catch (e) { resolve(null); }
+                };
+                reader.onerror = () => resolve(null);
+                reader.readAsDataURL(file);
+            });
+        }
+
+        // Créer produit (redirige vers Fiche produit avec EAN)
         $('#btn_create_prod')?.addEventListener('click', () => {
             const ean = (eanInput.value || '').trim();
-            // Redirige vers la page Fiche produit (où se trouve le formulaire de création),
-            // en passant l’EAN et une intention de retour éventuelle.
             const next = encodeURIComponent("{{ BASE }}achats");
             const url = `{{ BASE }}products?ean=${encodeURIComponent(ean)}&next=${next}`;
             window.location.href = url;
