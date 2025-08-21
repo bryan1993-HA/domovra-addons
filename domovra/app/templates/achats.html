@@ -123,18 +123,17 @@
             </div>
 
         </form>
-    </div>
-    <!-- DEBUG PANEL (caché par défaut, activé via JS) -->
-    <div id="dbg_panel" style="display:none; margin-top:1rem;">
-        <div class="card" style="background:var(--bg-soft,#1f2937); color:var(--fg,#e5e7eb);">
-            <div class="title">
-                <h3>Debug scan</h3>
+        <!-- DEBUG PANEL (caché par défaut, activé via JS) -->
+        <div id="dbg_panel" style="display:none; margin-top:1rem;">
+            <div class="card" style="background:var(--bg-soft,#1f2937); color:var(--fg,#e5e7eb);">
+                <div class="title">
+                    <h3>Debug scan</h3>
+                </div>
+                <pre id="dbg_log"
+                    style="white-space:pre-wrap; max-height:220px; overflow:auto; font-family:ui-monospace, SFMono-Regular, Menlo, monospace; font-size:12px;"></pre>
             </div>
-            <pre id="dbg_log"
-                style="white-space:pre-wrap; max-height:220px; overflow:auto; font-family:ui-monospace, SFMono-Regular, Menlo, monospace; font-size:12px;"></pre>
         </div>
     </div>
-
 </div>
 {% block scripts %}
 <script src="https://unpkg.com/@zxing/library@0.20.0"></script>
