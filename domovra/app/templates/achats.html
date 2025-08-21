@@ -6,6 +6,95 @@
 <span class="chip">🛒 Achats</span>
 {% endblock %}
 
+<style>
+    .scan-modal {
+        position: fixed;
+        inset: 0;
+        z-index: 9999;
+        background: rgba(0, 0, 0, .65);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .scan-modal.hidden {
+        display: none;
+    }
+
+    .scan-box {
+        position: relative;
+        width: min(92vw, 700px);
+        aspect-ratio: 3/4;
+        background: #000;
+        border-radius: 16px;
+        overflow: hidden;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, .4);
+    }
+
+    #scan_video,
+    #scan_overlay {
+        position: absolute;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+
+    .scan-hud {
+        position: absolute;
+        right: .75rem;
+        top: .75rem;
+        display: flex;
+        gap: .5rem;
+        z-index: 3
+    }
+
+    .scan-tip {
+        position: absolute;
+        left: 0;
+        right: 0;
+        bottom: .5rem;
+        text-align: center;
+        color: #fff;
+        font-weight: 600;
+        text-shadow: 0 1px 2px #000;
+        z-index: 3
+    }
+
+    .scan-frame {
+        position: absolute;
+        inset: 12% 8%;
+        border: 3px solid rgba(255, 255, 255, .8);
+        border-radius: 12px;
+        box-shadow: 0 0 0 200vmax rgba(0, 0, 0, .35);
+        z-index: 2;
+    }
+
+    .scan-frame::after {
+        content: "";
+        position: absolute;
+        left: 10%;
+        right: 10%;
+        top: 50%;
+        height: 2px;
+        background: rgba(0, 255, 128, .9);
+        box-shadow: 0 0 12px rgba(0, 255, 128, .9);
+        transform: translateY(-1px);
+        animation: scanline 2.1s linear infinite;
+    }
+
+    @keyframes scanline {
+        0% {
+            top: 18%
+        }
+
+        100% {
+            top: 82%
+        }
+    }
+</style>
+
+
 {% block content %}
 <div class="wrap" data-page="achats">
 
@@ -159,159 +248,11 @@
 {% endblock %}
 {% block scripts %}
 <!-- ZXing (fallback photo + live decode) -->
-<script src="{{ BASE }}static/js/zxing.min.js"></script> {# si tu n'as pas le fichier local, remplace par:
-https://unpkg.com/@zxing/library@0.20.0 #}
+<script src="{{ BASE }}static/js/zxing.min.js"></script>
 
 <script>
-
-    // ====== MODALE SCAN (vidéo) ======
-    const modal = document.getElementById('scan_modal');
-    const vEl = document.getElementById('scan_video');
-    const cvs = document.getElementById('scan_overlay');
-    const ctx = cvs?.getContext('2d');
-    const btnFlip2 = document.getElementById('scan_flip');
-    const btnClose = document.getElementById('scan_close');
-
-    let rafId = null;
-
-    function openScanModal() { modal.classList.remove('hidden'); modal.setAttribute('aria-hidden', 'false'); }
-    function closeScanModal() { modal.classList.add('hidden'); modal.setAttribute('aria-hidden', 'true'); stopLive(); clearOverlay(); }
-
-    function fitCanvasToVideo() {
-        if (!cvs || !vEl) return;
-        const r = vEl.getBoundingClientRect();
-        cvs.width = r.width * devicePixelRatio;
-        cvs.height = r.height * devicePixelRatio;
-    }
-
-    function clearOverlay() { if (ctx) { ctx.clearRect(0, 0, cvs.width, cvs.height); } }
-
-    function drawDetection(result) {
-        if (!ctx || !result) return;
-        clearOverlay();
-        const pts = result.resultPoints || []; // ZXing renvoie souvent 2 points (gauche/droite) en 1D
-        const vw = vEl.videoWidth, vh = vEl.videoHeight;
-        const rw = cvs.width, rh = cvs.height;
-        if (!vw || !vh) return;
-
-        const sx = rw / vw, sy = rh / vh;
-
-        ctx.lineWidth = 4 * devicePixelRatio;
-        ctx.strokeStyle = 'rgba(0,255,128,0.95)';
-        ctx.fillStyle = 'rgba(0,255,128,0.18)';
-
-        if (pts.length >= 2) {
-            // Ligne entre 2 points
-            const p0 = { x: pts[0].x * sx, y: pts[0].y * sy };
-            const p1 = { x: pts[1].x * sx, y: pts[1].y * sy };
-            ctx.beginPath();
-            ctx.moveTo(p0.x, p0.y); ctx.lineTo(p1.x, p1.y);
-            ctx.stroke();
-
-            // Boîte englobante grossière autour de la ligne
-            const pad = 24 * devicePixelRatio;
-            const minx = Math.min(p0.x, p1.x) - pad, maxx = Math.max(p0.x, p1.x) + pad;
-            const miny = Math.min(p0.y, p1.y) - pad, maxy = Math.max(p0.y, p1.y) + pad;
-            ctx.strokeRect(minx, miny, maxx - minx, maxy - miny);
-        } else {
-            // Fallback : un rectangle centré
-            const w = rw * 0.6, h = rh * 0.18;
-            const x = (rw - w) / 2, y = (rh - h) / 2;
-            ctx.strokeRect(x, y, w, h);
-        }
-    }
-
-    async function getVideoInputs() {
-        if (!navigator.mediaDevices?.enumerateDevices) return [];
-        const all = await navigator.mediaDevices.enumerateDevices();
-        return all.filter(d => d.kind === 'videoinput');
-    }
-
-    // Ouvre la modale et démarre le live
-    document.getElementById('btn_scan_live')?.addEventListener('click', async () => {
-        if (!navigator.mediaDevices?.getUserMedia) { window.showToast?.("getUserMedia indisponible.", "warn"); return; }
-        openScanModal();
-        await startScanLive();
-    });
-
-    btnClose?.addEventListener('click', closeScanModal);
-    modal?.addEventListener('click', (e) => { if (e.target === modal) closeScanModal(); });
-
-    // Flip caméra
-    btnFlip2?.addEventListener('click', async () => {
-        const devices = await getVideoInputs();
-        if (!devices.length) return;
-        const idx = devices.findIndex(d => d.deviceId === currentDeviceId);
-        currentDeviceId = devices[(idx + 1 + devices.length) % devices.length].deviceId;
-        await restartLive();
-    });
-
-    // Démarre le flux + ZXing
-    async function startScanLive() {
-        try {
-            fitCanvasToVideo();
-            window.addEventListener('resize', fitCanvasToVideo, { passive: true });
-
-            const constraints = {
-                video: currentDeviceId ? { deviceId: { exact: currentDeviceId } } : { facingMode: 'environment' },
-                audio: false
-            };
-            const stream = await navigator.mediaDevices.getUserMedia(constraints);
-            currentStream = stream;
-            vEl.srcObject = stream;
-
-            // Choix caméra arrière si possible
-            const devs = await getVideoInputs();
-            if (!currentDeviceId && devs.length) {
-                const back = devs.find(d => /back|rear|environment|arrière/i.test(d.label));
-                currentDeviceId = (back || devs[0]).deviceId;
-            }
-
-            // ZXing live
-            if (!zxingReader) zxingReader = new ZXing.BrowserMultiFormatReader();
-            liveRunning = true;
-
-            // Petit raf de nettoyage overlay
-            const loop = () => {
-                if (!liveRunning) return; // laisser la scanline du CSS; on nettoie doucement
-                rafId = requestAnimationFrame(loop);
-            };
-            rafId = requestAnimationFrame(loop);
-
-            await zxingReader.decodeFromVideoDevice(currentDeviceId || null, vEl, (result, err) => {
-                if (result && liveRunning) {
-                    drawDetection(result);
-                    const code = result.text;
-                    // stop → remplir EAN + lookup
-                    liveRunning = false;
-                    stopLive(false); // garde la modale ouverte 150ms pour voir le cadre
-                    setTimeout(() => { closeScanModal(); }, 150);
-                    document.getElementById('ean').value = code;
-                    window.showToast?.('Code détecté : ' + code, 'ok');
-                    // réutilise ta fonction existante :
-                    if (typeof lookupByEAN === 'function') lookupByEAN(code);
-                }
-            });
-        } catch (err) {
-            window.showToast?.("Caméra indisponible. Essaie le mode 📷 (photo).", "warn");
-            closeScanModal();
-        }
-    }
-
-    async function restartLive() { stopLive(false); await startScanLive(); }
-
-    function stopLive(hide = true) {
-        try { zxingReader?.reset(); } catch { }
-        if (currentStream) { for (const t of currentStream.getTracks()) t.stop(); }
-        currentStream = null;
-        cancelAnimationFrame(rafId); rafId = null;
-        if (hide) closeScanModal();
-        window.removeEventListener('resize', fitCanvasToVideo);
-        clearOverlay();
-    }
-
     (function () {
-        // ====== DEBUG minimal (tu peux mettre false après tests) ======
+        // ===== DEBUG =====
         const DEBUG = true;
         const dbgPanel = document.getElementById('dbg_panel');
         const dbgLogEl = document.getElementById('dbg_log');
@@ -328,22 +269,34 @@ https://unpkg.com/@zxing/library@0.20.0 #}
         }
         function toast(msg, type = 'ok') { window.showToast?.(msg, type); log('TOAST', type, msg); }
 
-        // ====== Références & état ======
+        // ===== Refs communs =====
         const $ = (s, p = document) => p.querySelector(s);
 
+        // Form
         const eanInput = $('#ean'), eanHint = $('#ean_hint');
         const nameSuggest = $('#name_suggest'), offQtyHint = $('#off_qty_hint');
-
         const productSelect = $('#product_select'), productHint = $('#product_hint');
-
         const qtyInput = $('#qty'), unitSel = $('#unit'), btnPlus1 = $('#btn_plus1'), btnPack = $('#btn_pack');
 
+        // Live (petit aperçu dans le formulaire)
         const liveBox = $('#live_scanner');
         const videoEl = $('#video_preview');
         const btnLive = $('#btn_scan_live');
         const btnLiveStop = $('#btn_live_stop');
         const btnLiveFlip = $('#btn_live_flip');
 
+        // Modale plein écran
+        const modal = document.getElementById('scan_modal');
+        const vEl = document.getElementById('scan_video');
+        const cvs = document.getElementById('scan_overlay');
+        const ctx = cvs?.getContext('2d');
+        const btnFlip2 = document.getElementById('scan_flip');
+        const btnClose = document.getElementById('scan_close');
+
+        // Bouton photo
+        const btnPhoto = document.getElementById('btn_scan');
+
+        // State partagé
         const isSecure = window.isSecureContext === true;
         const hasBarDet = 'BarcodeDetector' in window;
         const hasMedia = !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia);
@@ -352,70 +305,55 @@ https://unpkg.com/@zxing/library@0.20.0 #}
         let currentDeviceId = null;
         let zxingReader = null;
         let liveRunning = false;
+        let rafId = null;
 
-        log('Page load', {
-            href: location.href,
-            isSecure, hasBarDet, hasMedia,
-            ua: navigator.userAgent
-        });
+        log('Page load', { href: location.href, isSecure, hasBarDet, hasMedia, ua: navigator.userAgent });
 
-        // (optionnel) permissions caméra
+        // Permissions (best-effort)
         (async () => {
             if (navigator.permissions?.query) {
                 try { const st = await navigator.permissions.query({ name: 'camera' }); log('permissions.camera', { state: st.state }); } catch (e) { }
             }
         })();
 
-        // ====== Helpers UI ======
+        // ===== UI helpers =====
         function setHint(el, text) { if (el) el.textContent = text || ''; }
 
         function applyProductDefaults(opt) {
             if (!opt) { btnPack && (btnPack.hidden = true); setHint(productHint, ''); setHint(offQtyHint, ''); return; }
             const unit = opt.dataset.unit || 'pièce';
             const pack = parseFloat(opt.dataset.pack || '0');
-
-            // Unité par défaut du produit
             unitSel.value = Array.from(unitSel.options).some(o => o.value === unit) ? unit : 'pièce';
-
-            // Bouton +1 pack
             if (btnPack) {
                 if (pack && pack > 1 && unitSel.value === 'pièce') {
-                    btnPack.hidden = false;
-                    setHint(offQtyHint, `Pack de ${pack} ${pack > 1 ? 'unités' : ''}`);
+                    btnPack.hidden = false; setHint(offQtyHint, `Pack de ${pack} ${pack > 1 ? 'unités' : ''}`);
                     btnPack.onclick = () => { const cur = parseFloat(qtyInput.value || '0') || 0; qtyInput.value = String(cur + pack); };
-                } else {
-                    btnPack.hidden = true; setHint(offQtyHint, '');
-                }
+                } else { btnPack.hidden = true; setHint(offQtyHint, ''); }
             }
-
             const bc = opt.dataset.barcode || '';
             setHint(productHint, bc ? `EAN: ${bc}` : '');
         }
-
         productSelect?.addEventListener('change', () => {
             const opt = productSelect.selectedOptions[0];
             applyProductDefaults(opt);
         });
-
         btnPlus1?.addEventListener('click', () => {
             const cur = parseFloat(qtyInput.value || '0') || 0;
             qtyInput.value = String(cur + 1);
         });
 
-        // ====== Lookup EAN: 1) DB locale 2) OFF ======
+        // ===== Lookup EAN (DB -> OFF) =====
         async function lookupByEAN(ean) {
             const code = (ean || '').trim().replace(/\s+/g, '');
             if (!code) { toast('EAN vide.', 'warn'); return; }
             eanInput.value = code;
             log('lookupByEAN', code);
 
-            // 1) DB locale
             try {
                 const r = await fetch(`{{ BASE }}api/product/by_barcode?code=${encodeURIComponent(code)}`);
                 log('by_barcode status', r.status);
                 if (r.ok) {
                     const p = await r.json();
-                    log('by_barcode result', p);
                     const opt = Array.from(productSelect.options).find(o => (o.dataset.barcode || '').replace(/\s+/g, '') === code);
                     productSelect.value = opt ? opt.value : String(p.id);
                     productSelect.dispatchEvent(new Event('change'));
@@ -426,7 +364,6 @@ https://unpkg.com/@zxing/library@0.20.0 #}
                 }
             } catch (e) { log('by_barcode error', String(e)); }
 
-            // 2) OFF
             try {
                 const r = await fetch(`{{ BASE }}api/off?barcode=${encodeURIComponent(code)}`);
                 log('OFF status', r.status);
@@ -440,22 +377,17 @@ https://unpkg.com/@zxing/library@0.20.0 #}
                     toast(`OFF → ${data.name || 'Nom inconnu'}`, 'warn');
                 } else {
                     setHint(eanHint, "Ni Domovra ni OFF n’ont trouvé ce code.");
-                    nameSuggest.value = '';
-                    setHint(offQtyHint, '');
-                    toast("Aucun résultat pour cet EAN.", "warn");
+                    nameSuggest.value = ''; setHint(offQtyHint, ''); toast("Aucun résultat pour cet EAN.", "warn");
                 }
             } catch (e) {
                 setHint(eanHint, "Erreur OFF."); toast("Erreur lors de la récupération OFF.", "error");
                 log('OFF fetch error', String(e));
             }
         }
+        document.getElementById('btn_check_ean')?.addEventListener('click', () => lookupByEAN(eanInput.value));
+        eanInput?.addEventListener('keydown', (ev) => { if (ev.key === 'Enter') { ev.preventDefault(); lookupByEAN(eanInput.value); } });
 
-        $('#btn_check_ean')?.addEventListener('click', () => lookupByEAN(eanInput.value));
-        eanInput?.addEventListener('keydown', (ev) => {
-            if (ev.key === 'Enter') { ev.preventDefault(); lookupByEAN(eanInput.value); }
-        });
-
-        // ====== Helpers photo (HTTP/HTTPS) ======
+        // ===== Photo (📷) =====
         function pickImageFromCamera() {
             log('pickImageFromCamera: open');
             return new Promise(resolve => {
@@ -463,15 +395,11 @@ https://unpkg.com/@zxing/library@0.20.0 #}
                 input.type = 'file';
                 input.accept = 'image/*';
                 input.setAttribute('capture', 'environment');
-
-                // iOS préférera souvent 'camera'
                 const ua = navigator.userAgent || '';
                 if (/iPad|iPhone|iPod/.test(ua)) {
                     input.accept = 'image/*;capture=camera';
                     input.setAttribute('capture', 'camera');
                 }
-
-                // variante Android: si rien choisi, retenter 'camera'
                 let triedAlt = false;
                 input.onchange = () => { log('pickImageFromCamera: change', input.files?.[0]?.type, input.files?.[0]?.size); resolve(input.files?.[0] || null); };
                 input.addEventListener('click', () => {
@@ -479,19 +407,15 @@ https://unpkg.com/@zxing/library@0.20.0 #}
                         if (!input.files?.length && !triedAlt && /Android/.test(ua)) {
                             triedAlt = true;
                             const alt = document.createElement('input');
-                            alt.type = 'file';
-                            alt.accept = 'image/*';
-                            alt.setAttribute('capture', 'camera');
+                            alt.type = 'file'; alt.accept = 'image/*'; alt.setAttribute('capture', 'camera');
                             alt.onchange = () => { log('pickImageFromCamera: alt change', alt.files?.[0]?.type, alt.files?.[0]?.size); resolve(alt.files?.[0] || null); };
                             alt.click();
                         }
                     }, 700);
                 });
-
                 input.click();
             });
         }
-
         async function decodeImageWithZXing(file) {
             log('decodeImageWithZXing: start');
             return new Promise((resolve) => {
@@ -513,48 +437,46 @@ https://unpkg.com/@zxing/library@0.20.0 #}
                 fr.readAsDataURL(file);
             });
         }
-
-        // ====== SCAN PHOTO (📷) ======
-        $('#btn_scan')?.addEventListener('click', async () => {
+        btnPhoto?.addEventListener('click', async () => {
             log('scan: click', { isSecure, hasBarDet });
-            // 1) BarcodeDetector (si dispo) — rapide
             if (isSecure && hasBarDet) {
                 try {
                     const file = await pickImageFromCamera(); if (!file) { log('scan: no file'); return; }
-                    log('scan: file picked', { size: file.size, type: file.type });
                     const bmp = await createImageBitmap(file);
                     const det = new BarcodeDetector({ formats: ['ean_13', 'ean_8', 'upc_e', 'upc_a'] });
                     const found = await det.detect(bmp);
                     log('scan: BD found', found?.map(f => f.rawValue));
-                    if (found?.length) {
-                        const code = found[0].rawValue;
-                        eanInput.value = code;
-                        lookupByEAN(code);
-                        return;
-                    }
+                    if (found?.length) { const code = found[0].rawValue; eanInput.value = code; lookupByEAN(code); return; }
                 } catch (e) { log('scan: BD error', String(e)); }
             }
-            // 2) Fallback ZXing (photo)
             try {
                 const file = await pickImageFromCamera(); if (!file) { log('scan: no file (fallback)'); return; }
-                log('scan: fallback file', { size: file.size, type: file.type });
                 const code = await decodeImageWithZXing(file);
                 log('scan: ZXing result', code);
                 if (code) { eanInput.value = code; lookupByEAN(code); }
                 else toast('Aucun code‑barres détecté sur la photo.', 'warn');
-            } catch (e) {
-                toast('Scan indisponible. Utilisez une douchette ou saisissez l’EAN.', 'warn');
-                log('scan: fallback error', String(e));
-            }
+            } catch (e) { toast('Scan indisponible. Utilisez une douchette ou saisissez l’EAN.', 'warn'); log('scan: fallback error', String(e)); }
         });
 
-        // ====== Helpers vidéo (HTTPS + autorisation) ======
+        // ===== Vidéo helpers =====
         async function getVideoInputs() {
             if (!navigator.mediaDevices?.enumerateDevices) return [];
             const all = await navigator.mediaDevices.enumerateDevices();
             return all.filter(d => d.kind === 'videoinput');
         }
+        function stopLive(hideBox = true) {
+            liveRunning = false;
+            try { zxingReader?.reset(); } catch { }
+            if (currentStream) { for (const tr of currentStream.getTracks()) tr.stop(); }
+            currentStream = null;
+            cancelAnimationFrame(rafId); rafId = null;
+            if (hideBox && liveBox) liveBox.style.display = 'none';
+            window.removeEventListener('resize', fitCanvasToVideo);
+            clearOverlay();
+        }
+        async function restartLive() { stopLive(false); await startScanLive(); }
 
+        // ===== Live (petit aperçu dans le formulaire) =====
         async function startZXingContinuous() {
             if (!zxingReader) zxingReader = new ZXing.BrowserMultiFormatReader();
             try {
@@ -573,91 +495,143 @@ https://unpkg.com/@zxing/library@0.20.0 #}
                 setHint($('#live_hint'), 'Impossible de décoder en continu. Essaie le mode 📷 (photo).');
             }
         }
-
-        async function restartLive() {
-            stopLive(false);
-            btnLive?.click();
-        }
-
-        function stopLive(hide = true) {
-            liveRunning = false;
-            try { zxingReader?.reset(); } catch { }
-            if (currentStream) {
-                for (const tr of currentStream.getTracks()) tr.stop();
-            }
-            currentStream = null;
-            if (hide && liveBox) liveBox.style.display = 'none';
-        }
-
-        // ====== SCAN VIDÉO (🎥) ======
         btnLive?.addEventListener('click', async () => {
             log('live: click', { isSecure, hasMedia });
             if (!hasMedia) { toast('getUserMedia indisponible.', 'warn'); return; }
-
             try {
-                // 1) Ouvre la caméra (si deviceId connu, on le force ; sinon on laisse choisir au navigateur)
-                const constraints = {
-                    video: currentDeviceId ? { deviceId: { exact: currentDeviceId } } : true,
-                    audio: false
-                };
+                const constraints = { video: currentDeviceId ? { deviceId: { exact: currentDeviceId } } : true, audio: false };
                 const stream = await navigator.mediaDevices.getUserMedia(constraints);
                 currentStream = stream;
                 if (videoEl) videoEl.srcObject = stream;
                 if (liveBox) liveBox.style.display = 'block';
                 liveRunning = true;
 
-                // 2) Liste des caméras avec enumerateDevices (remplace l'API ZXing qui manquait)
                 const devices = await getVideoInputs();
                 log('live: devices', devices.map(d => ({ id: d.deviceId, label: d.label })));
-
                 if (!currentDeviceId && devices.length) {
-                    // Essaie caméra arrière si label indique 'back/rear/environment'
                     const back = devices.find(d => /back|rear|environment|arrière/i.test(d.label));
                     currentDeviceId = (back || devices[0]).deviceId;
                 }
-
-                // 3) Décodage en continu
                 startZXingContinuous();
                 setHint($('#live_hint'), 'Pointe un code‑barres vers la caméra…');
-
             } catch (err) {
                 log('live: getUserMedia error', { name: err?.name, message: err?.message });
-                if (err && (err.name === 'NotAllowedError' || err.name === 'SecurityError')) {
-                    toast("Accès caméra refusé. Autorise la caméra pour *.ui.nabu.casa.", "error");
-                } else if (err && err.name === 'NotFoundError') {
-                    toast("Aucune caméra détectée.", "error");
-                } else {
-                    toast("Caméra indisponible dans cette vue (Ingress). Utilise 📷 (photo) ou une douchette.", "warn");
-                }
+                if (err && (err.name === 'NotAllowedError' || err.name === 'SecurityError')) toast("Accès caméra refusé. Autorise la caméra pour *.ui.nabu.casa.", "error");
+                else if (err && err.name === 'NotFoundError') toast("Aucune caméra détectée.", "error");
+                else toast("Caméra indisponible dans cette vue (Ingress). Utilise 📷 (photo) ou une douchette.", "warn");
                 stopLive();
             }
         });
-
-        btnLiveStop?.addEventListener('click', stopLive);
-
+        btnLiveStop?.addEventListener('click', () => stopLive());
         btnLiveFlip?.addEventListener('click', async () => {
             try {
                 const devices = await getVideoInputs();
                 if (devices.length) {
                     const idx = devices.findIndex(d => d.deviceId === currentDeviceId);
-                    const next = devices[(idx + 1 + devices.length) % devices.length];
-                    currentDeviceId = next.deviceId;
-                    await restartLive();
-                } else {
-                    toast("Aucune autre caméra détectée.", "warn");
-                }
+                    currentDeviceId = devices[(idx + 1 + devices.length) % devices.length].deviceId;
+                    // On relance le live aperçu
+                    stopLive(false);
+                    btnLive?.click();
+                } else toast("Aucune autre caméra détectée.", "warn");
             } catch (e) { log('live: flip error', String(e)); }
         });
 
-        // ====== Créer produit (redirige vers Fiche produit) ======
-        $('#btn_create_prod')?.addEventListener('click', () => {
+        // ===== Modale plein écran =====
+        function openScanModal() { modal.classList.remove('hidden'); modal.setAttribute('aria-hidden', 'false'); }
+        function closeScanModal() { modal.classList.add('hidden'); modal.setAttribute('aria-hidden', 'true'); stopLive(); }
+
+        function fitCanvasToVideo() {
+            if (!cvs || !vEl) return;
+            const r = vEl.getBoundingClientRect();
+            cvs.width = r.width * devicePixelRatio;
+            cvs.height = r.height * devicePixelRatio;
+        }
+        function clearOverlay() { if (ctx) ctx.clearRect(0, 0, cvs.width, cvs.height); }
+        function drawDetection(result) {
+            if (!ctx || !result) return;
+            clearOverlay();
+            const pts = result.resultPoints || [];
+            const vw = vEl.videoWidth, vh = vEl.videoHeight;
+            const rw = cvs.width, rh = cvs.height;
+            if (!vw || !vh) return;
+            const sx = rw / vw, sy = rh / vh;
+            ctx.lineWidth = 4 * devicePixelRatio;
+            ctx.strokeStyle = 'rgba(0,255,128,0.95)';
+            if (pts.length >= 2) {
+                const p0 = { x: pts[0].x * sx, y: pts[0].y * sy };
+                const p1 = { x: pts[1].x * sx, y: pts[1].y * sy };
+                ctx.beginPath(); ctx.moveTo(p0.x, p0.y); ctx.lineTo(p1.x, p1.y); ctx.stroke();
+                const pad = 24 * devicePixelRatio;
+                const minx = Math.min(p0.x, p1.x) - pad, maxx = Math.max(p0.x, p1.x) + pad;
+                const miny = Math.min(p0.y, p1.y) - pad, maxy = Math.max(p0.y, p1.y) + pad;
+                ctx.strokeRect(minx, miny, maxx - minx, maxy - miny);
+            } else {
+                const w = rw * 0.6, h = rh * 0.18, x = (rw - w) / 2, y = (rh - h) / 2;
+                ctx.strokeRect(x, y, w, h);
+            }
+        }
+        async function startScanLive() {
+            try {
+                fitCanvasToVideo();
+                window.addEventListener('resize', fitCanvasToVideo, { passive: true });
+                const constraints = { video: currentDeviceId ? { deviceId: { exact: currentDeviceId } } : { facingMode: 'environment' }, audio: false };
+                const stream = await navigator.mediaDevices.getUserMedia(constraints);
+                currentStream = stream;
+                vEl.srcObject = stream;
+
+                const devs = await getVideoInputs();
+                if (!currentDeviceId && devs.length) {
+                    const back = devs.find(d => /back|rear|environment|arrière/i.test(d.label));
+                    currentDeviceId = (back || devs[0]).deviceId;
+                }
+                if (!zxingReader) zxingReader = new ZXing.BrowserMultiFormatReader();
+                liveRunning = true;
+
+                const loop = () => { if (!liveRunning) return; rafId = requestAnimationFrame(loop); };
+                rafId = requestAnimationFrame(loop);
+
+                await zxingReader.decodeFromVideoDevice(currentDeviceId || null, vEl, (result, err) => {
+                    if (result && liveRunning) {
+                        drawDetection(result);
+                        const code = result.text;
+                        liveRunning = false;
+                        stopLive(false);
+                        setTimeout(() => closeScanModal(), 150);
+                        eanInput.value = code;
+                        toast('Code détecté : ' + code, 'ok');
+                        lookupByEAN(code);
+                    }
+                });
+            } catch (err) {
+                toast("Caméra indisponible. Essaie le mode 📷 (photo).", "warn");
+                closeScanModal();
+            }
+        }
+
+        document.getElementById('btn_scan_live')?.addEventListener('click', async () => {
+            if (!navigator.mediaDevices?.getUserMedia) { toast("getUserMedia indisponible.", "warn"); return; }
+            openScanModal();
+            await startScanLive();
+        });
+        btnClose?.addEventListener('click', closeScanModal);
+        modal?.addEventListener('click', (e) => { if (e.target === modal) closeScanModal(); });
+        btnFlip2?.addEventListener('click', async () => {
+            const devices = await getVideoInputs();
+            if (!devices.length) return;
+            const idx = devices.findIndex(d => d.deviceId === currentDeviceId);
+            currentDeviceId = devices[(idx + 1 + devices.length) % devices.length].deviceId;
+            await restartLive();
+        });
+
+        // ===== Créer produit =====
+        document.getElementById('btn_create_prod')?.addEventListener('click', () => {
             const ean = (eanInput.value || '').trim();
             const next = encodeURIComponent("{{ BASE }}achats");
             const url = `{{ BASE }}products?ean=${encodeURIComponent(ean)}&next=${next}`;
             window.location.href = url;
         });
 
-        // ====== Toast après ajout ======
+        // ===== Toast après ajout =====
         if (new URLSearchParams(location.search).has('added')) {
             toast("Ajout enregistré dans le stock.", "ok");
             history.replaceState({}, "", location.pathname);
