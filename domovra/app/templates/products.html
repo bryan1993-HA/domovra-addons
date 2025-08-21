@@ -195,7 +195,13 @@
       {% set is_low = (it.qty_total < (it.min_qty if it.min_qty is not none else 0) and (it.min_qty is not none)) %}
         <article class="prod-card"
         data-name="{{ (it.name ~ ' ' ~ (it.category or '') ~ ' ' ~ (it.unit or '') ~ ' ' ~ (it.barcode or ''))|lower }}"
-        data-barcode="{{ (it.barcode or '')|lower }}">
+        data-barcode="{{ (it.barcode or '')|lower }}" data-category="{{ (it.category or '')|lower }}"
+        data-unit="{{ (it.unit or '')|lower }}" data-expiry="{{ (it.expiry_kind or 'DLC')|lower }}" {# "dlc" ou "ddm" #}
+        data-freeze="{{ 1 if (it.no_freeze or 0)!=0 else 0 }}" {# 1=interdit de congeler #}
+        data-location="{{ (loc_map.get((it.default_location_id|string)) or '')|lower if it.default_location_id else '' }}"
+        data-lots="{{ it.lots_count|int }}" data-qty="{{ '%.3f'|format(it.qty_total) }}"
+        data-hasbarcode="{{ 1 if it.barcode else 0 }}"
+        data-low="{{ 1 if (it.min_qty is not none and it.qty_total < it.min_qty) else 0 }}">
         <header class="pc-head">
           <div class="pc-title">
             <h3 class="pc-name">{{ it.name }}</h3>
@@ -476,33 +482,194 @@
   {{ loc_map | tojson }}
 </script>
 
-<script type="application/json" id="loc-map-data">
-  {{ loc_map | tojson }}
-</script>
-
 <script>
-  /* ====== Recherche (cartes) ====== */
+  /* ====== Recherche intelligente (cartes) ======
+     Exemples : ddm -has:barcode qty>0 | cat:"Produits laitiers" u:g is:low | loc:Frigo -nofreeze
+     ⚠︎ nécessite des data-attributes sur .prod-card : category, unit, expiry, freeze, location, lots, qty, hasbarcode, low
+  */
   const q = document.getElementById('q');
   const grid = document.getElementById('cardsGrid');
   const cards = Array.from(grid ? grid.children : []);
-  function applyFilterCards(s) {
-    const t = (s || '').toLowerCase().trim();
+
+  function tokenize(str) {
+    const tokens = [];
+    let cur = '', inQ = false;
+    for (let i = 0; i < str.length; i++) {
+      const c = str[i];
+      if (c === '"') { inQ = !inQ; continue; }
+      if (!inQ && /\s/.test(c)) { if (cur) { tokens.push(cur); cur = ''; } }
+      else { cur += c; }
+    }
+    if (cur) tokens.push(cur);
+    return tokens;
+  }
+
+  function parseQuery(qs) {
+    const raw = (qs || '').trim().toLowerCase();
+    if (!raw) return { text: [], filters: [], excludes: [] };
+
+    const tokens = tokenize(raw);
+    const text = [];
+    const filters = [];
+    const excludes = [];
+
+    const pushFilter = (arr, key, op, val) => arr.push({ key, op, val });
+
+    tokens.forEach(tok => {
+      let t = tok, neg = false;
+      if (t.startsWith('-')) { neg = true; t = t.slice(1); }
+
+      if (t === 'dlc' || t === 'ddm') {
+        pushFilter(neg ? excludes : filters, 'expiry', '==', t); return;
+      }
+      if (t === 'nofreeze' || t === 'freeze:no') {
+        pushFilter(neg ? excludes : filters, 'freeze', '==', 1); return;
+      }
+      if (t === 'freeze:yes') {
+        pushFilter(neg ? excludes : filters, 'freeze', '==', 0); return;
+      }
+      if (t === 'is:low' || t === 'low') {
+        pushFilter(neg ? excludes : filters, 'low', '==', 1); return;
+      }
+      if (t === 'has:barcode') {
+        pushFilter(neg ? excludes : filters, 'hasbarcode', '==', 1); return;
+      }
+
+      const m = t.match(/^([a-z]+)([=<>]{1,2})?(.*)$/);
+      if (m) {
+        let [, key, op, val] = m;
+        key = key.trim(); op = (op || '==').trim(); val = (val || '').trim();
+        if (val.startsWith(':')) val = val.slice(1);
+
+        if (key === 'cat') key = 'category';
+        if (key === 'u') key = 'unit';
+        if (key === 'loc') key = 'location';
+        if (key === 'ean') key = 'barcode';
+
+        if (key === 'freeze') val = (/^(1|yes|true|on)$/i.test(val)) ? 1 : 0;
+        if (['lots', 'qty'].includes(key)) {
+          val = parseFloat(val.replace(',', '.'));
+          if (Number.isNaN(val)) return;
+        }
+        pushFilter(neg ? excludes : filters, key, op, val);
+        return;
+      }
+
+      text.push(t);
+    });
+
+    return { text, filters, excludes };
+  }
+
+  function matchesOps(num, op, val) {
+    if (typeof num !== 'number' || Number.isNaN(num)) return false;
+    switch (op) {
+      case '>': return num > val;
+      case '>=': return num >= val;
+      case '<': return num < val;
+      case '<=': return num <= val;
+      case '!=': return num != val; // eslint-disable-line eqeqeq
+      case '==':
+      default: return num == val; // eslint-disable-line eqeqeq
+    }
+  }
+
+  function cardMatches(card, query) {
+    const txt = (card.dataset.name || '');
+
+    for (const t of query.text) {
+      if (!txt.includes(t)) return false;
+    }
+
+    const ds = card.dataset;
+
+    for (const f of query.filters) {
+      const k = f.key, op = f.op, v = f.val;
+      switch (k) {
+        case 'category':
+        case 'unit':
+        case 'location':
+        case 'barcode':
+        case 'expiry':
+          if (!String(ds[k] || '').includes(String(v))) return false;
+          break;
+
+        case 'freeze':
+        case 'low':
+        case 'hasbarcode': {
+          const cur = parseInt(ds[k] || '0', 10) || 0;
+          if (!matchesOps(cur, op, parseInt(v, 10))) return false;
+          break;
+        }
+
+        case 'lots': {
+          const cur = parseInt(ds.lots || '0', 10) || 0;
+          if (!matchesOps(cur, op, v)) return false;
+          break;
+        }
+        case 'qty': {
+          const cur = parseFloat(ds.qty || '0') || 0;
+          if (!matchesOps(cur, op, v)) return false;
+          break;
+        }
+
+        default:
+          if (!txt.includes(String(v))) return false;
+      }
+    }
+
+    for (const f of query.excludes) {
+      const k = f.key, op = f.op, v = f.val;
+      let hit = false;
+      switch (k) {
+        case 'category':
+        case 'unit':
+        case 'location':
+        case 'barcode':
+        case 'expiry':
+          hit = String(ds[k] || '').includes(String(v)); break;
+        case 'freeze':
+        case 'low':
+        case 'hasbarcode':
+          hit = matchesOps(parseInt(ds[k] || '0', 10) || 0, op, parseInt(v, 10)); break;
+        case 'lots':
+          hit = matchesOps(parseInt(ds.lots || '0', 10) || 0, op, v); break;
+        case 'qty':
+          hit = matchesOps(parseFloat(ds.qty || '0') || 0, op, v); break;
+        default:
+          hit = txt.includes(String(v));
+      }
+      if (hit) return false;
+    }
+
+    return true;
+  }
+
+  let searchTimer = null;
+  function runSmartSearch(qs) {
+    const query = parseQuery(qs);
     let shown = 0;
     cards.forEach(card => {
-      const txt = card.dataset.name || '';
-      const ok = txt.includes(t);
+      const ok = cardMatches(card, query);
       card.style.display = ok ? '' : 'none';
       if (ok) shown++;
     });
     const chip = document.querySelector('[data-page="product"] .chip b');
-    if (chip) chip.textContent = String(t ? shown : cards.length);
+    if (chip) chip.textContent = String(qs ? shown : cards.length);
   }
-  if (q) q.addEventListener('input', e => applyFilterCards(e.target.value));
+
+  if (q) {
+    q.placeholder = 'Ex.  ddm -has:barcode qty>0   |   cat:"Produits laitiers" u:g is:low';
+    q.addEventListener('input', (e) => {
+      clearTimeout(searchTimer);
+      searchTimer = setTimeout(() => runSmartSearch(e.target.value), 120);
+    });
+  }
 
   /* ====== Helpers communs ====== */
   const $ = s => document.querySelector(s);
 
-  // Config par unité (step, suffixe, placeholder, hint)
+  // Config par unité (step visuel, suffixe, placeholder, hint)
   const UNIT_CFG = {
     'pièce': { step: 1, suffix: 'pièce', placeholder: 'ex. 1', hint: 'Conseil : 1, 2, 3 pièces…' },
     'tranche': { step: 1, suffix: 'tranche', placeholder: 'ex. 1', hint: 'Conseil : 1, 2, 3 tranches…' },
@@ -516,7 +683,6 @@
     'barquette': { step: 1, suffix: 'barquette', placeholder: 'ex. 1', hint: 'Conseil : 1, 2, 3 barquettes…' },
     'rouleau': { step: 1, suffix: 'rouleau', placeholder: 'ex. 1', hint: 'Conseil : 1, 2, 3 rouleaux…' },
     'dosette': { step: 1, suffix: 'dosette', placeholder: 'ex. 1', hint: 'Conseil : 1, 2, 3 dosettes…' },
-
     'g': { step: 50, suffix: 'g', placeholder: 'ex. 500', hint: 'Par 50 g (500 g, 750 g, …)' },
     'kg': { step: 0.1, suffix: 'kg', placeholder: 'ex. 0.5', hint: 'Par 0,1 kg (0,5 kg, 1,0 kg, …)' },
     'ml': { step: 50, suffix: 'ml', placeholder: 'ex. 500', hint: 'Par 50 ml (500 ml, 750 ml, …)' },
@@ -605,10 +771,9 @@
       const u = unitSel?.value || 'pièce';
       const cfg = cfgForUnit(u);
 
-      // autorise tout mais mémorise le pas à utiliser avec les flèches
       if (minInput) {
-        minInput.setAttribute('step', 'any');
-        minInput.dataset.stepCustom = String(cfg.step);
+        minInput.setAttribute('step', 'any');           // autorise tout
+        minInput.dataset.stepCustom = String(cfg.step); // pas pour flèches
         minInput.placeholder = cfg.placeholder;
       }
       if (minSuffix) minSuffix.textContent = cfg.suffix;
@@ -635,8 +800,8 @@
     if (!minInput || !unitSuffix) return;
 
     const cfg = cfgForUnit(unit);
-    minInput.setAttribute('step', 'any');        // autorise tout
-    minInput.dataset.stepCustom = String(cfg.step); // pas pour flèches
+    minInput.setAttribute('step', 'any');
+    minInput.dataset.stepCustom = String(cfg.step);
     minInput.placeholder = cfg.placeholder;
     unitSuffix.textContent = cfg.suffix;
   }
@@ -688,14 +853,14 @@
       const name = del.dataset.name || '';
       const lots = parseInt(del.dataset.lots || '0', 10);
       document.getElementById('del-msg').textContent = lots > 0
-        ? `La suppression retirera aussi les ${lots} stock(s) lié(s) à « ${name} » .`
+        ? `La suppression retirera aussi les ${lots} stock(s) lié(s) à « ${name} ».`
         : `Supprimer « ${name} » ?`;
       document.getElementById('dlg-delete').showModal();
       return;
     }
   });
 
-  /* ====== Pas personnalisés via flèches ↑/↓ (sans bloquer la saisie) ====== */
+  /* ====== Pas personnalisés via flèches ↑/↓ (sans bloquer la saisie libre) ====== */
   document.addEventListener('keydown', (e) => {
     const input = e.target.closest('input[type=number][data-step-custom]');
     if (!input) return;
@@ -703,15 +868,10 @@
     if (isNaN(step) || step <= 0) return;
 
     const cur = parseFloat(input.value || '0') || 0;
-
-    if (e.key === 'ArrowUp') {
-      e.preventDefault();
-      input.value = (cur + step).toString();
-    } else if (e.key === 'ArrowDown') {
-      e.preventDefault();
-      input.value = (cur - step).toString();
-    }
+    if (e.key === 'ArrowUp') { e.preventDefault(); input.value = (cur + step).toString(); }
+    if (e.key === 'ArrowDown') { e.preventDefault(); input.value = (cur - step).toString(); }
   });
 </script>
+
 
 {% endblock %}
