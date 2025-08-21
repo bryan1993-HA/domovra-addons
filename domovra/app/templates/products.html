@@ -234,9 +234,10 @@ Astuce : tu peux combiner (ex. « ddm produits laitiers »)."></span>
             <span class="v">{{ Q.v }} {{ (Q.u or it.unit)|pluralize_fr(Q.v) }}</span>
           </div>
           {% if it.min_qty is not none %}
+          {% set M = fmt_qty(it.min_qty, it.unit) %}
           <div class="stat">
             <span class="k">Seuil min</span>
-            <span class="v">{{ human_qty(it.min_qty, it.unit) }}</span>
+            <span class="v">{{ M.v }} {{ (M.u or it.unit)|pluralize_fr(M.v) }}</span>
           </div>
           {% endif %}
           {% if it.default_location_id %}
