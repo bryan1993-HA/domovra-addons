@@ -319,9 +319,9 @@ Astuce : tu peux combiner (ex. « ddm produits laitiers »)."></span>
 
 
 <!-- Éditer -->
-<dialog id="dlg-edit">
-  <form method="post" action="{{ BASE }}product/update" style="display:grid;gap:10px;min-width:min(680px,96vw)">
-    <h3 style="margin:0">Modifier la fiche produit</h3>
+<dialog id="dlg-edit" class="modal">
+  <form method="post" action="{{ BASE }}product/update" class="edit-form">
+    <h3 class="dlg-title">Modifier la fiche produit</h3>
     <input type="hidden" name="product_id" id="dlg-product-id">
 
     <div>
@@ -334,45 +334,18 @@ Astuce : tu peux combiner (ex. « ddm produits laitiers »)."></span>
       <textarea name="description" id="dlg-desc" rows="2"></textarea>
     </div>
 
-    <div class="row" style="gap:10px">
-      <div style="flex:1">
+    <div class="row">
+      <div>
         <div class="label">Emplacement par défaut</div>
-        <select name="default_location_id" id="dlg-default-location">
-          <option value="">— Aucun —</option>
-          {% for loc in locations or [] %}
-          <option value="{{ loc.id }}">{{ loc.name }}</option>
-          {% endfor %}
-        </select>
+        <select name="default_location_id" id="dlg-default-location"> … </select>
       </div>
 
-      <div style="flex:1">
+      <div>
         <div class="label">Unité</div>
-        <select name="unit" id="dlg-unit">
-          <optgroup label="Comptage">
-            <option value="pièce">pièce</option>
-            <option value="tranche">tranche</option>
-            <option value="paquet">paquet</option>
-            <option value="boîte">boîte</option>
-            <option value="bocal">bocal</option>
-            <option value="bouteille">bouteille</option>
-            <option value="sachet">sachet</option>
-            <option value="lot">lot</option>
-            <option value="barquette">barquette</option>
-            <option value="rouleau">rouleau</option>
-            <option value="dosette">dosette</option>
-          </optgroup>
-          <optgroup label="Poids">
-            <option value="g">g</option>
-            <option value="kg">kg</option>
-          </optgroup>
-          <optgroup label="Volume">
-            <option value="ml">ml</option>
-            <option value="L">L</option>
-          </optgroup>
-        </select>
+        <select name="unit" id="dlg-unit"> … </select>
       </div>
 
-      <div style="flex:1">
+      <div>
         <div class="label">Quantité minimum en stock</div>
         <div class="infield-qty">
           <input name="min_qty" id="dlg-min" type="number" min="0" step="any" placeholder="ex. 1">
@@ -381,84 +354,53 @@ Astuce : tu peux combiner (ex. « ddm produits laitiers »)."></span>
       </div>
     </div>
 
-    <div class="row" style="gap:10px">
-      <div style="flex:1">
+    <div class="row">
+      <div>
         <div class="label">Alerte stock faible actif ?</div>
-        <select name="low_stock_enabled" id="dlg-low-enabled">
-          <option value="1">Oui</option>
-          <option value="0">Non</option>
-        </select>
+        <select name="low_stock_enabled" id="dlg-low-enabled"> … </select>
       </div>
 
-      <div style="flex:1">
+      <div>
         <div class="label">Type d’échéance</div>
-        <div>
-          <label style="margin-right:10px"><input type="radio" name="expiry_kind" id="dlg-exp-dlc" value="DLC">
-            DLC</label>
+        <div class="radio-row">
+          <label><input type="radio" name="expiry_kind" id="dlg-exp-dlc" value="DLC"> DLC</label>
           <label><input type="radio" name="expiry_kind" id="dlg-exp-ddm" value="DDM"> DDM</label>
         </div>
       </div>
 
-      <div style="flex:1">
+      <div>
         <div class="label">Péremption par défaut (jours)</div>
         <input type="number" name="shelf" id="dlg-shelf" min="1" placeholder="ex. 90">
       </div>
     </div>
 
-    <div class="row" style="gap:10px">
-      <div style="flex:1">
-        <label class="label" style="display:flex;align-items:center;gap:8px">
+    <div class="row">
+      <div>
+        <label class="label">
           <input type="checkbox" id="dlg-no-freeze" name="no_freeze" value="1">
           Ne doit pas être congelé
         </label>
       </div>
 
-      <div style="flex:1" id="dlg-freeze-group">
+      <div id="dlg-freeze-group">
         <div class="label">Péremption après congélation (jours)</div>
         <input type="number" name="default_freeze_shelf_days" id="dlg-freeze-shelf" min="1" placeholder="ex. 180">
       </div>
 
-      <div style="flex:1">
+      <div>
         <div class="label">Catégorie</div>
-        <select name="category" id="dlg-category">
-          <option value="">— Choisir une catégorie —</option>
-
-          <optgroup label="Alimentation">
-            <option>Fruits & légumes</option>
-            <option>Viande</option>
-            <option>Poisson & fruits de mer</option>
-            <option>Produits laitiers</option>
-            <option>Œufs</option>
-            <option>Charcuterie</option>
-            <option>Fromages</option>
-            <option>Boulangerie & pâtisserie</option>
-            <option>Céréales, pâtes & riz</option>
-            <option>Épicerie salée</option>
-            <option>Épicerie sucrée</option>
-            <option>Conserves & bocaux</option>
-            <option>Condiments & sauces</option>
-            <option>Huiles & vinaigres</option>
-            <option>Boissons</option>
-            <option>Surgelés</option>
-            <option>Bio / Sans gluten</option>
-          </optgroup>
-
-          <optgroup label="Non alimentaire">
-            <option>Hygiène & beauté</option>
-            <option>Entretien & ménager</option>
-            <option>Animaux</option>
-            <option>Bébé</option>
-            <option>Autre</option>
-          </optgroup>
-        </select>
+        <select name="category" id="dlg-category"> … </select>
       </div>
+    </div>
 
-      <div class="row" style="justify-content:flex-end;gap:8px">
-        <button type="button" onclick="document.getElementById('dlg-edit').close()">Annuler</button>
-        <button class="secondary">Enregistrer</button>
-      </div>
+    <!-- Actions -->
+    <div class="dlg-actions">
+      <button type="button" class="btn-cancel" onclick="document.getElementById('dlg-edit').close()">Annuler</button>
+      <button class="secondary btn-save">Enregistrer</button>
+    </div>
   </form>
 </dialog>
+
 
 <!-- Supprimer -->
 <dialog id="dlg-delete">
