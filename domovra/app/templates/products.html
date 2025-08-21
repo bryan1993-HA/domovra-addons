@@ -171,9 +171,9 @@
             {% if it.category %}<span class="pill">{{ it.category }}</span>{% endif %}
             {% if is_low %}<span class="pill danger">🔻 Faible stock</span>{% endif %}
           </div>
-          <div class="pc-sub">
-            {{ p.unit }} / {{ p.date_type }}
-            {% if p.no_freeze %} / ❄️ interdit{% endif %}
+          <div class="pc-sub muted">
+            {{ it.unit }} / {{ it.expiry_kind or 'DLC' }}
+            {% if it.no_freeze %} / ❄️ interdit{% endif %}
           </div>
         </header>
 
