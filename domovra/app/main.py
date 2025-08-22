@@ -14,8 +14,6 @@ from utils.assets import ensure_hashed_asset
 from services.events import _ensure_events_table, log_event, list_events
 from routes.home import router as home_router
 from routes.products import router as products_router
-app.include_router(products_router)
-
 
 
 
@@ -93,6 +91,8 @@ def render(name: str, **ctx):
 
 app.state.templates = templates
 app.include_router(home_router)
+app.include_router(products_router)
+
 
 
 
