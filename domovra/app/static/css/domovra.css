@@ -1859,128 +1859,27 @@ html[data-theme="light"] .qhelp code {
 
 
 /* ========================================================================== */
-/* ========== 14) Page Stocks (/lots) ======================================= */
+/* ========== 14) Page Stocks (/lots) — cartes uniquement ==================== */
 /* ========================================================================== */
 
-/* Infield (select + boutons) */
-.wrap form[action$="lot/add"] .infield {
-    position: relative;
-    display: flex;
-    align-items: center;
-}
-
-.wrap form[action$="lot/add"] .infield select {
-    width: 100%;
-    padding-right: 104px;
-    appearance: none;
-    background: linear-gradient(transparent, transparent) padding-box;
-}
-
-.wrap form[action$="lot/add"] .infield-buttons {
-    position: absolute;
-    right: 6px;
-    top: 50%;
-    transform: translateY(-50%);
-    display: flex;
-    gap: 6px;
-}
-
-/* Boutons icône (commun) */
-.wrap .icon-btn {
-    width: 40px;
-    height: 40px;
-    border-radius: 10px;
+/* Filtres (recherche + sélecteurs) */
+.wrap .filters-row {
     display: grid;
-    place-items: center;
-    border: 1px solid var(--line);
-    background: transparent;
-    color: var(--text-muted);
-    cursor: pointer;
-    transition: transform .06s, background .12s;
-}
-
-.wrap .icon-btn:hover {
-    background: rgba(255, 255, 255, .06);
-}
-
-.wrap .icon-btn:active {
-    transform: scale(.97);
-}
-
-.wrap .icon-btn svg {
-    width: 18px;
-    height: 18px;
-    fill: currentColor;
-}
-
-/* Accessibilité utilitaire */
-.wrap .sr-only {
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    padding: 0;
-    margin: -1px;
-    overflow: hidden;
-    clip: rect(0, 0, 0, 0);
-    white-space: nowrap;
-    border: 0;
-}
-
-/* Grille Ajout (lot) */
-.wrap form[action$="lot/add"].form-grid {
-    display: grid !important;
-    grid-template-columns: 2fr 1.2fr 1fr 1fr 1fr;
+    grid-template-columns: 2fr 1fr 1fr 1fr auto;
     gap: 12px;
-    align-items: end;
-}
-
-@media (max-width:1100px) {
-    .wrap form[action$="lot/add"].form-grid {
-        grid-template-columns: 2fr 1.2fr 1fr 1fr;
-    }
 }
 
 @media (max-width:900px) {
-    .wrap form[action$="lot/add"].form-grid {
-        grid-template-columns: 1fr 1fr 1fr;
+    .wrap .filters-row {
+        grid-template-columns: 1fr 1fr;
     }
 
-    .wrap form[action$="lot/add"].form-grid .btn-wide {
+    .wrap .filters-row .wide {
         grid-column: 1 / -1;
-        justify-self: stretch;
     }
 }
 
-@media (max-width:700px) {
-    .wrap form[action$="lot/add"].form-grid {
-        grid-template-columns: 1fr;
-    }
-
-    .wrap form[action$="lot/add"].form-grid .btn-wide {
-        width: 100%;
-    }
-}
-
-/* Ligne / meta / status / timeline */
-.wrap .line {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    flex-wrap: wrap;
-}
-
-.wrap .meta {
-    display: flex;
-    gap: 10px;
-    flex-wrap: wrap;
-    color: var(--text-muted);
-    font-size: 14px;
-}
-
-.wrap .sep {
-    opacity: .5;
-}
-
+/* Pastille d'état */
 .wrap .status {
     margin-left: auto;
     display: inline-flex;
@@ -2004,6 +1903,7 @@ html[data-theme="light"] .qhelp code {
     background: rgba(239, 83, 80, .12);
 }
 
+/* Bloc Dates */
 .wrap details.dates {
     margin-top: 6px;
 }
@@ -2038,77 +1938,60 @@ html[data-theme="light"] .qhelp code {
     background: transparent;
 }
 
-/* Filtres */
-.wrap .filters-row {
+/* Cartes de lots */
+.lot-cards {
     display: grid;
-    grid-template-columns: 2fr 1fr 1fr 1fr auto;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
     gap: 12px;
 }
 
-@media (max-width:900px) {
-    .wrap .filters-row {
-        grid-template-columns: 1fr 1fr;
+.lot-card {
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 12px;
+    background: transparent;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.lc-head {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.lc-title {
+    font-weight: 700;
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.lc-sub {
+    color: var(--text-muted);
+    font-size: 14px;
+}
+
+.lc-actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    margin-top: 8px;
+}
+
+@media (max-width:640px) {
+    .lot-cards {
+        grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
     }
 
-    .wrap .filters-row .wide {
-        grid-column: 1 / -1;
+    .lc-actions {
+        grid-template-columns: 1fr;
     }
 }
 
-/* Cartes mobiles (STOCKS) — scopées via :has(form[action$="lot/add"]) */
-.wrap:has(form[action$="lot/add"]) .cards {
-    display: none;
-}
-
-@media (max-width:700px) {
-
-    .wrap:has(form[action$="lot/add"]) #tbl,
-    .wrap:has(form[action$="lot/add"]) #tbl thead {
-        display: none;
-    }
-
-    .wrap:has(form[action$="lot/add"]) .cards {
-        display: grid;
-        gap: 10px;
-    }
-
-    .wrap:has(form[action$="lot/add"]) .card-item {
-        border: 1px solid var(--line);
-        border-radius: 12px;
-        padding: 10px;
-        background: transparent;
-    }
-
-    .wrap:has(form[action$="lot/add"]) .card-head {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-    }
-
-    .wrap:has(form[action$="lot/add"]) .card-title {
-        font-weight: 600;
-        flex: 1;
-    }
-
-    .wrap:has(form[action$="lot/add"]) .card-sub {
-        color: var(--text-muted);
-        font-size: 14px;
-        margin-top: 4px;
-    }
-
-    .wrap:has(form[action$="lot/add"]) .card-actions {
-        display: flex;
-        gap: 8px;
-        margin-top: 8px;
-    }
-
-    .wrap:has(form[action$="lot/add"]) .card-actions .icon-btn {
-        padding: 8px 10px;
-        border-radius: 10px;
-        border: 1px solid var(--line);
-        background: transparent;
-    }
-}
 
 /* ========================================================================== */
 /* ========== 15) Page Paramètres (/settings) =============================== */

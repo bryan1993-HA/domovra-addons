@@ -8,7 +8,7 @@
 {% endblock %}
 
 {% block content %}
-<div class="wrap">
+<div class="wrap" data-page="lots">
   <!-- Outils -->
   <div class="card">
     <div class="title">
@@ -30,103 +30,37 @@
     </div>
   </div>
 
-  <!-- Liste -->
+  <!-- Liste (cartes uniquement) -->
   <div class="card">
     <div class="title">
-      <h2>Liste</h2><span class="muted">Table (bureau) / Cartes (mobile)</span>
+      <h2>Liste</h2><span class="muted">Cartes (responsive)</span>
     </div>
 
-    <table id="tbl">
-      <colgroup>
-        <col style="width:36%">
-        <col style="width:48%">
-        <col style="width:16%">
-      </colgroup>
-      <thead>
-        <tr>
-          <th>Produit</th>
-          <th>Infos</th>
-          <th>Actions</th>
-        </tr>
-      </thead>
-      <tbody id="tbody">
-        {% if items %}
-        {% for it in items %}
-        <tr data-name="{{ it.product|lower }}" data-loc="{{ it.location|lower }}"
-          data-barcode="{{ (it.barcode or '')|lower }}" data-status="{{ it.status }}">
-          <td>
-            <div class="line">
-              <div style="font-weight:600">
-                {{ it.article_name or it.product }}
-                {% if it.brand %}<span class="muted"> — {{ it.brand }}</span>{% endif %}
-              </div>
-              {% set code = it.ean or it.barcode %}
-              {% if code %}<span class="sep">•</span><span class="muted">🏷️ {{ code }}</span>{% endif %}
-            </div>
-          </td>
-
-          <td>
-            <div class="line">
-              <div class="meta">
-                <span>Qté <b>{{ '%.2f'|format(it.qty)|trim('0')|trim('.') }} {{ it.unit|pluralize_fr(it.qty)
-                    }}</b></span>
-                <span class="sep">•</span>
-                <span>📍 <b>{{ it.location }}</b></span>
-              </div>
-              <span class="status {{ it.status }}">
-                {{ "OK" if it.status=="green" else ("Bientôt" if it.status=="yellow" else ("Urgent" if it.status=="red"
-                else "—")) }}
-              </span>
-            </div>
-            <details class="dates">
-              <summary>📅 Dates</summary>
-              <div class="timeline">
-                <span class="pill">❄ <span>{{ it.frozen_on or '—' }}</span></span>
-                <span class="pill">⏳ <span>{{ it.best_before or '—' }}</span></span>
-                {% if it.created_on %}<span class="pill">➕ <span>{{ it.created_on }}</span></span>{% endif %}
-              </div>
-            </details>
-          </td>
-          <td>
-            <div class="row" style="gap:8px">
-              <button class="secondary js-edit-open" data-id="{{ it.id }}" data-qty="{{ it.qty }}"
-                data-unit="{{ it.unit }}" data-location_id="{{ it.location_id }}" data-frozen="{{ it.frozen_on or '' }}"
-                data-best_before="{{ it.best_before or '' }}">✏️ Modifier</button>
-              <button class="secondary js-delete-open" data-id="{{ it.id }}" data-product="{{ it.product }}">🗑️
-                Supprimer</button>
-            </div>
-          </td>
-        </tr>
-        {% endfor %}
-        {% else %}
-        <tr>
-          <td colspan="3" class="muted">Aucune entrée de stock.</td>
-        </tr>
-        {% endif %}
-      </tbody>
-    </table>
-
-    <!-- Mobile cards -->
-    <div class="cards" id="cards">
+    <div class="lot-cards" id="cards">
+      {% if items %}
       {% for it in items %}
-      <div class="card-item" data-name="{{ it.product|lower }}" data-loc="{{ it.location|lower }}"
+      <div class="lot-card" data-name="{{ it.product|lower }}" data-loc="{{ it.location|lower }}"
         data-barcode="{{ (it.barcode or '')|lower }}" data-status="{{ it.status }}">
-        <div class="card-head">
-          <div class="card-title">
+        <div class="lc-head">
+          <div class="lc-title">
             {{ it.article_name or it.product }}
             {% if it.brand %}<span class="muted"> — {{ it.brand }}</span>{% endif %}
           </div>
-          <span class="status {{ it.status }}">{{ "OK" if it.status=="green" else ("Bientôt" if it.status=="yellow" else
-            ("Urgent" if it.status=="red" else "—")) }}</span>
+          <span class="status {{ it.status }}">
+            {{ "OK" if it.status=="green" else ("Bientôt" if it.status=="yellow" else ("Urgent" if it.status=="red" else
+            "—")) }}
+          </span>
         </div>
-        <div class="card-sub">
-          {% set q = fmt_qty(it.qty, it.unit) %}
-          {{ q.v }} {{ q.u|pluralize_fr(it.qty) }}
+
+        <div class="lc-sub">
+          {% set qv = fmt_qty(it.qty, it.unit) %}
+          {{ qv.v }} {{ qv.u|pluralize_fr(it.qty) }}
           • 📍 {{ it.location }}
           {% set code = it.ean or it.barcode %}
           {% if code %} • 🏷️ {{ code }}{% endif %}
         </div>
-        <details class="dates" style="margin-top:6px">
+
+        <details class="dates">
           <summary>📅 Dates</summary>
           <div class="timeline">
             <span class="pill">❄ <span>{{ it.frozen_on or '—' }}</span></span>
@@ -134,15 +68,20 @@
             {% if it.created_on %}<span class="pill">➕ <span>{{ it.created_on }}</span></span>{% endif %}
           </div>
         </details>
-        <div class="card-actions">
-          <button class="icon-btn js-edit-open" title="Modifier" data-id="{{ it.id }}" data-qty="{{ it.qty }}"
-            data-unit="{{ it.unit }}" data-location_id="{{ it.location_id }}" data-frozen="{{ it.frozen_on or '' }}"
-            data-best_before="{{ it.best_before or '' }}">✏️</button>
-          <button class="icon-btn js-delete-open" title="Supprimer" data-id="{{ it.id }}"
-            data-product="{{ it.product }}">🗑️</button>
+
+        <div class="lc-actions">
+          <button class="secondary js-edit-open" data-id="{{ it.id }}" data-qty="{{ it.qty }}" data-unit="{{ it.unit }}"
+            data-location_id="{{ it.location_id }}" data-frozen="{{ it.frozen_on or '' }}"
+            data-best_before="{{ it.best_before or '' }}">✏️ Modifier</button>
+
+          <button class="secondary js-delete-open" data-id="{{ it.id }}" data-product="{{ it.product }}">🗑️
+            Supprimer</button>
         </div>
       </div>
       {% endfor %}
+      {% else %}
+      <div class="muted">Aucune entrée de stock.</div>
+      {% endif %}
     </div>
   </div>
 </div>
@@ -190,17 +129,15 @@
     </div>
   </form>
 </dialog>
-
 {% endblock %}
 
 {% block scripts %}
 <script>
   const $ = s => document.querySelector(s);
 
-  /* --- Recherche / filtres live --- */
-  const q = $('#q'), tbody = $('#tbody'), cards = $('#cards'),
-    fLoc = $('#f_loc'), fStatus = $('#f_status');
-  const rows = Array.from(tbody ? tbody.children : []);
+  /* --- Recherche / filtres (cartes uniquement) --- */
+  const q = $('#q'), fLoc = $('#f_loc'), fStatus = $('#f_status');
+  const cards = $('#cards');
   const cardsItems = Array.from(cards ? cards.children : []);
 
   function passesFilters(ds, txt, loc, st) {
@@ -214,18 +151,16 @@
     const txt = (q?.value || '').toLowerCase().trim();
     const loc = (fLoc?.value || '').toLowerCase().trim();
     const st = (fStatus?.value || '').trim();
+
     let shown = 0;
-    rows.forEach(tr => {
-      const m = passesFilters(tr.dataset, txt, loc, st);
-      tr.style.display = m ? '' : 'none';
-      if (m) shown++;
-    });
     cardsItems.forEach(c => {
       const m = passesFilters(c.dataset, txt, loc, st);
       c.style.display = m ? '' : 'none';
+      if (m) shown++;
     });
+
     const lc = document.getElementById('lots-count');
-    if (lc) lc.textContent = (txt || loc || st) ? shown : rows.length;
+    if (lc) lc.textContent = (txt || loc || st) ? shown : cardsItems.length;
   }
   [q, fLoc, fStatus].forEach(el => el && el.addEventListener('input', applyFilter));
 
@@ -260,17 +195,17 @@
       btn.addEventListener('click', () => {
         setVal('del-lot-id', btn.dataset.id);
         const msg = document.getElementById('del-msg');
-        msg && (msg.textContent = btn.dataset.product ? `Supprimer "${btn.dataset.product}" du stock ?` : 'Supprimer cette entrée de stock ?');
+        if (msg) msg.textContent = btn.dataset.product
+          ? `Supprimer "${btn.dataset.product}" du stock ?`
+          : 'Supprimer cette entrée de stock ?';
         delDialog?.showModal();
       });
     });
 
-    // Sécurités UX : empêcher qu'ENTER soumette par mégarde la modale delete
+    // Sécurité UX : empêcher ENTER de soumettre la modale delete
     const delForm = delDialog?.querySelector('form');
     delForm?.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter' && e.target.tagName !== 'TEXTAREA') {
-        e.preventDefault();
-      }
+      if (e.key === 'Enter' && e.target.tagName !== 'TEXTAREA') e.preventDefault();
     });
   })();
 </script>
