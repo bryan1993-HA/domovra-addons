@@ -88,6 +88,18 @@ os.makedirs(os.path.join(STATIC_DIR, "css"), exist_ok=True)
 
 app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 
+# --- CSS versionnée : calcule et expose aux templates
+try:
+    css_rel = ensure_hashed_asset("static/css/domovra.css")  # attendu: 'static/css/domovra-<hash>.css'
+    if not (isinstance(css_rel, str) and css_rel.startswith("static/")):
+        css_rel = "static/css/domovra.css"
+    templates.globals["ASSET_CSS_PATH"] = css_rel
+    logger.info("ASSET_CSS_PATH set to %s", css_rel)
+except Exception as e:
+    logger.exception("Failed to compute ASSET_CSS_PATH: %s", e)
+    templates.globals["ASSET_CSS_PATH"] = "static/css/domovra.css"
+
+
 # ➜ NEW
 css_rel = ensure_hashed_asset("static/css/domovra.css")
 templates.globals["ASSET_CSS_PATH"] = css_rel
@@ -383,10 +395,13 @@ def _startup():
     # S'assurer que le CSS hashé existe (log utile)
 try:
     hashed_rel = ensure_hashed_asset("static/css/domovra.css")
+    if not (isinstance(hashed_rel, str) and hashed_rel.startswith("static/")):
+        hashed_rel = "static/css/domovra.css"
     templates.globals["ASSET_CSS_PATH"] = hashed_rel
-    logger.info("CSS hashed path ready: %s", hashed_rel)
+    logger.info("Startup ASSET_CSS_PATH: %s", hashed_rel)
 except Exception as e:
     logger.exception("ensure_hashed_asset at startup failed: %s", e)
+
 
     init_db()
     _ensure_events_table()   # <- importé depuis services.events
@@ -398,6 +413,14 @@ except Exception as e:
         logger.exception("Erreur lecture settings au démarrage: %s", e)
 
 
+@app.get("/_debug/vars")
+def debug_vars():
+    return {
+        "ASSET_CSS_PATH": templates.globals.get("ASSET_CSS_PATH"),
+        "STATIC_DIR": os.path.abspath(STATIC_DIR),
+        "ls_static": sorted(os.listdir(STATIC_DIR)) if os.path.isdir(STATIC_DIR) else [],
+        "ls_css": sorted(os.listdir(os.path.join(STATIC_DIR, "css"))) if os.path.isdir(os.path.join(STATIC_DIR, "css")) else [],
+    }
 
 
 
