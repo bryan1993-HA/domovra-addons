@@ -1227,15 +1227,6 @@ def list_product_insights(limit: int = 8):
     # Pour l’instant on renvoie une structure vide.
     return []
 
-import sqlite3
-
-DB_PATH = "/data/domovra.sqlite3"  # adapte si besoin
-
-def _conn():
-    c = sqlite3.connect(DB_PATH)
-    c.row_factory = sqlite3.Row
-    return c
-
 @app.get("/debug/db")
 def debug_db():
     """Retourne toutes les tables et les 5 premières lignes de chaque table"""
