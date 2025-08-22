@@ -72,6 +72,16 @@ logger = logging.getLogger("domovra")
 app = FastAPI()
 
 templates = build_jinja_env()
+
+def render(name: str, **ctx):
+    return _render_with_env(templates, name, **ctx)
+
+app.state.templates = templates
+
+# Par défaut: chemin *avec* /static/
+templates.globals["ASSET_CSS_PATH"] = "static/css/domovra.css"
+
+
 templates.globals.setdefault("ASSET_CSS_PATH", "static/css/domovra.css")
 
 

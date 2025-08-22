@@ -112,18 +112,4 @@ def debug_static(request: Request):
         "hashed_css_url": hashed_url,
     })
 
-from fastapi import HTTPException
-
-@router.get("/{path:path}", include_in_schema=False)
-def fallback(request: Request, path: str):
-    # Laisse passer nos endpoints de debug
-    if path.startswith("_debug/"):
-        raise HTTPException(status_code=404, detail="Not found")
-    base = ingress_base(request)
-    return RedirectResponse(base, status_code=303, headers={"Cache-Control":"no-store"})
-
-
-@router.get("/{path:path}", include_in_schema=False)
-def fallback(request: Request, path: str):
-    base = ingress_base(request)
-    return RedirectResponse(base, status_code=303, headers={"Cache-Control":"no-store"})
+# ⚠️ Pas de fallback ici ! On en remettra un plus tard côté main.py si besoin.
