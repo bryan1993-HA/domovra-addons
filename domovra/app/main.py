@@ -7,11 +7,12 @@ from fastapi.responses import HTMLResponse, RedirectResponse, JSONResponse, Plai
 from fastapi.staticfiles import StaticFiles
 from jinja2 import Environment, FileSystemLoader, select_autoescape
 from urllib.parse import urlencode
-from .config import WARNING_DAYS, CRITICAL_DAYS, DB_PATH, START_TS
-from .utils.http import nocache_html, render, ingress_base
-from .utils.jinja import build_jinja_env
-from .utils.assets import ensure_hashed_asset
-from .services.events import _ensure_events_table, log_event, list_events
+from config import WARNING_DAYS, CRITICAL_DAYS, DB_PATH, START_TS
+from utils.http import nocache_html, render, ingress_base
+from utils.jinja import build_jinja_env
+from utils.assets import ensure_hashed_asset
+from services.events import _ensure_events_table, log_event, list_events
+
 
 from db import (
     init_db,
