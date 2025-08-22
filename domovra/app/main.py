@@ -424,29 +424,92 @@ def achats_page(request: Request):
     )
 
 @app.post("/achats/add")
-def achats_add_action(request: Request,
-                      product_id: int = Form(...),
-                      location_id: int = Form(...),
-                      qty: float = Form(...),
-                      best_before: str = Form(""),
-                      frozen_on: str = Form(""),
-                      note: str = Form("")):
-    res = add_or_merge_lot(product_id, location_id, float(qty), best_before or None, frozen_on or None)
+def achats_add_action(
+    request: Request,
+    # champs “fiche parent” + placement
+    product_id: int = Form(...),
+    location_id: int = Form(...),
 
-    # Journal (traçabilité même en fusion)
+    # quantités/prix (le backend actuel n’enregistre pas le prix : on log seulement)
+    qty: float = Form(...),              # quantité par unité (ex. 33 pour 33cl, 1 pour pièce)
+    unit: str = Form("pièce"),           # non stocké aujourd’hui en DB (on garde pour futurs usages)
+    multiplier: int = Form(1),           # nombre d’unités (ex. 6 pour 6×33cl)
+    price_total: str = Form(""),         # string pour tolérer vide/virgule ; log only
+
+    # identification & infos achat (log only / journal)
+    ean: str = Form(""),
+    name: str = Form(""),
+    brand: str = Form(""),
+    store: str = Form(""),
+    note: str = Form(""),
+
+    # conservation
+    best_before: str = Form(""),
+    frozen_on: str = Form(""),
+):
+    """
+    Nouveau flux 'Achats' :
+    - ajoute ou fusionne un lot sur la base (product_id, location_id, best_before, frozen_on)
+    - qty_total = qty * multiplier (on conserve l’unité côté UI/log pour l’instant)
+    - si un EAN est fourni et que le produit n’a pas de barcode, on le renseigne (transitoire, mono‑EAN)
+    """
+    # normaliser les nombres (virgule -> point)
+    def _f(x: str) -> float:
+        try:
+            return float((x or "").replace(",", "."))
+        except Exception:
+            return 0.0
+
+    try:
+        m = int(multiplier or 1)
+    except Exception:
+        m = 1
+    if m < 1: m = 1
+
+    qty_per_unit = float(qty or 0)
+    qty_delta = qty_per_unit * m  # <= la DB stocke seulement la quantité totale
+
+    # 1) ajout / fusion (réutilise ta logique existante)
+    res = add_or_merge_lot(
+        int(product_id),
+        int(location_id),
+        float(qty_delta),
+        best_before or None,
+        frozen_on or None
+    )
+
+    # 2) si EAN fourni et produit sans barcode -> on le renseigne (transitoire, mono‑EAN)
+    ean_digits = "".join(ch for ch in (ean or "") if ch.isdigit())
+    if ean_digits:
+        try:
+            with _conn() as c:
+                row = c.execute("SELECT COALESCE(barcode,'') AS barcode FROM products WHERE id=?", (int(product_id),)).fetchone()
+                current_bc = (row["barcode"] or "") if row else ""
+                if not current_bc.strip():
+                    c.execute("UPDATE products SET barcode=? WHERE id=?", (ean_digits, int(product_id)))
+                    c.commit()
+        except Exception as e:
+            logger.warning("achats_add_action: unable to set product barcode: %s", e)
+
+    # 3) journaliser tout (y compris les champs non persistés aujourd’hui)
+    def _price_num():
+        try:
+            return float((price_total or "").replace(",", "."))
+        except Exception:
+            return None
+
     log_event("achats.add", {
-        "product_id": int(product_id),
-        "location_id": int(location_id),
-        "qty_delta": float(qty),
-        "best_before": best_before or None,
-        "frozen_on": frozen_on or None,
-        "note": (note or None),
-        "result": res["action"],
-        "lot_id": res["lot_id"],
-        "new_qty": res["new_qty"],
+        "result": res["action"], "lot_id": res["lot_id"], "new_qty": res["new_qty"],
+        "product_id": int(product_id), "location_id": int(location_id),
+        "ean": ean_digits or None,
+        "name": (name or None), "brand": (brand or None),
+        "unit": (unit or None), "qty_per_unit": qty_per_unit, "multiplier": m,
+        "qty_delta": qty_delta, "price_total": _price_num(),
+        "store": (store or None), "note": (note or None),
+        "best_before": best_before or None, "frozen_on": frozen_on or None,
     })
 
-    # Rester sur /achats pour enchaîner les saisies
+    # 4) Rester sur /achats pour enchaîner les saisies
     base = ingress_base(request)
     return RedirectResponse(base + "achats?added=1", status_code=303,
                             headers={"Cache-Control": "no-store"})
