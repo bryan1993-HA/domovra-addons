@@ -1,6 +1,6 @@
 from fastapi import Request
 from fastapi.responses import HTMLResponse, RedirectResponse
-from ..settings_store import load_settings
+from settings_store import load_settings
 
 def nocache_html(html: str) -> HTMLResponse:
     return HTMLResponse(html, headers={

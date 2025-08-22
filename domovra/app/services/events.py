@@ -1,6 +1,6 @@
 import json
 from datetime import datetime, timezone
-from ..db import _conn
+from db import _conn
 
 def _ensure_events_table():
     with _conn() as c:

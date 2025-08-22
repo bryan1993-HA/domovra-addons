@@ -1,6 +1,6 @@
 from jinja2 import Environment, FileSystemLoader, select_autoescape
 from .assets import asset_ver, ensure_hashed_asset
-from ..config import START_TS
+from config import START_TS
 
 def _pretty_num(x) -> str:
     try:
