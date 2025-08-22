@@ -442,21 +442,21 @@ def add_lot(product_id: int, location_id: int, qty: float, frozen_on: str | None
 
 def list_lots():
     with _conn() as c:
-        q = """
+        # 1) Essaie avec l.name (cas où tu stockes "Nutella" dans stock_lots.name)
+        q1 = """
         SELECT
             l.id,
             l.product_id,
             l.location_id,
 
-            -- Catégorie (nom de la fiche produit, ex: Bonbon)
+            -- Catégorie (nom de la fiche produit)
             p.name AS product,
 
-            -- Nom affiché (priorité à l'article saisi à l'achat, sinon la catégorie)
-            COALESCE(NULLIF(l.article_name, ''), p.name) AS name,
+            -- Nom affiché prioritaire : l.name > l.article_name > p.name
+            COALESCE(NULLIF(l.name, ''), NULLIF(l.article_name, ''), p.name) AS name,
 
             p.unit AS unit,
             COALESCE(p.barcode, '') AS barcode,
-
             loc.name AS location,
 
             l.qty,
@@ -464,7 +464,7 @@ def list_lots():
             l.best_before,
             l.created_on AS created_on,
 
-            -- Champs achat
+            -- Champs achat (on renvoie aussi les originaux)
             COALESCE(l.article_name, '')    AS article_name,
             COALESCE(l.brand, '')           AS brand,
             COALESCE(l.ean, '')             AS ean,
@@ -477,13 +477,42 @@ def list_lots():
         FROM stock_lots l
         JOIN products  p   ON p.id  = l.product_id
         JOIN locations loc ON loc.id = l.location_id
-        ORDER BY COALESCE(l.best_before, '9999-12-31') ASC, p.name
+        ORDER BY COALESCE(l.best_before, '9999-12-31') ASC,
+                 COALESCE(NULLIF(l.name, ''), NULLIF(l.article_name, ''), p.name)
         """
-        return [dict(r) for r in c.execute(q)]
-
-
-
-
+        try:
+            return [dict(r) for r in c.execute(q1)]
+        except Exception:
+            # 2) Fallback si la colonne l.name n’existe pas (ancien schéma)
+            q2 = """
+            SELECT
+                l.id,
+                l.product_id,
+                l.location_id,
+                p.name AS product,
+                COALESCE(NULLIF(l.article_name, ''), p.name) AS name,
+                p.unit AS unit,
+                COALESCE(p.barcode, '') AS barcode,
+                loc.name AS location,
+                l.qty,
+                l.frozen_on,
+                l.best_before,
+                l.created_on AS created_on,
+                COALESCE(l.article_name, '')    AS article_name,
+                COALESCE(l.brand, '')           AS brand,
+                COALESCE(l.ean, '')             AS ean,
+                l.price_total                   AS price_total,
+                COALESCE(l.store, '')           AS store,
+                l.qty_per_unit                  AS qty_per_unit,
+                l.multiplier                    AS multiplier,
+                COALESCE(l.unit_at_purchase,'') AS unit_at_purchase
+            FROM stock_lots l
+            JOIN products  p   ON p.id  = l.product_id
+            JOIN locations loc ON loc.id = l.location_id
+            ORDER BY COALESCE(l.best_before, '9999-12-31') ASC,
+                     COALESCE(NULLIF(l.article_name, ''), p.name)
+            """
+            return [dict(r) for r in c.execute(q2)]
 
 def consume_lot(lot_id: int, qty: float):
     with _conn() as c:
