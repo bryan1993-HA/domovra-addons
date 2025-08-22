@@ -442,32 +442,45 @@ def add_lot(product_id: int, location_id: int, qty: float, frozen_on: str | None
 
 def list_lots():
     with _conn() as c:
-        q = """SELECT
-                 l.id,
-                 l.product_id,
-                 l.location_id,
-                 p.name        AS product,
-                 p.unit        AS unit,
-                 COALESCE(p.barcode,'') AS barcode,
-                 loc.name      AS location,
-                 l.qty,
-                 l.frozen_on,
-                 l.best_before,
-                 l.created_on  AS created_on,
-                 -- nouveaux champs d'achat exposés
-                 COALESCE(l.article_name, '')    AS article_name,
-                 COALESCE(l.brand, '')           AS brand,
-                 COALESCE(l.ean, '')             AS ean,
-                 l.price_total                   AS price_total,
-                 COALESCE(l.store, '')           AS store,
-                 l.qty_per_unit                  AS qty_per_unit,
-                 l.multiplier                    AS multiplier,
-                 COALESCE(l.unit_at_purchase,'') AS unit_at_purchase
-               FROM stock_lots l
-               JOIN products  p   ON p.id  = l.product_id
-               JOIN locations loc ON loc.id = l.location_id
-               ORDER BY COALESCE(l.best_before, '9999-12-31') ASC, p.name"""
+        q = """
+        SELECT
+            l.id,
+            l.product_id,
+            l.location_id,
+
+            -- Catégorie (nom de la fiche produit, ex: Bonbon)
+            p.name AS product,
+
+            -- Nom affiché (priorité à l'article saisi à l'achat, sinon la catégorie)
+            COALESCE(NULLIF(l.article_name, ''), p.name) AS name,
+
+            p.unit AS unit,
+            COALESCE(p.barcode, '') AS barcode,
+
+            loc.name AS location,
+
+            l.qty,
+            l.frozen_on,
+            l.best_before,
+            l.created_on AS created_on,
+
+            -- Champs achat
+            COALESCE(l.article_name, '')    AS article_name,
+            COALESCE(l.brand, '')           AS brand,
+            COALESCE(l.ean, '')             AS ean,
+            l.price_total                   AS price_total,
+            COALESCE(l.store, '')           AS store,
+            l.qty_per_unit                  AS qty_per_unit,
+            l.multiplier                    AS multiplier,
+            COALESCE(l.unit_at_purchase,'') AS unit_at_purchase
+
+        FROM stock_lots l
+        JOIN products  p   ON p.id  = l.product_id
+        JOIN locations loc ON loc.id = l.location_id
+        ORDER BY COALESCE(l.best_before, '9999-12-31') ASC, p.name
+        """
         return [dict(r) for r in c.execute(q)]
+
 
 
 
