@@ -2,11 +2,11 @@
 import os
 from fastapi import APIRouter, Request
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse, PlainTextResponse
-from fastapi.staticfiles import StaticFiles  # (uniquement pour typer, pas utilisé ici)
 from urllib.parse import urlencode
 
 from utils.http import ingress_base, render as render_with_env
-from config import START_TS
+from config import START_TS, WARNING_DAYS, CRITICAL_DAYS
+from db import list_locations, list_products, list_lots, status_for
 
 router = APIRouter()
 
@@ -17,26 +17,38 @@ def ping():
 @router.get("/", response_class=HTMLResponse)
 @router.get("//", response_class=HTMLResponse)
 def index(request: Request):
-    """
-    ⚠️ ATTENTION :
-    - On NE met ici que le rendu de la page (données minimales),
-    - La logique métier / données complexes restent dans leurs routers/dépendances dédiés.
-    """
     base = ingress_base(request)
-    # Les données utilisées par index.html viennent de main.py jusqu'à la migration complète
-    # (pour cette 3A on garde l'implémentation “plein pot” côté main.py, voir plus bas)
-    # Ici on ne fait que “proxy” l’appel de rendu pour éviter le double code.
-    return render_with_env(request.app.state.templates, "index.html", BASE=base, page="home", request=request)
+
+    # Calcule les données de la home (ex-logiciel de main.py)
+    locations = list_locations()
+    products  = list_products()
+    lots      = list_lots()
+    for it in lots:
+        it["status"] = status_for(it.get("best_before"), WARNING_DAYS, CRITICAL_DAYS)
+
+    # Optionnel: basiques “faible stock” si tu veux tout de suite
+    low_products = []  # tu peux brancher list_low_stock_products si dispo
+
+    # Rendu en utilisant l’env Jinja stocké dans app.state.templates
+    return render_with_env(
+        request.app.state.templates,
+        "index.html",
+        BASE=base,
+        page="home",
+        request=request,
+        locations=locations,
+        products=products,
+        lots=lots,
+        low_products=low_products,
+        WARNING_DAYS=WARNING_DAYS,
+        CRITICAL_DAYS=CRITICAL_DAYS,
+    )
 
 @router.get("/_debug/static")
 def debug_static(request: Request):
-    """
-    Copie du endpoint debug, mais en s’appuyant uniquement sur l'état de l'app
-    (templates globals + STATIC_DIR).
-    """
     templates = request.app.state.templates
     HERE = os.path.dirname(__file__)                # .../routes
-    APP_DIR = os.path.abspath(os.path.join(HERE, ".."))   # .../app
+    APP_DIR = os.path.abspath(os.path.join(HERE, ".."))
     STATIC_DIR = os.path.join(APP_DIR, "static")
 
     css_path = os.path.join(STATIC_DIR, "css", "domovra.css")
