@@ -76,6 +76,53 @@ def support_page(request: Request):
     return render_with_env(request.app.state.templates, "support.html",
                            BASE=base, page="support", request=request)
 
+@router.get("/_debug/vars")
+def debug_vars(request: Request):
+    templates = request.app.state.templates
+    HERE = os.path.dirname(__file__)
+    APP_DIR = os.path.abspath(os.path.join(HERE, ".."))
+    STATIC_DIR = os.path.join(APP_DIR, "static")
+    return {
+        "ASSET_CSS_PATH": templates.globals.get("ASSET_CSS_PATH"),
+        "STATIC_DIR": STATIC_DIR,
+        "ls_static": sorted(os.listdir(STATIC_DIR)) if os.path.isdir(STATIC_DIR) else [],
+        "ls_css": sorted(os.listdir(os.path.join(STATIC_DIR, "css"))) if os.path.isdir(os.path.join(STATIC_DIR, "css")) else [],
+    }
+
+@router.get("/_debug/static")
+def debug_static(request: Request):
+    templates = request.app.state.templates
+    HERE = os.path.dirname(__file__)
+    APP_DIR = os.path.abspath(os.path.join(HERE, ".."))
+    STATIC_DIR = os.path.join(APP_DIR, "static")
+    css_path = os.path.join(STATIC_DIR, "css", "domovra.css")
+    hashed_rel = templates.globals.get("ASSET_CSS_PATH")
+    hashed_path = (os.path.join(STATIC_DIR, hashed_rel.split("static/",1)[1]) if hashed_rel else None)
+    hashed_url = (str(request.url_for("static", path=hashed_rel.split("static/",1)[1])) if hashed_rel else None)
+    return JSONResponse({
+        "STATIC_DIR": STATIC_DIR,
+        "exists": os.path.isdir(STATIC_DIR),
+        "css_exists": os.path.isfile(css_path),
+        "css_size": os.path.getsize(css_path) if os.path.isfile(css_path) else None,
+        "ls_static": sorted(os.listdir(STATIC_DIR)) if os.path.isdir(STATIC_DIR) else [],
+        "ls_css": sorted(os.listdir(os.path.join(STATIC_DIR, "css"))) if os.path.isdir(os.path.join(STATIC_DIR, "css")) else [],
+        "url_css": str(request.url_for("static", path="css/domovra.css")),
+        "hashed_css_rel": hashed_rel,
+        "hashed_css_exists": os.path.isfile(hashed_path) if hashed_path else False,
+        "hashed_css_url": hashed_url,
+    })
+
+from fastapi import HTTPException
+
+@router.get("/{path:path}", include_in_schema=False)
+def fallback(request: Request, path: str):
+    # Laisse passer nos endpoints de debug
+    if path.startswith("_debug/"):
+        raise HTTPException(status_code=404, detail="Not found")
+    base = ingress_base(request)
+    return RedirectResponse(base, status_code=303, headers={"Cache-Control":"no-store"})
+
+
 @router.get("/{path:path}", include_in_schema=False)
 def fallback(request: Request, path: str):
     base = ingress_base(request)
