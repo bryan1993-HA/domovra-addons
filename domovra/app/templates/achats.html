@@ -137,10 +137,17 @@
                 <div class="hint" id="product_hint"></div>
             </div>
 
-            <!-- Nom suggéré (si produit inconnu via OFF) -->
+            <!-- Nom suggéré (OFF ou fiche produit si besoin) -->
             <div>
                 <div class="label">Nom (suggéré par OFF)</div>
-                <input type="text" id="name_suggest" placeholder="Rempli après scan si produit inconnu"
+                <input type="text" id="name_suggest" name="name" placeholder="Rempli après scan si produit inconnu"
+                    autocomplete="off">
+            </div>
+
+            <!-- Marque (séparée) -->
+            <div>
+                <div class="label">Marque</div>
+                <input type="text" id="brand_suggest" name="brand" placeholder="Marque (OFF ou fiche produit)"
                     autocomplete="off">
                 <div class="hint" id="off_qty_hint"></div>
             </div>
@@ -192,7 +199,6 @@
                 <div class="label">DLC (optionnel)</div>
                 <input type="date" name="best_before" id="best_before">
             </div>
-
             <div>
                 <div class="label">Date de congélation (optionnel)</div>
                 <input type="date" name="frozen_on" id="frozen_on">
@@ -453,6 +459,7 @@
         const eanHint = $('#ean_hint');
         const productSel = $('#product_select');
         const nameSuggest = $('#name_suggest');
+        const brandSuggest = $('#brand_suggest');
         const offQtyHint = $('#off_qty_hint');
         const qtyInput = $('#qty');
 
@@ -466,14 +473,16 @@
             if (['kg', 'kilogram', 'kilograms', 'kilogramme', 'kilogrammes'].includes(x)) return 'kg';
             if (['ml', 'millilitre', 'millilitres', 'milliliter', 'milliliters'].includes(x)) return 'ml';
             if (['l', 'litre', 'litres', 'liter', 'liters'].includes(x)) return 'L';
+            if (['cl', 'centilitre', 'centilitres', 'centiliter', 'centiliters'].includes(x)) return 'cl';
             if (['piece', 'pièce', 'pieces', 'pièces', 'pcs', 'pc'].includes(x)) return 'pièce';
-            if (['cl', 'centilitre', 'centilitres', 'centiliter', 'centiliters'].includes(x)) return 'ml'; // on mappe 33cl → 330 ml
             return null;
         }
         function selectUnitOnForm(uWanted) {
             const unitSel = $('#unit');
             if (!unitSel) return;
-            const mapped = mapUnit(uWanted);
+            let mapped = mapUnit(uWanted);
+            // on convertit cl -> ml pour rester cohérent avec le sélecteur
+            if (mapped === 'cl') mapped = 'ml';
             const target = mapped || uWanted;
             const opt = [...unitSel.options].find(o => o.value === target);
             if (opt) unitSel.value = opt.value;
@@ -484,13 +493,12 @@
             const n = Number(String(v).replace(',', '.'));
             if (!isNaN(n) && n > 0) q.value = String(n);
         }
-        function setNameSuggest(name, brand) {
+        function setNameSuggest(name) {
             const el = $('#name_suggest');
-            if (!el) return;
-            const parts = [];
-            if (name) parts.push(name);
-            if (brand) parts.push(`— ${brand}`);
-            el.value = parts.join(' ').trim();
+            if (el) el.value = (name || '').trim();
+        }
+        function setBrandSuggest(brand) {
+            if (brandSuggest) brandSuggest.value = (brand || '').trim();
         }
         function clearOffHints() {
             const offQtyHint = $('#off_qty_hint');
@@ -506,8 +514,9 @@
             const unit = opt.dataset.unit || 'pièce';
             selectUnitOnForm(unit);
 
-            // Nom lisible
-            setNameSuggest(opt.dataset.name, opt.dataset.brand);
+            // Nom + Marque séparés
+            setNameSuggest(opt.dataset.name);
+            setBrandSuggest(opt.dataset.brand);
 
             // Quantité par défaut
             if (!qtyInput.value || Number(qtyInput.value) <= 0) qtyInput.value = '1';
@@ -539,7 +548,7 @@
                     // essaie de sélectionner l’option correspondante dans la liste
                     const opt = [...productSel.options].find(o => (o.dataset.barcode || '').replace(/\s+/g, '') === code);
                     productSel.value = opt ? opt.value : String(p.id);
-                    productSel.dispatchEvent(new Event('change'));
+                    productSel.dispatchEvent(new Event('change')); // déclenche le préremplissage
                     setHint(eanHint, `Produit trouvé : ${p.name}`);
                     if (!qtyInput.value) qtyInput.value = '1';
                     toast('Produit sélectionné depuis le stock.', 'ok');
@@ -554,8 +563,9 @@
                 if (data && data.ok) {
                     setHint(eanHint, "Produit non connu en local — infos récupérées depuis OFF.");
 
-                    // Nom & marque
-                    setNameSuggest(data.name || data.product_name || '', data.brand || data.brands || '');
+                    // Nom & marque séparés
+                    setNameSuggest(data.name || data.product_name || '');
+                    setBrandSuggest(data.brand || data.brands || '');
 
                     // Quantité OFF : extraction structurée si dispo
                     let unitFromOff = data.unit || '';
@@ -583,13 +593,13 @@
 
                     // Quantité :
                     const uMap = mapUnit(unitFromOff);
-                    if (uMap && ['g', 'kg', 'ml', 'L'].includes(uMap) && qtyFromOff) {
-                        // Si cl → converti via mapUnit → ml ; qtyFromOff reste la valeur telle quelle
-                        // Exemple 33 cl → uMap=ml, qty=33 => on convertit en 330
+                    if (uMap && ['g', 'kg', 'ml', 'L', 'cl'].includes(uMap) && qtyFromOff) {
+                        // cl -> convertir en ml (33 cl → 330 ml)
                         if ((String(unitFromOff).toLowerCase().trim() === 'cl')) {
                             const n = Number(String(qtyFromOff));
                             if (!isNaN(n)) safeSetQty(n * 10); // 1 cl = 10 ml
                             else safeSetQty(qtyFromOff);
+                            selectUnitOnForm('ml');
                         } else {
                             safeSetQty(qtyFromOff);
                         }
@@ -598,7 +608,7 @@
                         if (!uMap) selectUnitOnForm('pièce');
                     }
 
-                    // Hint OFF
+                    // Hint OFF (quantité / pack)
                     const offTxt = [];
                     if (data.quantity) offTxt.push(`Quantité OFF : ${data.quantity}`);
                     if (packOf) offTxt.push(`Pack de ${packOf}`);
@@ -607,7 +617,7 @@
                     toast(`OFF → ${data.name || data.product_name || 'Nom indisponible'}`, 'warn');
                 } else {
                     setHint(eanHint, "Ni Domovra ni OFF n’ont trouvé ce code.");
-                    setNameSuggest('', '');
+                    setNameSuggest(''); setBrandSuggest('');
                     clearOffHints();
                     toast("Aucun résultat pour cet EAN.", "warn");
                 }
