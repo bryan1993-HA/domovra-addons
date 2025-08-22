@@ -1226,3 +1226,29 @@ def list_product_insights(limit: int = 8):
     # TODO: calcule “dernier achat”, “dernière utilisation”, etc.
     # Pour l’instant on renvoie une structure vide.
     return []
+
+import sqlite3
+
+DB_PATH = "/data/domovra.sqlite3"  # adapte si besoin
+
+def _conn():
+    c = sqlite3.connect(DB_PATH)
+    c.row_factory = sqlite3.Row
+    return c
+
+@app.get("/debug/db")
+def debug_db():
+    """Retourne toutes les tables et les 5 premières lignes de chaque table"""
+    out = []
+    with _conn() as c:
+        tables = [r["name"] for r in c.execute(
+            "SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'"
+        )]
+        for t in tables:
+            rows = [dict(r) for r in c.execute(f"SELECT * FROM {t} LIMIT 5")]
+            out.append({
+                "table": t,
+                "columns": list(rows[0].keys()) if rows else [],
+                "rows": rows
+            })
+    return out
