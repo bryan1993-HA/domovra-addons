@@ -431,4 +431,74 @@
         // (facultatif) le bouton 📷 reste géré par ton code existant
     })();
 </script>
+<script>
+    (function () {
+        const $ = (s, p = document) => p.querySelector(s);
+        const toast = (m, t = 'ok') => window.showToast?.(m, t);
+
+        const elEAN = $('#ean');
+        const eanHint = $('#ean_hint');
+        const productSel = $('#product_select');
+        const nameSuggest = $('#name_suggest');
+        const offQtyHint = $('#off_qty_hint');
+        const qtyInput = $('#qty');
+
+        function setHint(el, txt) { if (el) el.textContent = txt || ''; }
+
+        async function lookupByEAN_impl(ean) {
+            const code = (ean || '').replace(/\s+/g, '').trim();
+            if (!code) { toast('EAN vide.', 'warn'); return; }
+            if (elEAN) elEAN.value = code;
+
+            // 1) DB locale
+            try {
+                const r = await fetch(`{{ BASE }}api/product/by_barcode?code=${encodeURIComponent(code)}`);
+                if (r.ok) {
+                    const p = await r.json();
+                    // essaie de sélectionner l’option correspondante dans la liste
+                    const opt = [...productSel.options].find(o => (o.dataset.barcode || '').replace(/\s+/g, '') === code);
+                    productSel.value = opt ? opt.value : String(p.id);
+                    productSel.dispatchEvent(new Event('change'));
+                    setHint(eanHint, `Produit trouvé : ${p.name}`);
+                    if (!qtyInput.value) qtyInput.value = '1';
+                    toast('Produit sélectionné depuis le stock.', 'ok');
+                    return;
+                }
+            } catch { }
+
+            // 2) Open Food Facts (via ton endpoint serveur)
+            try {
+                const r = await fetch(`{{ BASE }}api/off?barcode=${encodeURIComponent(code)}`);
+                const data = await r.json();
+                if (data && data.ok) {
+                    setHint(eanHint, "Produit non connu en local — infos récupérées depuis OFF.");
+                    if (nameSuggest) nameSuggest.value = data.name || '';
+                    setHint(offQtyHint, data.quantity ? `Quantité OFF : ${data.quantity}` : '');
+                    if (!qtyInput.value || qtyInput.value === '0') qtyInput.value = '1';
+                    toast(`OFF → ${data.name || 'Nom indisponible'}`, 'warn');
+                } else {
+                    setHint(eanHint, "Ni Domovra ni OFF n’ont trouvé ce code.");
+                    if (nameSuggest) nameSuggest.value = '';
+                    setHint(offQtyHint, '');
+                    toast("Aucun résultat pour cet EAN.", "warn");
+                }
+            } catch (e) {
+                setHint(eanHint, "Erreur OFF.");
+                toast("Erreur lors de la récupération OFF.", "error");
+            }
+        }
+
+        // Expose pour que ton scanner puisse l’appeler :
+        if (typeof window.lookupByEAN !== 'function') {
+            window.lookupByEAN = lookupByEAN_impl;
+        }
+
+        // Bouton 🔎 et touche Entrée sur le champ
+        $('#btn_check_ean')?.addEventListener('click', () => window.lookupByEAN(elEAN.value));
+        elEAN?.addEventListener('keydown', (ev) => {
+            if (ev.key === 'Enter') { ev.preventDefault(); window.lookupByEAN(elEAN.value); }
+        });
+    })();
+</script>
+
 {% endblock %}
