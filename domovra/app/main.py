@@ -77,7 +77,6 @@ def render(name: str, **ctx):
     return _render_with_env(templates, name, **ctx)
 
 app.state.templates = templates
-app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 app.include_router(home_router)
 
 
