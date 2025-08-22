@@ -14,118 +14,156 @@
     <div class="title">
       <h2>Outils</h2><span class="muted">Recherche & filtres</span>
     </div>
+
     <div class="filters-row">
-      <input id="q" class="wide" type="search" placeholder="Rechercher (produit, emplacement, EAN)…">
+      <div class="qwrap wide">
+        <input id="q" type="search" placeholder="Rechercher (produit, emplacement, EAN)…">
+        <button type="button" class="icon-btn" aria-label="Aide recherche"
+          onclick="document.getElementById('q-help')?.showModal()">?</button>
+      </div>
+
       <select id="f_loc">
         <option value="">📍 Tous emplacements</option>
         {% for l in locations %}<option value="{{ l.name|lower }}">{{ l.name }}</option>{% endfor %}
       </select>
+
       <select id="f_status">
         <option value="">⚑ Tous états</option>
         <option value="green">OK</option>
         <option value="yellow">Bientôt</option>
         <option value="red">Urgent</option>
       </select>
+
       <span class="chip">🧺 Stocks : <b id="lots-count">{{ items|length }}</b></span>
     </div>
   </div>
 
-  <!-- Liste (cartes uniquement) -->
-  <div class="card">
-    <div class="title">
-      <h2>Liste</h2><span class="muted">Cartes (responsive)</span>
-    </div>
-
-    <div class="lot-cards" id="cards">
-      {% if items %}
-      {% for it in items %}
-      <div class="lot-card" data-name="{{ it.product|lower }}" data-loc="{{ it.location|lower }}"
-        data-barcode="{{ (it.barcode or '')|lower }}" data-status="{{ it.status }}">
-        <div class="lc-head">
-          <div class="lc-title">
+  <!-- Grille de cartes (comme /products) -->
+  <div class="cards-grid" id="lot-cards">
+    {% if items %}
+    {% for it in items %}
+    {% set q = fmt_qty(it.qty, it.unit) %}
+    {% set code = it.ean or it.barcode %}
+    <article class="prod-card" data-name="{{ it.product|lower }}" data-loc="{{ it.location|lower }}"
+      data-barcode="{{ (code or '')|lower }}" data-status="{{ it.status }}">
+      <!-- En-tête -->
+      <div class="pc-head">
+        <div class="pc-title">
+          <h3 class="pc-name">
             {{ it.article_name or it.product }}
             {% if it.brand %}<span class="muted"> — {{ it.brand }}</span>{% endif %}
-          </div>
+          </h3>
           <span class="status {{ it.status }}">
             {{ "OK" if it.status=="green" else ("Bientôt" if it.status=="yellow" else ("Urgent" if it.status=="red" else
             "—")) }}
           </span>
         </div>
-
-        <div class="lc-sub">
-          {% set qv = fmt_qty(it.qty, it.unit) %}
-          {{ qv.v }} {{ qv.u|pluralize_fr(it.qty) }}
-          • 📍 {{ it.location }}
-          {% set code = it.ean or it.barcode %}
+        <div class="pc-sub">
+          {{ q.v }} {{ q.u|pluralize_fr(it.qty) }} • 📍 {{ it.location }}
           {% if code %} • 🏷️ {{ code }}{% endif %}
         </div>
+      </div>
 
-        <details class="dates">
-          <summary>📅 Dates</summary>
-          <div class="timeline">
-            <span class="pill">❄ <span>{{ it.frozen_on or '—' }}</span></span>
-            <span class="pill">⏳ <span>{{ it.best_before or '—' }}</span></span>
-            {% if it.created_on %}<span class="pill">➕ <span>{{ it.created_on }}</span></span>{% endif %}
-          </div>
-        </details>
+      <!-- Corps (stats 2 colonnes comme /products) -->
+      <div class="pc-body">
+        <div class="stat">
+          <span class="k">Quantité totale</span>
+          <span class="v">{{ q.v }} {{ q.u|pluralize_fr(it.qty) }}</span>
+        </div>
+        <div class="stat">
+          <span class="k">Emplacement</span>
+          <span class="v">{{ it.location }}</span>
+        </div>
 
-        <div class="lc-actions">
-          <button class="secondary js-edit-open" data-id="{{ it.id }}" data-qty="{{ it.qty }}" data-unit="{{ it.unit }}"
-            data-location_id="{{ it.location_id }}" data-frozen="{{ it.frozen_on or '' }}"
-            data-best_before="{{ it.best_before or '' }}">✏️ Modifier</button>
-
-          <button class="secondary js-delete-open" data-id="{{ it.id }}" data-product="{{ it.product }}">🗑️
-            Supprimer</button>
+        <div class="stat full">
+          <span class="k">Dates</span>
+          <details class="dates">
+            <summary>📅 Voir les dates</summary>
+            <div class="timeline">
+              <span class="pill">❄ <span>{{ it.frozen_on or '—' }}</span></span>
+              <span class="pill">⏳ <span>{{ it.best_before or '—' }}</span></span>
+              {% if it.created_on %}<span class="pill">➕ <span>{{ it.created_on }}</span></span>{% endif %}
+            </div>
+          </details>
         </div>
       </div>
-      {% endfor %}
-      {% else %}
-      <div class="muted">Aucune entrée de stock.</div>
-      {% endif %}
-    </div>
+
+      <!-- Actions (mêmes boutons que /products) -->
+      <div class="pc-actions">
+        <button class="secondary js-edit-open" data-id="{{ it.id }}" data-qty="{{ it.qty }}" data-unit="{{ it.unit }}"
+          data-location_id="{{ it.location_id }}" data-frozen="{{ it.frozen_on or '' }}"
+          data-best_before="{{ it.best_before or '' }}">
+          ✏️ Modifier
+        </button>
+
+        <button class="secondary js-delete-open" data-id="{{ it.id }}" data-product="{{ it.product }}">
+          🗑️ Supprimer
+        </button>
+      </div>
+    </article>
+    {% endfor %}
+    {% else %}
+    <div class="muted">Aucune entrée de stock.</div>
+    {% endif %}
   </div>
 </div>
 
+<!-- Aide rapide recherche -->
+<dialog id="q-help">
+  <div class="qhelp">
+    <header>
+      <strong>Astuce recherche</strong>
+      <button class="icon-btn" onclick="this.closest('dialog')?.close()">✕</button>
+    </header>
+    <ul class="help-list">
+      <li>Tape le nom du produit, un emplacement ou un EAN.</li>
+      <li>Combine avec les filtres “Emplacements” et “États”.</li>
+    </ul>
+  </div>
+</dialog>
+
 <!-- Dialogs -->
-<dialog id="dlg-edit">
-  <form method="post" action="{{ BASE }}lot/update" style="display:grid;gap:10px;min-width:min(520px,92vw)">
-    <h3 style="margin:0">Modifier le stock</h3>
+<dialog id="dlg-edit" class="modal">
+  <form method="post" action="{{ BASE }}lot/update" class="edit-form">
+    <h3 class="dlg-title">Modifier le stock</h3>
     <input type="hidden" name="lot_id" id="dlg-lot-id">
-    <div class="row" style="gap:10px">
-      <div style="flex:1">
+
+    <div class="row">
+      <div class="field">
         <div class="label">Quantité</div>
         <input type="number" name="qty" id="dlg-qty" step="0.01" min="0" required>
       </div>
-      <div style="flex:1">
+      <div class="field">
         <div class="label">Emplacement</div>
         <select name="location_id" id="dlg-location">
           {% for l in locations %}<option value="{{ l.id }}">{{ l.name }}</option>{% endfor %}
         </select>
       </div>
-    </div>
-    <div class="row" style="gap:10px">
-      <div style="flex:1">
-        <div class="label">Congelé le</div><input type="date" name="frozen_on" id="dlg-frozen">
+      <div class="field">
+        <div class="label">Congelé le</div>
+        <input type="date" name="frozen_on" id="dlg-frozen">
       </div>
-      <div style="flex:1">
-        <div class="label">À consommer avant</div><input type="date" name="best_before" id="dlg-best-before">
+      <div class="field">
+        <div class="label">À consommer avant</div>
+        <input type="date" name="best_before" id="dlg-best-before">
       </div>
     </div>
-    <div class="row" style="justify-content:flex-end;gap:8px">
-      <button type="button" onclick="document.getElementById('dlg-edit').close()">Annuler</button>
-      <button class="secondary">Enregistrer</button>
+
+    <div class="dlg-actions">
+      <button type="button" class="btn-cancel" onclick="document.getElementById('dlg-edit').close()">Annuler</button>
+      <button class="btn-save secondary">Enregistrer</button>
     </div>
   </form>
 </dialog>
 
-<dialog id="dlg-delete">
-  <form method="post" action="{{ BASE }}lot/delete" style="display:grid;gap:10px;min-width:min(420px,92vw)">
-    <h3 style="margin:0">Supprimer du stock</h3>
+<dialog id="dlg-delete" class="modal">
+  <form method="post" action="{{ BASE }}lot/delete" class="edit-form">
+    <h3 class="dlg-title">Supprimer du stock</h3>
     <input type="hidden" name="lot_id" id="del-lot-id">
     <div class="muted" id="del-msg">Supprimer cette entrée de stock ?</div>
-    <div class="row" style="justify-content:flex-end;gap:8px">
-      <button type="button" onclick="document.getElementById('dlg-delete').close()">Annuler</button>
-      <button class="secondary" style="background:var(--danger);border:0;color:#1d0c0c">Supprimer</button>
+    <div class="dlg-actions">
+      <button type="button" class="btn-cancel" onclick="document.getElementById('dlg-delete').close()">Annuler</button>
+      <button class="btn-save secondary" style="background:var(--danger);border:0;color:#1d0c0c">Supprimer</button>
     </div>
   </form>
 </dialog>
@@ -135,12 +173,14 @@
 <script>
   const $ = s => document.querySelector(s);
 
-  /* --- Recherche / filtres (cartes uniquement) --- */
-  const q = $('#q'), fLoc = $('#f_loc'), fStatus = $('#f_status');
-  const cards = $('#cards');
-  const cardsItems = Array.from(cards ? cards.children : []);
+  /* --- Recherche / filtres --- */
+  const q = $('#q'),
+    fLoc = $('#f_loc'),
+    fStatus = $('#f_status'),
+    cards = Array.from(document.querySelectorAll('#lot-cards .prod-card')),
+    countEl = document.getElementById('lots-count');
 
-  function passesFilters(ds, txt, loc, st) {
+  function matches(ds, txt, loc, st) {
     const s = (ds.name + ' ' + (ds.loc || '') + ' ' + (ds.barcode || '')).includes(txt);
     const l = loc ? (ds.loc === loc) : true;
     const t = st ? ((ds.status || '') === st) : true;
@@ -151,25 +191,22 @@
     const txt = (q?.value || '').toLowerCase().trim();
     const loc = (fLoc?.value || '').toLowerCase().trim();
     const st = (fStatus?.value || '').trim();
-
     let shown = 0;
-    cardsItems.forEach(c => {
-      const m = passesFilters(c.dataset, txt, loc, st);
-      c.style.display = m ? '' : 'none';
+    cards.forEach(card => {
+      const m = matches(card.dataset, txt, loc, st);
+      card.style.display = m ? '' : 'none';
       if (m) shown++;
     });
-
-    const lc = document.getElementById('lots-count');
-    if (lc) lc.textContent = (txt || loc || st) ? shown : cardsItems.length;
+    if (countEl) countEl.textContent = (txt || loc || st) ? shown : cards.length;
   }
   [q, fLoc, fStatus].forEach(el => el && el.addEventListener('input', applyFilter));
 
   /* --- Toasts via querystring --- */
   (function () {
     const p = new URLSearchParams(location.search);
-    if (p.get('added') === '1') window.showToast('Stock ajouté.', 'ok');
-    if (p.get('updated') === '1') window.showToast('Stock mis à jour.', 'ok');
-    if (p.get('deleted') === '1') window.showToast('Stock supprimé.', 'warn');
+    if (p.get('added') === '1') window.showToast?.('Stock ajouté.', 'ok');
+    if (p.get('updated') === '1') window.showToast?.('Stock mis à jour.', 'ok');
+    if (p.get('deleted') === '1') window.showToast?.('Stock supprimé.', 'warn');
   })();
 
   /* --- Modales Edit / Delete --- */
@@ -178,7 +215,6 @@
     const delDialog = document.getElementById('dlg-delete');
     const setVal = (id, v) => { const el = document.getElementById(id); if (el) el.value = v ?? ''; };
 
-    // Ouvrir "Modifier"
     document.querySelectorAll('.js-edit-open').forEach(btn => {
       btn.addEventListener('click', () => {
         setVal('dlg-lot-id', btn.dataset.id);
@@ -190,21 +226,17 @@
       });
     });
 
-    // Ouvrir "Supprimer"
     document.querySelectorAll('.js-delete-open').forEach(btn => {
       btn.addEventListener('click', () => {
         setVal('del-lot-id', btn.dataset.id);
         const msg = document.getElementById('del-msg');
-        if (msg) msg.textContent = btn.dataset.product
-          ? `Supprimer "${btn.dataset.product}" du stock ?`
-          : 'Supprimer cette entrée de stock ?';
+        msg && (msg.textContent = btn.dataset.product ? `Supprimer "${btn.dataset.product}" du stock ?` : 'Supprimer cette entrée de stock ?');
         delDialog?.showModal();
       });
     });
 
-    // Sécurité UX : empêcher ENTER de soumettre la modale delete
-    const delForm = delDialog?.querySelector('form');
-    delForm?.addEventListener('keydown', (e) => {
+    // sécurité : ENTER ne soumet pas la modale delete par mégarde
+    delDialog?.querySelector('form')?.addEventListener('keydown', (e) => {
       if (e.key === 'Enter' && e.target.tagName !== 'TEXTAREA') e.preventDefault();
     });
   })();

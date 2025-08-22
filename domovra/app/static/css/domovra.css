@@ -1859,138 +1859,48 @@ html[data-theme="light"] .qhelp code {
 
 
 /* ========================================================================== */
-/* ========== 14) Page Stocks (/lots) — cartes uniquement ==================== */
+/* ========== 14) Page Stocks (/lots) — s'aligne sur /products =============== */
 /* ========================================================================== */
 
 /* Filtres (recherche + sélecteurs) */
-.wrap .filters-row {
-    display: grid;
-    grid-template-columns: 2fr 1fr 1fr 1fr auto;
-    gap: 12px;
+.wrap .filters-row{
+  display:grid;
+  grid-template-columns:2fr 1fr 1fr auto;
+  gap:12px;
+}
+@media (max-width:900px){
+  .wrap .filters-row{ grid-template-columns:1fr 1fr; }
+  .wrap .filters-row .wide{ grid-column:1 / -1; }
 }
 
-@media (max-width:900px) {
-    .wrap .filters-row {
-        grid-template-columns: 1fr 1fr;
-    }
+/* Pastille d'état (réutilisée dans l'entête de carte) */
+.wrap .status{
+  margin-left:auto;
+  display:inline-flex;
+  align-items:center;
+  gap:6px;
+  padding:4px 10px;
+  border-radius:999px;
+  border:1px solid var(--line);
+  font-weight:600;
+}
+.wrap .status.green{  background:rgba(76,175,80,.12); }
+.wrap .status.yellow{ background:rgba(255,179,0,.12); }
+.wrap .status.red{    background:rgba(239,83,80,.12); }
 
-    .wrap .filters-row .wide {
-        grid-column: 1 / -1;
-    }
+/* Bloc Dates (utilisé dans .stat.full comme /products) */
+.wrap details.dates{ margin-top:6px; }
+.wrap details.dates summary{
+  cursor:pointer; list-style:none; display:inline-flex; align-items:center; gap:8px;
+  color:var(--text-muted);
+}
+.wrap details.dates summary::-webkit-details-marker{ display:none; }
+.wrap .timeline{ display:flex; gap:12px; flex-wrap:wrap; margin-top:6px; }
+.wrap .timeline .pill{
+  display:inline-flex; align-items:center; gap:6px;
+  padding:4px 8px; border-radius:999px; border:1px solid var(--line); background:transparent;
 }
 
-/* Pastille d'état */
-.wrap .status {
-    margin-left: auto;
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    padding: 4px 10px;
-    border-radius: 999px;
-    border: 1px solid var(--line);
-    font-weight: 600;
-}
-
-.wrap .status.green {
-    background: rgba(76, 175, 80, .12);
-}
-
-.wrap .status.yellow {
-    background: rgba(255, 179, 0, .12);
-}
-
-.wrap .status.red {
-    background: rgba(239, 83, 80, .12);
-}
-
-/* Bloc Dates */
-.wrap details.dates {
-    margin-top: 6px;
-}
-
-.wrap details.dates summary {
-    cursor: pointer;
-    list-style: none;
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    color: var(--text-muted);
-}
-
-.wrap details.dates summary::-webkit-details-marker {
-    display: none;
-}
-
-.wrap .timeline {
-    display: flex;
-    gap: 12px;
-    flex-wrap: wrap;
-    margin-top: 6px;
-}
-
-.wrap .timeline .pill {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    padding: 4px 8px;
-    border-radius: 999px;
-    border: 1px solid var(--line);
-    background: transparent;
-}
-
-/* Cartes de lots */
-.lot-cards {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
-    gap: 12px;
-}
-
-.lot-card {
-    border: 1px solid var(--line);
-    border-radius: 12px;
-    padding: 12px;
-    background: transparent;
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-}
-
-.lc-head {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-}
-
-.lc-title {
-    font-weight: 700;
-    flex: 1;
-    min-width: 0;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-}
-
-.lc-sub {
-    color: var(--text-muted);
-    font-size: 14px;
-}
-
-.lc-actions {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 8px;
-    margin-top: 8px;
-}
-
-@media (max-width:640px) {
-    .lot-cards {
-        grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
-    }
-
-    .lc-actions {
-        grid-template-columns: 1fr;
-    }
-}
 
 
 /* ========================================================================== */
