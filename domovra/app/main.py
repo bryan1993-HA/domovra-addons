@@ -7,6 +7,11 @@ from fastapi.responses import HTMLResponse, RedirectResponse, JSONResponse, Plai
 from fastapi.staticfiles import StaticFiles
 from jinja2 import Environment, FileSystemLoader, select_autoescape
 from urllib.parse import urlencode
+from .config import WARNING_DAYS, CRITICAL_DAYS, DB_PATH, START_TS
+from .utils.http import nocache_html, render, ingress_base
+from .utils.jinja import build_jinja_env
+from .utils.assets import ensure_hashed_asset
+from .services.events import _ensure_events_table, log_event, list_events
 
 from db import (
     init_db,
@@ -61,14 +66,10 @@ def setup_logging():
 setup_logging()
 logger = logging.getLogger("domovra")
 
-WARNING_DAYS  = int(os.environ.get("WARNING_DAYS",  "30"))
-CRITICAL_DAYS = int(os.environ.get("CRITICAL_DAYS", "14"))
-DB_PATH       = os.environ.get("DB_PATH", "/data/domovra.sqlite3")
-
-# Cache-buster de secours (boot) – encore dispo si besoin
-START_TS = os.environ.get("START_TS") or str(int(time.time()))
-
 app = FastAPI()
+
+templates = build_jinja_env()
+
 
 # === Static files : dossier à côté de main.py (Option A) ===
 HERE = os.path.dirname(__file__)                  # /opt/app
@@ -92,11 +93,6 @@ try:
     logger.info("CSS file %s exists=%s size=%s", css_file, os.path.isfile(css_file), os.path.getsize(css_file) if os.path.isfile(css_file) else "N/A")
 except Exception as e:
     logger.exception("Static check failed: %s", e)
-
-templates = Environment(
-    loader=FileSystemLoader("templates"),
-    autoescape=select_autoescape()
-)
 
 # -------------------- Asset versioning automatique (hash fichier) --------------------
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -171,125 +167,8 @@ def ensure_hashed_asset(src_rel: str) -> str:
 
     return dst_rel
 
-# Expose dans Jinja :
-templates.globals["asset_ver"] = asset_ver
-templates.globals["ASSET_VER"] = asset_ver("static/css/domovra.css")  # optionnel (affichage/debug)
-CSS_MAIN_REL = "static/css/domovra.css"
-CSS_HASHED_REL = ensure_hashed_asset(CSS_MAIN_REL)
-templates.globals["ASSET_CSS_PATH"] = CSS_HASHED_REL  # <- à utiliser dans base.html
-templates.globals["START_TS"] = START_TS
-
-# -------- Filtre pluralisation FR --------
-def pluralize_fr(unit: str, qty) -> str:
-    try:
-        q = float(qty)
-    except Exception:
-        q = qty
-    try:
-        is_one = abs(float(q) - 1.0) < 1e-9
-    except Exception:
-        is_one = (q == 1)
-
-    if not unit:
-        return unit
-    u = str(unit)
-
-    if is_one:
-        return u
-
-    invariants = { "kg","g","mg","l","L","ml","cl","m","cm","mm","%", "°C", "°F" }
-    if u in invariants:
-        return u
-
-    irregulars = {
-        "pièce": "pièces","piece": "pieces","sachet": "sachets","boîte": "boîtes","boite": "boites",
-        "bouteille": "bouteilles","canette": "canettes","paquet": "paquets","tranche": "tranches",
-        "gousse": "gousses","pot": "pots","brique": "briques","barquette": "barquettes",
-        "œuf": "œufs","oeuf": "oeufs","unité": "unités","unite": "unites","pack": "packs",
-        "lot": "lots","bocal": "bocaux","journal": "journaux"
-    }
-    if u in irregulars.values() or u.endswith(("s","x")):
-        return u
-    if u in irregulars:
-        return irregulars[u]
-    if u.endswith("al"):
-        return u[:-2] + "aux"
-    if u.endswith("eau"):
-        return u + "x"
-    return u + "s"
-
-templates.filters["pluralize_fr"] = pluralize_fr
-
-
-# -------- Pretty numbers & smart quantity formatting --------
-def _pretty_num(x) -> str:
-    try:
-        f = float(x)
-    except Exception:
-        return str(x)
-    if abs(f - round(f)) < 1e-9:
-        return str(int(round(f)))
-    s = f"{f:.2f}".rstrip("0").rstrip(".")
-    return s if s else "0"
-
-def fmt_qty(qty, unit: str) -> dict:
-    """
-    Return a dict {'v': <pretty value>, 'u': <unit possibly converted>}
-    - g -> kg when >= 1000
-    - ml -> L when >= 1000
-    - keep kg/L as is
-    - other units unchanged
-    """
-    try:
-        q = float(qty or 0)
-    except Exception:
-        q = 0.0
-
-    u = (unit or "").strip()
-
-    # Normalize liter casing
-    if u == "l":
-        u = "L"
-
-    if u == "g":
-        if q >= 1000:
-            q = q / 1000.0
-            u = "kg"
-        return {"v": _pretty_num(q), "u": u}
-
-    if u == "ml":
-        if q >= 1000:
-            q = q / 1000.0
-            u = "L"
-        return {"v": _pretty_num(q), "u": u}
-
-    if u in ("kg", "L"):
-        return {"v": _pretty_num(q), "u": u}
-
-    # Counting units etc.
-    return {"v": _pretty_num(q), "u": u}
-
-templates.filters["pretty_num"] = _pretty_num
-templates.globals["fmt_qty"] = fmt_qty
-
 
 # -------- Helpers
-def nocache_html(html: str) -> Response:
-    return HTMLResponse(html, headers={
-        "Cache-Control":"no-store, no-cache, must-revalidate, max-age=0",
-        "Pragma":"no-cache","Expires":"0"
-    })
-
-def render(name: str, **ctx):
-    if "SETTINGS" not in ctx:
-        ctx["SETTINGS"] = load_settings()
-    tpl = templates.get_template(name)
-    return nocache_html(tpl.render(**ctx))
-
-def ingress_base(request: Request) -> str:
-    base = request.headers.get("X-Ingress-Path") or "/"
-    if not base.endswith("/"): base += "/"
-    return base
 
 def _conn():
     c = sqlite3.connect(DB_PATH)
@@ -321,38 +200,6 @@ def add_or_merge_lot(product_id: int, location_id: int, qty_delta: float,
     lid = add_lot(int(product_id), int(location_id), float(qty_delta or 0), fr, bb)
     return {"action": "insert", "lot_id": int(lid), "new_qty": float(qty_delta or 0)}
 
-# ---------------- Journal (events)
-def _ensure_events_table():
-    with _conn() as c:
-        c.execute("""
-          CREATE TABLE IF NOT EXISTS events (
-            id         INTEGER PRIMARY KEY AUTOINCREMENT,
-            created_at TEXT NOT NULL,
-            kind       TEXT NOT NULL,
-            details    TEXT
-          )
-        """)
-        c.commit()
-
-def log_event(kind: str, details: dict):
-    created_at = datetime.now(timezone.utc).isoformat()
-    payload = json.dumps(details or {}, ensure_ascii=False)
-    with _conn() as c:
-        c.execute("INSERT INTO events(created_at,kind,details) VALUES (?,?,?)",
-                  (created_at, kind, payload))
-        c.commit()
-
-def list_events(limit: int = 200):
-    with _conn() as c:
-        rows = c.execute("SELECT id, created_at, kind, details FROM events ORDER BY id DESC LIMIT ?", (limit,)).fetchall()
-        items = []
-        for r in rows:
-            try:
-                det = json.loads(r["details"] or "{}")
-            except Exception:
-                det = {}
-            items.append({"id": r["id"], "created_at": r["created_at"], "kind": r["kind"], "details": det})
-        return items
 
 def get_low_stock_products(limit: int = 8):
     dflt = 1
@@ -570,7 +417,7 @@ def _startup():
     logger.info("Domovra starting. DB_PATH=%s", DB_PATH)
     logger.info("WARNING_DAYS=%s CRITICAL_DAYS=%s", WARNING_DAYS, CRITICAL_DAYS)
 
-    # S'assurer que le CSS hashé existe dès le boot (et logguer le nom)
+    # S'assurer que le CSS hashé existe (log utile)
     try:
         hashed_rel = ensure_hashed_asset("static/css/domovra.css")
         logger.info("CSS hashed path ready: %s", hashed_rel)
@@ -578,12 +425,14 @@ def _startup():
         logger.exception("ensure_hashed_asset at startup failed: %s", e)
 
     init_db()
-    _ensure_events_table()
+    _ensure_events_table()   # <- importé depuis services.events
+
     try:
         current = load_settings()
         logger.info("Settings au démarrage: %s", current)
     except Exception as e:
         logger.exception("Erreur lecture settings au démarrage: %s", e)
+
 
 @app.get("/ping", response_class=PlainTextResponse)
 def ping(): return "ok"
@@ -592,9 +441,11 @@ def ping(): return "ok"
 @app.get("/_debug/static")
 def debug_static(request: Request):
     css_path = os.path.join(STATIC_DIR, "css", "domovra.css")
-    hashed_rel = CSS_HASHED_REL
-    hashed_path = _abs_path(hashed_rel)
-    hashed_url = str(request.url_for("static", path=hashed_rel.split("static/",1)[1])) if os.path.isfile(hashed_path) else None
+    hashed_rel = templates.globals.get("ASSET_CSS_PATH")
+    hashed_path = (os.path.join(STATIC_DIR, hashed_rel.split("static/",1)[1])
+                   if hashed_rel else None)
+    hashed_url = (str(request.url_for("static", path=hashed_rel.split("static/",1)[1]))
+                  if hashed_rel else None)
     return JSONResponse({
         "STATIC_DIR": STATIC_DIR,
         "exists": os.path.isdir(STATIC_DIR),
@@ -604,11 +455,11 @@ def debug_static(request: Request):
         "ls_css": sorted(os.listdir(os.path.join(STATIC_DIR, "css"))) if os.path.isdir(os.path.join(STATIC_DIR, "css")) else [],
         "url_css": str(request.url_for("static", path="css/domovra.css")),
         "cache_buster_boot": START_TS,
-        "asset_ver_css": asset_ver("static/css/domovra.css"),
         "hashed_css_rel": hashed_rel,
-        "hashed_css_exists": os.path.isfile(hashed_path),
+        "hashed_css_exists": os.path.isfile(hashed_path) if hashed_path else False,
         "hashed_css_url": hashed_url,
     })
+
 
 # ---------------- Pages
 @app.get("/", response_class=HTMLResponse)
