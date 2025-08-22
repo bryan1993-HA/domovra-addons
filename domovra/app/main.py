@@ -306,7 +306,8 @@ def add_or_merge_lot(
 ) -> dict:
     """
     Fusion si même (product_id, location_id, best_before, frozen_on).
-    DB actuelle : on NE stocke pas encore les métadonnées d'achat sur le lot.
+    En cas de fusion : on incrémente juste la quantité.
+    En cas d'insertion : on crée un nouveau lot (signature DB d'origine).
     """
     bb = best_before or None
     fr = frozen_on or None
@@ -321,9 +322,9 @@ def add_or_merge_lot(
             update_lot(int(lot["id"]), new_qty, int(location_id), fr, bb)
             return {"action": "merge", "lot_id": int(lot["id"]), "new_qty": new_qty}
 
-    # insertion simple (pas de métadonnées côté DB pour l’instant)
     lid = add_lot(int(product_id), int(location_id), float(qty_delta or 0), fr, bb)
     return {"action": "insert", "lot_id": int(lid), "new_qty": float(qty_delta or 0)}
+
 
 
     # insertion avec métadonnées d'achat
@@ -443,13 +444,13 @@ def achats_add_action(
     product_id: int = Form(...),
     location_id: int = Form(...),
 
-    # quantités / prix (prix non persisté aujourd'hui — log seulement)
+    # quantités / prix
     qty: float = Form(...),
     unit: str = Form("pièce"),
     multiplier: int = Form(1),
     price_total: str = Form(""),
 
-    # identité d'article & achat (log seulement)
+    # identité d'article & achat (log uniquement)
     ean: str = Form(""),
     name: str = Form(""),
     brand: str = Form(""),
@@ -460,53 +461,16 @@ def achats_add_action(
     best_before: str = Form(""),
     frozen_on: str = Form(""),
 ):
-    def _f(x: str) -> float:
-        try: return float((x or "").replace(",", "."))
-        except: return 0.0
-
-    try: m = int(multiplier or 1)
-    except: m = 1
-    if m < 1: m = 1
-
-    qty_per_unit = float(qty or 0)
-    qty_delta = qty_per_unit * m
-
-    # Ajout / fusion (EAN inclus)
-@app.post("/achats/add")
-def achats_add_action(
-    request: Request,
-    # fiche parent + emplacement
-    product_id: int = Form(...),
-    location_id: int = Form(...),
-
-    # quantités / prix (prix non persisté aujourd'hui — log seulement)
-    qty: float = Form(...),
-    unit: str = Form("pièce"),
-    multiplier: int = Form(1),
-    price_total: str = Form(""),
-
-    # identité d'article & achat (log seulement)
-    ean: str = Form(""),
-    name: str = Form(""),
-    brand: str = Form(""),
-    store: str = Form(""),
-    note: str = Form(""),
-
-    # conservation
-    best_before: str = Form(""),
-    frozen_on: str = Form(""),
-):
-    # helpers
+    # --- helpers d'abord (pour éviter NameError)
     def _price_num():
         try:
             return float((price_total or "").replace(",", "."))
         except Exception:
             return None
 
-    # EAN nettoyé
     ean_digits = "".join(ch for ch in (ean or "") if ch.isdigit())
 
-    # normalisation quantités
+    # --- normalisation quantité
     try:
         m = int(multiplier or 1)
     except Exception:
@@ -517,7 +481,7 @@ def achats_add_action(
     qty_per_unit = float(qty or 0)
     qty_delta = qty_per_unit * m
 
-    # 1) Ajout / fusion (DB actuelle : pas de métadonnées dans le lot)
+    # 1) ajout / fusion du lot (signature DB actuelle)
     res = add_or_merge_lot(
         int(product_id),
         int(location_id),
@@ -526,7 +490,7 @@ def achats_add_action(
         frozen_on or None,
     )
 
-    # 2) Si EAN fourni et que le produit n'a pas de barcode -> on le pose (mono‑EAN)
+    # 2) si le produit n’a pas encore de barcode et qu’on a un EAN → on le renseigne
     if ean_digits:
         try:
             with _conn() as c:
@@ -534,18 +498,17 @@ def achats_add_action(
                     "SELECT COALESCE(barcode,'') AS barcode FROM products WHERE id=?",
                     (int(product_id),)
                 ).fetchone()
-                current_bc = (row["barcode"] or "") if row else ""
-                if not current_bc.strip():
+                if row and not (row["barcode"] or "").strip():
                     c.execute("UPDATE products SET barcode=? WHERE id=?", (ean_digits, int(product_id)))
                     c.commit()
         except Exception as e:
             logger.warning("achats_add_action: unable to set product barcode: %s", e)
 
-    # 3) Journal : on garde toutes les infos d’achat (même si non stockées dans la table lot)
+    # 3) journal
     log_event("achats.add", {
         "result": res["action"], "lot_id": res["lot_id"], "new_qty": res["new_qty"],
         "product_id": int(product_id), "location_id": int(location_id),
-        "ean": (ean_digits or None),
+        "ean": ean_digits or None,
         "name": (name or None), "brand": (brand or None),
         "unit": (unit or None), "qty_per_unit": qty_per_unit, "multiplier": m,
         "qty_delta": qty_delta, "price_total": _price_num(),
@@ -553,28 +516,10 @@ def achats_add_action(
         "best_before": best_before or None, "frozen_on": frozen_on or None,
     })
 
-    # 4) Retour /achats
+    # 4) redirect (évite d’afficher “null”)
     base = ingress_base(request)
     return RedirectResponse(base + "achats?added=1", status_code=303,
                             headers={"Cache-Control": "no-store"})
-
-
-    log_event("achats.add", {
-        "result": res["action"], "lot_id": res["lot_id"], "new_qty": res["new_qty"],
-        "product_id": int(product_id), "location_id": int(location_id),
-        "ean": ("".join(ch for ch in (ean or "") if ch.isdigit()) or None),
-        "name": (name or None), "brand": (brand or None),
-        "unit": (unit or None), "qty_per_unit": qty_per_unit, "multiplier": m,
-        "qty_delta": qty_delta, "price_total": _price_num(),
-        "store": (store or None), "note": (note or None),
-        "best_before": best_before or None, "frozen_on": frozen_on or None,
-    })
-
-    base = ingress_base(request)
-    return RedirectResponse(base + "achats?added=1", status_code=303,
-                            headers={"Cache-Control": "no-store"})
-
-
 
 @app.on_event("startup")
 def _startup():
