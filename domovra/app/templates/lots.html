@@ -44,15 +44,17 @@
     {% for it in items %}
     {% set q = fmt_qty(it.qty, it.unit) %}
     {% set code = it.ean or it.barcode %}
-    <article class="prod-card" data-name="{{ it.product|lower }}" data-loc="{{ it.location|lower }}"
-      data-barcode="{{ (code or '')|lower }}" data-status="{{ it.status }}">
+    <article class="prod-card" data-name="{{ (it.name or it.article_name or it.product)|lower }}"
+      data-loc="{{ it.location|lower }}" data-barcode="{{ (code or '')|lower }}" data-status="{{ it.status }}">
+
       <!-- En-tête -->
       <div class="pc-head">
         <div class="pc-title">
           <h3 class="pc-name">
-            {{ it.article_name or it.product }}
+            {{ it.name or it.article_name or it.product }}
             {% if it.brand %}<span class="muted"> — {{ it.brand }}</span>{% endif %}
           </h3>
+
           <span class="status {{ it.status }}">
             {{ "OK" if it.status=="green" else ("Bientôt" if it.status=="yellow" else ("Urgent" if it.status=="red" else
             "—")) }}
@@ -96,9 +98,11 @@
           ✏️ Modifier
         </button>
 
-        <button class="secondary js-delete-open" data-id="{{ it.id }}" data-product="{{ it.product }}">
+        <button class="secondary js-delete-open" data-id="{{ it.id }}"
+          data-product="{{ it.name or it.article_name or it.product }}">
           🗑️ Supprimer
         </button>
+
       </div>
     </article>
     {% endfor %}
