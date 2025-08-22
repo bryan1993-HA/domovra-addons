@@ -105,7 +105,6 @@
                 <h2>Ajouter au stock</h2>
                 <span class="muted">→ page dédiée aux entrées (scan ou saisie)</span>
             </div>
-            <button type="button" class="btn" id="btn_scan" title="Scanner un code-barres">📷</button>
             <button type="button" class="btn" id="btn_scan_live" title="Scanner en direct">🎥</button>
 
         </div>
@@ -120,8 +119,6 @@
                         autocomplete="off">
                     <button type="button" class="btn" id="btn_check_ean"
                         title="Rechercher le produit par EAN">🔎</button>
-                    <button type="button" class="btn" id="btn_create_prod" title="Créer le produit"
-                        style="white-space:nowrap;">➕</button>
                 </div>
                 <div class="hint" id="ean_hint"></div>
             </div>
@@ -155,14 +152,28 @@
                 <div class="infield">
                     <input type="number" step="0.001" min="0.001" name="qty" id="qty" value="1" required>
                     <select name="unit" id="unit" style="max-width:140px">
-                        <option value="pièce">pièce</option>
-                        <option value="g">g</option>
-                        <option value="kg">kg</option>
-                        <option value="ml">ml</option>
-                        <option value="l">l</option>
+                        <optgroup label="Comptage">
+                            <option value="pièce">pièce</option>
+                            <option value="tranche">tranche</option>
+                            <option value="paquet">paquet</option>
+                            <option value="boîte">boîte</option>
+                            <option value="bocal">bocal</option>
+                            <option value="bouteille">bouteille</option>
+                            <option value="sachet">sachet</option>
+                            <option value="lot">lot</option>
+                            <option value="barquette">barquette</option>
+                            <option value="rouleau">rouleau</option>
+                            <option value="dosette">dosette</option>
+                        </optgroup>
+                        <optgroup label="Poids">
+                            <option value="g">g</option>
+                            <option value="kg">kg</option>
+                        </optgroup>
+                        <optgroup label="Volume">
+                            <option value="ml">ml</option>
+                            <option value="L">L</option>
+                        </optgroup>
                     </select>
-                    <button type="button" class="btn" id="btn_plus1">+1</button>
-                    <button type="button" class="btn" id="btn_pack" hidden>+1 pack</button>
                 </div>
                 <div class="hint" id="qty_hint"></div>
             </div>
