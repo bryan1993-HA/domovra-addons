@@ -82,11 +82,15 @@ app.include_router(home_router)
 
 
 # === Static files : dossier à côté de main.py (Option A) ===
-HERE = os.path.dirname(__file__)                  # /opt/app
-STATIC_DIR = os.path.join(HERE, "static")         # /opt/app/static
+HERE = os.path.dirname(__file__)
+STATIC_DIR = os.path.join(HERE, "static")
 os.makedirs(os.path.join(STATIC_DIR, "css"), exist_ok=True)
 
 app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
+
+# ➜ NEW
+css_rel = ensure_hashed_asset("static/css/domovra.css")
+templates.globals["ASSET_CSS_PATH"] = css_rel
 
 # Logs de vérification au boot
 try:
@@ -377,11 +381,12 @@ def _startup():
     logger.info("WARNING_DAYS=%s CRITICAL_DAYS=%s", WARNING_DAYS, CRITICAL_DAYS)
 
     # S'assurer que le CSS hashé existe (log utile)
-    try:
-        hashed_rel = ensure_hashed_asset("static/css/domovra.css")
-        logger.info("CSS hashed path ready: %s", hashed_rel)
-    except Exception as e:
-        logger.exception("ensure_hashed_asset at startup failed: %s", e)
+try:
+    hashed_rel = ensure_hashed_asset("static/css/domovra.css")
+    templates.globals["ASSET_CSS_PATH"] = hashed_rel
+    logger.info("CSS hashed path ready: %s", hashed_rel)
+except Exception as e:
+    logger.exception("ensure_hashed_asset at startup failed: %s", e)
 
     init_db()
     _ensure_events_table()   # <- importé depuis services.events
