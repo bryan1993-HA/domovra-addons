@@ -421,36 +421,13 @@ def delete_product(product_id: int):
 def _today():
     return datetime.date.today().isoformat()
 
-def add_lot(
-    product_id: int,
-    location_id: int,
-    qty: float,
-    frozen_on: str | None,
-    best_before: str | None,
-    # nouveaux (optionnels)
-    article_name: str | None = None,
-    brand: str | None = None,
-    ean: str | None = None,
-    price_total: float | None = None,
-    store: str | None = None,
-    qty_per_unit: float | None = None,
-    multiplier: int | None = None,
-    unit_at_purchase: str | None = None,
-) -> int:
+def add_lot(product_id: int, location_id: int, qty: float, frozen_on: str | None, best_before: str | None) -> int:
     with _conn() as c:
         today = _today()
         cur = c.execute(
-            """INSERT INTO stock_lots(
-                   product_id, location_id, qty, frozen_on, best_before, created_on,
-                   article_name, brand, ean, price_total, store,
-                   qty_per_unit, multiplier, unit_at_purchase
-               )
-               VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
-            (
-                product_id, location_id, qty, frozen_on, best_before, today,
-                (article_name or None), (brand or None), (ean or None), price_total, (store or None),
-                qty_per_unit, multiplier, (unit_at_purchase or None)
-            )
+            """INSERT INTO stock_lots(product_id,location_id,qty,frozen_on,best_before,created_on)
+               VALUES(?,?,?,?,?,?)""",
+            (product_id, location_id, qty, frozen_on, best_before, today)
         )
         lot_id = cur.lastrowid
         c.execute(
@@ -460,6 +437,7 @@ def add_lot(
         )
         c.commit()
     return lot_id
+
 
 
 def list_lots():
