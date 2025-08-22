@@ -2,7 +2,7 @@
 {% block title %}Domovra — Achats{% endblock %}
 {% block head %}
 <style>
-    /* Sections propres + grille responsive locale (n'altère pas ton CSS global) */
+    /* Sections & grille locale (n'altère pas ton CSS global) */
     .section {
         margin-top: 1rem;
         padding-top: 1rem;
@@ -66,7 +66,6 @@
         justify-self: end;
     }
 
-    /* champs compacts en lignes */
     .inline {
         display: flex;
         gap: .5rem;
@@ -77,12 +76,10 @@
         min-width: 0;
     }
 
-    /* hints mieux lisibles */
     .hint {
         opacity: .85;
     }
 
-    /* Mobile */
     @media (max-width: 700px) {
         .row {
             grid-template-columns: 1fr;
@@ -117,7 +114,7 @@
             <div class="section">
                 <div class="section-title">
                     <h3>Identification</h3>
-                    <span class="muted">EAN → Produit → Nom / Marque</span>
+                    <span class="muted">EAN → Fiche parent → Nom / Marque (article)</span>
                 </div>
 
                 <div class="row">
@@ -133,10 +130,10 @@
                         <div class="hint" id="ean_hint"></div>
                     </div>
 
-                    <!-- Produit -->
+                    <!-- Fiche produit (parent) -->
                     <div class="col-6">
-                        <div class="label">Produit</div>
-                        <select name="product_id" id="product_select">
+                        <div class="label">Fiche produit (parent)</div>
+                        <select name="product_id" id="product_select" required>
                             <option value="" disabled selected>— Choisir ou scanner —</option>
                             {% for p in products %}
                             <option value="{{ p.id }}" data-barcode="{{ p.barcode or '' }}"
@@ -147,20 +144,20 @@
                             </option>
                             {% endfor %}
                         </select>
-                        <div class="hint" id="product_hint"></div>
+                        <div class="hint" id="product_hint">Associe l’article à sa fiche parent (obligatoire).</div>
                     </div>
 
-                    <!-- Nom -->
+                    <!-- Nom article -->
                     <div class="col-6">
                         <div class="label">Nom (suggéré par OFF)</div>
                         <input type="text" id="name_suggest" name="name"
-                            placeholder="Rempli après scan si produit inconnu" autocomplete="off">
+                            placeholder="Libellé de l’article sur le ticket" autocomplete="off">
                     </div>
 
-                    <!-- Marque -->
+                    <!-- Marque article -->
                     <div class="col-6">
                         <div class="label">Marque</div>
-                        <input type="text" id="brand_suggest" name="brand" placeholder="Marque (OFF ou fiche produit)"
+                        <input type="text" id="brand_suggest" name="brand" placeholder="Marque (OFF ou saisie)"
                             autocomplete="off">
                         <div class="hint" id="off_qty_hint"></div>
                     </div>
@@ -453,7 +450,7 @@
     })();
 </script>
 
-<!-- ======= LOGIQUE FORMULAIRE / OFF / PRIX (inchangée) ======= -->
+<!-- ======= LOGIQUE FORMULAIRE / OFF / PRIX ======= -->
 <script>
     (function () {
         const $ = (s, p = document) => p.querySelector(s);
@@ -479,6 +476,12 @@
         function setHint(el, txt) { if (el) el.textContent = txt || ''; }
         function valNum(el) { const n = Number(String(el?.value || '').replace(',', '.')); return isFinite(n) ? n : 0; }
 
+        // ===== Flags: ne pas écraser Nom/Marque saisis par l'utilisateur
+        let nameTouched = false;
+        let brandTouched = false;
+        nameSuggest?.addEventListener('input', () => { nameTouched = true; });
+        brandSuggest?.addEventListener('input', () => { brandTouched = true; });
+
         function mapUnit(u) {
             if (!u) return null;
             const x = ('' + u).toLowerCase().trim();
@@ -493,7 +496,7 @@
         function selectUnitOnForm(uWanted) {
             if (!unitSel) return;
             let mapped = mapUnit(uWanted);
-            if (mapped === 'cl') mapped = 'ml'; // cohérence
+            if (mapped === 'cl') mapped = 'ml'; // cohérence UI
             const target = mapped || uWanted;
             const opt = [...unitSel.options].find(o => o.value === target);
             if (opt) unitSel.value = opt.value;
@@ -503,9 +506,20 @@
             const n = Number(String(v).replace(',', '.'));
             if (!isNaN(n) && n > 0) qtyInput.value = String(n);
         }
-        function setName(v) { if (nameSuggest) nameSuggest.value = (v || '').trim(); }
-        function setBrand(v) { if (brandSuggest) brandSuggest.value = (v || '').trim(); }
+        function setName(v, { force = false } = {}) {
+            if (!nameSuggest) return;
+            const nv = (v || '').trim();
+            if (force) { nameSuggest.value = nv; return; }
+            if (!nameTouched && !nameSuggest.value) nameSuggest.value = nv;
+        }
+        function setBrand(v, { force = false } = {}) {
+            if (!brandSuggest) return;
+            const nv = (v || '').trim();
+            if (force) { brandSuggest.value = nv; return; }
+            if (!brandTouched && !brandSuggest.value) brandSuggest.value = nv;
+        }
 
+        // === Calculs quantités / prix
         function updateCalcs() {
             const q = Math.max(valNum(qtyInput), 0);
             const u = unitSel?.value || 'pièce';
@@ -545,59 +559,62 @@
         });
         $('#btn_reset')?.addEventListener('click', () => setTimeout(updateCalcs, 0));
 
+        // === Changement de fiche parent (NE PAS toucher au nom/marque article)
         productSel?.addEventListener('change', () => {
             const opt = productSel.options[productSel.selectedIndex];
             if (!opt) return;
 
+            // Unité / pack / emplacement par défaut
             selectUnitOnForm(opt.dataset.unit || 'pièce');
-            setName(opt.dataset.name);
-            setBrand(opt.dataset.brand);
 
             const pack = Number(opt.dataset.pack || '1');
-            safeSet(multInput, String(Math.max(1, pack || 1)));
+            if (!isNaN(pack) && pack > 1) multInput.value = String(pack);
 
             if (!qtyInput.value || Number(qtyInput.value) <= 0) qtyInput.value = '1';
 
             const locDefault = opt.dataset.defaultLocation;
             const locSel = $('#location_id');
-            if (locDefault && locSel) {
-                const has = [...locSel.options].some(o => o.value === String(locDefault));
-                if (has) locSel.value = String(locDefault);
+            if (locDefault && locSel && [...locSel.options].some(o => o.value === String(locDefault))) {
+                locSel.value = String(locDefault);
             }
 
-            setHint($('#product_hint'), `Fiche produit : ${opt.dataset.name}${opt.dataset.brand ? ' — ' + opt.dataset.brand : ''}`);
+            setHint($('#product_hint'), `Fiche parent : ${opt.dataset.name}${opt.dataset.brand ? ' — ' + opt.dataset.brand : ''}`);
             setHint(offQtyHint, '');
             updateCalcs();
         });
 
+        // ===== Recherche EAN (local puis OFF)
         async function lookupByEAN_impl(ean) {
             const code = (ean || '').replace(/\s+/g, '').trim();
             if (!code) { toast('EAN vide.', 'warn'); return; }
-
             if (elEAN) elEAN.value = code;
 
+            // 1) DB locale (peut déjà renvoyer une fiche parent)
             try {
                 const r = await fetch(`{{ BASE }}api/product/by_barcode?code=${encodeURIComponent(code)}`);
                 if (r.ok) {
                     const p = await r.json();
                     const opt = [...productSel.options].find(o => (o.dataset.barcode || '').replace(/\s+/g, '') === code);
                     productSel.value = opt ? opt.value : String(p.id);
-                    productSel.dispatchEvent(new Event('change'));
+                    productSel.dispatchEvent(new Event('change')); // met à jour unité/pack/loc, PAS nom/marque
                     setHint(eanHint, `Produit trouvé : ${p.name}`);
-                    toast('Produit sélectionné depuis le stock.', 'ok');
+                    toast('Fiche parent sélectionnée depuis le stock.', 'ok');
                     return;
                 }
             } catch { }
 
+            // 2) Open Food Facts (préremplit article si vide)
             try {
                 const r = await fetch(`{{ BASE }}api/off?barcode=${encodeURIComponent(code)}`);
                 const data = await r.json();
                 if (data && data.ok) {
                     setHint(eanHint, "Produit non connu en local — infos récupérées depuis OFF.");
 
+                    // Nom & marque ARTICLE (protégés par flags)
                     setName(data.name || data.product_name || '');
                     setBrand(data.brand || data.brands || '');
 
+                    // Quantité/Unité + pack éventuel
                     let unitFromOff = data.unit || '';
                     let qtyFromOff = data.quantity_value || '';
                     let packOf = data.pack_of || '';
@@ -616,7 +633,7 @@
 
                     const uMap = mapUnit(unitFromOff);
                     if (uMap && ['g', 'kg', 'ml', 'L', 'cl'].includes(uMap) && qtyFromOff) {
-                        if (String(unitFromOff).toLowerCase().trim() === 'cl') {
+                        if ((String(unitFromOff).toLowerCase().trim() === 'cl')) {
                             const n = Number(String(qtyFromOff));
                             if (!isNaN(n)) { safeSetQty(n * 10); selectUnitOnForm('ml'); }
                             else safeSetQty(qtyFromOff);
@@ -651,11 +668,14 @@
             }
         }
 
+        // Expose pour le scanner
         if (typeof window.lookupByEAN !== 'function') window.lookupByEAN = lookupByEAN_impl;
 
+        // Bouton 🔎 et Entrée sur EAN
         $('#btn_check_ean')?.addEventListener('click', () => window.lookupByEAN(elEAN.value));
         elEAN?.addEventListener('keydown', (ev) => { if (ev.key === 'Enter') { ev.preventDefault(); window.lookupByEAN(elEAN.value); } });
 
+        // Init calculs
         updateCalcs();
     })();
 </script>
