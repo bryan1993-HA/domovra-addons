@@ -80,6 +80,94 @@
         opacity: .85;
     }
 
+    /* Modale scanner (overlay plein écran) */
+    .scan-modal {
+        position: fixed;
+        inset: 0;
+        z-index: 10000;
+        background: rgba(0, 0, 0, .65);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .scan-modal.hidden {
+        display: none;
+    }
+
+    .scan-box {
+        position: relative;
+        width: min(92vw, 700px);
+        aspect-ratio: 3/4;
+        background: #000;
+        border-radius: 16px;
+        overflow: hidden;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, .4);
+    }
+
+    #scan_video,
+    #scan_overlay {
+        position: absolute;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+
+    .scan-hud {
+        position: absolute;
+        right: .75rem;
+        top: .75rem;
+        display: flex;
+        gap: .5rem;
+        z-index: 3
+    }
+
+    .scan-tip {
+        position: absolute;
+        left: 0;
+        right: 0;
+        bottom: .5rem;
+        text-align: center;
+        color: #fff;
+        font-weight: 600;
+        text-shadow: 0 1px 2px #000;
+        z-index: 3
+    }
+
+    .scan-frame {
+        position: absolute;
+        inset: 12% 8%;
+        border: 3px solid rgba(255, 255, 255, .8);
+        border-radius: 12px;
+        box-shadow: 0 0 0 200vmax rgba(0, 0, 0, .35);
+        z-index: 2;
+    }
+
+    .scan-frame::after {
+        content: "";
+        position: absolute;
+        left: 10%;
+        right: 10%;
+        top: 50%;
+        height: 2px;
+        background: rgba(0, 255, 128, .9);
+        box-shadow: 0 0 12px rgba(0, 255, 128, .9);
+        transform: translateY(-1px);
+        animation: scanline 2.1s linear infinite;
+    }
+
+    @keyframes scanline {
+        0% {
+            top: 18%
+        }
+
+        100% {
+            top: 82%
+        }
+    }
+
+    /* Mobile */
     @media (max-width: 700px) {
         .row {
             grid-template-columns: 1fr;
@@ -109,7 +197,6 @@
         </div>
 
         <form id="achats_form" method="post" action="{{ BASE }}achats/add">
-
             <!-- SECTION 1 — Identification -->
             <div class="section">
                 <div class="section-title">
@@ -130,7 +217,7 @@
                         <div class="hint" id="ean_hint"></div>
                     </div>
 
-                    <!-- Fiche produit (parent) -->
+                    <!-- Fiche produit (parent) obligatoire -->
                     <div class="col-6">
                         <div class="label">Fiche produit (parent)</div>
                         <select name="product_id" id="product_select" required>
@@ -308,22 +395,6 @@
                     <button type="button" class="btn ghost" id="btn_live_flip">Changer de caméra</button>
                 </div>
             </div>
-
-            <!-- MODALE SCAN -->
-            <div id="scan_modal" class="scan-modal hidden" aria-hidden="true">
-                <div class="scan-box">
-                    <video id="scan_video" playsinline autoplay muted></video>
-                    <canvas id="scan_overlay"></canvas>
-
-                    <div class="scan-hud">
-                        <button type="button" class="btn ghost" id="scan_flip" title="Changer de caméra">🔁</button>
-                        <button type="button" class="btn" id="scan_close" title="Fermer">✖</button>
-                    </div>
-
-                    <div class="scan-tip">Alignez le code-barres dans le cadre</div>
-                    <div class="scan-frame"></div>
-                </div>
-            </div>
         </form>
 
         <!-- DEBUG (caché par défaut) -->
@@ -337,6 +408,26 @@
             </div>
         </div>
     </div>
+
+    <!-- === MODALE SCAN (déplacée hors du <form> pour un vrai overlay) === -->
+    <div id="scan_modal" class="scan-modal hidden" aria-hidden="true">
+        <div class="scan-box">
+            <video id="scan_video" playsinline autoplay muted></video>
+            <canvas id="scan_overlay"></canvas>
+
+            <!-- HUD -->
+            <div class="scan-hud">
+                <button type="button" class="btn ghost" id="scan_flip" title="Changer de caméra">🔁</button>
+                <button type="button" class="btn" id="scan_close" title="Fermer">✖</button>
+            </div>
+
+            <!-- Tip -->
+            <div class="scan-tip">Alignez le code-barres dans le cadre</div>
+
+            <!-- Cadre de guidage (statique) -->
+            <div class="scan-frame"></div>
+        </div>
+    </div>
 </div>
 {% endblock %}
 
@@ -344,18 +435,26 @@
 <!-- ZXing (déjà ok) -->
 <script src="https://unpkg.com/@zxing/library@0.20.0"></script>
 
-<!-- ======= LECTURE CODE-BARRES — INTACT ======= -->
+<!-- ======= LECTURE CODE‑BARRES — BLOC D’ORIGINE (inchangé) ======= -->
 <script>
     (function () {
+        // ---------- utils ----------
         const $ = (s, p = document) => p.querySelector(s);
         const toast = (m, t = 'ok') => window.showToast?.(m, t);
+
+        // Champs/form
         const elEAN = $('#ean');
+
+        // Boutons
         const btnLive = $('#btn_scan_live');
         const btnPhoto = $('#btn_scan'); // inchangé
+
+        // Modale : on supporte *les deux* conventions d’ID
         const modal = $('#scan-modal') || $('#scan_modal');
         const video = $('#scan-video') || $('#scan_video');
         const btnClose = $('#scan-close') || $('#scan_close');
 
+        // Évite qu’un mauvais ID casse tout
         function openModal() {
             if (!modal) return;
             if (modal.nodeName.toLowerCase() === 'dialog') modal.showModal();
@@ -367,7 +466,11 @@
             else { modal.classList.add('hidden'); modal.setAttribute('aria-hidden', 'true'); }
         }
 
-        let stream = null, zxingReader = null, liveActive = false;
+        // État caméra
+        let stream = null;
+        let zxingReader = null;
+        let liveActive = false;
+
         function stopStream() {
             liveActive = false;
             try { zxingReader?.reset?.(); } catch { }
@@ -375,63 +478,119 @@
             stream = null;
         }
 
-        const REQUIRED_STREAK = 3;
-        let lastRead = '', streak = 0, streakTimer = null;
-        const STREAK_TIMEOUT_MS = 1800;
+        // --- Validation triple lecture ---
+        const REQUIRED_STREAK = 3;       // ← 3 fois
+        let lastRead = '';               // dernier code lu
+        let streak = 0;                  // compteur de répétitions consécutives
+        let streakTimer = null;          // reset auto si plus de lectures pendant un moment
+        const STREAK_TIMEOUT_MS = 1800;  // reset si > 1.8 s sans même code
 
-        function resetStreak() { lastRead = ''; streak = 0; if (streakTimer) { clearTimeout(streakTimer); streakTimer = null; } }
+        function resetStreak() {
+            lastRead = '';
+            streak = 0;
+            if (streakTimer) { clearTimeout(streakTimer); streakTimer = null; }
+        }
+
         function handleRead(rawCode) {
+            // On garde uniquement les chiffres (EAN/UPC)
             const code = ('' + rawCode).replace(/\D+/g, '');
             if (!code) return;
-            if (code === lastRead) streak += 1; else { lastRead = code; streak = 1; }
+
+            if (code === lastRead) {
+                streak += 1;
+            } else {
+                lastRead = code;
+                streak = 1;
+            }
+
+            // (Re)programme le reset automatique du streak
             if (streakTimer) clearTimeout(streakTimer);
             streakTimer = setTimeout(resetStreak, STREAK_TIMEOUT_MS);
-            if (streak < REQUIRED_STREAK) { toast(`Lecture ${streak}/${REQUIRED_STREAK} : ${code}`, 'warn'); return; }
+
+            // Feedback léger tant qu'on n'a pas validé
+            if (streak < REQUIRED_STREAK) {
+                toast(`Lecture ${streak}/${REQUIRED_STREAK} : ${code}`, 'warn');
+                return;
+            }
+
+            // 3/3 OK → on valide définitivement
             commitDetected(code);
         }
+
         async function commitDetected(code) {
-            resetStreak(); stopStream(); closeModal();
+            resetStreak();        // on repart propre pour la prochaine fois
+            stopStream();         // stoppe la caméra
+            closeModal();         // ferme la modale
             if (elEAN) elEAN.value = code;
             toast('Code détecté : ' + code, 'ok');
             if (typeof lookupByEAN === 'function') lookupByEAN(code);
         }
 
+        // ---------- Live: BarcodeDetector -> fallback ZXing ----------
         async function startLiveScan() {
             if (!video) { toast("Élément <video> introuvable dans la modale.", "error"); return; }
-            video.setAttribute('playsinline', ''); video.setAttribute('webkit-playsinline', ''); video.muted = true;
-            const constraints = { audio: false, video: { facingMode: { ideal: 'environment' }, width: { ideal: 1280 }, height: { ideal: 720 } } };
 
+            // Attributs iOS
+            video.setAttribute('playsinline', ''); video.setAttribute('webkit-playsinline', '');
+            video.muted = true;
+
+            // Contraintes: arrière si possible + un peu de résolution
+            const constraints = {
+                audio: false,
+                video: { facingMode: { ideal: 'environment' }, width: { ideal: 1280 }, height: { ideal: 720 } }
+            };
+
+            // 1) try BarcodeDetector (si https & support)
             if (window.isSecureContext && 'BarcodeDetector' in window) {
                 try {
                     const det = new BarcodeDetector({ formats: ['ean_13', 'ean_8', 'upc_a', 'upc_e'] });
                     stream = await navigator.mediaDevices.getUserMedia(constraints);
                     video.srcObject = stream; try { await video.play(); } catch { }
                     liveActive = true;
+
                     const tick = async () => {
                         if (!liveActive) return;
-                        try { const res = await det.detect(video); if (res && res[0] && res[0].rawValue) handleRead(res[0].rawValue); } catch { }
+                        try {
+                            const res = await det.detect(video);
+                            if (res && res[0] && res[0].rawValue) handleRead(res[0].rawValue);
+                        } catch { }
                         requestAnimationFrame(tick);
-                    }; tick(); return;
-                } catch (e) { /* fallback */ }
+                    };
+                    tick();
+                    return; // on reste dans ce mode si tout va bien
+                } catch (e) {
+                    // pass → on tentera ZXing juste après
+                }
             }
 
+            // 2) fallback ZXing
             try {
                 stream = await navigator.mediaDevices.getUserMedia(constraints);
                 video.srcObject = stream; try { await video.play(); } catch { }
-            } catch (e) { toast("Caméra indisponible (permissions/domain). Essaie le mode photo.", "warn"); stopStream(); closeModal(); return; }
+            } catch (e) {
+                toast("Caméra indisponible (permissions/domain). Essaie le mode photo.", "warn");
+                stopStream(); closeModal();
+                return;
+            }
 
             try {
                 if (!zxingReader) zxingReader = new ZXing.BrowserMultiFormatReader(hintsForEAN());
+                // optionnel: accélère un peu les tentatives
                 zxingReader.timeBetweenDecodingAttempts = 150;
+
                 liveActive = true;
                 await zxingReader.decodeFromVideoDevice(null, video, (result, err) => {
                     if (!liveActive) return;
                     const code = result && (result.text || result.getText) ? (result.text || result.getText()) : '';
                     if (code) handleRead(code);
                 });
-            } catch (e) { toast("Décodage live indisponible ici. Essaie le mode photo.", "warn"); stopStream(); closeModal(); }
+            } catch (e) {
+                toast("Décodage live indisponible ici. Essaie le mode photo.", "warn");
+                stopStream(); closeModal();
+            }
         }
 
+        // Hints pour ZXing (meilleure détection EAN/UPC)
         function hintsForEAN() {
             const H = ZXing.DecodeHintType, F = ZXing.BarcodeFormat;
             const hints = new Map();
@@ -441,12 +600,22 @@
             return hints;
         }
 
+        // ---------- Handlers ----------
         btnLive?.addEventListener('click', async () => {
             if (!navigator.mediaDevices?.getUserMedia) { toast('getUserMedia indisponible.', 'warn'); return; }
-            resetStreak(); openModal(); await startLiveScan();
+            resetStreak(); // on repart propre à chaque ouverture
+            openModal();
+            await startLiveScan();
         });
+
         btnClose?.addEventListener('click', () => { stopStream(); closeModal(); resetStreak(); });
-        modal?.addEventListener('click', (e) => { const box = e.target.closest('.scan-box'); if (!box) { stopStream(); closeModal(); resetStreak(); } });
+        // fermeture si clic sur le fond (pour la version <div>)
+        modal?.addEventListener('click', (e) => {
+            const box = e.target.closest('.scan-box');
+            if (!box) { stopStream(); closeModal(); resetStreak(); }
+        });
+
+        // (facultatif) le bouton 📷 reste géré par ton code existant
     })();
 </script>
 
@@ -476,7 +645,7 @@
         function setHint(el, txt) { if (el) el.textContent = txt || ''; }
         function valNum(el) { const n = Number(String(el?.value || '').replace(',', '.')); return isFinite(n) ? n : 0; }
 
-        // ===== Flags: ne pas écraser Nom/Marque saisis par l'utilisateur
+        /* Flags: ne pas écraser Nom/Marque saisis par l'utilisateur */
         let nameTouched = false;
         let brandTouched = false;
         nameSuggest?.addEventListener('input', () => { nameTouched = true; });
