@@ -2,89 +2,94 @@
 {% block title %}Domovra — Achats{% endblock %}
 {% block head %}
 <style>
-    .scan-modal {
-        position: fixed;
-        inset: 0;
-        z-index: 9999;
-        background: rgba(0, 0, 0, .65);
+    /* Sections propres + grille responsive locale (n'altère pas ton CSS global) */
+    .section {
+        margin-top: 1rem;
+        padding-top: 1rem;
+        border-top: 1px solid var(--line, rgba(255, 255, 255, .08));
+    }
+
+    .section:first-of-type {
+        margin-top: .25rem;
+        padding-top: 0;
+        border-top: 0;
+    }
+
+    .section .section-title {
         display: flex;
-        align-items: center;
-        justify-content: center;
+        align-items: baseline;
+        gap: .5rem;
+        margin: .25rem 0 .75rem;
     }
 
-    .scan-modal.hidden {
-        display: none;
+    .section .section-title h3 {
+        font-size: 1.05rem;
+        margin: 0;
     }
 
-    .scan-box {
-        position: relative;
-        width: min(92vw, 700px);
-        aspect-ratio: 3/4;
-        background: #000;
-        border-radius: 16px;
-        overflow: hidden;
-        box-shadow: 0 10px 30px rgba(0, 0, 0, .4);
+    .section .section-title .muted {
+        font-size: .9rem;
+        opacity: .8;
     }
 
-    #scan_video,
-    #scan_overlay {
-        position: absolute;
-        inset: 0;
-        width: 100%;
-        height: 100%;
-        object-fit: cover;
+    .row {
+        display: grid;
+        grid-template-columns: repeat(12, 1fr);
+        gap: .75rem;
     }
 
-    .scan-hud {
-        position: absolute;
-        right: .75rem;
-        top: .75rem;
+    .col-12 {
+        grid-column: span 12;
+    }
+
+    .col-9 {
+        grid-column: span 9;
+    }
+
+    .col-8 {
+        grid-column: span 8;
+    }
+
+    .col-6 {
+        grid-column: span 6;
+    }
+
+    .col-4 {
+        grid-column: span 4;
+    }
+
+    .col-3 {
+        grid-column: span 3;
+    }
+
+    .end {
+        justify-self: end;
+    }
+
+    /* champs compacts en lignes */
+    .inline {
         display: flex;
         gap: .5rem;
-        z-index: 3
+        align-items: center;
     }
 
-    .scan-tip {
-        position: absolute;
-        left: 0;
-        right: 0;
-        bottom: .5rem;
-        text-align: center;
-        color: #fff;
-        font-weight: 600;
-        text-shadow: 0 1px 2px #000;
-        z-index: 3
+    .inline>* {
+        min-width: 0;
     }
 
-    .scan-frame {
-        position: absolute;
-        inset: 12% 8%;
-        border: 3px solid rgba(255, 255, 255, .8);
-        border-radius: 12px;
-        box-shadow: 0 0 0 200vmax rgba(0, 0, 0, .35);
-        z-index: 2;
+    /* hints mieux lisibles */
+    .hint {
+        opacity: .85;
     }
 
-    .scan-frame::after {
-        content: "";
-        position: absolute;
-        left: 10%;
-        right: 10%;
-        top: 50%;
-        height: 2px;
-        background: rgba(0, 255, 128, .9);
-        box-shadow: 0 0 12px rgba(0, 255, 128, .9);
-        transform: translateY(-1px);
-        animation: scanline 2.1s linear infinite;
-    }
-
-    @keyframes scanline {
-        0% {
-            top: 18%
+    /* Mobile */
+    @media (max-width: 700px) {
+        .row {
+            grid-template-columns: 1fr;
         }
 
-        100% {
-            top: 82%
+        .end {
+            justify-self: stretch;
         }
     }
 </style>
@@ -96,9 +101,8 @@
 
 {% block content %}
 <div class="wrap" data-page="achats">
-
     <div class="card">
-        <!-- Titre + bouton Scan à droite -->
+        <!-- Titre + bouton Scan -->
         <div class="title" style="display:flex; align-items:center; justify-content:space-between; gap:.5rem;">
             <div>
                 <h2>Ajouter au stock</h2>
@@ -107,143 +111,198 @@
             <button type="button" class="btn" id="btn_scan_live" title="Scanner en direct">🎥</button>
         </div>
 
-        <form id="achats_form" method="post" action="{{ BASE }}achats/add" class="form-grid">
+        <form id="achats_form" method="post" action="{{ BASE }}achats/add">
 
-            <!-- EAN -->
-            <div>
-                <div class="label">Code‑barres (EAN)</div>
-                <div class="infield">
-                    <input type="text" name="ean" id="ean" placeholder="Scanner ou saisir" inputmode="numeric"
-                        autocomplete="off">
-                    <button type="button" class="btn" id="btn_check_ean"
-                        title="Rechercher le produit par EAN">🔎</button>
+            <!-- SECTION 1 — Identification -->
+            <div class="section">
+                <div class="section-title">
+                    <h3>Identification</h3>
+                    <span class="muted">EAN → Produit → Nom / Marque</span>
                 </div>
-                <div class="hint" id="ean_hint"></div>
-            </div>
 
-            <!-- Produit (sélection si déjà existant) -->
-            <div>
-                <div class="label">Produit</div>
-                <select name="product_id" id="product_select" required>
-                    <option value="" disabled selected>— Choisir ou scanner —</option>
-                    {% for p in products %}
-                    <option value="{{ p.id }}" data-barcode="{{ p.barcode or '' }}" data-unit="{{ p.unit or 'pièce' }}"
-                        data-pack="{{ p.pack_of or '' }}" data-name="{{ p.name }}" data-brand="{{ p.brand or '' }}"
-                        data-default-location="{{ p.default_location_id or '' }}">
-                        {{ p.name }}{% if p.brand %} — {{ p.brand }}{% endif %}
-                    </option>
-                    {% endfor %}
-                </select>
-                <div class="hint" id="product_hint"></div>
-            </div>
+                <div class="row">
+                    <!-- EAN -->
+                    <div class="col-6">
+                        <div class="label">Code‑barres (EAN)</div>
+                        <div class="infield">
+                            <input type="text" name="ean" id="ean" placeholder="Scanner ou saisir" inputmode="numeric"
+                                autocomplete="off">
+                            <button type="button" class="btn" id="btn_check_ean"
+                                title="Rechercher le produit par EAN">🔎</button>
+                        </div>
+                        <div class="hint" id="ean_hint"></div>
+                    </div>
 
-            <!-- Nom / Marque (séparés) -->
-            <div>
-                <div class="label">Nom (suggéré par OFF)</div>
-                <input type="text" id="name_suggest" name="name" placeholder="Rempli après scan si produit inconnu"
-                    autocomplete="off">
-            </div>
-            <div>
-                <div class="label">Marque</div>
-                <input type="text" id="brand_suggest" name="brand" placeholder="Marque (OFF ou fiche produit)"
-                    autocomplete="off">
-                <div class="hint" id="off_qty_hint"></div>
-            </div>
+                    <!-- Produit -->
+                    <div class="col-6">
+                        <div class="label">Produit</div>
+                        <select name="product_id" id="product_select">
+                            <option value="" disabled selected>— Choisir ou scanner —</option>
+                            {% for p in products %}
+                            <option value="{{ p.id }}" data-barcode="{{ p.barcode or '' }}"
+                                data-unit="{{ p.unit or 'pièce' }}" data-pack="{{ p.pack_of or '' }}"
+                                data-name="{{ p.name }}" data-brand="{{ p.brand or '' }}"
+                                data-default-location="{{ p.default_location_id or '' }}">
+                                {{ p.name }}{% if p.brand %} — {{ p.brand }}{% endif %}
+                            </option>
+                            {% endfor %}
+                        </select>
+                        <div class="hint" id="product_hint"></div>
+                    </div>
 
-            <!-- Quantité par unité + unité -->
-            <div>
-                <div class="label">Quantité (par unité)</div>
-                <div class="infield">
-                    <input type="number" step="0.001" min="0.001" name="qty" id="qty" value="1" required>
-                    <select name="unit" id="unit" style="max-width:140px">
-                        <optgroup label="Comptage">
-                            <option value="pièce">pièce</option>
-                            <option value="tranche">tranche</option>
-                            <option value="paquet">paquet</option>
-                            <option value="boîte">boîte</option>
-                            <option value="bocal">bocal</option>
-                            <option value="bouteille">bouteille</option>
-                            <option value="sachet">sachet</option>
-                            <option value="lot">lot</option>
-                            <option value="barquette">barquette</option>
-                            <option value="rouleau">rouleau</option>
-                            <option value="dosette">dosette</option>
-                        </optgroup>
-                        <optgroup label="Poids">
-                            <option value="g">g</option>
-                            <option value="kg">kg</option>
-                        </optgroup>
-                        <optgroup label="Volume">
-                            <option value="ml">ml</option>
-                            <option value="L">L</option>
-                        </optgroup>
-                    </select>
+                    <!-- Nom -->
+                    <div class="col-6">
+                        <div class="label">Nom (suggéré par OFF)</div>
+                        <input type="text" id="name_suggest" name="name"
+                            placeholder="Rempli après scan si produit inconnu" autocomplete="off">
+                    </div>
+
+                    <!-- Marque -->
+                    <div class="col-6">
+                        <div class="label">Marque</div>
+                        <input type="text" id="brand_suggest" name="brand" placeholder="Marque (OFF ou fiche produit)"
+                            autocomplete="off">
+                        <div class="hint" id="off_qty_hint"></div>
+                    </div>
                 </div>
-                <div class="hint" id="qty_hint"></div>
             </div>
 
-            <!-- Multiplicateur (nombre d’unités / pack) -->
-            <div>
-                <div class="label">× N unités</div>
-                <input type="number" step="1" min="1" name="multiplier" id="multiplier" value="1">
-                <div class="hint" id="total_qty_hint"></div>
-            </div>
-
-            <!-- Magasin -->
-            <div>
-                <div class="label">Magasin</div>
-                <input type="text" name="store" id="store" placeholder="Ex. Carrefour, Leclerc, Lidl…"
-                    autocomplete="off">
-            </div>
-
-            <!-- Prix -->
-            <div>
-                <div class="label">Prix payé (total)</div>
-                <div class="infield">
-                    <input type="number" step="0.01" min="0" name="price_total" id="price_total" placeholder="0.00">
-                    <span style="align-self:center;">€</span>
+            <!-- SECTION 2 — Quantités & Prix -->
+            <div class="section">
+                <div class="section-title">
+                    <h3>Quantités & Prix</h3>
+                    <span class="muted">par unité, multiplicateur, totaux & €/kg·L</span>
                 </div>
-                <div class="hint" id="price_calc_hint"></div>
+
+                <div class="row">
+                    <!-- Quantité par unité + unité -->
+                    <div class="col-4">
+                        <div class="label">Quantité (par unité)</div>
+                        <div class="infield">
+                            <input type="number" step="0.001" min="0.001" name="qty" id="qty" value="1" required>
+                            <select name="unit" id="unit" style="max-width:140px">
+                                <optgroup label="Comptage">
+                                    <option value="pièce">pièce</option>
+                                    <option value="tranche">tranche</option>
+                                    <option value="paquet">paquet</option>
+                                    <option value="boîte">boîte</option>
+                                    <option value="bocal">bocal</option>
+                                    <option value="bouteille">bouteille</option>
+                                    <option value="sachet">sachet</option>
+                                    <option value="lot">lot</option>
+                                    <option value="barquette">barquette</option>
+                                    <option value="rouleau">rouleau</option>
+                                    <option value="dosette">dosette</option>
+                                </optgroup>
+                                <optgroup label="Poids">
+                                    <option value="g">g</option>
+                                    <option value="kg">kg</option>
+                                </optgroup>
+                                <optgroup label="Volume">
+                                    <option value="ml">ml</option>
+                                    <option value="L">L</option>
+                                </optgroup>
+                            </select>
+                        </div>
+                        <div class="hint" id="qty_hint"></div>
+                    </div>
+
+                    <!-- Multiplicateur -->
+                    <div class="col-2">
+                        <div class="label">× N unités</div>
+                        <input type="number" step="1" min="1" name="multiplier" id="multiplier" value="1">
+                    </div>
+
+                    <!-- Prix total -->
+                    <div class="col-3">
+                        <div class="label">Prix payé (total)</div>
+                        <div class="infield">
+                            <input type="number" step="0.01" min="0" name="price_total" id="price_total"
+                                placeholder="0.00">
+                            <span style="align-self:center;">€</span>
+                        </div>
+                    </div>
+
+                    <!-- Hints total & €/kg·L -->
+                    <div class="col-3">
+                        <div class="label">Calculs</div>
+                        <div class="hint" id="total_qty_hint">Quantité totale : 1 pièce</div>
+                        <div class="hint" id="price_calc_hint"></div>
+                    </div>
+
+                    <!-- Hidden quantités totales (pour backend) -->
+                    <input type="hidden" name="qty_total" id="qty_total" value="1">
+                </div>
             </div>
 
-            <!-- Emplacement -->
-            <div>
-                <div class="label">Emplacement</div>
-                <select name="location_id" id="location_id" required>
-                    {% for loc in locations %}
-                    <option value="{{ loc.id }}">{{ loc.name }}</option>
-                    {% endfor %}
-                </select>
+            <!-- SECTION 3 — Conservation & Emplacement -->
+            <div class="section">
+                <div class="section-title">
+                    <h3>Conservation & Emplacement</h3>
+                    <span class="muted">où ranger et dates</span>
+                </div>
+
+                <div class="row">
+                    <!-- Emplacement -->
+                    <div class="col-4">
+                        <div class="label">Emplacement</div>
+                        <select name="location_id" id="location_id" required>
+                            {% for loc in locations %}
+                            <option value="{{ loc.id }}">{{ loc.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <!-- DLC -->
+                    <div class="col-4">
+                        <div class="label">DLC (optionnel)</div>
+                        <input type="date" name="best_before" id="best_before">
+                    </div>
+
+                    <!-- Date de congélation -->
+                    <div class="col-4">
+                        <div class="label">Date de congélation (optionnel)</div>
+                        <input type="date" name="frozen_on" id="frozen_on">
+                    </div>
+                </div>
             </div>
 
-            <!-- Dates -->
-            <div>
-                <div class="label">DLC (optionnel)</div>
-                <input type="date" name="best_before" id="best_before">
-            </div>
-            <div>
-                <div class="label">Date de congélation (optionnel)</div>
-                <input type="date" name="frozen_on" id="frozen_on">
-            </div>
+            <!-- SECTION 4 — Magasin & Notes -->
+            <div class="section">
+                <div class="section-title">
+                    <h3>Magasin & Notes</h3>
+                    <span class="muted">infos d’achat</span>
+                </div>
 
-            <!-- Note -->
-            <div style="grid-column:1/-1">
-                <div class="label">Note (optionnel)</div>
-                <textarea name="note" rows="2"
-                    placeholder="Infos complémentaires (lot fournisseur, promo, etc.)"></textarea>
-            </div>
+                <div class="row">
+                    <!-- Magasin -->
+                    <div class="col-4">
+                        <div class="label">Magasin</div>
+                        <input type="text" name="store" id="store" placeholder="Ex. Carrefour, Leclerc, Lidl…"
+                            autocomplete="off">
+                    </div>
 
-            <!-- Hidden: quantité totale calculée (facilite le backend, optionnel) -->
-            <input type="hidden" name="qty_total" id="qty_total" value="1">
+                    <!-- Note -->
+                    <div class="col-8">
+                        <div class="label">Note (optionnel)</div>
+                        <textarea name="note" rows="2"
+                            placeholder="Infos complémentaires (lot fournisseur, promo, etc.)"></textarea>
+                    </div>
+                </div>
+            </div>
 
             <!-- Actions -->
-            <div style="grid-column:1/-1; display:flex; gap:.5rem; justify-content:flex-end">
-                <button type="reset" class="btn ghost" id="btn_reset">Réinitialiser</button>
-                <button type="submit" class="btn primary">Ajouter</button>
+            <div class="section" style="border-top:0; padding-top:.5rem;">
+                <div class="row">
+                    <div class="col-12 end" style="display:flex; gap:.5rem;">
+                        <button type="reset" class="btn ghost" id="btn_reset">Réinitialiser</button>
+                        <button type="submit" class="btn primary">Ajouter</button>
+                    </div>
+                </div>
             </div>
 
-            <!-- Aperçu vidéo pour le scan en direct -->
-            <div id="live_scanner" style="grid-column:1/-1; display:none;">
+            <!-- Aperçu vidéo (scan en direct) -->
+            <div id="live_scanner" style="display:none; margin-top: .75rem;">
                 <video id="video_preview" playsinline autoplay muted
                     style="width:100%; max-height:280px; border-radius:12px; background:#000;"></video>
                 <div class="hint" id="live_hint">Pointe un code‑barres vers la caméra…</div>
@@ -259,23 +318,18 @@
                     <video id="scan_video" playsinline autoplay muted></video>
                     <canvas id="scan_overlay"></canvas>
 
-                    <!-- HUD -->
                     <div class="scan-hud">
                         <button type="button" class="btn ghost" id="scan_flip" title="Changer de caméra">🔁</button>
                         <button type="button" class="btn" id="scan_close" title="Fermer">✖</button>
                     </div>
 
-                    <!-- Tip -->
                     <div class="scan-tip">Alignez le code-barres dans le cadre</div>
-
-                    <!-- Cadre de guidage (statique) -->
                     <div class="scan-frame"></div>
                 </div>
             </div>
-
         </form>
 
-        <!-- DEBUG PANEL (caché par défaut, activé via JS) -->
+        <!-- DEBUG (caché par défaut) -->
         <div id="dbg_panel" style="display:none; margin-top:1rem;">
             <div class="card" style="background:var(--bg-soft,#1f2937); color:var(--fg,#e5e7eb);">
                 <div class="title">
@@ -292,8 +346,9 @@
 {% block scripts %}
 <!-- ZXing (déjà ok) -->
 <script src="https://unpkg.com/@zxing/library@0.20.0"></script>
+
+<!-- ======= LECTURE CODE-BARRES — INTACT ======= -->
 <script>
-    /* ======= LECTURE CODE-BARRES — INTACT ======= */
     (function () {
         const $ = (s, p = document) => p.querySelector(s);
         const toast = (m, t = 'ok') => window.showToast?.(m, t);
@@ -327,11 +382,7 @@
         let lastRead = '', streak = 0, streakTimer = null;
         const STREAK_TIMEOUT_MS = 1800;
 
-        function resetStreak() {
-            lastRead = ''; streak = 0;
-            if (streakTimer) { clearTimeout(streakTimer); streakTimer = null; }
-        }
-
+        function resetStreak() { lastRead = ''; streak = 0; if (streakTimer) { clearTimeout(streakTimer); streakTimer = null; } }
         function handleRead(rawCode) {
             const code = ('' + rawCode).replace(/\D+/g, '');
             if (!code) return;
@@ -341,7 +392,6 @@
             if (streak < REQUIRED_STREAK) { toast(`Lecture ${streak}/${REQUIRED_STREAK} : ${code}`, 'warn'); return; }
             commitDetected(code);
         }
-
         async function commitDetected(code) {
             resetStreak(); stopStream(); closeModal();
             if (elEAN) elEAN.value = code;
@@ -403,8 +453,8 @@
     })();
 </script>
 
+<!-- ======= LOGIQUE FORMULAIRE / OFF / PRIX (inchangée) ======= -->
 <script>
-    /* ======= LOGIQUE FORMULAIRE / OFF / PRIX ======= */
     (function () {
         const $ = (s, p = document) => p.querySelector(s);
         const toast = (m, t = 'ok') => window.showToast?.(m, t);
@@ -443,7 +493,7 @@
         function selectUnitOnForm(uWanted) {
             if (!unitSel) return;
             let mapped = mapUnit(uWanted);
-            if (mapped === 'cl') mapped = 'ml'; // on convertit cl -> ml pour cohérence
+            if (mapped === 'cl') mapped = 'ml'; // cohérence
             const target = mapped || uWanted;
             const opt = [...unitSel.options].find(o => o.value === target);
             if (opt) unitSel.value = opt.value;
@@ -456,45 +506,29 @@
         function setName(v) { if (nameSuggest) nameSuggest.value = (v || '').trim(); }
         function setBrand(v) { if (brandSuggest) brandSuggest.value = (v || '').trim(); }
 
-        // === Calculs quantités / prix ===
         function updateCalcs() {
             const q = Math.max(valNum(qtyInput), 0);
             const u = unitSel?.value || 'pièce';
             const m = Math.max(Math.floor(valNum(multInput)) || 1, 1);
             const pt = Math.max(valNum(priceTotal), 0);
 
-            // quantité totale affichée (en unité choisie)
             const totalQty = q * m;
             if (qtyTotalHidden) qtyTotalHidden.value = String(totalQty);
 
-            // libellé quantité totale + conversion utile
             let qtyTxt = `Quantité totale : ${totalQty} ${u}`;
-            let baseTxt = '';
-            let perUnitTxt = '';
-            let perBaseTxt = '';
+            let baseTxt = ''; let perUnitTxt = ''; let perBaseTxt = '';
 
-            // prix par unité (pièce ou “une unité de vente”)
             if (pt > 0 && m > 0) perUnitTxt = `Prix / unité : ${(pt / m).toFixed(2)} €`;
 
-            // €/kg ou €/L si applicable
             const mu = mapUnit(u);
             if (pt > 0 && mu) {
                 if (mu === 'g' || mu === 'kg') {
-                    // total en kg
                     const totalKg = (mu === 'kg') ? totalQty : (totalQty / 1000);
-                    if (totalKg > 0) {
-                        perBaseTxt = `Prix / kg : ${(pt / totalKg).toFixed(2)} €`;
-                        baseTxt = `≈ ${totalKg.toFixed(3)} kg`;
-                    }
+                    if (totalKg > 0) { perBaseTxt = `Prix / kg : ${(pt / totalKg).toFixed(2)} €`; baseTxt = `≈ ${totalKg.toFixed(3)} kg`; }
                 } else if (mu === 'ml' || mu === 'L') {
-                    // total en L
                     const totalL = (mu === 'L') ? totalQty : (totalQty / 1000);
-                    if (totalL > 0) {
-                        perBaseTxt = `Prix / L : ${(pt / totalL).toFixed(2)} €`;
-                        baseTxt = `≈ ${totalL.toFixed(3)} L`;
-                    }
+                    if (totalL > 0) { perBaseTxt = `Prix / L : ${(pt / totalL).toFixed(2)} €`; baseTxt = `≈ ${totalL.toFixed(3)} L`; }
                 } else if (mu === 'pièce') {
-                    // €/pièce
                     if (m > 0) perBaseTxt = `Prix / pièce : ${(pt / m).toFixed(2)} €`;
                 }
             }
@@ -503,7 +537,6 @@
             setHint(priceCalcHint, [perUnitTxt, perBaseTxt].filter(Boolean).join(' · '));
         }
 
-        // === Changements de saisie qui déclenchent les calculs
         ['change', 'input'].forEach(ev => {
             qtyInput?.addEventListener(ev, updateCalcs);
             unitSel?.addEventListener(ev, updateCalcs);
@@ -512,27 +545,19 @@
         });
         $('#btn_reset')?.addEventListener('click', () => setTimeout(updateCalcs, 0));
 
-        // === Préremplissage quand on choisit un produit existant
         productSel?.addEventListener('change', () => {
             const opt = productSel.options[productSel.selectedIndex];
             if (!opt) return;
 
-            // Unité depuis la fiche produit
-            const unit = opt.dataset.unit || 'pièce';
-            selectUnitOnForm(unit);
-
-            // Nom + Marque séparés
+            selectUnitOnForm(opt.dataset.unit || 'pièce');
             setName(opt.dataset.name);
             setBrand(opt.dataset.brand);
 
-            // Multiplicateur depuis la fiche produit (pack)
             const pack = Number(opt.dataset.pack || '1');
             safeSet(multInput, String(Math.max(1, pack || 1)));
 
-            // Quantité par défaut : 1 si rien
             if (!qtyInput.value || Number(qtyInput.value) <= 0) qtyInput.value = '1';
 
-            // Emplacement par défaut si fourni
             const locDefault = opt.dataset.defaultLocation;
             const locSel = $('#location_id');
             if (locDefault && locSel) {
@@ -545,63 +570,53 @@
             updateCalcs();
         });
 
-        // ===== Recherche EAN (local puis OFF) =====
         async function lookupByEAN_impl(ean) {
             const code = (ean || '').replace(/\s+/g, '').trim();
             if (!code) { toast('EAN vide.', 'warn'); return; }
+
             if (elEAN) elEAN.value = code;
 
-            // 1) DB locale
             try {
                 const r = await fetch(`{{ BASE }}api/product/by_barcode?code=${encodeURIComponent(code)}`);
                 if (r.ok) {
                     const p = await r.json();
                     const opt = [...productSel.options].find(o => (o.dataset.barcode || '').replace(/\s+/g, '') === code);
                     productSel.value = opt ? opt.value : String(p.id);
-                    productSel.dispatchEvent(new Event('change')); // déclenche le préremplissage
+                    productSel.dispatchEvent(new Event('change'));
                     setHint(eanHint, `Produit trouvé : ${p.name}`);
                     toast('Produit sélectionné depuis le stock.', 'ok');
                     return;
                 }
             } catch { }
 
-            // 2) Open Food Facts (via ton endpoint serveur)
             try {
                 const r = await fetch(`{{ BASE }}api/off?barcode=${encodeURIComponent(code)}`);
                 const data = await r.json();
                 if (data && data.ok) {
                     setHint(eanHint, "Produit non connu en local — infos récupérées depuis OFF.");
 
-                    // Nom & marque séparés
                     setName(data.name || data.product_name || '');
                     setBrand(data.brand || data.brands || '');
 
-                    // Quantité OFF structurée si dispo
                     let unitFromOff = data.unit || '';
                     let qtyFromOff = data.quantity_value || '';
                     let packOf = data.pack_of || '';
 
-                    // Sinon parser "quantity" (ex. "6 x 33 cl", "400 g", "1 L")
                     if ((!unitFromOff || !qtyFromOff) && data.quantity) {
                         const qtxt = String(data.quantity).toLowerCase().replace(',', '.').trim();
                         let mPack = qtxt.match(/(\d+)\s*[x×]\s*(\d+(?:\.\d+)?)\s*([a-zA-Z]+)/i);
-                        if (mPack) {
-                            packOf = mPack[1];
-                            qtyFromOff = mPack[2];
-                            unitFromOff = mPack[3];
-                        } else {
+                        if (mPack) { packOf = mPack[1]; qtyFromOff = mPack[2]; unitFromOff = mPack[3]; }
+                        else {
                             let m = qtxt.match(/(\d+(?:\.\d+)?)\s*([a-zA-Z]+)/);
                             if (m) { qtyFromOff = m[1]; unitFromOff = m[2]; }
                         }
                     }
 
-                    // Unité sur le formulaire (si connue)
                     if (unitFromOff) selectUnitOnForm(unitFromOff);
 
-                    // Quantité : gérer cl→ml
                     const uMap = mapUnit(unitFromOff);
                     if (uMap && ['g', 'kg', 'ml', 'L', 'cl'].includes(uMap) && qtyFromOff) {
-                        if ((String(unitFromOff).toLowerCase().trim() === 'cl')) {
+                        if (String(unitFromOff).toLowerCase().trim() === 'cl') {
                             const n = Number(String(qtyFromOff));
                             if (!isNaN(n)) { safeSetQty(n * 10); selectUnitOnForm('ml'); }
                             else safeSetQty(qtyFromOff);
@@ -613,11 +628,9 @@
                         if (!uMap) selectUnitOnForm('pièce');
                     }
 
-                    // Multiplicateur (pack)
                     const packN = Math.max(1, Number(packOf || 1));
                     safeSet(multInput, String(packN));
 
-                    // Hint OFF
                     const offTxt = [];
                     if (data.quantity) offTxt.push(`Quantité OFF : ${data.quantity}`);
                     if (packN > 1) offTxt.push(`Pack de ${packN}`);
@@ -638,18 +651,11 @@
             }
         }
 
-        // Expose pour le scanner :
-        if (typeof window.lookupByEAN !== 'function') {
-            window.lookupByEAN = lookupByEAN_impl;
-        }
+        if (typeof window.lookupByEAN !== 'function') window.lookupByEAN = lookupByEAN_impl;
 
-        // Bouton 🔎 et touche Entrée sur le champ
         $('#btn_check_ean')?.addEventListener('click', () => window.lookupByEAN(elEAN.value));
-        elEAN?.addEventListener('keydown', (ev) => {
-            if (ev.key === 'Enter') { ev.preventDefault(); window.lookupByEAN(elEAN.value); }
-        });
+        elEAN?.addEventListener('keydown', (ev) => { if (ev.key === 'Enter') { ev.preventDefault(); window.lookupByEAN(elEAN.value); } });
 
-        // Init calculs
         updateCalcs();
     })();
 </script>
