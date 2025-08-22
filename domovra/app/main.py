@@ -72,6 +72,8 @@ logger = logging.getLogger("domovra")
 app = FastAPI()
 
 templates = build_jinja_env()
+templates.globals.setdefault("ASSET_CSS_PATH", "static/css/domovra.css")
+
 
 def render(name: str, **ctx):
     return _render_with_env(templates, name, **ctx)
@@ -392,19 +394,18 @@ def _startup():
     logger.info("Domovra starting. DB_PATH=%s", DB_PATH)
     logger.info("WARNING_DAYS=%s CRITICAL_DAYS=%s", WARNING_DAYS, CRITICAL_DAYS)
 
-    # S'assurer que le CSS hashé existe (log utile)
-try:
-    hashed_rel = ensure_hashed_asset("static/css/domovra.css")
-    if not (isinstance(hashed_rel, str) and hashed_rel.startswith("static/")):
-        hashed_rel = "static/css/domovra.css"
-    templates.globals["ASSET_CSS_PATH"] = hashed_rel
-    logger.info("Startup ASSET_CSS_PATH: %s", hashed_rel)
-except Exception as e:
-    logger.exception("ensure_hashed_asset at startup failed: %s", e)
-
+    # 1) Assurer le fichier hashé et l'injecter dans Jinja
+    try:
+        hashed_rel = ensure_hashed_asset("static/css/domovra.css")
+        templates.globals["ASSET_CSS_PATH"] = hashed_rel         # <-- LIGNE CLÉ
+        logger.info("CSS hashed path ready: %s", hashed_rel)
+    except Exception as e:
+        logger.exception("ensure_hashed_asset at startup failed: %s", e)
+        # filet de sécurité si jamais:
+        templates.globals.setdefault("ASSET_CSS_PATH", "static/css/domovra.css")
 
     init_db()
-    _ensure_events_table()   # <- importé depuis services.events
+    _ensure_events_table()
 
     try:
         current = load_settings()
