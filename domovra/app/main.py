@@ -14,6 +14,7 @@ from utils.assets import ensure_hashed_asset
 from services.events import _ensure_events_table, log_event, list_events
 from routes.home import router as home_router
 from routes.products import router as products_router
+from routes.locations import router as locations_router
 
 
 
@@ -86,12 +87,10 @@ templates.globals["ASSET_CSS_PATH"] = "static/css/domovra.css"
 templates.globals.setdefault("ASSET_CSS_PATH", "static/css/domovra.css")
 
 
-def render(name: str, **ctx):
-    return _render_with_env(templates, name, **ctx)
-
 app.state.templates = templates
 app.include_router(home_router)
 app.include_router(products_router)
+app.include_router(locations_router)
 
 
 
@@ -437,39 +436,6 @@ def debug_vars():
     }
 
 
-
-
-
-@app.get("/locations", response_class=HTMLResponse)
-def locations_page(request: Request):
-    base = ingress_base(request)
-    logger.info("GET /locations (BASE=%s)", base)
-    items = list_locations()
-
-    counts_total: dict[int,int] = {}
-    counts_soon:  dict[int,int] = {}
-    counts_urg:   dict[int,int] = {}
-    for l in list_lots():
-        st = status_for(l.get("best_before"), WARNING_DAYS, CRITICAL_DAYS)
-        lid = int(l["location_id"])
-        counts_total[lid] = counts_total.get(lid, 0) + 1
-        if st == "yellow":
-            counts_soon[lid] = counts_soon.get(lid, 0) + 1
-        elif st == "red":
-            counts_urg[lid] = counts_urg.get(lid, 0) + 1
-
-    for it in items:
-        lid = int(it["id"])
-        it["lot_count"]   = int(counts_total.get(lid, 0))
-        it["soon_count"]  = int(counts_soon.get(lid, 0))
-        it["urgent_count"]= int(counts_urg.get(lid, 0))
-
-    return render("locations.html",
-                  BASE=base,
-                  page="locations",
-                  request=request,
-                  items=items)
-
 @app.get("/lots", response_class=HTMLResponse)
 def lots_page(
     request: Request,
@@ -639,89 +605,6 @@ def settings_save(request: Request,
         return RedirectResponse(base + "settings?error=1",
                                 status_code=303,
                                 headers={"Cache-Control":"no-store"})
-
-@app.post("/location/add")
-def location_add(request: Request,
-                 name: str = Form(...),
-                 is_freezer: str | None = Form(None),
-                 description: str | None = Form(None)):
-    base = ingress_base(request)
-    nm = (name or "").strip()
-
-    existing = [l["name"].strip().casefold() for l in list_locations()]
-    if nm.casefold() in existing:
-        log_event("location.duplicate", {"name": nm})
-        params = urlencode({"duplicate": 1, "name": nm})
-        return RedirectResponse(base + f"locations?{params}", status_code=303, headers={"Cache-Control":"no-store"})
-
-    freezer = 1 if is_freezer else 0
-    desc = (description or "").strip() or None
-
-    lid = add_location(nm, freezer, desc)
-    log_event("location.add", {"id": lid, "name": nm, "is_freezer": freezer, "description": desc})
-
-    params = urlencode({"added": 1, "name": nm})
-    return RedirectResponse(base + f"locations?{params}", status_code=303, headers={"Cache-Control":"no-store"})
-
-
-@app.post("/location/update")
-def location_update(
-    request: Request,
-    location_id: int = Form(...),
-    name: str = Form(...),
-    is_freezer: str = Form(""),
-    description: str = Form("")
-):
-    base = ingress_base(request)
-    nm = (name or "").strip()
-    freezer = 1 if str(is_freezer).lower() in ("1","true","on","yes") else 0
-    desc = (description or "").strip()
-
-    update_location(location_id, nm, freezer, desc)
-    log_event("location.update", {"id": location_id, "name": nm, "is_freezer": freezer, "description": desc})
-    params = urlencode({"updated": 1, "name": nm})
-    return RedirectResponse(base + f"locations?{params}", status_code=303, headers={"Cache-Control":"no-store"})
-
-
-@app.post("/location/delete")
-def location_delete(request: Request, location_id: int = Form(...), move_to: str = Form("")):
-    base = ingress_base(request)
-    with _conn() as c:
-        row = c.execute("SELECT name, COALESCE(is_freezer,0) AS is_freezer FROM locations WHERE id=?",
-                        (location_id,)).fetchone()
-        nm = row["name"] if row else ""
-        src_is_freezer = int(row["is_freezer"] or 0) if row else 0
-
-    move_to_id = (move_to or "").strip()
-    move_invalid = False
-
-    if move_to_id:
-        try:
-            with _conn() as c:
-                dest = c.execute("SELECT COALESCE(is_freezer,0) AS is_freezer FROM locations WHERE id=?",
-                                 (int(move_to_id),)).fetchone()
-                dest_is_freezer = int(dest["is_freezer"] or 0) if dest else 0
-
-            if src_is_freezer != dest_is_freezer:
-                move_invalid = True
-                logger.info("location.delete move refused: freezer mismatch src=%s dest=%s",
-                            src_is_freezer, dest_is_freezer)
-            else:
-                move_lots_from_location(int(location_id), int(move_to_id))
-                log_event("location.move_lots", {"from": int(location_id), "to": int(move_to_id)})
-        except Exception as e:
-            logger.exception("move_lots_from_location error: %s", e)
-
-    delete_location(location_id)
-    log_event("location.delete", {"id": location_id, "name": nm, "moved_to": move_to_id or None})
-
-    params = {"deleted": 1}
-    if move_invalid:
-        params["move_invalid"] = 1
-    return RedirectResponse(base + "locations?" + urlencode(params),
-                            status_code=303,
-                            headers={"Cache-Control":"no-store"})
-
 
 @app.post("/lot/add")
 def lot_add_action(request: Request,
