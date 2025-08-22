@@ -66,6 +66,10 @@ def init_db():
               WHERE created_on IS NULL
             """)
 
+        # ----- stock_lots : EAN par lot (nouveau)
+        if not _column_exists(c, "stock_lots", "ean"):
+            c.execute("ALTER TABLE stock_lots ADD COLUMN ean TEXT")
+
         # ----- 🚀 Nouvelle migration : seuil mini par produit
         if not _column_exists(c, "products", "min_qty"):
             c.execute("ALTER TABLE products ADD COLUMN min_qty REAL")  # nullable
@@ -424,7 +428,7 @@ def list_lots():
                  l.location_id,
                  p.name        AS product,
                  p.unit        AS unit,
-                 COALESCE(p.barcode,'') AS barcode,
+                 COALESCE(l.ean, p.barcode, '') AS barcode,  -- priorité à l'EAN du lot
                  loc.name      AS location,
                  l.qty,
                  l.frozen_on,
@@ -435,6 +439,8 @@ def list_lots():
                JOIN locations loc ON loc.id = l.location_id
                ORDER BY COALESCE(l.best_before, '9999-12-31') ASC, p.name"""
         return [dict(r) for r in c.execute(q)]
+
+
 
 def consume_lot(lot_id: int, qty: float):
     with _conn() as c:
