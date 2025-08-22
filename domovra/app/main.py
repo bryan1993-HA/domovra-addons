@@ -7,11 +7,13 @@ from fastapi.responses import HTMLResponse, RedirectResponse, JSONResponse, Plai
 from fastapi.staticfiles import StaticFiles
 from jinja2 import Environment, FileSystemLoader, select_autoescape
 from urllib.parse import urlencode
-from config import WARNING_DAYS, CRITICAL_DAYS, DB_PATH, START_TS
+from config import WARNING_DAYS, CRITICAL_DAYS, DB_PATH
 from utils.http import nocache_html, render as _render_with_env, ingress_base
 from utils.jinja import build_jinja_env
 from utils.assets import ensure_hashed_asset
 from services.events import _ensure_events_table, log_event, list_events
+from routes.home import router as home_router
+
 
 
 from db import (
@@ -71,9 +73,12 @@ app = FastAPI()
 
 templates = build_jinja_env()
 
-# Wrapper local pour conserver l'appel historique render("page.html", **ctx)
 def render(name: str, **ctx):
     return _render_with_env(templates, name, **ctx)
+
+app.state.templates = templates
+app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
+app.include_router(home_router)
 
 
 
@@ -207,58 +212,7 @@ def add_or_merge_lot(product_id: int, location_id: int, qty_delta: float,
     return {"action": "insert", "lot_id": int(lid), "new_qty": float(qty_delta or 0)}
 
 
-def get_low_stock_products(limit: int = 8):
-    dflt = 1
-    try:
-        dflt = int(load_settings().get("low_stock_default", 1))
-    except Exception:
-        dflt = 1
 
-    with _conn() as c:
-        try:
-            q = """
-            SELECT
-              p.id, p.name, p.unit,
-              COALESCE(p.min_qty, ?) AS min_qty,
-              COALESCE(SUM(l.qty), 0) AS qty_total
-            FROM products p
-            LEFT JOIN stock_lots l ON l.product_id = p.id
-            GROUP BY p.id
-            HAVING qty_total <= COALESCE(p.min_qty, ?) AND COALESCE(p.min_qty, ?) > 0
-            ORDER BY (qty_total - COALESCE(p.min_qty, ?)) ASC, p.name
-            LIMIT ?
-            """
-            rows = c.execute(q, (dflt, dflt, dflt, dflt, limit)).fetchall()
-        except sqlite3.OperationalError:
-            q = """
-            SELECT
-              p.id, p.name, p.unit,
-              ? AS min_qty,
-              COALESCE(SUM(l.qty), 0) AS qty_total
-            FROM products p
-            LEFT JOIN stock_lots l ON l.product_id = p.id
-            GROUP BY p.id
-            HAVING qty_total <= ? AND ? > 0
-            ORDER BY (qty_total - ?) ASC, p.name
-            LIMIT ?
-            """
-            rows = c.execute(q, (dflt, dflt, dflt, dflt, limit)).fetchall()
-
-        items = []
-        for r in rows:
-            min_qty = float(r["min_qty"] or 0)
-            qty_total = float(r["qty_total"] or 0)
-            items.append({
-                "id": r["id"],
-                "name": r["name"],
-                "unit": r["unit"],
-                "min_qty": min_qty,
-                "qty_total": qty_total,
-                "delta": qty_total - min_qty,
-            })
-        return items
-
-# ---------------- Lifecycle
 # ---------------- Page Achats (entrées de stock)
 @app.get("/achats", response_class=HTMLResponse)
 def achats_page(request: Request):
@@ -440,58 +394,8 @@ def _startup():
         logger.exception("Erreur lecture settings au démarrage: %s", e)
 
 
-@app.get("/ping", response_class=PlainTextResponse)
-def ping(): return "ok"
-
-# ---------------- Petit endpoint de debug pour le static
-@app.get("/_debug/static")
-def debug_static(request: Request):
-    css_path = os.path.join(STATIC_DIR, "css", "domovra.css")
-    hashed_rel = templates.globals.get("ASSET_CSS_PATH")
-    hashed_path = (os.path.join(STATIC_DIR, hashed_rel.split("static/",1)[1])
-                   if hashed_rel else None)
-    hashed_url = (str(request.url_for("static", path=hashed_rel.split("static/",1)[1]))
-                  if hashed_rel else None)
-    return JSONResponse({
-        "STATIC_DIR": STATIC_DIR,
-        "exists": os.path.isdir(STATIC_DIR),
-        "css_exists": os.path.isfile(css_path),
-        "css_size": os.path.getsize(css_path) if os.path.isfile(css_path) else None,
-        "ls_static": sorted(os.listdir(STATIC_DIR)) if os.path.isdir(STATIC_DIR) else [],
-        "ls_css": sorted(os.listdir(os.path.join(STATIC_DIR, "css"))) if os.path.isdir(os.path.join(STATIC_DIR, "css")) else [],
-        "url_css": str(request.url_for("static", path="css/domovra.css")),
-        "cache_buster_boot": START_TS,
-        "hashed_css_rel": hashed_rel,
-        "hashed_css_exists": os.path.isfile(hashed_path) if hashed_path else False,
-        "hashed_css_url": hashed_url,
-    })
 
 
-# ---------------- Pages
-@app.get("/", response_class=HTMLResponse)
-@app.get("//", response_class=HTMLResponse)
-def index(request: Request):
-    base = ingress_base(request)
-    logger.info("GET /  (BASE=%s UA=%s)", base, request.headers.get("user-agent", "-"))
-
-    locations = list_locations()
-    products  = list_products()
-    lots      = list_lots()
-    for it in lots:
-        it["status"] = status_for(it.get("best_before"), WARNING_DAYS, CRITICAL_DAYS)
-
-    low_products = get_low_stock_products(limit=8)
-
-    return render("index.html",
-                  BASE=base,
-                  page="home",
-                  request=request,
-                  locations=locations,
-                  products=products,
-                  lots=lots,
-                  low_products=low_products,
-                  WARNING_DAYS=WARNING_DAYS,
-                  CRITICAL_DAYS=CRITICAL_DAYS)
 
 @app.get("/products", response_class=HTMLResponse)
 def products_page(request: Request):
@@ -1048,20 +952,6 @@ def lot_delete_action(request: Request, lot_id: int = Form(...)):
     return RedirectResponse(base + "lots?deleted=1", status_code=303,
                             headers={"Cache-Control": "no-store"})
 
-@app.get("/support", response_class=HTMLResponse)
-def support_page(request: Request):
-    base = ingress_base(request)
-    logger.info("GET /support (BASE=%s)", base)
-    return render("support.html",
-                  BASE=base,
-                  page="support",
-                  request=request)
-
-@app.get("/{path:path}", include_in_schema=False)
-def fallback(request: Request, path: str):
-    base = ingress_base(request)
-    logger.info("Fallback -> redirect %s", base)
-    return RedirectResponse(base, status_code=303, headers={"Cache-Control":"no-store"})
 
 def get_products_with_stats():
     try:
