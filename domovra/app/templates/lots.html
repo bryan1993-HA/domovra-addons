@@ -142,10 +142,15 @@
           data-barcode="{{ (it.barcode or '')|lower }}" data-status="{{ it.status }}">
           <td>
             <div class="line">
-              <div style="font-weight:600">{{ it.product }}</div>
-              {% if it.barcode %}<span class="sep">•</span><span class="muted">🏷️ {{ it.barcode }}</span>{% endif %}
+              <div style="font-weight:600">
+                {{ it.article_name or it.product }}
+                {% if it.brand %}<span class="muted"> — {{ it.brand }}</span>{% endif %}
+              </div>
+              {% set code = it.ean or it.barcode %}
+              {% if code %}<span class="sep">•</span><span class="muted">🏷️ {{ code }}</span>{% endif %}
             </div>
           </td>
+
           <td>
             <div class="line">
               <div class="meta">
@@ -193,13 +198,18 @@
       <div class="card-item" data-name="{{ it.product|lower }}" data-loc="{{ it.location|lower }}"
         data-barcode="{{ (it.barcode or '')|lower }}" data-status="{{ it.status }}">
         <div class="card-head">
-          <div class="card-title">{{ it.product }}</div>
+          <div class="card-title">
+            {{ it.article_name or it.product }}
+            {% if it.brand %}<span class="muted"> — {{ it.brand }}</span>{% endif %}
+          </div>
           <span class="status {{ it.status }}">{{ "OK" if it.status=="green" else ("Bientôt" if it.status=="yellow" else
             ("Urgent" if it.status=="red" else "—")) }}</span>
         </div>
         <div class="card-sub">
-          {{ '%.2f'|format(it.qty)|trim('0')|trim('.') }} {{ it.unit|pluralize_fr(it.qty) }} • 📍 {{ it.location }}{% if
-          it.barcode %} • 🏷️ {{ it.barcode }}{% endif %}
+          {{ '%.2f'|format(it.qty)|trim('0')|trim('.') }} {{ it.unit|pluralize_fr(it.qty) }}
+          • 📍 {{ it.location }}
+          {% set code = it.ean or it.barcode %}
+          {% if code %} • 🏷️ {{ code }}{% endif %}
         </div>
         <details class="dates" style="margin-top:6px">
           <summary>📅 Dates</summary>

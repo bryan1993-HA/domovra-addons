@@ -97,6 +97,24 @@ def init_db():
             c.execute("ALTER TABLE products ADD COLUMN category TEXT")
         if not _column_exists(c, "products", "parent_id"):
             c.execute("ALTER TABLE products ADD COLUMN parent_id INTEGER")
+                # ----- Lots : colonnes issues des achats (si absentes)
+        if not _column_exists(c, "stock_lots", "article_name"):
+            c.execute("ALTER TABLE stock_lots ADD COLUMN article_name TEXT")
+        if not _column_exists(c, "stock_lots", "brand"):
+            c.execute("ALTER TABLE stock_lots ADD COLUMN brand TEXT")
+        if not _column_exists(c, "stock_lots", "ean"):
+            c.execute("ALTER TABLE stock_lots ADD COLUMN ean TEXT")
+        if not _column_exists(c, "stock_lots", "price_total"):
+            c.execute("ALTER TABLE stock_lots ADD COLUMN price_total REAL")
+        if not _column_exists(c, "stock_lots", "store"):
+            c.execute("ALTER TABLE stock_lots ADD COLUMN store TEXT")
+        if not _column_exists(c, "stock_lots", "qty_per_unit"):
+            c.execute("ALTER TABLE stock_lots ADD COLUMN qty_per_unit REAL")
+        if not _column_exists(c, "stock_lots", "multiplier"):
+            c.execute("ALTER TABLE stock_lots ADD COLUMN multiplier INTEGER")
+        if not _column_exists(c, "stock_lots", "unit_at_purchase"):
+            c.execute("ALTER TABLE stock_lots ADD COLUMN unit_at_purchase TEXT")
+
 
 
         c.commit()
@@ -403,13 +421,36 @@ def delete_product(product_id: int):
 def _today():
     return datetime.date.today().isoformat()
 
-def add_lot(product_id: int, location_id: int, qty: float, frozen_on: str | None, best_before: str | None) -> int:
+def add_lot(
+    product_id: int,
+    location_id: int,
+    qty: float,
+    frozen_on: str | None,
+    best_before: str | None,
+    # nouveaux (optionnels)
+    article_name: str | None = None,
+    brand: str | None = None,
+    ean: str | None = None,
+    price_total: float | None = None,
+    store: str | None = None,
+    qty_per_unit: float | None = None,
+    multiplier: int | None = None,
+    unit_at_purchase: str | None = None,
+) -> int:
     with _conn() as c:
         today = _today()
         cur = c.execute(
-            """INSERT INTO stock_lots(product_id,location_id,qty,frozen_on,best_before,created_on)
-               VALUES(?,?,?,?,?,?)""",
-            (product_id, location_id, qty, frozen_on, best_before, today)
+            """INSERT INTO stock_lots(
+                   product_id, location_id, qty, frozen_on, best_before, created_on,
+                   article_name, brand, ean, price_total, store,
+                   qty_per_unit, multiplier, unit_at_purchase
+               )
+               VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+            (
+                product_id, location_id, qty, frozen_on, best_before, today,
+                (article_name or None), (brand or None), (ean or None), price_total, (store or None),
+                qty_per_unit, multiplier, (unit_at_purchase or None)
+            )
         )
         lot_id = cur.lastrowid
         c.execute(
@@ -420,6 +461,7 @@ def add_lot(product_id: int, location_id: int, qty: float, frozen_on: str | None
         c.commit()
     return lot_id
 
+
 def list_lots():
     with _conn() as c:
         q = """SELECT
@@ -428,17 +470,27 @@ def list_lots():
                  l.location_id,
                  p.name        AS product,
                  p.unit        AS unit,
-                 COALESCE(l.ean, p.barcode, '') AS barcode,  -- priorité à l'EAN du lot
+                 COALESCE(p.barcode,'') AS barcode,
                  loc.name      AS location,
                  l.qty,
                  l.frozen_on,
                  l.best_before,
-                 l.created_on  AS created_on
+                 l.created_on  AS created_on,
+                 -- nouveaux champs d'achat exposés
+                 COALESCE(l.article_name, '')    AS article_name,
+                 COALESCE(l.brand, '')           AS brand,
+                 COALESCE(l.ean, '')             AS ean,
+                 l.price_total                   AS price_total,
+                 COALESCE(l.store, '')           AS store,
+                 l.qty_per_unit                  AS qty_per_unit,
+                 l.multiplier                    AS multiplier,
+                 COALESCE(l.unit_at_purchase,'') AS unit_at_purchase
                FROM stock_lots l
                JOIN products  p   ON p.id  = l.product_id
                JOIN locations loc ON loc.id = l.location_id
                ORDER BY COALESCE(l.best_before, '9999-12-31') ASC, p.name"""
         return [dict(r) for r in c.execute(q)]
+
 
 
 

@@ -297,41 +297,48 @@ def _conn():
     return c
 
 # --- Helper Achats : ajouter OU fusionner un lot existant
-def add_or_merge_lot(product_id: int, location_id: int, qty_delta: float,
-                     best_before: str | None, frozen_on: str | None,
-                     ean: str | None = None) -> dict:
+def add_or_merge_lot(
+    product_id: int,
+    location_id: int,
+    qty_delta: float,
+    best_before: str | None,
+    frozen_on: str | None,
+    # nouveaux champs (facultatifs) pour insert
+    article_name: str | None = None,
+    brand: str | None = None,
+    ean: str | None = None,
+    price_total: float | None = None,
+    store: str | None = None,
+    qty_per_unit: float | None = None,
+    multiplier: int | None = None,
+    unit_at_purchase: str | None = None,
+) -> dict:
     """
-    Fusion uniquement si la signature complète est identique :
-    (product_id, location_id, best_before, frozen_on, ean).
+    Fusion si même (product_id, location_id, best_before, frozen_on).
+    En cas de fusion, on n'écrase pas les métadonnées d'achat (on incrémente juste la quantité).
+    En cas d'insertion, on stocke toutes les infos d'achat.
     """
     bb = best_before or None
     fr = frozen_on or None
-    ean_norm = "".join(ch for ch in (ean or "") if ch.isdigit()) or None
 
-    # Cherche un lot strictement équivalent
     for lot in list_lots():
-        if int(lot["product_id"]) != int(product_id):   continue
-        if int(lot["location_id"]) != int(location_id): continue
-        if (lot.get("best_before") or None) != bb:      continue
-        if (lot.get("frozen_on") or None)   != fr:      continue
-        # lire l'ean stocké sur le lot
-        with _conn() as c:
-            row = c.execute("SELECT ean FROM stock_lots WHERE id=?", (int(lot["id"]),)).fetchone()
-            lot_ean = (row["ean"] if row else None) or None
-        if (lot_ean or None) != (ean_norm or None):
+        if int(lot["product_id"]) != int(product_id):
             continue
+        if int(lot["location_id"]) != int(location_id):
+            continue
+        if (lot.get("best_before") or None) == bb and (lot.get("frozen_on") or None) == fr:
+            new_qty = float(lot.get("qty") or 0) + float(qty_delta or 0)
+            update_lot(int(lot["id"]), new_qty, int(location_id), fr, bb)
+            return {"action": "merge", "lot_id": int(lot["id"]), "new_qty": new_qty}
 
-        new_qty = float(lot.get("qty") or 0) + float(qty_delta or 0)
-        update_lot(int(lot["id"]), new_qty, int(location_id), fr, bb)
-        return {"action": "merge", "lot_id": int(lot["id"]), "new_qty": new_qty}
-
-    # Pas trouvé -> insertion d’un nouveau lot
-    lid = add_lot(int(product_id), int(location_id), float(qty_delta or 0), fr, bb)
-    if ean_norm:
-        with _conn() as c:
-            c.execute("UPDATE stock_lots SET ean=? WHERE id=?", (ean_norm, int(lid)))
-            c.commit()
+    # insertion avec métadonnées d'achat
+    lid = add_lot(
+        int(product_id), int(location_id), float(qty_delta), fr, bb,
+        article_name=article_name, brand=brand, ean=ean, price_total=price_total, store=store,
+        qty_per_unit=qty_per_unit, multiplier=multiplier, unit_at_purchase=unit_at_purchase
+    )
     return {"action": "insert", "lot_id": int(lid), "new_qty": float(qty_delta or 0)}
+
 
 
 
@@ -471,13 +478,22 @@ def achats_add_action(
 
     # Ajout / fusion (EAN inclus)
     res = add_or_merge_lot(
-        product_id=int(product_id),
-        location_id=int(location_id),
-        qty_delta=float(qty_delta),
-        best_before=best_before or None,
-        frozen_on=frozen_on or None,
-        ean=ean or None
+        int(product_id),
+        int(location_id),
+        float(qty_delta),
+        best_before or None,
+        frozen_on or None,
+        # nouveaux champs transférés au lot si insertion
+        article_name=(name or None),
+        brand=(brand or None),
+        ean=(ean_digits or None),
+        price_total=_price_num(),
+        store=(store or None),
+        qty_per_unit=qty_per_unit,
+        multiplier=m,
+        unit_at_purchase=(unit or None),
     )
+
 
     def _price_num():
         try: return float((price_total or "").replace(",", "."))
