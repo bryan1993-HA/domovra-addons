@@ -94,7 +94,6 @@
 <span class="chip">🛒 Achats</span>
 {% endblock %}
 
-
 {% block content %}
 <div class="wrap" data-page="achats">
 
@@ -106,7 +105,6 @@
                 <span class="muted">→ page dédiée aux entrées (scan ou saisie)</span>
             </div>
             <button type="button" class="btn" id="btn_scan_live" title="Scanner en direct">🎥</button>
-
         </div>
 
         <form id="achats_form" method="post" action="{{ BASE }}achats/add" class="form-grid">
@@ -130,7 +128,8 @@
                     <option value="" disabled selected>— Choisir ou scanner —</option>
                     {% for p in products %}
                     <option value="{{ p.id }}" data-barcode="{{ p.barcode or '' }}" data-unit="{{ p.unit or 'pièce' }}"
-                        data-pack="" {# pack_of si tu l’ajoutes plus tard #}>
+                        data-pack="{{ p.pack_of or '' }}" data-name="{{ p.name }}" data-brand="{{ p.brand or '' }}"
+                        data-default-location="{{ p.default_location_id or '' }}">
                         {{ p.name }}{% if p.brand %} — {{ p.brand }}{% endif %}
                     </option>
                     {% endfor %}
@@ -146,7 +145,7 @@
                 <div class="hint" id="off_qty_hint"></div>
             </div>
 
-            <!-- Quantité + unité + raccourcis -->
+            <!-- Quantité + unité -->
             <div>
                 <div class="label">Quantité</div>
                 <div class="infield">
@@ -211,6 +210,7 @@
                 <button type="reset" class="btn ghost">Réinitialiser</button>
                 <button type="submit" class="btn primary">Ajouter</button>
             </div>
+
             <!-- Aperçu vidéo pour le scan en direct -->
             <div id="live_scanner" style="grid-column:1/-1; display:none;">
                 <video id="video_preview" playsinline autoplay muted
@@ -242,8 +242,8 @@
                 </div>
             </div>
 
-
         </form>
+
         <!-- DEBUG PANEL (caché par défaut, activé via JS) -->
         <div id="dbg_panel" style="display:none; margin-top:1rem;">
             <div class="card" style="background:var(--bg-soft,#1f2937); color:var(--fg,#e5e7eb);">
@@ -257,6 +257,7 @@
     </div>
 </div>
 {% endblock %}
+
 {% block scripts %}
 <!-- ZXing (déjà ok) -->
 <script src="https://unpkg.com/@zxing/library@0.20.0"></script>
@@ -305,7 +306,7 @@
         // --- Validation triple lecture ---
         const REQUIRED_STREAK = 3;       // ← 3 fois
         let lastRead = '';               // dernier code lu
-        let streak = 0;                // compteur de répétitions consécutives
+        let streak = 0;                  // compteur de répétitions consécutives
         let streakTimer = null;          // reset auto si plus de lectures pendant un moment
         const STREAK_TIMEOUT_MS = 1800;  // reset si > 1.8 s sans même code
 
@@ -442,6 +443,7 @@
         // (facultatif) le bouton 📷 reste géré par ton code existant
     })();
 </script>
+
 <script>
     (function () {
         const $ = (s, p = document) => p.querySelector(s);
@@ -456,6 +458,74 @@
 
         function setHint(el, txt) { if (el) el.textContent = txt || ''; }
 
+        // ===== Helpers de préremplissage =====
+        function mapUnit(u) {
+            if (!u) return null;
+            const x = ('' + u).toLowerCase().trim();
+            if (['g', 'gram', 'grams', 'gramme', 'grammes'].includes(x)) return 'g';
+            if (['kg', 'kilogram', 'kilograms', 'kilogramme', 'kilogrammes'].includes(x)) return 'kg';
+            if (['ml', 'millilitre', 'millilitres', 'milliliter', 'milliliters'].includes(x)) return 'ml';
+            if (['l', 'litre', 'litres', 'liter', 'liters'].includes(x)) return 'L';
+            if (['piece', 'pièce', 'pieces', 'pièces', 'pcs', 'pc'].includes(x)) return 'pièce';
+            if (['cl', 'centilitre', 'centilitres', 'centiliter', 'centiliters'].includes(x)) return 'ml'; // on mappe 33cl → 330 ml
+            return null;
+        }
+        function selectUnitOnForm(uWanted) {
+            const unitSel = $('#unit');
+            if (!unitSel) return;
+            const mapped = mapUnit(uWanted);
+            const target = mapped || uWanted;
+            const opt = [...unitSel.options].find(o => o.value === target);
+            if (opt) unitSel.value = opt.value;
+        }
+        function safeSetQty(v) {
+            const q = $('#qty');
+            if (!q) return;
+            const n = Number(String(v).replace(',', '.'));
+            if (!isNaN(n) && n > 0) q.value = String(n);
+        }
+        function setNameSuggest(name, brand) {
+            const el = $('#name_suggest');
+            if (!el) return;
+            const parts = [];
+            if (name) parts.push(name);
+            if (brand) parts.push(`— ${brand}`);
+            el.value = parts.join(' ').trim();
+        }
+        function clearOffHints() {
+            const offQtyHint = $('#off_qty_hint');
+            if (offQtyHint) offQtyHint.textContent = '';
+        }
+
+        // Préremplissage quand on choisit un produit existant
+        productSel?.addEventListener('change', () => {
+            const opt = productSel.options[productSel.selectedIndex];
+            if (!opt) return;
+
+            // Unité depuis la fiche produit
+            const unit = opt.dataset.unit || 'pièce';
+            selectUnitOnForm(unit);
+
+            // Nom lisible
+            setNameSuggest(opt.dataset.name, opt.dataset.brand);
+
+            // Quantité par défaut
+            if (!qtyInput.value || Number(qtyInput.value) <= 0) qtyInput.value = '1';
+
+            // Emplacement par défaut si fourni
+            const locDefault = opt.dataset.defaultLocation;
+            const locSel = $('#location_id');
+            if (locDefault && locSel) {
+                const has = [...locSel.options].some(o => o.value === String(locDefault));
+                if (has) locSel.value = String(locDefault);
+            }
+
+            // Hints
+            setHint($('#product_hint'), `Fiche produit : ${opt.dataset.name}${opt.dataset.brand ? ' — ' + opt.dataset.brand : ''}`);
+            clearOffHints();
+        });
+
+        // ===== Recherche EAN (local puis OFF) =====
         async function lookupByEAN_impl(ean) {
             const code = (ean || '').replace(/\s+/g, '').trim();
             if (!code) { toast('EAN vide.', 'warn'); return; }
@@ -483,14 +553,62 @@
                 const data = await r.json();
                 if (data && data.ok) {
                     setHint(eanHint, "Produit non connu en local — infos récupérées depuis OFF.");
-                    if (nameSuggest) nameSuggest.value = data.name || '';
-                    setHint(offQtyHint, data.quantity ? `Quantité OFF : ${data.quantity}` : '');
-                    if (!qtyInput.value || qtyInput.value === '0') qtyInput.value = '1';
-                    toast(`OFF → ${data.name || 'Nom indisponible'}`, 'warn');
+
+                    // Nom & marque
+                    setNameSuggest(data.name || data.product_name || '', data.brand || data.brands || '');
+
+                    // Quantité OFF : extraction structurée si dispo
+                    let unitFromOff = data.unit || '';
+                    let qtyFromOff = data.quantity_value || '';
+                    let packOf = data.pack_of || '';
+
+                    // Si pas structuré, parser data.quantity ("400 g" / "1 L" / "6 x 33 cl" / "4x100g")
+                    if ((!unitFromOff || !qtyFromOff) && data.quantity) {
+                        const qtxt = String(data.quantity).toLowerCase().replace(',', '.').trim();
+                        // "6 x 33 cl" / "4x100g"
+                        let mPack = qtxt.match(/(\d+)\s*[x×]\s*(\d+(?:\.\d+)?)\s*([a-zA-Z]+)/i);
+                        if (mPack) {
+                            packOf = mPack[1];
+                            qtyFromOff = mPack[2];
+                            unitFromOff = mPack[3];
+                        } else {
+                            // "400 g" / "1 l"
+                            let m = qtxt.match(/(\d+(?:\.\d+)?)\s*([a-zA-Z]+)/);
+                            if (m) { qtyFromOff = m[1]; unitFromOff = m[2]; }
+                        }
+                    }
+
+                    // Unité sur le formulaire (si connue)
+                    if (unitFromOff) selectUnitOnForm(unitFromOff);
+
+                    // Quantité :
+                    const uMap = mapUnit(unitFromOff);
+                    if (uMap && ['g', 'kg', 'ml', 'L'].includes(uMap) && qtyFromOff) {
+                        // Si cl → converti via mapUnit → ml ; qtyFromOff reste la valeur telle quelle
+                        // Exemple 33 cl → uMap=ml, qty=33 => on convertit en 330
+                        if ((String(unitFromOff).toLowerCase().trim() === 'cl')) {
+                            const n = Number(String(qtyFromOff));
+                            if (!isNaN(n)) safeSetQty(n * 10); // 1 cl = 10 ml
+                            else safeSetQty(qtyFromOff);
+                        } else {
+                            safeSetQty(qtyFromOff);
+                        }
+                    } else {
+                        if (!qtyInput.value || Number(qtyInput.value) <= 0) qtyInput.value = '1';
+                        if (!uMap) selectUnitOnForm('pièce');
+                    }
+
+                    // Hint OFF
+                    const offTxt = [];
+                    if (data.quantity) offTxt.push(`Quantité OFF : ${data.quantity}`);
+                    if (packOf) offTxt.push(`Pack de ${packOf}`);
+                    setHint(offQtyHint, offTxt.join(' — '));
+
+                    toast(`OFF → ${data.name || data.product_name || 'Nom indisponible'}`, 'warn');
                 } else {
                     setHint(eanHint, "Ni Domovra ni OFF n’ont trouvé ce code.");
-                    if (nameSuggest) nameSuggest.value = '';
-                    setHint(offQtyHint, '');
+                    setNameSuggest('', '');
+                    clearOffHints();
                     toast("Aucun résultat pour cet EAN.", "warn");
                 }
             } catch (e) {
@@ -499,7 +617,7 @@
             }
         }
 
-        // Expose pour que ton scanner puisse l’appeler :
+        // Expose pour le scanner :
         if (typeof window.lookupByEAN !== 'function') {
             window.lookupByEAN = lookupByEAN_impl;
         }
@@ -511,5 +629,4 @@
         });
     })();
 </script>
-
 {% endblock %}
