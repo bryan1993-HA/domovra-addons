@@ -260,7 +260,7 @@
 
         // Boutons
         const btnLive = $('#btn_scan_live');
-        const btnPhoto = $('#btn_scan'); // reste inchangé, si tu l'utilises
+        const btnPhoto = $('#btn_scan'); // inchangé
 
         // Modale : on supporte *les deux* conventions d’ID
         const modal = $('#scan-modal') || $('#scan_modal');
@@ -270,19 +270,13 @@
         // Évite qu’un mauvais ID casse tout
         function openModal() {
             if (!modal) return;
-            if (modal.nodeName.toLowerCase() === 'dialog') {
-                modal.showModal();
-            } else {
-                modal.classList.remove('hidden'); modal.setAttribute('aria-hidden', 'false');
-            }
+            if (modal.nodeName.toLowerCase() === 'dialog') modal.showModal();
+            else { modal.classList.remove('hidden'); modal.setAttribute('aria-hidden', 'false'); }
         }
         function closeModal() {
             if (!modal) return;
-            if (modal.nodeName.toLowerCase() === 'dialog') {
-                try { modal.close(); } catch { }
-            } else {
-                modal.classList.add('hidden'); modal.setAttribute('aria-hidden', 'true');
-            }
+            if (modal.nodeName.toLowerCase() === 'dialog') { try { modal.close(); } catch { } }
+            else { modal.classList.add('hidden'); modal.setAttribute('aria-hidden', 'true'); }
         }
 
         // État caméra
@@ -297,10 +291,50 @@
             stream = null;
         }
 
-        async function onDetected(code) {
+        // --- Validation triple lecture ---
+        const REQUIRED_STREAK = 3;       // ← 3 fois
+        let lastRead = '';               // dernier code lu
+        let streak = 0;                // compteur de répétitions consécutives
+        let streakTimer = null;          // reset auto si plus de lectures pendant un moment
+        const STREAK_TIMEOUT_MS = 1800;  // reset si > 1.8 s sans même code
+
+        function resetStreak() {
+            lastRead = '';
+            streak = 0;
+            if (streakTimer) { clearTimeout(streakTimer); streakTimer = null; }
+        }
+
+        function handleRead(rawCode) {
+            // On garde uniquement les chiffres (EAN/UPC)
+            const code = ('' + rawCode).replace(/\D+/g, '');
             if (!code) return;
-            stopStream(); closeModal();
-            elEAN && (elEAN.value = ('' + code).replace(/\D+/g, ''));
+
+            if (code === lastRead) {
+                streak += 1;
+            } else {
+                lastRead = code;
+                streak = 1;
+            }
+
+            // (Re)programme le reset automatique du streak
+            if (streakTimer) clearTimeout(streakTimer);
+            streakTimer = setTimeout(resetStreak, STREAK_TIMEOUT_MS);
+
+            // Feedback léger tant qu'on n'a pas validé
+            if (streak < REQUIRED_STREAK) {
+                toast(`Lecture ${streak}/${REQUIRED_STREAK} : ${code}`, 'warn');
+                return;
+            }
+
+            // 3/3 OK → on valide définitivement
+            commitDetected(code);
+        }
+
+        async function commitDetected(code) {
+            resetStreak();        // on repart propre pour la prochaine fois
+            stopStream();         // stoppe la caméra
+            closeModal();         // ferme la modale
+            if (elEAN) elEAN.value = code;
             toast('Code détecté : ' + code, 'ok');
             if (typeof lookupByEAN === 'function') lookupByEAN(code);
         }
@@ -331,7 +365,7 @@
                         if (!liveActive) return;
                         try {
                             const res = await det.detect(video);
-                            if (res && res[0] && res[0].rawValue) return onDetected(res[0].rawValue);
+                            if (res && res[0] && res[0].rawValue) handleRead(res[0].rawValue);
                         } catch { }
                         requestAnimationFrame(tick);
                     };
@@ -360,10 +394,8 @@
                 liveActive = true;
                 await zxingReader.decodeFromVideoDevice(null, video, (result, err) => {
                     if (!liveActive) return;
-                    if (result && (result.text || result.getText)) {
-                        const code = result.text || result.getText();
-                        if (code) onDetected(code);
-                    }
+                    const code = result && (result.text || result.getText) ? (result.text || result.getText()) : '';
+                    if (code) handleRead(code);
                 });
             } catch (e) {
                 toast("Décodage live indisponible ici. Essaie le mode photo.", "warn");
@@ -384,20 +416,19 @@
         // ---------- Handlers ----------
         btnLive?.addEventListener('click', async () => {
             if (!navigator.mediaDevices?.getUserMedia) { toast('getUserMedia indisponible.', 'warn'); return; }
+            resetStreak(); // on repart propre à chaque ouverture
             openModal();
             await startLiveScan();
         });
 
-        btnClose?.addEventListener('click', () => { stopStream(); closeModal(); });
+        btnClose?.addEventListener('click', () => { stopStream(); closeModal(); resetStreak(); });
         // fermeture si clic sur le fond (pour la version <div>)
         modal?.addEventListener('click', (e) => {
             const box = e.target.closest('.scan-box');
-            if (!box) { stopStream(); closeModal(); }
+            if (!box) { stopStream(); closeModal(); resetStreak(); }
         });
 
-        // (facultatif) bouton 📷 déjà en place chez toi — pas modifié ici
-        // Tu conserves ton handler photo existant si tu le souhaites.
-
+        // (facultatif) le bouton 📷 reste géré par ton code existant
     })();
 </script>
 {% endblock %}
