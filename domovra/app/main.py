@@ -8,7 +8,7 @@ from fastapi.staticfiles import StaticFiles
 from jinja2 import Environment, FileSystemLoader, select_autoescape
 from urllib.parse import urlencode
 from config import WARNING_DAYS, CRITICAL_DAYS, DB_PATH, START_TS
-from utils.http import nocache_html, render, ingress_base
+from utils.http import nocache_html, render as _render_with_env, ingress_base
 from utils.jinja import build_jinja_env
 from utils.assets import ensure_hashed_asset
 from services.events import _ensure_events_table, log_event, list_events
@@ -70,6 +70,11 @@ logger = logging.getLogger("domovra")
 app = FastAPI()
 
 templates = build_jinja_env()
+
+# Wrapper local pour conserver l'appel historique render("page.html", **ctx)
+def render(name: str, **ctx):
+    return _render_with_env(templates, name, **ctx)
+
 
 
 # === Static files : dossier à côté de main.py (Option A) ===
