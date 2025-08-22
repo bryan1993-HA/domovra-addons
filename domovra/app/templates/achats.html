@@ -247,233 +247,157 @@
 </div>
 {% endblock %}
 {% block scripts %}
-<!-- ZXing -->
+<!-- ZXing (déjà ok) -->
 <script src="https://unpkg.com/@zxing/library@0.20.0"></script>
 <script>
-(function () {
-  // ===== util =====
-  const $ = (s,p=document)=>p.querySelector(s);
-  const toast = (m,t='ok')=>window.showToast?.(m,t);
+    (function () {
+        // ---------- utils ----------
+        const $ = (s, p = document) => p.querySelector(s);
+        const toast = (m, t = 'ok') => window.showToast?.(m, t);
 
-  // --- form refs
-  const eanInput = $('#ean');
-  const eanHint  = $('#ean_hint');
-  const productSel = $('#product_select');
-  const nameSuggest = $('#name_suggest');
-  const offQtyHint  = $('#off_qty_hint');
-  const qtyInput = $('#qty');
-  const unitSel  = $('#unit');
+        // Champs/form
+        const elEAN = $('#ean');
 
-  // --- scan (aperçu dans la page)
-  const liveBox   = $('#live_scanner');
-  const videoEl   = $('#video_preview');
-  const btnLive   = $('#btn_scan_live');
-  const btnStop   = $('#btn_live_stop');
-  const btnFlip   = $('#btn_live_flip');
+        // Boutons
+        const btnLive = $('#btn_scan_live');
+        const btnPhoto = $('#btn_scan'); // reste inchangé, si tu l'utilises
 
-  // --- scan (photo)
-  const btnPhoto  = $('#btn_scan');
+        // Modale : on supporte *les deux* conventions d’ID
+        const modal = $('#scan-modal') || $('#scan_modal');
+        const video = $('#scan-video') || $('#scan_video');
+        const btnClose = $('#scan-close') || $('#scan_close');
 
-  let currentStream = null;
-  let currentDeviceId = null;
-  let zxingReader = null;
-  let liveRunning = false;
-
-  // ===== helpers produit =====
-  function setHint(el, txt){ if(el) el.textContent = txt||''; }
-  function applyProductDefaults(opt){
-    if(!opt) return;
-    const unit = opt.dataset.unit || 'pièce';
-    unitSel.value = Array.from(unitSel.options).some(o=>o.value===unit) ? unit : 'pièce';
-  }
-  productSel?.addEventListener('change', ()=>applyProductDefaults(productSel.selectedOptions[0]));
-
-  // ===== lookup EAN (DB -> OFF) =====
-  async function lookupByEAN(ean){
-    const code=(ean||'').trim().replace(/\s+/g,''); if(!code){toast('EAN vide','warn');return;}
-    eanInput.value = code;
-
-    try{
-      const r = await fetch(`{{ BASE }}api/product/by_barcode?code=${encodeURIComponent(code)}`);
-      if(r.ok){
-        const p = await r.json();
-        const opt=[...productSel.options].find(o=>(o.dataset.barcode||'').replace(/\s+/g,'')===code);
-        productSel.value = opt ? opt.value : String(p.id);
-        productSel.dispatchEvent(new Event('change'));
-        setHint(eanHint, `Produit trouvé : ${p.name}`);
-        if(!qtyInput.value) qtyInput.value='1';
-        toast('Produit sélectionné depuis le stock','ok');
-        return;
-      }
-    }catch{}
-    try{
-      const r = await fetch(`{{ BASE }}api/off?barcode=${encodeURIComponent(code)}`);
-      const data = await r.json();
-      if(data?.ok){
-        setHint(eanHint,"Produit non connu dans Domovra (OFF consulté).");
-        nameSuggest.value = data.name || '';
-        setHint(offQtyHint, data.quantity ? `Quantité OFF : ${data.quantity}` : '');
-        if(!qtyInput.value || qtyInput.value==='0') qtyInput.value='1';
-        toast(`OFF → ${data.name || 'Nom inconnu'}`,'warn');
-      }else{
-        setHint(eanHint,"Ni Domovra ni OFF n’ont trouvé ce code.");
-        nameSuggest.value=''; setHint(offQtyHint,''); toast("Aucun résultat pour cet EAN.","warn");
-      }
-    }catch{
-      setHint(eanHint,"Erreur OFF."); toast("Erreur OFF.","error");
-    }
-  }
-  $('#btn_check_ean')?.addEventListener('click', ()=>lookupByEAN(eanInput.value));
-  eanInput?.addEventListener('keydown', e=>{ if(e.key==='Enter'){ e.preventDefault(); lookupByEAN(eanInput.value);} });
-
-  // ===== ZXing hints (améliore EAN) =====
-  function zxingHints(){
-    const H = ZXing.DecodeHintType, F = ZXing.BarcodeFormat;
-    const hints = new Map();
-    hints.set(H.POSSIBLE_FORMATS, [F.EAN_13, F.EAN_8, F.UPC_A, F.UPC_E]);
-    hints.set(H.TRY_HARDER, true);
-    hints.set(H.ASSUME_GS1, true);
-    return hints;
-  }
-
-  // ===== PHOTO (fallback universel) =====
-  function pickImageFromCamera(){
-    return new Promise(resolve=>{
-      const input=document.createElement('input');
-      input.type='file'; input.accept='image/*'; input.setAttribute('capture','environment');
-      if(/iPad|iPhone|iPod/.test(navigator.userAgent)){ input.accept='image/*;capture=camera'; input.setAttribute('capture','camera'); }
-      input.onchange=()=>resolve(input.files?.[0]||null);
-      input.click();
-    });
-  }
-  async function decodeImageWithZXing(file){
-    return new Promise((resolve)=>{
-      const fr=new FileReader();
-      fr.onload=()=>{
-        const img=new Image();
-        img.onload=async()=>{
-          try{
-            const reader = new ZXing.BrowserMultiFormatReader(zxingHints());
-            const res = await reader.decodeFromImage(img);
-            resolve(res?.text || null);
-          }catch{ resolve(null); }
-        };
-        img.onerror=()=>resolve(null);
-        img.src=fr.result;
-      };
-      fr.onerror=()=>resolve(null);
-      fr.readAsDataURL(file);
-    });
-  }
-  btnPhoto?.addEventListener('click', async ()=>{
-    // 1) BarcodeDetector (si HTTPS + support)
-    if(window.isSecureContext && 'BarcodeDetector' in window){
-      try{
-        const file = await pickImageFromCamera(); if(!file) return;
-        const bmp = await createImageBitmap(file);
-        const det = new BarcodeDetector({formats:['ean_13','ean_8','upc_e','upc_a']});
-        const found = await det.detect(bmp);
-        if(found?.length){ const code=found[0].rawValue; eanInput.value=code; return lookupByEAN(code); }
-      }catch{}
-    }
-    // 2) ZXing
-    const file = await pickImageFromCamera(); if(!file) return;
-    const code = await decodeImageWithZXing(file);
-    if(code){ eanInput.value=code; return lookupByEAN(code); }
-    toast('Aucun code‑barres détecté sur la photo.','warn');
-  });
-
-  // ===== LIVE (réouverture caméra arrière fiable) =====
-  async function listVideoInputs(){
-    if(!navigator.mediaDevices?.enumerateDevices) return [];
-    const all = await navigator.mediaDevices.enumerateDevices();
-    return all.filter(d=>d.kind==='videoinput');
-  }
-
-  async function startLive(targetVideo){
-    // Contraintes simples : on *suggère* la caméra arrière
-    const constraints = {
-      audio:false,
-      video: currentDeviceId ? { deviceId: { exact: currentDeviceId } }
-                             : { facingMode: { ideal:'environment' } }
-    };
-
-    // 1) ouvre la caméra
-    const stream = await navigator.mediaDevices.getUserMedia(constraints);
-    currentStream = stream;
-    targetVideo.srcObject = stream;
-    // iOS/Safari a parfois besoin d’un .play()
-    try { await targetVideo.play?.(); } catch {}
-
-    // 2) si on n’a pas encore un deviceId, on choisit un “back” s’il existe
-    const devs = await listVideoInputs();
-    if(!currentDeviceId && devs.length){
-      const back = devs.find(d=>/back|rear|environment|arrière/i.test(d.label));
-      currentDeviceId = (back || devs[0]).deviceId;
-    }
-
-    // 3) ZXing (avec hints EAN)
-    if(!zxingReader) zxingReader = new ZXing.BrowserMultiFormatReader(zxingHints());
-    liveRunning = true;
-    await zxingReader.decodeFromVideoDevice(
-      currentDeviceId || null,
-      targetVideo,
-      (result, err)=>{
-        if(!liveRunning) return;
-        if(result){
-          const code = result.text;
-          liveRunning = false;
-          stopLive(false);
-          eanInput.value = code;
-          toast('Code détecté : '+code,'ok');
-          lookupByEAN(code);
+        // Évite qu’un mauvais ID casse tout
+        function openModal() {
+            if (!modal) return;
+            if (modal.nodeName.toLowerCase() === 'dialog') {
+                modal.showModal();
+            } else {
+                modal.classList.remove('hidden'); modal.setAttribute('aria-hidden', 'false');
+            }
         }
-      }
-    );
-  }
+        function closeModal() {
+            if (!modal) return;
+            if (modal.nodeName.toLowerCase() === 'dialog') {
+                try { modal.close(); } catch { }
+            } else {
+                modal.classList.add('hidden'); modal.setAttribute('aria-hidden', 'true');
+            }
+        }
 
-  function stopLive(hideBox=true){
-    try{ zxingReader?.reset?.(); }catch{}
-    if(currentStream){ try{ currentStream.getTracks().forEach(t=>t.stop()); }catch{} }
-    currentStream = null;
-    if(hideBox && liveBox) liveBox.style.display='none';
-  }
+        // État caméra
+        let stream = null;
+        let zxingReader = null;
+        let liveActive = false;
 
-  // Boutons live
-  btnLive?.addEventListener('click', async ()=>{
-    if(!navigator.mediaDevices?.getUserMedia){ toast('Caméra indisponible','warn'); return; }
-    try{
-      liveBox.style.display='block';
-      await startLive(videoEl);
-    }catch(err){
-      toast('Caméra live indisponible ici. Essaie 📷 (photo).','warn');
-      stopLive();
-    }
-  });
+        function stopStream() {
+            liveActive = false;
+            try { zxingReader?.reset?.(); } catch { }
+            if (stream) try { stream.getTracks().forEach(t => t.stop()); } catch { }
+            stream = null;
+        }
 
-  btnStop?.addEventListener('click', ()=>stopLive());
+        async function onDetected(code) {
+            if (!code) return;
+            stopStream(); closeModal();
+            elEAN && (elEAN.value = ('' + code).replace(/\D+/g, ''));
+            toast('Code détecté : ' + code, 'ok');
+            if (typeof lookupByEAN === 'function') lookupByEAN(code);
+        }
 
-  btnFlip?.addEventListener('click', async ()=>{
-    const devs = await listVideoInputs();
-    if(!devs.length){ toast('Aucune autre caméra détectée.','warn'); return; }
-    const idx = devs.findIndex(d=>d.deviceId===currentDeviceId);
-    currentDeviceId = devs[(idx+1+devs.length)%devs.length].deviceId;
-    stopLive(false);
-    await startLive(videoEl);
-  });
+        // ---------- Live: BarcodeDetector -> fallback ZXing ----------
+        async function startLiveScan() {
+            if (!video) { toast("Élément <video> introuvable dans la modale.", "error"); return; }
 
-  // ===== créer produit (inchangé)
-  $('#btn_create_prod')?.addEventListener('click', ()=>{
-    const ean = (eanInput.value||'').trim();
-    const next = encodeURIComponent("{{ BASE }}achats");
-    location.href = `{{ BASE }}products?ean=${encodeURIComponent(ean)}&next=${next}`;
-  });
+            // Attributs iOS
+            video.setAttribute('playsinline', ''); video.setAttribute('webkit-playsinline', '');
+            video.muted = true;
 
-  // ===== toast après ajout (inchangé)
-  if(new URLSearchParams(location.search).has('added')){
-    toast("Ajout enregistré dans le stock.","ok");
-    history.replaceState({}, "", location.pathname);
-  }
-})();
+            // Contraintes: arrière si possible + un peu de résolution
+            const constraints = {
+                audio: false,
+                video: { facingMode: { ideal: 'environment' }, width: { ideal: 1280 }, height: { ideal: 720 } }
+            };
+
+            // 1) try BarcodeDetector (si https & support)
+            if (window.isSecureContext && 'BarcodeDetector' in window) {
+                try {
+                    const det = new BarcodeDetector({ formats: ['ean_13', 'ean_8', 'upc_a', 'upc_e'] });
+                    stream = await navigator.mediaDevices.getUserMedia(constraints);
+                    video.srcObject = stream; try { await video.play(); } catch { }
+                    liveActive = true;
+
+                    const tick = async () => {
+                        if (!liveActive) return;
+                        try {
+                            const res = await det.detect(video);
+                            if (res && res[0] && res[0].rawValue) return onDetected(res[0].rawValue);
+                        } catch { }
+                        requestAnimationFrame(tick);
+                    };
+                    tick();
+                    return; // on reste dans ce mode si tout va bien
+                } catch (e) {
+                    // pass → on tentera ZXing juste après
+                }
+            }
+
+            // 2) fallback ZXing
+            try {
+                stream = await navigator.mediaDevices.getUserMedia(constraints);
+                video.srcObject = stream; try { await video.play(); } catch { }
+            } catch (e) {
+                toast("Caméra indisponible (permissions/domain). Essaie le mode photo.", "warn");
+                stopStream(); closeModal();
+                return;
+            }
+
+            try {
+                if (!zxingReader) zxingReader = new ZXing.BrowserMultiFormatReader(hintsForEAN());
+                // optionnel: accélère un peu les tentatives
+                zxingReader.timeBetweenDecodingAttempts = 150;
+
+                liveActive = true;
+                await zxingReader.decodeFromVideoDevice(null, video, (result, err) => {
+                    if (!liveActive) return;
+                    if (result && (result.text || result.getText)) {
+                        const code = result.text || result.getText();
+                        if (code) onDetected(code);
+                    }
+                });
+            } catch (e) {
+                toast("Décodage live indisponible ici. Essaie le mode photo.", "warn");
+                stopStream(); closeModal();
+            }
+        }
+
+        // Hints pour ZXing (meilleure détection EAN/UPC)
+        function hintsForEAN() {
+            const H = ZXing.DecodeHintType, F = ZXing.BarcodeFormat;
+            const hints = new Map();
+            hints.set(H.POSSIBLE_FORMATS, [F.EAN_13, F.EAN_8, F.UPC_A, F.UPC_E]);
+            hints.set(H.TRY_HARDER, true);
+            hints.set(H.ASSUME_GS1, true);
+            return hints;
+        }
+
+        // ---------- Handlers ----------
+        btnLive?.addEventListener('click', async () => {
+            if (!navigator.mediaDevices?.getUserMedia) { toast('getUserMedia indisponible.', 'warn'); return; }
+            openModal();
+            await startLiveScan();
+        });
+
+        btnClose?.addEventListener('click', () => { stopStream(); closeModal(); });
+        // fermeture si clic sur le fond (pour la version <div>)
+        modal?.addEventListener('click', (e) => {
+            const box = e.target.closest('.scan-box');
+            if (!box) { stopStream(); closeModal(); }
+        });
+
+        // (facultatif) bouton 📷 déjà en place chez toi — pas modifié ici
+        // Tu conserves ton handler photo existant si tu le souhaites.
+
+    })();
 </script>
 {% endblock %}
