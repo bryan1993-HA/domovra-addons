@@ -438,6 +438,55 @@ def add_lot(product_id: int, location_id: int, qty: float, frozen_on: str | None
         c.commit()
     return lot_id
 
+def add_lot_purchase(
+    product_id: int,
+    location_id: int,
+    qty_total: float,                 # quantité totale (qty * multiplier)
+    frozen_on: str | None,
+    best_before: str | None,
+    *,
+    article_name: str | None = None,  # ← “Nutella”
+    brand: str | None = None,
+    ean: str | None = None,
+    price_total: float | None = None,
+    qty_per_unit: float | None = None,
+    multiplier: int | None = None,
+    unit_at_purchase: str | None = None,
+) -> int:
+    """Insertion d’un lot depuis la page Achats, en enregistrant les méta‑infos d’article."""
+    with _conn() as c:
+        today = _today()
+        cur = c.execute(
+            """
+            INSERT INTO stock_lots(
+              product_id, location_id, qty, frozen_on, best_before, created_on,
+              article_name, brand, ean, price_total, qty_per_unit, multiplier, unit_at_purchase
+            )
+            VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)
+            """,
+            (
+                int(product_id), int(location_id), float(qty_total),
+                frozen_on, best_before, today,
+                (article_name or None),
+                (brand or None),
+                (ean or None),
+                (float(price_total) if price_total not in (None, "",) else None),
+                (float(qty_per_unit) if qty_per_unit not in (None, "",) else None),
+                (int(multiplier) if multiplier not in (None, "",) else None),
+                (unit_at_purchase or None),
+            )
+        )
+        lot_id = cur.lastrowid
+
+        # Mouvement IN (comme add_lot)
+        c.execute(
+            """INSERT INTO movements(lot_id,type,qty,ts,note)
+               VALUES(?,?,?,?,?)""",
+            (lot_id, 'IN', float(qty_total), today, None)
+        )
+        c.commit()
+    return lot_id
+
 
 
 def list_lots():

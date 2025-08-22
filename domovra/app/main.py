@@ -427,13 +427,13 @@ def achats_add_action(
     product_id: int = Form(...),
     location_id: int = Form(...),
 
-    # quantités / prix (prix non persisté aujourd'hui — log seulement)
+    # quantités / prix
     qty: float = Form(...),
     unit: str = Form("pièce"),
     multiplier: int = Form(1),
     price_total: str = Form(""),
 
-    # identité d'article & achat (log seulement)
+    # identité d'article & achat
     ean: str = Form(""),
     name: str = Form(""),
     brand: str = Form(""),
@@ -444,13 +444,14 @@ def achats_add_action(
     best_before: str = Form(""),
     frozen_on: str = Form(""),
 ):
-    # normalise les nombres (virgule -> point)
+    # --- Helpers ---
     def _price_num():
         try:
             return float((price_total or "").replace(",", "."))
         except Exception:
             return None
 
+    # Multiplier sécurisé
     try:
         m = int(multiplier or 1)
     except Exception:
@@ -461,10 +462,10 @@ def achats_add_action(
     qty_per_unit = float(qty or 0)
     qty_delta = qty_per_unit * m
 
-    # EAN nettoyé pour le journal + éventuelle mise à jour du produit
+    # EAN nettoyé
     ean_digits = "".join(ch for ch in (ean or "") if ch.isdigit())
 
-    # Ajout / fusion — version simple compatible avec db.py
+    # --- Ajout ou fusion du lot ---
     res = add_or_merge_lot(
         int(product_id),
         int(location_id),
@@ -473,7 +474,7 @@ def achats_add_action(
         frozen_on or None,
     )
 
-    # Si le produit n'a pas encore de code-barres et qu'on en a saisi un, on l’enregistre
+    # --- Mise à jour des infos du produit si code-barres manquant ---
     if ean_digits:
         try:
             with _conn() as c:
@@ -488,7 +489,65 @@ def achats_add_action(
         except Exception as e:
             logger.warning("achats_add_action: unable to set product barcode: %s", e)
 
-    # Journal complet (analytique)
+    # --- NOUVEAU : mise à jour des champs d’achat dans stock_lots ---
+    try:
+        lot_id = int(res["lot_id"])
+        with _conn() as c:
+            # Préparation des valeurs
+            _name  = (name or "").strip()
+            _brand = (brand or "").strip()
+            _ean   = ean_digits
+            _store = (store or "").strip()
+            _note  = (note or "").strip()
+            _price_total = _price_num()
+
+            sets, params = [], []
+
+            if _name:
+                sets.append("name=?")
+                params.append(_name)
+                sets.append("article_name=?")
+                params.append(_name)
+
+            if _brand:
+                sets.append("brand=?")
+                params.append(_brand)
+
+            if _ean:
+                sets.append("ean=?")
+                params.append(_ean)
+
+            if _store:
+                sets.append("store=?")
+                params.append(_store)
+
+            if _note:
+                sets.append("note=?")
+                params.append(_note)
+
+            if _price_total is not None:
+                sets.append("price_total=?")
+                params.append(_price_total)
+
+            sets.append("qty_per_unit=?")
+            params.append(qty_per_unit)
+
+            sets.append("multiplier=?")
+            params.append(m)
+
+            if unit:
+                sets.append("unit_at_purchase=?")
+                params.append(unit)
+
+            if sets:
+                params.append(lot_id)
+                c.execute(f"UPDATE stock_lots SET {', '.join(sets)} WHERE id=?", params)
+                c.commit()
+
+    except Exception as e:
+        logger.warning("achats_add_action: unable to update lot purchase fields: %s", e)
+
+    # --- Journal ---
     log_event("achats.add", {
         "result": res["action"], "lot_id": res["lot_id"], "new_qty": res["new_qty"],
         "product_id": int(product_id), "location_id": int(location_id),
@@ -500,6 +559,7 @@ def achats_add_action(
         "best_before": best_before or None, "frozen_on": frozen_on or None,
     })
 
+    # --- Redirect ---
     base = ingress_base(request)
     return RedirectResponse(base + "achats?added=1", status_code=303,
                             headers={"Cache-Control": "no-store"})
