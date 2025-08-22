@@ -42,6 +42,10 @@
   <div class="cards-grid" id="lot-cards">
     {% if items %}
     {% for it in items %}
+    <pre style="font-size:12px;max-height:200px;overflow:auto;background:#111;color:#0f0;padding:6px;">
+  {{ it | tojson(indent=2) }}
+</pre>
+
     {% set q = fmt_qty(it.qty, it.unit) %}
     {% set code = it.ean or it.barcode %}
     <article class="prod-card" data-name="{{ (it.name or it.article_name or it.product)|lower }}"
