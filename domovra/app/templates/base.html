@@ -48,8 +48,9 @@
   </script>
 
   <!-- Précharge la CSS ; si préload annulé par le navigateur, le <link> normal prend le relai -->
-  <link rel="preload" href="{{ BASE }}static/css/domovra.css" as="style">
-  <link rel="stylesheet" href="{{ BASE }}static/css/domovra.css">
+  <link rel="preload" href="{{ BASE }}{{ ASSET_CSS_PATH }}" as="style">
+  <link rel="stylesheet" href="{{ BASE }}{{ ASSET_CSS_PATH }}">
+
 
 
 
