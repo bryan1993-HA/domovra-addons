@@ -45,17 +45,17 @@ def init_db():
             FOREIGN KEY(lot_id) REFERENCES stock_lots(id)
         )""")
 
-        # ----- Migration : ajout de la colonne barcode si absente
+        # ----- Migration : products.barcode (+ index unique null‑safe)
         if not _column_exists(c, "products", "barcode"):
             c.execute("ALTER TABLE products ADD COLUMN barcode TEXT")
-        # Index d'unicité (en tenant compte des NULL)
-        c.execute("""CREATE UNIQUE INDEX IF NOT EXISTS idx_products_barcode_unique
-                     ON products(barcode) WHERE barcode IS NOT NULL""")
+        c.execute("""
+            CREATE UNIQUE INDEX IF NOT EXISTS idx_products_barcode_unique
+            ON products(barcode) WHERE barcode IS NOT NULL
+        """)
 
-        # ----- Migration : ajout de created_on dans stock_lots (+ backfill)
+        # ----- Migration : stock_lots.created_on (+ backfill)
         if not _column_exists(c, "stock_lots", "created_on"):
             c.execute("ALTER TABLE stock_lots ADD COLUMN created_on TEXT")
-            # Backfill depuis le premier mouvement IN (date d'ajout)
             c.execute("""
               UPDATE stock_lots
               SET created_on = (
@@ -66,38 +66,7 @@ def init_db():
               WHERE created_on IS NULL
             """)
 
-        # ----- stock_lots : EAN par lot (nouveau)
-        if not _column_exists(c, "stock_lots", "ean"):
-            c.execute("ALTER TABLE stock_lots ADD COLUMN ean TEXT")
-
-        # ----- 🚀 Nouvelle migration : seuil mini par produit
-        if not _column_exists(c, "products", "min_qty"):
-            c.execute("ALTER TABLE products ADD COLUMN min_qty REAL")  # nullable
-
-                # ----- Migration : champs supplémentaires pour locations
-        if not _column_exists(c, "locations", "is_freezer"):
-            c.execute("ALTER TABLE locations ADD COLUMN is_freezer INTEGER NOT NULL DEFAULT 0")
-        if not _column_exists(c, "locations", "description"):
-            c.execute("ALTER TABLE locations ADD COLUMN description TEXT")
-
-        # ----- Produits : nouvelles colonnes (idempotent)
-        if not _column_exists(c, "products", "description"):
-            c.execute("ALTER TABLE products ADD COLUMN description TEXT")
-        if not _column_exists(c, "products", "default_location_id"):
-            c.execute("ALTER TABLE products ADD COLUMN default_location_id INTEGER")
-        if not _column_exists(c, "products", "low_stock_enabled"):
-            c.execute("ALTER TABLE products ADD COLUMN low_stock_enabled INTEGER NOT NULL DEFAULT 1")
-        if not _column_exists(c, "products", "expiry_kind"):
-            c.execute("ALTER TABLE products ADD COLUMN expiry_kind TEXT DEFAULT 'DLC'")
-        if not _column_exists(c, "products", "default_freeze_shelf_days"):
-            c.execute("ALTER TABLE products ADD COLUMN default_freeze_shelf_days INTEGER")
-        if not _column_exists(c, "products", "no_freeze"):
-            c.execute("ALTER TABLE products ADD COLUMN no_freeze INTEGER NOT NULL DEFAULT 0")
-        if not _column_exists(c, "products", "category"):
-            c.execute("ALTER TABLE products ADD COLUMN category TEXT")
-        if not _column_exists(c, "products", "parent_id"):
-            c.execute("ALTER TABLE products ADD COLUMN parent_id INTEGER")
-                # ----- Lots : colonnes issues des achats (si absentes)
+        # ----- Lots : colonnes issues des achats (si absentes)
         if not _column_exists(c, "stock_lots", "article_name"):
             c.execute("ALTER TABLE stock_lots ADD COLUMN article_name TEXT")
         if not _column_exists(c, "stock_lots", "brand"):
@@ -114,14 +83,40 @@ def init_db():
             c.execute("ALTER TABLE stock_lots ADD COLUMN multiplier INTEGER")
         if not _column_exists(c, "stock_lots", "unit_at_purchase"):
             c.execute("ALTER TABLE stock_lots ADD COLUMN unit_at_purchase TEXT")
+        # ✅ Nouveaux champs nécessaires à achats.py
         if not _column_exists(c, "stock_lots", "name"):
             c.execute("ALTER TABLE stock_lots ADD COLUMN name TEXT")
         if not _column_exists(c, "stock_lots", "note"):
             c.execute("ALTER TABLE stock_lots ADD COLUMN note TEXT")
 
+        # ----- Locations : champs supplémentaires
+        if not _column_exists(c, "locations", "is_freezer"):
+            c.execute("ALTER TABLE locations ADD COLUMN is_freezer INTEGER NOT NULL DEFAULT 0")
+        if not _column_exists(c, "locations", "description"):
+            c.execute("ALTER TABLE locations ADD COLUMN description TEXT")
 
+        # ----- Products : nouvelles colonnes (idempotent)
+        if not _column_exists(c, "products", "min_qty"):
+            c.execute("ALTER TABLE products ADD COLUMN min_qty REAL")
+        if not _column_exists(c, "products", "description"):
+            c.execute("ALTER TABLE products ADD COLUMN description TEXT")
+        if not _column_exists(c, "products", "default_location_id"):
+            c.execute("ALTER TABLE products ADD COLUMN default_location_id INTEGER")
+        if not _column_exists(c, "products", "low_stock_enabled"):
+            c.execute("ALTER TABLE products ADD COLUMN low_stock_enabled INTEGER NOT NULL DEFAULT 1")
+        if not _column_exists(c, "products", "expiry_kind"):
+            c.execute("ALTER TABLE products ADD COLUMN expiry_kind TEXT DEFAULT 'DLC'")
+        if not _column_exists(c, "products", "default_freeze_shelf_days"):
+            c.execute("ALTER TABLE products ADD COLUMN default_freeze_shelf_days INTEGER")
+        if not _column_exists(c, "products", "no_freeze"):
+            c.execute("ALTER TABLE products ADD COLUMN no_freeze INTEGER NOT NULL DEFAULT 0")
+        if not _column_exists(c, "products", "category"):
+            c.execute("ALTER TABLE products ADD COLUMN category TEXT")
+        if not _column_exists(c, "products", "parent_id"):
+            c.execute("ALTER TABLE products ADD COLUMN parent_id INTEGER")
 
         c.commit()
+
 
 # ---------- Locations
 # ---------- Locations
