@@ -102,3 +102,56 @@ def debug_lots():
     for it in items:
         it["status"] = status_for(it.get("best_before"), WARNING_DAYS, CRITICAL_DAYS)
     return JSONResponse({"count": len(items), "items": items})
+
+
+# --- Debug JSON : même data que la page /lots -------------------------------
+from fastapi import Query
+from fastapi.responses import JSONResponse
+from config import WARNING_DAYS, CRITICAL_DAYS
+from db import list_lots, list_locations, list_products, status_for
+
+@router.get("/_debug/lots")
+def debug_lots(
+    request: Request,
+    product: str = Query("", alias="product"),
+    location: str = Query("", alias="location"),
+    status: str = Query("", alias="status"),
+):
+    # 1) Données brutes
+    items = list_lots()
+
+    # 2) Ajoute le statut (comme dans la page)
+    for it in items:
+        it["status"] = status_for(it.get("best_before"), WARNING_DAYS, CRITICAL_DAYS)
+
+    # 3) Filtres identiques à /lots
+    if product:
+        needle = product.casefold()
+        items = [i for i in items if needle in (i.get("product", "").casefold())]
+    if location:
+        items = [i for i in items if i.get("location") == location]
+    if status:
+        items = [i for i in items if i.get("status") == status]
+
+    # 4) Petits récap utiles
+    counts = {"total": len(items), "by_status": {"green": 0, "yellow": 0, "red": 0}}
+    for it in items:
+        s = it.get("status") or "green"
+        if s not in counts["by_status"]:
+            counts["by_status"][s] = 0
+        counts["by_status"][s] += 1
+
+    # 5) Options de filtres (pour savoir ce qui est possible)
+    locations = list_locations()
+    products = list_products()
+
+    return JSONResponse({
+        "filters_applied": {"product": product, "location": location, "status": status},
+        "counts": counts,
+        "items": items,                 # -> la liste des lots telle que vue par le template
+        "filter_options": {
+            "locations": [{"id": l["id"], "name": l["name"]} for l in locations],
+            "products": [{"id": p["id"], "name": p["name"]} for p in products],
+            "status": ["green", "yellow", "red"]
+        }
+    })
