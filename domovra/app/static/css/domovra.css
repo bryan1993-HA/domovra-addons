@@ -1863,42 +1863,79 @@ html[data-theme="light"] .qhelp code {
 /* ========================================================================== */
 
 /* Filtres (recherche + sélecteurs) */
-.wrap .filters-row{
-  display:grid;
-  grid-template-columns:2fr 1fr 1fr auto;
-  gap:12px;
+.wrap .filters-row {
+    display: grid;
+    grid-template-columns: 2fr 1fr 1fr auto;
+    gap: 12px;
 }
-@media (max-width:900px){
-  .wrap .filters-row{ grid-template-columns:1fr 1fr; }
-  .wrap .filters-row .wide{ grid-column:1 / -1; }
+
+@media (max-width:900px) {
+    .wrap .filters-row {
+        grid-template-columns: 1fr 1fr;
+    }
+
+    .wrap .filters-row .wide {
+        grid-column: 1 / -1;
+    }
 }
 
 /* Pastille d'état (réutilisée dans l'entête de carte) */
-.wrap .status{
-  margin-left:auto;
-  display:inline-flex;
-  align-items:center;
-  gap:6px;
-  padding:4px 10px;
-  border-radius:999px;
-  border:1px solid var(--line);
-  font-weight:600;
+.wrap .status {
+    margin-left: auto;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 10px;
+    border-radius: 999px;
+    border: 1px solid var(--line);
+    font-weight: 600;
 }
-.wrap .status.green{  background:rgba(76,175,80,.12); }
-.wrap .status.yellow{ background:rgba(255,179,0,.12); }
-.wrap .status.red{    background:rgba(239,83,80,.12); }
+
+.wrap .status.green {
+    background: rgba(76, 175, 80, .12);
+}
+
+.wrap .status.yellow {
+    background: rgba(255, 179, 0, .12);
+}
+
+.wrap .status.red {
+    background: rgba(239, 83, 80, .12);
+}
 
 /* Bloc Dates (utilisé dans .stat.full comme /products) */
-.wrap details.dates{ margin-top:6px; }
-.wrap details.dates summary{
-  cursor:pointer; list-style:none; display:inline-flex; align-items:center; gap:8px;
-  color:var(--text-muted);
+.wrap details.dates {
+    margin-top: 6px;
 }
-.wrap details.dates summary::-webkit-details-marker{ display:none; }
-.wrap .timeline{ display:flex; gap:12px; flex-wrap:wrap; margin-top:6px; }
-.wrap .timeline .pill{
-  display:inline-flex; align-items:center; gap:6px;
-  padding:4px 8px; border-radius:999px; border:1px solid var(--line); background:transparent;
+
+.wrap details.dates summary {
+    cursor: pointer;
+    list-style: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--text-muted);
+}
+
+.wrap details.dates summary::-webkit-details-marker {
+    display: none;
+}
+
+.wrap .timeline {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-top: 6px;
+}
+
+.wrap .timeline .pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 8px;
+    border-radius: 999px;
+    border: 1px solid var(--line);
+    background: transparent;
 }
 
 
@@ -1927,6 +1964,150 @@ html[data-theme="light"] .qhelp code {
     border-radius: 999px;
     border: 1px solid var(--line);
 }
+
+/* Ribbon coin pour états Bientôt / Urgent */
+.prod-card {
+    position: relative;
+    /* nécessaire pour positionner le ruban */
+    overflow: hidden;
+    /* évite que le ruban dépasse visuellement */
+}
+
+/* Couleurs (fallback si tes variables n'existent pas) */
+:root {
+    --ribbon-warn: var(--warn, #f59e0b);
+    /* jaune */
+    --ribbon-danger: var(--danger, #ef4444);
+    /* rouge */
+}
+
+/* style commun */
+.prod-card[data-status="yellow"]::after,
+.prod-card[data-status="red"]::after {
+    content: attr(data-status)=="yellow" ? "Bientôt": "Urgent";
+    /* ignoré par CSS, voir below */
+    position: absolute;
+    top: 12px;
+    right: -42px;
+    /* décalage pour couper en diagonale */
+    width: 170px;
+    height: 28px;
+    line-height: 28px;
+    transform: rotate(45deg);
+    text-align: center;
+    font-weight: 700;
+    letter-spacing: .3px;
+    z-index: 2;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, .25);
+}
+
+/* CSS ne peut pas conditionner le content sur attr(), on sépare donc: */
+.prod-card[data-status="yellow"]::after {
+    content: "Bientôt";
+    background: var(--ribbon-warn);
+    color: #121212;
+    /* texte sombre lisible sur jaune */
+}
+
+.prod-card[data-status="red"]::after {
+    content: "Urgent";
+    background: var(--ribbon-danger);
+    color: #fff;
+    /* texte clair sur rouge */
+}
+
+/* Option: si tu veux cacher le badge texte du bas quand ribbon présent */
+.prod-card[data-status="yellow"] .pc-status,
+.prod-card[data-status="red"] .pc-status {
+    display: none;
+}
+
+/* Petites cartes (mobile) : ruban un peu plus court */
+@media (max-width: 700px) {
+
+    .prod-card[data-status="yellow"]::after,
+    .prod-card[data-status="red"]::after {
+        top: 10px;
+        right: -36px;
+        width: 150px;
+        height: 24px;
+        line-height: 24px;
+        font-size: .85rem;
+    }
+}
+
+/* Ribbon coin pour états Bientôt / Urgent */
+.prod-card {
+    position: relative;
+    /* nécessaire pour positionner le ruban */
+    overflow: hidden;
+    /* évite que le ruban dépasse visuellement */
+}
+
+/* Couleurs (fallback si tes variables n'existent pas) */
+:root {
+    --ribbon-warn: var(--warn, #f59e0b);
+    /* jaune */
+    --ribbon-danger: var(--danger, #ef4444);
+    /* rouge */
+}
+
+/* style commun */
+.prod-card[data-status="yellow"]::after,
+.prod-card[data-status="red"]::after {
+    content: attr(data-status)=="yellow" ? "Bientôt": "Urgent";
+    /* ignoré par CSS, voir below */
+    position: absolute;
+    top: 12px;
+    right: -42px;
+    /* décalage pour couper en diagonale */
+    width: 170px;
+    height: 28px;
+    line-height: 28px;
+    transform: rotate(45deg);
+    text-align: center;
+    font-weight: 700;
+    letter-spacing: .3px;
+    z-index: 2;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, .25);
+}
+
+/* CSS ne peut pas conditionner le content sur attr(), on sépare donc: */
+.prod-card[data-status="yellow"]::after {
+    content: "Bientôt";
+    background: var(--ribbon-warn);
+    color: #121212;
+    /* texte sombre lisible sur jaune */
+}
+
+.prod-card[data-status="red"]::after {
+    content: "Urgent";
+    background: var(--ribbon-danger);
+    color: #fff;
+    /* texte clair sur rouge */
+}
+
+/* Option: si tu veux cacher le badge texte du bas quand ribbon présent */
+.prod-card[data-status="yellow"] .pc-status,
+.prod-card[data-status="red"] .pc-status {
+    display: none;
+}
+
+/* Petites cartes (mobile) : ruban un peu plus court */
+@media (max-width: 700px) {
+
+    .prod-card[data-status="yellow"]::after,
+    .prod-card[data-status="red"]::after {
+        top: 10px;
+        right: -36px;
+        width: 150px;
+        height: 24px;
+        line-height: 24px;
+        font-size: .85rem;
+    }
+}
+
+
 
 /* ========================================================================== */
 /* ========== 16) Page Journal (/journal) =================================== */
