@@ -1968,28 +1968,22 @@ html[data-theme="light"] .qhelp code {
 /* Ribbon coin pour états Bientôt / Urgent */
 .prod-card {
     position: relative;
-    /* nécessaire pour positionner le ruban */
     overflow: hidden;
-    /* évite que le ruban dépasse visuellement */
 }
 
-/* Couleurs (fallback si tes variables n'existent pas) */
+/* Couleurs (tombe sur le fallback si --warn/--danger ne sont pas définies) */
 :root {
     --ribbon-warn: var(--warn, #f59e0b);
-    /* jaune */
     --ribbon-danger: var(--danger, #ef4444);
-    /* rouge */
 }
 
-/* style commun */
+/* Base */
 .prod-card[data-status="yellow"]::after,
 .prod-card[data-status="red"]::after {
-    content: attr(data-status)=="yellow" ? "Bientôt": "Urgent";
-    /* ignoré par CSS, voir below */
     position: absolute;
     top: 12px;
     right: -42px;
-    /* décalage pour couper en diagonale */
+    /* coupe le ruban en diagonale */
     width: 170px;
     height: 28px;
     line-height: 28px;
@@ -1999,31 +1993,30 @@ html[data-theme="light"] .qhelp code {
     letter-spacing: .3px;
     z-index: 2;
     box-shadow: 0 2px 8px rgba(0, 0, 0, .25);
+    /* pas de content ici : défini par état */
 }
 
-/* CSS ne peut pas conditionner le content sur attr(), on sépare donc: */
+/* États */
 .prod-card[data-status="yellow"]::after {
     content: "Bientôt";
     background: var(--ribbon-warn);
     color: #121212;
-    /* texte sombre lisible sur jaune */
 }
 
 .prod-card[data-status="red"]::after {
     content: "Urgent";
     background: var(--ribbon-danger);
     color: #fff;
-    /* texte clair sur rouge */
 }
 
-/* Option: si tu veux cacher le badge texte du bas quand ribbon présent */
+/* Option : cacher l’étiquette en bas si ruban présent */
 .prod-card[data-status="yellow"] .pc-status,
 .prod-card[data-status="red"] .pc-status {
     display: none;
 }
 
-/* Petites cartes (mobile) : ruban un peu plus court */
-@media (max-width: 700px) {
+/* Mobile */
+@media (max-width:700px) {
 
     .prod-card[data-status="yellow"]::after,
     .prod-card[data-status="red"]::after {
@@ -2035,78 +2028,6 @@ html[data-theme="light"] .qhelp code {
         font-size: .85rem;
     }
 }
-
-/* Ribbon coin pour états Bientôt / Urgent */
-.prod-card {
-    position: relative;
-    /* nécessaire pour positionner le ruban */
-    overflow: hidden;
-    /* évite que le ruban dépasse visuellement */
-}
-
-/* Couleurs (fallback si tes variables n'existent pas) */
-:root {
-    --ribbon-warn: var(--warn, #f59e0b);
-    /* jaune */
-    --ribbon-danger: var(--danger, #ef4444);
-    /* rouge */
-}
-
-/* style commun */
-.prod-card[data-status="yellow"]::after,
-.prod-card[data-status="red"]::after {
-    content: attr(data-status)=="yellow" ? "Bientôt": "Urgent";
-    /* ignoré par CSS, voir below */
-    position: absolute;
-    top: 12px;
-    right: -42px;
-    /* décalage pour couper en diagonale */
-    width: 170px;
-    height: 28px;
-    line-height: 28px;
-    transform: rotate(45deg);
-    text-align: center;
-    font-weight: 700;
-    letter-spacing: .3px;
-    z-index: 2;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, .25);
-}
-
-/* CSS ne peut pas conditionner le content sur attr(), on sépare donc: */
-.prod-card[data-status="yellow"]::after {
-    content: "Bientôt";
-    background: var(--ribbon-warn);
-    color: #121212;
-    /* texte sombre lisible sur jaune */
-}
-
-.prod-card[data-status="red"]::after {
-    content: "Urgent";
-    background: var(--ribbon-danger);
-    color: #fff;
-    /* texte clair sur rouge */
-}
-
-/* Option: si tu veux cacher le badge texte du bas quand ribbon présent */
-.prod-card[data-status="yellow"] .pc-status,
-.prod-card[data-status="red"] .pc-status {
-    display: none;
-}
-
-/* Petites cartes (mobile) : ruban un peu plus court */
-@media (max-width: 700px) {
-
-    .prod-card[data-status="yellow"]::after,
-    .prod-card[data-status="red"]::after {
-        top: 10px;
-        right: -36px;
-        width: 150px;
-        height: 24px;
-        line-height: 24px;
-        font-size: .85rem;
-    }
-}
-
 
 
 /* ========================================================================== */
