@@ -93,17 +93,13 @@
         </div>
 
         <div class="pc-actions">
-          <form method="post" action="{{ BASE }}lot/consume" class="inline">
-            <input type="hidden" name="lot_id" value="{{ it.id }}">
-            <input type="hidden" name="qty" value="1">
-            <button class="btn small" title="Consommer 1 unité">−1</button>
-          </form>
           <button class="btn small secondary btn-edit" data-id="{{ it.id }}" data-qty="{{ it.qty }}"
             data-loc="{{ it.location_id }}" data-frozen="{{ it.frozen_on }}"
             data-bb="{{ it.best_before }}">Modifier</button>
           <button class="btn small danger btn-delete" data-id="{{ it.id }}"
             data-product="{{ it.name or it.article_name or it.product }}">Supprimer</button>
         </div>
+
       </div>
 
       <!-- Corps -->
@@ -149,10 +145,6 @@
           </details>
         </div>
       </div>
-
-      <!-- État -->
-      <div class="pc-status {{ it.status }}">{{ {'green':'OK','yellow':'Bientôt','red':'Urgent'}[it.status] if it.status
-        else '—' }}</div>
     </article>
     {% endfor %}
     {% else %}
