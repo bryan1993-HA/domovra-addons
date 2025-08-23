@@ -24,6 +24,8 @@ from routes.journal import router as journal_router
 from routes.support import router as support_router
 from routes.settings import router as settings_router
 
+from routes.api import router as api_router
+from routes.debug import router as debug_router
 
 
 # DB: uniquement ce qui est *réellement* utilisé ici
@@ -127,6 +129,8 @@ app.include_router(achats_router)
 app.include_router(journal_router)
 app.include_router(support_router)
 app.include_router(settings_router)
+app.include_router(api_router)
+app.include_router(debug_router)
 
 
 
@@ -143,81 +147,3 @@ def _startup():
         logger.info("Settings au démarrage: %s", current)
     except Exception as e:
         logger.exception("Erreur lecture settings au démarrage: %s", e)
-
-# ================== Debug ==================
-@app.get("/_debug/vars")
-def debug_vars():
-    return {
-        "ASSET_CSS_PATH": templates.globals.get("ASSET_CSS_PATH"),
-        "STATIC_DIR": os.path.abspath(STATIC_DIR),
-        "ls_static": sorted(os.listdir(STATIC_DIR)) if os.path.isdir(STATIC_DIR) else [],
-        "ls_css": sorted(os.listdir(os.path.join(STATIC_DIR, "css"))) if os.path.isdir(os.path.join(STATIC_DIR, "css")) else [],
-    }
-
-# ================== Journal / API ==================
-
-@app.get("/api/product/by_barcode")
-def api_product_by_barcode(code: str):
-    code = (code or "").strip().replace(" ", "")
-    if not code:
-        return JSONResponse({"error": "missing code"}, status_code=400)
-    with _conn() as c:
-        row = c.execute("""
-            SELECT id, name, COALESCE(barcode,'') AS barcode
-            FROM products
-            WHERE REPLACE(COALESCE(barcode,''), ' ', '') = ?
-            LIMIT 1
-        """, (code,)).fetchone()
-    if not row:
-        return JSONResponse({"error": "not found"}, status_code=404)
-    return JSONResponse({"id": row["id"], "name": row["name"], "barcode": row["barcode"]})
-
-# ================== OFF proxy ==================
-@app.get("/api/off")
-def api_off(barcode: str):
-    import urllib.request, urllib.error
-    barcode = (barcode or "").strip()
-    if not barcode:
-        return JSONResponse({"ok": False, "error": "missing barcode"}, status_code=400)
-
-    url = f"https://world.openfoodfacts.org/api/v2/product/{barcode}.json"
-    try:
-        req = urllib.request.Request(url, headers={"User-Agent":"Domovra/1.0"})
-        with urllib.request.urlopen(req, timeout=6) as resp:
-            raw = resp.read()
-        data = json.loads(raw.decode("utf-8"))
-    except urllib.error.URLError:
-        return JSONResponse({"ok": False, "error": "offline"}, status_code=502)
-    except Exception:
-        return JSONResponse({"ok": False, "error": "parse"}, status_code=500)
-
-    if not isinstance(data, dict) or data.get("status") != 1:
-        return JSONResponse({"ok": False, "error": "notfound"}, status_code=404)
-
-    p = data.get("product", {}) or {}
-    return JSONResponse({
-        "ok": True,
-        "barcode": barcode,
-        "name": p.get("product_name") or "",
-        "brand": p.get("brands") or "",
-        "quantity": p.get("quantity") or "",
-        "image": p.get("image_front_url") or p.get("image_url") or "",
-    })
-
-
-# ================== Debug DB ==================
-@app.get("/debug/db")
-def debug_db():
-    out = []
-    with _conn() as c:
-        tables = [r["name"] for r in c.execute(
-            "SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'"
-        )]
-        for t in tables:
-            rows = [dict(r) for r in c.execute(f"SELECT * FROM {t} LIMIT 5")]
-            out.append({
-                "table": t,
-                "columns": list(rows[0].keys()) if rows else [],
-                "rows": rows
-            })
-    return out
