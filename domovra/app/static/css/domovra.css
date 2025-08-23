@@ -1971,19 +1971,19 @@ html[data-theme="light"] .qhelp code {
     overflow: hidden;
 }
 
-/* Couleurs (tombe sur le fallback si --warn/--danger ne sont pas définies) */
+/* Couleurs (fallbacks) */
 :root {
     --ribbon-warn: var(--warn, #f59e0b);
     --ribbon-danger: var(--danger, #ef4444);
 }
 
-/* Base */
+/* Base commune */
 .prod-card[data-status="yellow"]::after,
 .prod-card[data-status="red"]::after {
     position: absolute;
     top: 12px;
     right: -42px;
-    /* coupe le ruban en diagonale */
+    /* coupe en diagonale */
     width: 170px;
     height: 28px;
     line-height: 28px;
@@ -1991,9 +1991,15 @@ html[data-theme="light"] .qhelp code {
     text-align: center;
     font-weight: 700;
     letter-spacing: .3px;
-    z-index: 2;
+    z-index: 10;
+    /* plus haut pour passer au-dessus des enfants */
     box-shadow: 0 2px 8px rgba(0, 0, 0, .25);
-    /* pas de content ici : défini par état */
+    display: block;
+    /* explicite */
+    pointer-events: none;
+    /* évite d’intercepter les clics sur les boutons */
+    content: "";
+    /* sera écrasé par chaque état */
 }
 
 /* États */
@@ -2028,6 +2034,7 @@ html[data-theme="light"] .qhelp code {
         font-size: .85rem;
     }
 }
+
 
 
 /* ========================================================================== */
