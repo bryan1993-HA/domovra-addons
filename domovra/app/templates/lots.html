@@ -12,10 +12,13 @@
   <!-- Outils -->
   <a href="{{ BASE }}_debug/lots{% if request.query_params %}?{{ request.query_params.urlencode() }}{% endif %}"
     class="debug-link" aria-label="Ouvrir le JSON debug des lots" title="Debug lots JSON">·</a>
+  <a href="{{ BASE }}_debug/locations" class="debug-link" title="Debug locations">·</a>
+  <a href="{{ BASE }}_debug/products" class="debug-link" title="Debug products">·</a>
 
   <div class="card">
     <div class="title">
-      <h2>Outils</h2><span class="muted">Recherche & filtres</span>
+      <h2>Stocks</h2>
+      <span class="muted">→ lots issus des achats</span>
     </div>
 
     <div class="filters-row">
@@ -28,6 +31,11 @@
       <select id="f_loc">
         <option value="">📍 Tous emplacements</option>
         {% for l in locations %}<option value="{{ l.name|lower }}">{{ l.name }}</option>{% endfor %}
+      </select>
+
+      <select id="f_prod">
+        <option value="">🧾 Tous produits</option>
+        {% for p in products %}<option value="{{ p.name|lower }}">{{ p.name }}</option>{% endfor %}
       </select>
 
       <select id="f_status">
@@ -45,14 +53,6 @@
   <div class="cards-grid" id="lot-cards">
     {% if items %}
     {% for it in items %}
-    {# ---- DEBUG JSON (facultatif) ----
-    <pre style="font-size:12px;max-height:200px;overflow:auto;background:#111;color:#0f0;padding:6px;">
-{{ it | tojson(indent=2) }}
-        </pre>
-    #}
-
-    {# ==== Calculs par lot (à l'intérieur de la boucle) ==== #}
-    {% set q = fmt_qty(it.qty, it.unit) %}
     {% set code = it.ean or it.barcode %}
     {% set m = (it.multiplier or 1) | int %}
     {% set qty_unit = it.qty_per_unit or 0 %}
@@ -74,7 +74,8 @@
     {% endif %}
 
     <article class="prod-card" data-name="{{ (it.name or it.article_name or it.product)|lower }}"
-      data-loc="{{ it.location|lower }}" data-barcode="{{ (code or '')|lower }}" data-status="{{ it.status }}">
+      data-product="{{ (it.name or it.article_name or it.product)|lower }}" data-loc="{{ it.location|lower }}"
+      data-barcode="{{ (code or '')|lower }}" data-status="{{ it.status }}">
 
       <!-- En-tête -->
       <div class="pc-head">
@@ -83,17 +84,24 @@
             {{ it.name or it.article_name or it.product }}
             {% if it.brand %}<span class="muted"> — {{ it.brand }}</span>{% endif %}
           </h3>
-
-          <span class="status {{ it.status }}">
-            {{ "OK" if it.status=="green" else ("Bientôt" if it.status=="yellow" else ("Urgent" if it.status=="red" else
-            "—")) }}
-          </span>
+          <div class="pc-meta muted">
+            {{ it.qty }} {{ (it.unit or 'pcs')|pluralize_fr(it.qty) }} • 📍 {{ it.location }}
+            {% if code %} • 🏷️ {{ code }}{% endif %}
+            {% if it.store %} • 🛍️ {{ it.store }}{% endif %}
+          </div>
         </div>
 
-        <div class="pc-sub">
-          {{ q.v }} {{ q.u|pluralize_fr(it.qty) }} • 📍 {{ it.location }}
-          {% if code %} • 🏷️ {{ code }}{% endif %}
-          {% if it.store %} • 🛍️ {{ it.store }}{% endif %}
+        <div class="pc-actions">
+          <form method="post" action="{{ BASE }}lot/consume" class="inline">
+            <input type="hidden" name="lot_id" value="{{ it.id }}">
+            <input type="hidden" name="qty" value="1">
+            <button class="btn small" title="Consommer 1 unité">−1</button>
+          </form>
+          <button class="btn small secondary btn-edit" data-id="{{ it.id }}" data-qty="{{ it.qty }}"
+            data-loc="{{ it.location_id }}" data-frozen="{{ it.frozen_on }}"
+            data-bb="{{ it.best_before }}">Modifier</button>
+          <button class="btn small danger btn-delete" data-id="{{ it.id }}"
+            data-product="{{ it.name or it.article_name or it.product }}">Supprimer</button>
         </div>
       </div>
 
@@ -101,32 +109,13 @@
       <div class="pc-body">
         <div class="stat">
           <span class="k">Quantité totale</span>
-          <span class="v">{{ q.v }} {{ q.u|pluralize_fr(it.qty) }}</span>
+          <span class="v">{{ it.qty }} {{ (it.unit or 'pcs')|pluralize_fr(it.qty) }}</span>
         </div>
 
         <div class="stat">
-          <span class="k">Emplacement</span>
-          <span class="v">{{ it.location }}</span>
-        </div>
-
-        <div class="stat full">
-          <span class="k">Dates</span>
-          <details class="dates">
-            <summary>📅 Voir les dates</summary>
-            <div class="timeline">
-              <span class="pill">❄ <span>{{ it.frozen_on or '—' }}</span></span>
-              <span class="pill">⏳ <span>{{ it.best_before or '—' }}</span></span>
-              {% if it.created_on %}<span class="pill">➕ <span>{{ it.created_on }}</span></span>{% endif %}
-            </div>
-          </details>
-        </div>
-
-        <!-- === Bloc Achat (nouveau) === -->
-        <div class="stat">
-          <span class="k">Prix payé</span>
-          <span class="v">
-            {% if price_total is not none %}{{ '%.2f'|format(price_total) }} €{% else %}—{% endif %}
-          </span>
+          <span class="k">Prix total</span>
+          <span class="v">{% if price_total is not none %}{{ '%.2f'|format(price_total) }} €{% else %}—{% endif
+            %}</span>
         </div>
 
         <div class="stat">
@@ -160,55 +149,53 @@
           </span>
         </div>
 
-        <div class="stat full">
-          <span class="k">Détails article</span>
-          <div class="v">
-            <div style="display:flex; gap:.5rem; flex-wrap:wrap;">
-              {% if it.article_name %}<span class="pill">🏷️ {{ it.article_name }}</span>{% endif %}
-              {% if it.brand %}<span class="pill">🏭 {{ it.brand }}</span>{% endif %}
-              {% if it.ean %}<span class="pill">📌 EAN {{ it.ean }}</span>{% endif %}
-              {% if u_buy %}<span class="pill">⚖️ {{ qty_unit or '—' }} {{ u_buy }} × {{ m }}</span>{% endif %}
-              {% if it.store %}<span class="pill">🛍️ {{ it.store }}</span>{% endif %}
-            </div>
-            {% if it.note %}
-            <div class="muted" style="margin-top:.35rem;">📝 {{ it.note }}</div>
-            {% endif %}
-          </div>
+        <div class="stat">
+          <span class="k">Emplacement</span>
+          <span class="v">{{ it.location }}</span>
         </div>
+
+        <div class="stat full">
+          <span class="k">Dates</span>
+          <details class="dates">
+            <summary>📅 Voir les dates</summary>
+            <div class="timeline">
+              <span class="pill">❄ <span>{{ it.frozen_on or '—' }}</span></span>
+              <span class="pill">⏳ <span>{{ it.best_before or '—' }}</span></span>
+              {% if it.created_on %}<span class="pill">➕ <span>{{ it.created_on }}</span></span>{% endif %}
+            </div>
+          </details>
+        </div>
+
+        {% if it.note %}
+        <div class="stat full">
+          <span class="k">Note</span>
+          <span class="v">{{ it.note }}</span>
+        </div>
+        {% endif %}
       </div>
 
-      <!-- Actions -->
-      <div class="pc-actions">
-        <button class="secondary js-edit-open" data-id="{{ it.id }}" data-qty="{{ it.qty }}" data-unit="{{ it.unit }}"
-          data-location_id="{{ it.location_id }}" data-frozen="{{ it.frozen_on or '' }}"
-          data-best_before="{{ it.best_before or '' }}">
-          ✏️ Modifier
-        </button>
-
-        <button class="secondary js-delete-open" data-id="{{ it.id }}"
-          data-product="{{ it.name or it.article_name or it.product }}">
-          🗑️ Supprimer
-        </button>
-      </div>
+      <!-- État -->
+      <div class="pc-status {{ it.status }}">{{ {'green':'OK','yellow':'Bientôt','red':'Urgent'}[it.status] if it.status
+        else '—' }}</div>
     </article>
     {% endfor %}
     {% else %}
-    <div class="muted">Aucune entrée de stock.</div>
+    <div class="muted" style="padding:1rem">Aucun stock pour l’instant.</div>
     {% endif %}
   </div>
 </div>
 
-<!-- Aide rapide recherche -->
-<dialog id="q-help">
-  <div class="qhelp">
-    <header>
-      <strong>Astuce recherche</strong>
-      <button class="icon-btn" onclick="this.closest('dialog')?.close()">✕</button>
-    </header>
-    <ul class="help-list">
-      <li>Tape le nom du produit, un emplacement ou un EAN.</li>
-      <li>Combine avec les filtres “Emplacements” et “États”.</li>
+<!-- Aide recherche -->
+<dialog id="q-help" class="modal">
+  <div class="prose">
+    <h3>Recherche dans les stocks</h3>
+    <ul>
+      <li>Par nom de produit, code-barres (EAN) et emplacement</li>
+      <li>Filtres par emplacement, produit et état</li>
     </ul>
+  </div>
+  <div class="dlg-actions">
+    <button class="btn-cancel" onclick="this.closest('dialog')?.close()">Fermer</button>
   </div>
 </dialog>
 
@@ -225,13 +212,13 @@
       </div>
       <div class="field">
         <div class="label">Emplacement</div>
-        <select name="location_id" id="dlg-location">
+        <select name="location_id" id="dlg-loc" required>
           {% for l in locations %}<option value="{{ l.id }}">{{ l.name }}</option>{% endfor %}
         </select>
       </div>
       <div class="field">
         <div class="label">Congelé le</div>
-        <input type="date" name="frozen_on" id="dlg-frozen">
+        <input type="date" name="frozen_on" id="dlg-frozen-on">
       </div>
       <div class="field">
         <div class="label">À consommer avant</div>
@@ -262,34 +249,36 @@
 {% block scripts %}
 <script>
   const $ = s => document.querySelector(s);
+  const cardsWrap = document.getElementById('lot-cards');
+  const cards = Array.from(cardsWrap?.querySelectorAll('.prod-card') || []);
+  const q = document.getElementById('q');
+  const fProd = document.getElementById('f_prod');
+  const fLoc = document.getElementById('f_loc');
+  const fStatus = document.getElementById('f_status');
+  const countEl = document.getElementById('lots-count');
 
-  /* --- Recherche / filtres --- */
-  const q = $('#q'),
-    fLoc = $('#f_loc'),
-    fStatus = $('#f_status'),
-    cards = Array.from(document.querySelectorAll('#lot-cards .prod-card')),
-    countEl = document.getElementById('lots-count');
-
-  function matches(ds, txt, loc, st) {
+  function matches(ds, txt, loc, st, prod) {
     const s = (ds.name + ' ' + (ds.loc || '') + ' ' + (ds.barcode || '')).includes(txt);
     const l = loc ? (ds.loc === loc) : true;
     const t = st ? ((ds.status || '') === st) : true;
-    return s && l && t;
+    const p = prod ? ((ds.product || '') === prod) : true;
+    return s && l && t && p;
   }
 
   function applyFilter() {
     const txt = (q?.value || '').toLowerCase().trim();
     const loc = (fLoc?.value || '').toLowerCase().trim();
     const st = (fStatus?.value || '').trim();
+    const prod = (fProd?.value || '').toLowerCase().trim();
     let shown = 0;
     cards.forEach(card => {
-      const m = matches(card.dataset, txt, loc, st);
+      const m = matches(card.dataset, txt, loc, st, prod);
       card.style.display = m ? '' : 'none';
       if (m) shown++;
     });
-    if (countEl) countEl.textContent = (txt || loc || st) ? shown : cards.length;
+    if (countEl) countEl.textContent = (txt || loc || st || prod) ? shown : cards.length;
   }
-  [q, fLoc, fStatus].forEach(el => el && el.addEventListener('input', applyFilter));
+  [q, fLoc, fStatus, fProd].forEach(el => el && el.addEventListener('input', applyFilter));
 
   /* --- Toasts via querystring --- */
   (function () {
@@ -305,18 +294,18 @@
     const delDialog = document.getElementById('dlg-delete');
     const setVal = (id, v) => { const el = document.getElementById(id); if (el) el.value = v ?? ''; };
 
-    document.querySelectorAll('.js-edit-open').forEach(btn => {
+    document.querySelectorAll('.btn-edit').forEach(btn => {
       btn.addEventListener('click', () => {
         setVal('dlg-lot-id', btn.dataset.id);
         setVal('dlg-qty', btn.dataset.qty);
-        setVal('dlg-location', btn.dataset.location_id);
-        setVal('dlg-frozen', btn.dataset.frozen || '');
-        setVal('dlg-best-before', btn.dataset.best_before || '');
+        setVal('dlg-loc', btn.dataset.loc);
+        setVal('dlg-frozen-on', btn.dataset.frozen);
+        setVal('dlg-best-before', btn.dataset.bb);
         editDialog?.showModal();
       });
     });
 
-    document.querySelectorAll('.js-delete-open').forEach(btn => {
+    document.querySelectorAll('.btn-delete').forEach(btn => {
       btn.addEventListener('click', () => {
         setVal('del-lot-id', btn.dataset.id);
         const msg = document.getElementById('del-msg');
