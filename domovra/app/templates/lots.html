@@ -107,71 +107,46 @@
 
       <!-- Corps -->
       <div class="pc-body">
-        <div class="stat">
-          <span class="k">Quantité totale</span>
-          <span class="v">{{ it.qty }} {{ (it.unit or 'pcs')|pluralize_fr(it.qty) }}</span>
-        </div>
-
-        <div class="stat">
-          <span class="k">Prix total</span>
-          <span class="v">{% if price_total is not none %}{{ '%.2f'|format(price_total) }} €{% else %}—{% endif
-            %}</span>
-        </div>
-
-        <div class="stat">
-          <span class="k">Prix / unité</span>
-          <span class="v">
-            {% if per_unit is not none %}{{ '%.2f'|format(per_unit) }} €{% else %}—{% endif %}
-          </span>
-        </div>
-
-        <div class="stat">
-          <span class="k">Conditionnement</span>
-          <span class="v">
-            {% if qty_unit and u_buy %}
-            {{ qty_unit|float }} {{ u_buy }} × {{ m }}
-            {% elif m > 1 %}
-            Pack × {{ m }}
-            {% else %}
-            —
-            {% endif %}
-          </span>
-        </div>
-
-        <div class="stat">
-          <span class="k">Prix / kg·L</span>
-          <span class="v">
-            {% if price_per_base is not none %}
-            {{ '%.2f'|format(price_per_base) }} €/{{ 'kg' if u_map in ['g','kg'] else 'L' }}
-            {% else %}
-            —
-            {% endif %}
-          </span>
-        </div>
-
-        <div class="stat">
-          <span class="k">Emplacement</span>
-          <span class="v">{{ it.location }}</span>
-        </div>
-
         <div class="stat full">
-          <span class="k">Dates</span>
-          <details class="dates">
-            <summary>📅 Voir les dates</summary>
-            <div class="timeline">
+          <span class="k">Plus d'informations</span>
+          <details class="more">
+            <summary>➕ Plus d'informations</summary>
+
+            <div class="kv">
+              <div class="row"><span class="k">Quantité totale</span><span class="v">{{ it.qty }} {{ (it.unit or
+                  'pcs')|pluralize_fr(it.qty) }}</span></div>
+
+              <div class="row"><span class="k">Prix total</span><span class="v">{% if price_total is not none %}{{
+                  '%.2f'|format(price_total) }} €{% else %}—{% endif %}</span></div>
+
+              <div class="row"><span class="k">Prix / unité</span><span class="v">{% if per_unit is not none %}{{
+                  '%.2f'|format(per_unit) }} €{% else %}—{% endif %}</span></div>
+
+              <div class="row"><span class="k">Conditionnement</span><span class="v">{% if qty_unit and u_buy %}{{
+                  qty_unit|float }} {{ u_buy }} × {{ m }}{% elif m > 1 %}Pack × {{ m }}{% else %}—{% endif %}</span>
+              </div>
+
+              <div class="row"><span class="k">Prix / kg·L</span><span class="v">{% if price_per_base is not none %}{{
+                  '%.2f'|format(price_per_base) }} €/{{ 'kg' if u_map in ['g','kg'] else 'L' }}{% else %}—{% endif
+                  %}</span></div>
+
+              <div class="row"><span class="k">Emplacement</span><span class="v">{{ it.location }}</span></div>
+            </div>
+
+            <div class="timeline" style="margin-top:.75rem">
               <span class="pill">❄ <span>{{ it.frozen_on or '—' }}</span></span>
               <span class="pill">⏳ <span>{{ it.best_before or '—' }}</span></span>
               {% if it.created_on %}<span class="pill">➕ <span>{{ it.created_on }}</span></span>{% endif %}
             </div>
+
+            {% if it.note %}
+            <div class="note" style="margin-top:.5rem">
+              <span class="k">Note</span>
+              <span class="v">{{ it.note }}</span>
+            </div>
+            {% endif %}
           </details>
         </div>
-
-        {% if it.note %}
-        <div class="stat full">
-          <span class="k">Note</span>
-          <span class="v">{{ it.note }}</span>
-        </div>
-        {% endif %}
       </div>
 
       <!-- État -->
