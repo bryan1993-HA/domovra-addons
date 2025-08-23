@@ -21,6 +21,8 @@ from routes.locations import router as locations_router
 from routes.lots import router as lots_router
 from routes.achats import router as achats_router
 from routes.journal import router as journal_router
+from routes.support import router as support_router
+from routes.settings import router as settings_router
 
 
 
@@ -123,6 +125,9 @@ app.include_router(locations_router)
 app.include_router(lots_router)
 app.include_router(achats_router)
 app.include_router(journal_router)
+app.include_router(support_router)
+app.include_router(settings_router)
+
 
 
 # ================== Lifecycle ==================
@@ -199,58 +204,6 @@ def api_off(barcode: str):
         "image": p.get("image_front_url") or p.get("image_url") or "",
     })
 
-# ================== Settings ==================
-try:
-    from settings_store import load_settings, save_settings
-except Exception:
-    def load_settings():
-        return {
-            "theme":"auto","table_mode":"scroll","sidebar_compact":False,
-            "default_shelf_days":90,
-            "toast_duration":3000,"toast_ok":"#4caf50","toast_warn":"#ffb300","toast_error":"#ef5350"
-        }
-    def save_settings(new_values: dict):
-        cur = load_settings(); cur.update(new_values or {}); return cur
-
-@app.get("/settings", response_class=HTMLResponse)
-def settings_page(request: Request):
-    base = ingress_base(request)
-    try:
-        settings = load_settings()
-        return render("settings.html", BASE=base, page="settings", request=request, SETTINGS=settings)
-    except Exception as e:
-        return PlainTextResponse(f"Erreur chargement paramètres: {e}", status_code=500)
-
-@app.post("/settings/save")
-def settings_save(request: Request,
-                  theme: str = Form("auto"),
-                  table_mode: str = Form("scroll"),
-                  sidebar_compact: str = Form(None),
-                  default_shelf_days: int = Form(90),
-                  toast_duration: int = Form(3000),
-                  toast_ok: str = Form("#4caf50"),
-                  toast_warn: str = Form("#ffb300"),
-                  toast_error: str = Form("#ef5350")):
-    base = ingress_base(request)
-    normalized = {
-        "theme": theme if theme in ("auto","light","dark") else "auto",
-        "table_mode": table_mode if table_mode in ("scroll","stacked") else "scroll",
-        "sidebar_compact": (sidebar_compact == "on"),
-        "default_shelf_days": int(default_shelf_days or 90),
-        "toast_duration": max(500, int(toast_duration or 3000)),
-        "toast_ok": (toast_ok or "#4caf50").strip(),
-        "toast_warn": (toast_warn or "#ffb300").strip(),
-        "toast_error": (toast_error or "#ef5350").strip(),
-    }
-    try:
-        saved = save_settings(normalized)
-        log_event("settings.update", saved)
-        return RedirectResponse(base + f"settings?ok=1&_={int(time.time())}",
-                                status_code=303, headers={"Cache-Control":"no-store"})
-    except Exception as e:
-        log_event("settings.error", {"error": str(e), "payload": normalized})
-        return RedirectResponse(base + "settings?error=1",
-                                status_code=303, headers={"Cache-Control":"no-store"})
 
 # ================== Debug DB ==================
 @app.get("/debug/db")
