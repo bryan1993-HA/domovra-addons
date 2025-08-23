@@ -1447,7 +1447,8 @@ html[data-theme="light"] .wrap[data-page="product"] #tbl tbody tr:hover {
     gap: 10px;
     height: 100%;
     min-width: 0;
-    /* évite débordements */
+    position: relative;
+    overflow: hidden;
 }
 
 /* En‑tête */
@@ -1851,6 +1852,50 @@ html[data-theme="light"] .qhelp code {
 /* Harmonise la hauteur des <select> de la modale (y compris Type d’échéance) */
 #dlg-edit select {
     min-height: 40px;
+}
+
+/* Fallback si :has() n’est pas supporté */
+.wrap .prod-card[data-status="red"]::after {
+    content: "Urgent";
+    background: var(--ribbon-danger, #ef4444);
+    color: #fff;
+}
+
+.wrap .prod-card[data-status="yellow"]::after {
+    content: "Bientôt";
+    background: var(--ribbon-warn, #f59e0b);
+    color: #121212;
+}
+
+/* Base commune (peut réutiliser ta base existante) */
+.wrap .prod-card[data-status="red"]::after,
+.wrap .prod-card[data-status="yellow"]::after {
+    position: absolute;
+    top: 12px;
+    right: -42px;
+    width: 170px;
+    height: 28px;
+    line-height: 28px;
+    transform: rotate(45deg);
+    text-align: center;
+    font-weight: 700;
+    letter-spacing: .3px;
+    z-index: 10;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, .25);
+    pointer-events: none;
+}
+
+@media (max-width:700px) {
+
+    .wrap .prod-card[data-status="red"]::after,
+    .wrap .prod-card[data-status="yellow"]::after {
+        top: 10px;
+        right: -36px;
+        width: 150px;
+        height: 24px;
+        line-height: 24px;
+        font-size: .85rem;
+    }
 }
 
 
