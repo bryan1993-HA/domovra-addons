@@ -10,6 +10,8 @@
 {% block content %}
 <div class="wrap" data-page="lots">
   <!-- Outils -->
+  <a href="{{ BASE }}_debug/lots{% if request.query_params %}?{{ request.query_params.urlencode() }}{% endif %}"
+    class="debug-link" aria-label="Ouvrir le JSON debug des lots" title="Debug lots JSON">·</a>
   <div class="card">
     <div class="title">
       <h2>Outils</h2><span class="muted">Recherche & filtres</span>
