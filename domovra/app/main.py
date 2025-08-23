@@ -20,6 +20,8 @@ from routes.products import router as products_router
 from routes.locations import router as locations_router
 from routes.lots import router as lots_router
 from routes.achats import router as achats_router
+from routes.journal import router as journal_router
+
 
 
 # DB: uniquement ce qui est *réellement* utilisé ici
@@ -120,6 +122,8 @@ app.include_router(products_router)
 app.include_router(locations_router)
 app.include_router(lots_router)
 app.include_router(achats_router)
+app.include_router(journal_router)
+
 
 # ================== Lifecycle ==================
 @app.on_event("startup")
@@ -146,25 +150,6 @@ def debug_vars():
     }
 
 # ================== Journal / API ==================
-@app.get("/journal", response_class=HTMLResponse)
-def journal_page(request: Request, limit: int = Query(200, ge=1, le=1000)):
-    base = ingress_base(request)
-    events = list_events(limit)
-    return render("journal.html", BASE=base, page="journal", request=request, events=events, limit=limit)
-
-@app.post("/journal/clear")
-def journal_clear(request: Request):
-    base = ingress_base(request)
-    with _conn() as c:
-        c.execute("DELETE FROM events")
-        c.commit()
-    log_event("journal.clear", {"by": "ui"})
-    return RedirectResponse(base + "journal?cleared=1", status_code=303,
-                            headers={"Cache-Control":"no-store"})
-
-@app.get("/api/events")
-def api_events(limit: int = 200):
-    return JSONResponse(list_events(limit))
 
 @app.get("/api/product/by_barcode")
 def api_product_by_barcode(code: str):
