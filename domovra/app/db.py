@@ -114,6 +114,10 @@ def init_db():
             c.execute("ALTER TABLE stock_lots ADD COLUMN multiplier INTEGER")
         if not _column_exists(c, "stock_lots", "unit_at_purchase"):
             c.execute("ALTER TABLE stock_lots ADD COLUMN unit_at_purchase TEXT")
+        if not _column_exists(c, "stock_lots", "name"):
+            c.execute("ALTER TABLE stock_lots ADD COLUMN name TEXT")
+        if not _column_exists(c, "stock_lots", "note"):
+            c.execute("ALTER TABLE stock_lots ADD COLUMN note TEXT")
 
 
 
