@@ -1983,7 +1983,51 @@ html[data-theme="light"] .qhelp code {
     background: transparent;
 }
 
+/* Dialog: actions côte à côte et boutons visibles */
+.wrap dialog.modal .dlg-actions,
+#dlg-delete .dlg-actions {
+    display: flex;
+    gap: 10px;
+    justify-content: flex-end;
+}
 
+/* Les boutons du dialog ne doivent PAS être en 100% largeur */
+.wrap dialog.modal .dlg-actions button,
+#dlg-delete .dlg-actions button {
+    width: auto;
+    min-width: 120px;
+}
+
+/* Styles des boutons d’action */
+.btn-danger {
+    background: var(--toast-error);
+    border: 0;
+    color: #1d0c0c;
+    /* bon contraste sur le rouge */
+    font-weight: 700;
+}
+
+.btn-cancel {
+    background: transparent;
+    border: 1px solid var(--line);
+}
+
+/* Empilement propre en mobile */
+@media (max-width:700px) {
+
+    .wrap dialog.modal .dlg-actions,
+    #dlg-delete .dlg-actions {
+        flex-direction: column-reverse;
+        /* Annuler en haut, Supprimer bien visible en bas */
+        align-items: stretch;
+    }
+
+    .wrap dialog.modal .dlg-actions button,
+    #dlg-delete .dlg-actions button {
+        width: 100%;
+        min-width: 0;
+    }
+}
 
 /* ========================================================================== */
 /* ========== 15) Page Paramètres (/settings) =============================== */
