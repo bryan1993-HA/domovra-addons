@@ -117,65 +117,67 @@ def achats_add_action(
       - enrichit la ligne de lot avec les infos d’achat (prix, ean, etc.),
       - met à jour le code-barres produit si absent.
     """
-# Multiplieur sûr (>= 1)
-try:
-    m = max(1, int(multiplier or 1))
-except Exception:
-    m = 1
 
-# --- NOUVEAU : normalisation des unités vers l'unité de référence du produit ---
-# 1) Récupérer l'unité de base du produit (ex. "g", "kg", "ml", "L", "pièce")
-prod = next((p for p in list_products() if int(p["id"]) == int(product_id)), None)
-base_unit = (prod["unit"] if prod else "").strip() or "pièce"
+    # Multiplieur sûr (>= 1)
+    try:
+        m = max(1, int(multiplier or 1))
+    except Exception:
+        m = 1
 
-# (Optionnel) Avertissement si incohérence masse/volume
-mass = {"g", "kg"}
-vol  = {"ml", "l", "L"}
-if (base_unit in mass and (unit or "").lower() in {"ml", "l"}) or \
-   (base_unit in {"ml", "l", "L"} and (unit or "").lower() in {"g", "kg"}):
-    # Tu peux soit:
-    # - lever une erreur (redirect avec ?error=unite_incoherente)
-    # - OU juste continuer mais sans conversion, et afficher un toast côté UI.
-    pass
+    # --- Normalisation des unités vers l'unité de référence du produit ---
+    # 1) Unité de base du produit (ex. "g", "kg", "ml", "L", "pièce")
+    prod = next((p for p in list_products() if int(p["id"]) == int(product_id)), None)
+    base_unit = (prod["unit"] if prod else "").strip() or "pièce"
 
+    # (Optionnel) Avertissement si incohérence masse/volume (pour plus tard)
+    mass = {"g", "kg"}
+    vol = {"ml", "l", "L"}
+    # Exemple d'usage possible :
+    # if (base_unit in mass and (unit or "").lower() in {"ml", "l"}) or \
+    #    (base_unit in {"ml", "l", "L"} and (unit or "").lower() in {"g", "kg"}):
+    #     pass  # afficher un toast / ignorer / etc.
 
-# 2) Petit helper local de conversion vers l'unité de base
-def _to_base(q: float, u_in: str, u_base: str) -> float:
-    ui = (u_in or "").strip().lower()
-    ub = (u_base or "").strip().lower()
-    # Harmoniser litre
-    if ui == "l": ui = "l"
-    if ub == "l": ub = "l"
+    # 2) Helper local de conversion vers l'unité de base
+    def _to_base(q: float, u_in: str, u_base: str) -> float:
+        ui = (u_in or "").strip().lower()
+        ub = (u_base or "").strip().lower()
 
-    # Masses
-    if (ui, ub) == ("kg", "g"):   return q * 1000.0
-    if (ui, ub) == ("g", "kg"):   return q / 1000.0
+        # Masses
+        if (ui, ub) == ("kg", "g"):
+            return q * 1000.0
+        if (ui, ub) == ("g", "kg"):
+            return q / 1000.0
 
-    # Volumes
-    if (ui, ub) == ("l", "ml"):   return q * 1000.0
-    if (ui, ub) == ("ml", "l"):   return q / 1000.0
+        # Volumes (on accepte "l" ou "L" côté UI)
+        if ui == "l":
+            ui = "l"
+        if ub == "l":
+            ub = "l"
+        if (ui, ub) == ("l", "ml"):
+            return q * 1000.0
+        if (ui, ub) == ("ml", "l"):
+            return q / 1000.0
 
-    # Identique ou conversion non gérée : on ne touche pas
-    return q
+        # Identique ou conversion non gérée : inchangé
+        return q
 
-# 3) Convertir la quantité saisie vers l'unité de base du produit
-qty_per_unit = float(qty or 0)
-qty_per_unit_base = _to_base(qty_per_unit, unit, base_unit)
+    # 3) Convertir la quantité saisie vers l'unité du produit
+    qty_per_unit = float(qty or 0)
+    qty_per_unit_base = _to_base(qty_per_unit, unit, base_unit)
 
-# 4) Appliquer le multiplicateur
-qty_delta = qty_per_unit_base * m
-# -------------------------------------------------------------------------------
+    # 4) Appliquer le multiplicateur
+    qty_delta = qty_per_unit_base * m
+    # ---------------------------------------------------------------------
 
-ean_digits = _clean_barcode(ean)
-price_num = _num_or_none(price_total)
+    ean_digits = _clean_barcode(ean)
+    price_num = _num_or_none(price_total)
 
-# Ajout ou merge du lot
-res = _add_or_merge_lot(
-    int(product_id), int(location_id),
-    float(qty_delta),
-    best_before or None, frozen_on or None,
-)
-
+    # Ajout ou merge du lot
+    res = _add_or_merge_lot(
+        int(product_id), int(location_id),
+        float(qty_delta),
+        best_before or None, frozen_on or None,
+    )
 
     # Si EAN fourni et produit sans code-barres -> on le remplit
     if ean_digits:
@@ -213,7 +215,7 @@ res = _add_or_merge_lot(
                 params.append(val)
 
             _add_set("name", name)
-            _add_set("article_name", name)        # alias affichage
+            _add_set("article_name", name)        # alias affichage (si la colonne existe dans ta DB)
             _add_set("brand", brand)
             _add_set("ean", ean_digits or None)
             _add_set("store", store)
