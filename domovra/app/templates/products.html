@@ -308,8 +308,8 @@ Astuce : tu peux combiner (ex. « ddm produits laitiers »)."></span>
 
     <div>
       <h3 style="margin:8px 0 6px">Historique des prix</h3>
-      <div id="v-price-history" class="muted" style="border:1px dashed var(--line);border-radius:10px;padding:12px">
-        Pas d’historique de prix pour ce produit.
+      <div id="v-price-chart" style="border:1px dashed var(--line);border-radius:10px;padding:12px;min-height:240px">
+        <!-- Graphique rendu en JS -->
       </div>
     </div>
 
@@ -721,6 +721,129 @@ Astuce : tu peux combiner (ex. « ddm produits laitiers »)."></span>
     if (diff === 1) return "hier";
     return `${iso}  ·  il y a ${diff} jour${diff > 1 ? 's' : ''}`;
   }
+
+  function renderPriceChart(container, rows, currency) {
+    container.innerHTML = '';
+
+    // 1) garde-fous
+    if (!Array.isArray(rows) || rows.length < 2) {
+      container.textContent = 'Pas assez de données de prix pour tracer un graphique.';
+      return;
+    }
+
+    // 2) parsing/tri
+    const data = rows
+      .map(r => ({
+        date: new Date(r.date),            // ex. "2025-08-20"
+        price: Number(r.price)
+      }))
+      .filter(d => !isNaN(d.date) && !isNaN(d.price))
+      .sort((a, b) => a.date - b.date);
+
+    if (data.length < 2) {
+      container.textContent = 'Pas assez de données de prix pour tracer un graphique.';
+      return;
+    }
+
+    // 3) dimensions & échelles
+    const W = container.clientWidth || 560;
+    const H = 240;
+    const P = { l: 46, r: 10, t: 10, b: 28 };
+    const x0 = P.l, x1 = W - P.r, y0 = H - P.b, y1 = P.t;
+
+    const minP = Math.min(...data.map(d => d.price));
+    const maxP = Math.max(...data.map(d => d.price));
+    const pad = (maxP - minP) * 0.1 || 0.5; // marges visuelles
+    const yMin = Math.max(0, minP - pad);
+    const yMax = maxP + pad;
+
+    const tMin = data[0].date.getTime();
+    const tMax = data[data.length - 1].date.getTime();
+    const tx = (t) => x0 + ((t - tMin) / (tMax - tMin || 1)) * (x1 - x0);
+    const ty = (v) => y0 - ((v - yMin) / (yMax - yMin || 1)) * (y0 - y1);
+
+    // 4) helpers SVG
+    const NS = 'http://www.w3.org/2000/svg';
+    const svg = document.createElementNS(NS, 'svg');
+    svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
+    svg.style.width = '100%';
+    svg.style.height = H + 'px';
+
+    // axes
+    const axX = document.createElementNS(NS, 'line');
+    axX.setAttribute('x1', x0); axX.setAttribute('x2', x1);
+    axX.setAttribute('y1', y0); axX.setAttribute('y2', y0);
+    axX.setAttribute('stroke', 'var(--line)');
+    svg.appendChild(axX);
+
+    const axY = document.createElementNS(NS, 'line');
+    axY.setAttribute('x1', x0); axY.setAttribute('x2', x0);
+    axY.setAttribute('y1', y0); axY.setAttribute('y2', y1);
+    axY.setAttribute('stroke', 'var(--line)');
+    svg.appendChild(axY);
+
+    // grilles + labels Y (5 graduations)
+    for (let i = 0; i <= 4; i++) {
+      const v = yMin + (i / 4) * (yMax - yMin);
+      const gy = ty(v);
+
+      const gl = document.createElementNS(NS, 'line');
+      gl.setAttribute('x1', x0); gl.setAttribute('x2', x1);
+      gl.setAttribute('y1', gy); gl.setAttribute('y2', gy);
+      gl.setAttribute('stroke', 'var(--line)');
+      gl.setAttribute('stroke-dasharray', '4 4');
+      svg.appendChild(gl);
+
+      const lbl = document.createElementNS(NS, 'text');
+      lbl.setAttribute('x', x0 - 8);
+      lbl.setAttribute('y', gy + 4);
+      lbl.setAttribute('text-anchor', 'end');
+      lbl.setAttribute('fill', 'var(--muted)');
+      lbl.setAttribute('font-size', '12');
+      lbl.textContent = v.toFixed(2).replace('.', ',') + ' ' + (currency || '€');
+      svg.appendChild(lbl);
+    }
+
+    // labels X : date min / date max
+    const fmt = (d) => d.toISOString().slice(0, 10);
+    [data[0].date, data[data.length - 1].date].forEach(d => {
+      const txt = document.createElementNS(NS, 'text');
+      txt.setAttribute('x', tx(d.getTime()));
+      txt.setAttribute('y', y0 + 18);
+      txt.setAttribute('text-anchor', 'middle');
+      txt.setAttribute('fill', 'var(--muted)');
+      txt.setAttribute('font-size', '12');
+      txt.textContent = fmt(d);
+      svg.appendChild(txt);
+    });
+
+    // courbe
+    let dAttr = '';
+    data.forEach((pt, i) => {
+      const x = tx(pt.date.getTime()), y = ty(pt.price);
+      dAttr += (i ? ' L ' : 'M ') + x + ' ' + y;
+    });
+    const path = document.createElementNS(NS, 'path');
+    path.setAttribute('d', dAttr);
+    path.setAttribute('fill', 'none');
+    path.setAttribute('stroke', 'var(--accent, #4da3ff)');
+    path.setAttribute('stroke-width', '2');
+    svg.appendChild(path);
+
+    // points
+    data.forEach(pt => {
+      const c = document.createElementNS(NS, 'circle');
+      c.setAttribute('cx', tx(pt.date.getTime()));
+      c.setAttribute('cy', ty(pt.price));
+      c.setAttribute('r', '3');
+      c.setAttribute('fill', 'var(--accent, #4da3ff)');
+      c.setAttribute('aria-label', `${fmt(pt.date)} · ${pt.price.toFixed(2).replace('.', ',')} ${(currency || '€')}`);
+      svg.appendChild(c);
+    });
+
+    container.appendChild(svg);
+  }
+
 
   document.addEventListener('click', (e) => {
     const btn = e.target.closest('.js-view-open');
