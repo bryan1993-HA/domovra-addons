@@ -2,8 +2,7 @@
 from fastapi import APIRouter, Request, Form
 from fastapi.responses import HTMLResponse, RedirectResponse
 from urllib.parse import urlencode
-
-import json  # ← AJOUT
+import json
 
 from utils.http import ingress_base, render as render_with_env
 from services.events import log_event
@@ -14,10 +13,9 @@ from db import (
     add_product, update_product, delete_product,
     # ajustements rapides
     add_lot, list_lots, consume_lot,
-    # ← AJOUT
+    # prix
     list_price_history_for_product,
 )
-
 
 router = APIRouter()
 
@@ -47,12 +45,12 @@ def products_page(request: Request):
     parents = list_products()
     insights = list_product_insights()
 
-    # Enrichir chaque produit avec last_price + historique JSON
+    # Enrichir chaque produit avec last_price + historique JSON (pour la modale Voir)
     for it in items:
         pid = int(it["id"])
         hist = list_price_history_for_product(pid, limit=10) or []
         it["last_price"] = (hist[0]["price"] if hist else None)
-        it["currency"] = "€"  # plus tard: lire depuis settings si besoin
+        it["currency"] = "€"  # TODO: lire depuis settings si besoin
         it["price_history_json"] = json.dumps(hist, ensure_ascii=False)
 
     loc_map = {str(loc["id"]): loc["name"] for loc in (locations or [])}
@@ -100,7 +98,8 @@ def product_add(
     if isinstance(min_qty, str) and min_qty.strip():
         try:
             mq = float(min_qty)
-            if mq < 0: mq = 0.0
+            if mq < 0:
+                mq = 0.0
         except Exception:
             mq = None
 
@@ -171,7 +170,8 @@ def product_update(
     if isinstance(min_qty, str) and min_qty.strip():
         try:
             mq = float(min_qty)
-            if mq < 0: mq = 0.0
+            if mq < 0:
+                mq = 0.0
         except Exception:
             mq = None
 
@@ -204,16 +204,16 @@ def product_update(
         "parent_id": parent_id or None,
     })
 
-    return RedirectResponse(ingress_base(request)+"products",
-                            status_code=303, headers={"Cache-Control":"no-store"})
+    return RedirectResponse(ingress_base(request) + "products",
+                            status_code=303, headers={"Cache-Control": "no-store"})
 
 
 @router.post("/product/delete")
 def product_delete(request: Request, product_id: int = Form(...)):
     delete_product(product_id)
     log_event("product.delete", {"id": product_id})
-    return RedirectResponse(ingress_base(request)+"products",
-                            status_code=303, headers={"Cache-Control":"no-store"})
+    return RedirectResponse(ingress_base(request) + "products",
+                            status_code=303, headers={"Cache-Control": "no-store"})
 
 
 @router.post("/product/adjust")
@@ -248,5 +248,4 @@ def product_adjust(request: Request, product_id: int = Form(...), delta: int = F
             remaining -= consume
         log_event("product.adjust", {"id": product_id, "delta": qty, "action": "consume"})
 
-    return RedirectResponse(ingress_base(request) + "products",
-                            status_code=303)
+    return RedirectResponse(ingress_base(request) + "products", status_code=303)
