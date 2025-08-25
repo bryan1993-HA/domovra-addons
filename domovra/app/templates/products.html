@@ -883,30 +883,11 @@ Astuce : tu peux combiner (ex. « ddm produits laitiers »)."></span>
     const currency = btn.dataset.priceCurrency || '€';
     document.getElementById('v-last-price').textContent = fmtPrice(btn.dataset.lastPrice, currency);
 
-    // Historique des prix
+    // Historique des prix → graphique
     let history = [];
     try { history = JSON.parse(btn.dataset.priceHistory || '[]'); } catch { }
-    const box = document.getElementById('v-price-history');
-    if (!history.length) {
-      box.innerHTML = 'Pas d’historique de prix pour ce produit.';
-    } else {
-      history.sort((a, b) => String(b.date).localeCompare(String(a.date)));
-      const rows = history.slice(0, 10).map(r => `
-    <div class="row" style="gap:8px">
-      <div style="width:110px">${r.date || ''}</div>
-      <div style="width:110px">${fmtPrice(r.price, currency)}</div>
-      <div style="width:120px">${r.qty || '—'} ${r.unit || ''}</div>
-      <div style="flex:1" class="muted">${r.source || '—'}</div>
-    </div>
-  `).join('');
-      box.innerHTML = `
-    <div class="row" style="font-weight:600;gap:8px">
-      <div style="width:110px">Date</div>
-      <div style="width:110px">Prix</div>
-      <div style="width:120px">Qté</div>
-      <div style="flex:1">Source</div>
-    </div>` + rows;
-    }
+    const chartBox = document.getElementById('v-price-chart');
+    renderPriceChart(chartBox, history, currency);
 
 
     const encoded = encodeURIComponent(name);
