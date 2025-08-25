@@ -250,7 +250,9 @@ Astuce : tu peux combiner (ex. « ddm produits laitiers »)."></span>
             data-shelf="{{ it.default_shelf_life_days or '' }}"
             data-default-location="{{ it.default_location_id or '' }}" data-barcode="{{ it.barcode or '' }}"
             data-min="{{ it.min_qty if it.min_qty is not none else '' }}" data-desc="{{ it.description or '' }}"
-            data-lots="{{ it.lots_count|int }}" data-qty="{{ '%.2f'|format(it.qty_total) }}">
+            data-lots="{{ it.lots_count|int }}" data-qty="{{ '%.2f'|format(it.qty_total) }}"
+            data-last-price="{{ it.last_price or '' }}" data-price-currency="{{ it.currency or '€' }}"
+            data-price-history='{{ (it.price_history_json or "[]")|safe }}'>
             👁️ Voir
           </button>
 
@@ -298,7 +300,7 @@ Astuce : tu peux combiner (ex. « ddm produits laitiers »)."></span>
       <div><b>Emplacement par défaut :</b> <span id="v-loc">—</span></div>
       <div><b>Dernier achat :</b> <span id="v-last-in">Jamais</span></div>
       <div><b>Dernière utilisation :</b> <span id="v-last-out">Jamais</span></div>
-      <div><b>Dernier prix :</b> <span class="muted">—</span></div>
+      <div><b>Dernier prix :</b> <span id="v-last-price">—</span></div>
       <div><b>stock moyen :</b> <span class="muted">—</span></div>
       <div><b>Durée moyenne de conservation :</b> <span id="v-avg-shelf">—</span></div>
       <div><b>Taux de péremption :</b> <span id="v-expired-rate">—</span></div>
@@ -306,8 +308,8 @@ Astuce : tu peux combiner (ex. « ddm produits laitiers »)."></span>
 
     <div>
       <h3 style="margin:8px 0 6px">Historique des prix</h3>
-      <div class="muted" style="border:1px dashed var(--line);border-radius:10px;padding:12px">
-        Suivi des prix non activé dans Domovra V1 (sera alimenté via la page Stock).
+      <div id="v-price-history" class="muted" style="border:1px dashed var(--line);border-radius:10px;padding:12px">
+        Pas d’historique de prix pour ce produit.
       </div>
     </div>
 
@@ -744,6 +746,44 @@ Astuce : tu peux combiner (ex. « ddm produits laitiers »)."></span>
     document.getElementById('v-last-out').textContent = lastOut;
     document.getElementById('v-avg-shelf').textContent = avgShelf;
     document.getElementById('v-expired-rate').textContent = expRate;
+
+    // ==== AJOUT POUR LES PRIX ====
+    function fmtPrice(n, cur) {
+      if (!n) return '—';
+      const v = Number(n);
+      if (Number.isNaN(v)) return '—';
+      return v.toFixed(2).replace('.', ',') + ' ' + (cur || '€');
+    }
+
+    // Dernier prix
+    const currency = btn.dataset.priceCurrency || '€';
+    document.getElementById('v-last-price').textContent = fmtPrice(btn.dataset.lastPrice, currency);
+
+    // Historique des prix
+    let history = [];
+    try { history = JSON.parse(btn.dataset.priceHistory || '[]'); } catch { }
+    const box = document.getElementById('v-price-history');
+    if (!history.length) {
+      box.innerHTML = 'Pas d’historique de prix pour ce produit.';
+    } else {
+      history.sort((a, b) => String(b.date).localeCompare(String(a.date)));
+      const rows = history.slice(0, 10).map(r => `
+    <div class="row" style="gap:8px">
+      <div style="width:110px">${r.date || ''}</div>
+      <div style="width:110px">${fmtPrice(r.price, currency)}</div>
+      <div style="width:120px">${r.qty || '—'} ${r.unit || ''}</div>
+      <div style="flex:1" class="muted">${r.source || '—'}</div>
+    </div>
+  `).join('');
+      box.innerHTML = `
+    <div class="row" style="font-weight:600;gap:8px">
+      <div style="width:110px">Date</div>
+      <div style="width:110px">Prix</div>
+      <div style="width:120px">Qté</div>
+      <div style="flex:1">Source</div>
+    </div>` + rows;
+    }
+
 
     const encoded = encodeURIComponent(name);
     const linkIn = document.getElementById('v-tab-in');
