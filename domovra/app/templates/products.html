@@ -296,7 +296,7 @@ Astuce : tu peux combiner (ex. « ddm produits laitiers »)."></span>
 
     <div class="kv">
       <div><b>Quantité en stock :</b> <span id="v-qty">—</span></div>
-      <div><b>Valeur du stock :</b> <span id="v-stock-value" class="muted">— (non suivi)</span></div>
+      <div><b>Valeur du stock :</b> <span id="v-stock-value" class="muted">— (inconnu)</span></div>
       <div><b>Emplacement par défaut :</b> <span id="v-loc">—</span></div>
       <div><b>Dernier achat :</b> <span id="v-last-in">Jamais</span></div>
       <div><b>Dernière utilisation :</b> <span id="v-last-out">Jamais</span></div>
@@ -871,24 +871,66 @@ Astuce : tu peux combiner (ex. « ddm produits laitiers »)."></span>
     document.getElementById('v-avg-shelf').textContent = avgShelf;
     document.getElementById('v-expired-rate').textContent = expRate;
 
-    // ==== AJOUT POUR LES PRIX ====
+    // ==== PRIX / HISTORIQUE / VALEUR DE STOCK ====
     function fmtPrice(n, cur) {
       if (!n) return '—';
       const v = Number(n);
-      if (Number.isNaN(v)) return '—';
+      if (!isFinite(v)) return '—';
       return v.toFixed(2).replace('.', ',') + ' ' + (cur || '€');
     }
 
-    // Dernier prix (affichage)
     const currency = btn.dataset.priceCurrency || '€';
     const lastPrice = parseFloat(btn.dataset.lastPrice || '0') || 0;
     document.getElementById('v-last-price').textContent = fmtPrice(lastPrice, currency);
 
-    // Historique des prix
+    // Historique (JSON) + graphique
     let history = [];
     try { history = JSON.parse(btn.dataset.priceHistory || '[]'); } catch { }
-    const chartBox = document.getElementById('v-price-chart');
-    renderPriceChart(chartBox, history, currency);
+    renderPriceChart(document.getElementById('v-price-chart'), history, currency);
+
+    // Dernier achat = date la plus récente de l'historique
+    if (Array.isArray(history) && history.length) {
+      const lastBuy = history
+        .map(r => new Date(r.date))
+        .filter(d => !isNaN(d))
+        .sort((a, b) => b - a)[0];
+      if (lastBuy) {
+        document.getElementById('v-last-in').textContent =
+          humanizeDate(lastBuy.toISOString().slice(0, 10));
+      }
+    }
+
+    // CMP (coût moyen pondéré) à partir de l’historique.
+    // Si une entrée n’a pas de qty, on lui met un poids = 1.
+    function weightedAvgUnitPrice(rows) {
+      let totalValue = 0, totalQty = 0;
+      for (const r of (rows || [])) {
+        const p = Number(r?.price);
+        let q = Number(r?.qty);
+        if (!isFinite(q) || q <= 0) q = 1;
+        if (isFinite(p) && p > 0) {
+          totalValue += p * q;
+          totalQty += q;
+        }
+      }
+      return totalQty > 0 ? (totalValue / totalQty) : 0;
+    }
+
+    // Valeur du stock = quantité actuelle × (CMP ou, à défaut, dernier prix)
+    const qtyNum = parseFloat((btn.dataset.qty || '0').replace(',', '.')) || 0;
+    const cmp = weightedAvgUnitPrice(history) || lastPrice;
+
+    const vStock = document.getElementById('v-stock-value');
+    if (vStock) {
+      if (qtyNum > 0 && cmp > 0) {
+        vStock.textContent = fmtPrice(qtyNum * cmp, currency);
+        vStock.classList.remove('muted');
+      } else {
+        vStock.textContent = '— (inconnu)';
+        vStock.classList.add('muted');
+      }
+    }
+
 
     // === Dernier achat (date la plus récente de l'historique) ===
     if (Array.isArray(history) && history.length) {
