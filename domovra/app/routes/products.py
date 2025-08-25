@@ -38,34 +38,37 @@ def _get_step_for_unit(unit: str) -> float:
     return 1.0
 
 
-items = list_products_with_stats()
-locations = list_locations()
-parents = list_products()
-insights = list_product_insights()
+@router.get("/products", response_class=HTMLResponse)
+def products_page(request: Request):
+    base = ingress_base(request)
 
-# ← AJOUT : enrichir chaque produit avec last_price + historique JSON
-for it in items:
-    pid = int(it["id"])
-    hist = list_price_history_for_product(pid, limit=10) or []
-    it["last_price"] = (hist[0]["price"] if hist else None)
-    it["currency"] = "€"  # si tu veux, plus tard on le lira depuis les settings
-    it["price_history_json"] = json.dumps(hist, ensure_ascii=False)
+    items = list_products_with_stats()
+    locations = list_locations()
+    parents = list_products()
+    insights = list_product_insights()
 
-loc_map = {str(loc["id"]): loc["name"] for loc in (locations or [])}
+    # Enrichir chaque produit avec last_price + historique JSON
+    for it in items:
+        pid = int(it["id"])
+        hist = list_price_history_for_product(pid, limit=10) or []
+        it["last_price"] = (hist[0]["price"] if hist else None)
+        it["currency"] = "€"  # plus tard: lire depuis settings si besoin
+        it["price_history_json"] = json.dumps(hist, ensure_ascii=False)
 
-return render_with_env(
-    request.app.state.templates,
-    "products.html",
-    BASE=base,
-    page="products",
-    request=request,
-    items=items,
-    locations=locations,
-    parents=parents,
-    insights=insights,
-    loc_map=loc_map,
-)
+    loc_map = {str(loc["id"]): loc["name"] for loc in (locations or [])}
 
+    return render_with_env(
+        request.app.state.templates,
+        "products.html",
+        BASE=base,
+        page="products",
+        request=request,
+        items=items,
+        locations=locations,
+        parents=parents,
+        insights=insights,
+        loc_map=loc_map,
+    )
 
 
 @router.post("/product/add")
