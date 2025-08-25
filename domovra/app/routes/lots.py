@@ -91,33 +91,21 @@ def lot_consume_action(request: Request, lot_id: int = Form(...), qty: float = F
 @router.post("/lot/delete")
 def lot_delete_action(request: Request, lot_id: int = Form(...)):
     try:
-        affected = delete_lot(int(lot_id))
+        affected = delete_lot(int(lot_id))  # doit retourner rowcount (0 ou 1)
     except Exception as e:
-        # Renvoie une erreur claire au lieu d'un 500 générique
-        return JSONResponse(
-            {"error": "delete_failed", "lot_id": lot_id, "detail": str(e)},
-            status_code=500
-        )
+        return JSONResponse({"error": "delete_failed", "lot_id": lot_id, "detail": str(e)}, status_code=500)
 
+    # Idempotent : si déjà supprimé, on ne casse pas l'UX
+    base = ingress_base(request)
     if not affected:
-        # ID inexistant → 404 explicite
-        return JSONResponse(
-            {"error": "not_found", "lot_id": lot_id},
-            status_code=404
-        )
+        return RedirectResponse(base + "lots?deleted=1", status_code=303, headers={"Cache-Control": "no-store"})
 
-    # Journal (si ton log_event est synchrone avec cette signature)
     try:
         log_event("lot.delete", {"lot_id": lot_id})
     except Exception:
-        # On ignore le log si ça échoue (pour ne pas casser la suppression)
         pass
 
-    return RedirectResponse(
-        ingress_base(request) + "lots?deleted=1",
-        status_code=303,
-        headers={"Cache-Control": "no-store"}
-    )
+    return RedirectResponse(base + "lots?deleted=1", status_code=303, headers={"Cache-Control": "no-store"})
 
 
 # (optionnel) petit debug JSON pratique
