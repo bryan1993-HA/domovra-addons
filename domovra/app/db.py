@@ -680,3 +680,34 @@ def list_price_history_for_product(product_id: int, limit: int = 10):
             (int(product_id), int(limit))
         ).fetchall()
         return [dict(r) for r in rows]
+
+def current_stock_value_by_product():
+    """
+    Retourne un dict {product_id: valeur_en_euros_du_stock_courant}.
+    On calcule la valeur restante par lot :
+      price_total * (qty_restante / (qty_per_unit * multiplier))
+    On ignore les lots sans prix/quantité valides.
+    """
+    with _conn() as c:
+        rows = c.execute("""
+            SELECT
+              l.product_id AS product_id,
+              SUM(
+                CASE
+                  WHEN l.price_total IS NULL
+                    OR l.qty_per_unit IS NULL
+                    OR l.multiplier IS NULL
+                    OR (l.qty_per_unit * l.multiplier) <= 0
+                  THEN NULL
+                  ELSE l.price_total * (l.qty / (l.qty_per_unit * l.multiplier))
+                END
+              ) AS value
+            FROM stock_lots l
+            WHERE l.qty > 0
+            GROUP BY l.product_id
+        """).fetchall()
+        out = {}
+        for r in rows:
+            v = r["value"]
+            out[int(r["product_id"])] = float(v) if v is not None else 0.0
+        return out

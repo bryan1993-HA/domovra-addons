@@ -6,15 +6,14 @@ import json
 
 from utils.http import ingress_base, render as render_with_env
 from services.events import log_event
+import json  # >>> AJOUT si absent
+
 from db import (
-    # affichage
     list_products_with_stats, list_locations, list_products, list_product_insights,
-    # CRUD
     add_product, update_product, delete_product,
-    # ajustements rapides
     add_lot, list_lots, consume_lot,
-    # prix
     list_price_history_for_product,
+    current_stock_value_by_product,  # >>> AJOUT
 )
 
 router = APIRouter()
@@ -44,6 +43,7 @@ def products_page(request: Request):
     locations = list_locations()
     parents = list_products()
     insights = list_product_insights()
+    stock_values = current_stock_value_by_product()
 
     # Enrichir chaque produit avec last_price + historique JSON (pour la modale Voir)
     for it in items:
@@ -52,6 +52,7 @@ def products_page(request: Request):
         it["last_price"] = (hist[0]["price"] if hist else None)
         it["currency"] = "€"  # TODO: lire depuis settings si besoin
         it["price_history_json"] = json.dumps(hist, ensure_ascii=False)
+        it["stock_value"] = stock_values.get(pid, 0.0)
 
     loc_map = {str(loc["id"]): loc["name"] for loc in (locations or [])}
 
