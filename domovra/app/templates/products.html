@@ -931,54 +931,6 @@ Astuce : tu peux combiner (ex. « ddm produits laitiers »)."></span>
       }
     }
 
-
-    // === Dernier achat (date la plus récente de l'historique) ===
-    if (Array.isArray(history) && history.length) {
-      const lastBuy = history
-        .map(r => new Date(r.date))
-        .filter(d => !isNaN(d))
-        .sort((a, b) => b - a)[0];
-      if (lastBuy) {
-        document.getElementById('v-last-in').textContent =
-          humanizeDate(lastBuy.toISOString().slice(0, 10));
-      }
-    }
-
-    // === Valeur du stock : coût moyen pondéré (CMP) sur l'historique ===
-    // Si une ligne d'historique a un prix "pour le lot/pack", tu peux mettre la quantité achetée dans r.qty.
-    // Le CMP = somme(prix * qty) / somme(qty). Si qty manquant → poids = 1.
-    function weightedAvgUnitPrice(rows) {
-      let totalValue = 0, totalQty = 0;
-      for (const r of (rows || [])) {
-        const p = Number(r?.price);
-        let q = Number(r?.qty);
-        if (!isFinite(q) || q <= 0) q = 1;     // fallback si qty absente
-        if (isFinite(p) && p > 0) {
-          totalValue += p * q;
-          totalQty += q;
-        }
-      }
-      return totalQty > 0 ? (totalValue / totalQty) : 0;
-    }
-
-    const vStock = document.getElementById('v-stock-value');
-    const qtyNum = parseFloat((btn.dataset.qty || '0').replace(',', '.')) || 0;
-
-    // CMP calculé à partir de l'historique ; à défaut, on retombe sur le dernier prix connu.
-    const cmp = weightedAvgUnitPrice(history) || lastPrice;
-
-    if (vStock) {
-      if (qtyNum > 0 && cmp > 0) {
-        vStock.textContent = fmtPrice(qtyNum * cmp, currency);
-        vStock.classList.remove('muted');
-      } else {
-        vStock.textContent = '— (inconnu)';
-        vStock.classList.add('muted');
-      }
-    }
-
-
-
     const encoded = encodeURIComponent(name);
     const linkIn = document.getElementById('v-tab-in');
     const linkJ = document.getElementById('v-tab-journal');
@@ -986,7 +938,8 @@ Astuce : tu peux combiner (ex. « ddm produits laitiers »)."></span>
     if (linkJ) linkJ.href = '{{ BASE }}journal';
 
     document.getElementById('dlg-view').showModal();
-  });
+  }); // <-- FIN du handler .js-view-open
+
 
   /* ====== AJOUT : logique d’unité -> min_qty (step visuel + hint) ====== */
   (function setupCreateFormUnitLogic() {
@@ -1000,16 +953,14 @@ Astuce : tu peux combiner (ex. « ddm produits laitiers »)."></span>
     function applyCreateMinUnitLogic() {
       const u = unitSel?.value || 'pièce';
       const cfg = cfgForUnit(u);
-
       if (minInput) {
-        minInput.setAttribute('step', 'any');           // autorise tout
-        minInput.dataset.stepCustom = String(cfg.step); // pas pour flèches
+        minInput.setAttribute('step', 'any');
+        minInput.dataset.stepCustom = String(cfg.step);
         minInput.placeholder = cfg.placeholder;
       }
       if (minSuffix) minSuffix.textContent = cfg.suffix;
       if (minHint) minHint.textContent = cfg.hint || '';
     }
-
     function applyCreateFreezeVisibility() {
       if (!noFreeze || !freezeGrp) return;
       freezeGrp.style.display = noFreeze.checked ? 'none' : '';
@@ -1021,6 +972,7 @@ Astuce : tu peux combiner (ex. « ddm produits laitiers »)."></span>
     applyCreateMinUnitLogic();
     applyCreateFreezeVisibility();
   })();
+
 
   /* ====== ÉDITION : logique d’unité -> min_qty (step visuel) ====== */
   function applyDlgMinUnitLogic() {
@@ -1042,6 +994,7 @@ Astuce : tu peux combiner (ex. « ddm produits laitiers »)."></span>
     grp.style.display = nf.checked ? 'none' : '';
   }
 
+  // Handler pour boutons "Modifier" et "Supprimer" (séparé du handler .js-view-open)
   document.addEventListener('click', function (e) {
     const edit = e.target.closest('.js-edit-open');
     const del = e.target.closest('.js-delete-open');
@@ -1099,8 +1052,8 @@ Astuce : tu peux combiner (ex. « ddm produits laitiers »)."></span>
     if (e.key === 'ArrowUp') { e.preventDefault(); input.value = (cur + step).toString(); }
     if (e.key === 'ArrowDown') { e.preventDefault(); input.value = (cur - step).toString(); }
   });
-
 </script>
+
 
 
 {% endblock %}
