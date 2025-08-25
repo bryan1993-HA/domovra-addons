@@ -657,3 +657,26 @@ def list_product_insights():
                 "expired_rate": float(r["expired_rate"]) if r["expired_rate"] is not None else None,
             }
         return out
+# APRÈS — À AJOUTER dans db.py
+def list_price_history_for_product(product_id: int, limit: int = 10):
+    """
+    Renvoie les dernières lignes de prix pour un produit à partir des lots saisis.
+    Chaque ligne : {date, price, qty, unit, source}
+    """
+    with _conn() as c:
+        rows = c.execute(
+            """
+            SELECT
+              COALESCE(created_on, date('now')) AS date,
+              price_total AS price,
+              qty_per_unit AS qty,
+              unit_at_purchase AS unit,
+              store AS source
+            FROM stock_lots
+            WHERE product_id = ? AND price_total IS NOT NULL
+            ORDER BY COALESCE(created_on, '0000-00-00') DESC
+            LIMIT ?
+            """,
+            (int(product_id), int(limit))
+        ).fetchall()
+        return [dict(r) for r in rows]
