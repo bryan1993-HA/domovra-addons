@@ -46,13 +46,55 @@ def products_page(request: Request):
     stock_values = current_stock_value_by_product()
 
     # Enrichir chaque produit avec last_price + historique JSON (pour la modale Voir)
+    # Enrichir chaque produit avec:
+    #  - last_price_unit = dernier prix *unitaire* (prix_total / quantité_achetée)
+    #  - historique JSON (graph)
+    #  - stock_value = somme réelle des lots restants (DB)
     for it in items:
         pid = int(it["id"])
         hist = list_price_history_for_product(pid, limit=10) or []
-        it["last_price"] = (hist[0]["price"] if hist else None)
+
+        # ===== Dernier prix unitaire =====
+        last_unit = None
+        if hist:
+            r0 = hist[0]  # entrée la plus récente
+            price_total = float(r0.get("price") or 0)  # "price" = prix total saisi lors de l'achat
+
+            # On cherche d'abord une quantité totale fiable pour ce lot d'achat.
+            qty_hist = r0.get("qty")
+            qty_per_unit = r0.get("qty_per_unit")
+            multiplier = r0.get("multiplier")
+
+            qty_total = None
+            # cas 1: l'historique fournit directement la quantité (ex: 3 L)
+            if qty_hist is not None:
+                try:
+                    q = float(qty_hist)
+                    if q > 0:
+                        qty_total = q
+                except Exception:
+                    pass
+
+            # cas 2: sinon on reconstitue: qty_per_unit × multiplier (ex: 1 L × 3)
+            if qty_total is None and (qty_per_unit is not None or multiplier is not None):
+                try:
+                    qpu = float(qty_per_unit or 0)
+                    mul = float(multiplier or 0)
+                    q = qpu * mul
+                    if q > 0:
+                        qty_total = q
+                except Exception:
+                    pass
+
+            # Si on a une quantité correcte, on calcule le prix unitaire
+            if price_total > 0 and qty_total and qty_total > 0:
+                last_unit = price_total / qty_total
+
+        it["last_price_unit"] = last_unit  # peut être None si inconnu
         it["currency"] = "€"  # TODO: lire depuis settings si besoin
         it["price_history_json"] = json.dumps(hist, ensure_ascii=False)
         it["stock_value"] = stock_values.get(pid, 0.0)
+
 
     loc_map = {str(loc["id"]): loc["name"] for loc in (locations or [])}
 

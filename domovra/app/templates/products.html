@@ -251,7 +251,8 @@ Astuce : tu peux combiner (ex. « ddm produits laitiers »)."></span>
             data-default-location="{{ it.default_location_id or '' }}" data-barcode="{{ it.barcode or '' }}"
             data-min="{{ it.min_qty if it.min_qty is not none else '' }}" data-desc="{{ it.description or '' }}"
             data-lots="{{ it.lots_count|int }}" data-qty="{{ '%.2f'|format(it.qty_total) }}"
-            data-last-price="{{ it.last_price or '' }}" data-price-currency="{{ it.currency or '€' }}"
+            data-last-price="{{ '%.2f'|format(it.last_price_unit) if it.last_price_unit else '' }}"
+            data-price-currency="{{ it.currency or '€' }}"
             data-price-history='{{ (it.price_history_json or "[]")|safe }}'
             data-stock-value="{{ '%.2f'|format(it.stock_value) if it.stock_value else '' }}">
             👁️ Voir
@@ -881,12 +882,13 @@ Astuce : tu peux combiner (ex. « ddm produits laitiers »)."></span>
       return v.toFixed(2).replace('.', ',') + ' ' + (cur || '€');
     }
 
-    // Devise + dernier prix (affichage simple)
     const currency = btn.dataset.priceCurrency || '€';
-    const lastPrice = parseFloat(btn.dataset.lastPrice || '0') || 0;
-    document.getElementById('v-last-price').textContent = fmtPrice(lastPrice, currency);
 
-    // Historique (JSON) + graphique
+    // (A) Dernier prix = **prix unitaire**
+    const lastPriceUnit = parseFloat(btn.dataset.lastPrice || '0') || 0;
+    document.getElementById('v-last-price').textContent = fmtPrice(lastPriceUnit, currency);
+
+    // (B) Historique (pour le graphique et la date du dernier achat)
     let history = [];
     try { history = JSON.parse(btn.dataset.priceHistory || '[]'); } catch { }
     renderPriceChart(document.getElementById('v-price-chart'), history, currency);
@@ -903,11 +905,11 @@ Astuce : tu peux combiner (ex. « ddm produits laitiers »)."></span>
       }
     }
 
-    // 1) Valeur exacte envoyée par le serveur (somme réelle des lots restants)
+    // (C) Valeur du stock — priorité à la **vraie valeur** calculée côté serveur
     const vStock = document.getElementById('v-stock-value');
     const stockValueData = parseFloat((btn.dataset.stockValue || '').replace(',', '.'));
 
-    // 2) Fallback minimal: quantité × CMP si jamais data-stock-value est absent
+    // Fallback minimal si jamais data-stock-value est absent : quantité × CMP
     function weightedAvgUnitPrice(rows) {
       let totalValue = 0, totalQty = 0;
       for (const r of (rows || [])) {
@@ -918,16 +920,17 @@ Astuce : tu peux combiner (ex. « ddm produits laitiers »)."></span>
       }
       return totalQty > 0 ? (totalValue / totalQty) : 0;
     }
+
     const qtyNum = parseFloat((btn.dataset.qty || '0').replace(',', '.')) || 0;
-    const cmp = weightedAvgUnitPrice(history) || lastPrice;
+    const cmp = weightedAvgUnitPrice(history) || lastPriceUnit; // on peut fallback sur le prix unitaire
 
     if (vStock) {
       if (isFinite(stockValueData) && stockValueData > 0) {
-        // ✅ Affiche la vraie valeur calculée côté serveur (ex: 4,27 €)
+        // ✅ vraie somme des lots restants (ex: 4,27 €)
         vStock.textContent = fmtPrice(stockValueData, currency);
         vStock.classList.remove('muted');
       } else if (qtyNum > 0 && cmp > 0) {
-        // ⛑️ Fallback
+        // ⛑️ fallback de secours
         vStock.textContent = fmtPrice(qtyNum * cmp, currency);
         vStock.classList.remove('muted');
       } else {
@@ -935,7 +938,6 @@ Astuce : tu peux combiner (ex. « ddm produits laitiers »)."></span>
         vStock.classList.add('muted');
       }
     }
-
 
     const encoded = encodeURIComponent(name);
     const linkIn = document.getElementById('v-tab-in');
