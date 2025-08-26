@@ -106,6 +106,40 @@ log = logging.getLogger("domovra.api")
 from fastapi import Query
 from db import list_products, list_lots
 
+# ---- Helpers internes (fallback champs produit) ----------------------------
+
+from typing import Optional, Iterable
+
+def _first_non_empty(*vals: Optional[str]) -> Optional[str]:
+    """Retourne la 1re valeur non vide (après trim), sinon None."""
+    for v in vals:
+        if v is None:
+            continue
+        s = str(v).strip()
+        if s != "":
+            return s
+    return None
+
+def _get_product_fields_from_db(prod_id: int, wanted: Iterable[str]) -> Dict[str, str]:
+    """
+    Lit les colonnes *existantes* parmi 'wanted' pour le produit 'prod_id'.
+    Renvoie un dict {col: valeur} avec valeurs déjà COALESCE('','').
+    """
+    with _conn() as c:
+        cols = [r["name"] for r in c.execute("PRAGMA table_info(products)")]
+
+        picks = [col for col in wanted if col in cols]
+        if not picks:
+            return {}
+
+        select_expr = ", ".join([f"COALESCE({col}, '') AS {col}" for col in picks])
+        row = c.execute(
+            f"SELECT {select_expr} FROM products WHERE id = ? LIMIT 1",
+            (prod_id,),
+        ).fetchone()
+        return dict(row) if row else {}
+
+
 @router.get("/api/product-info")
 def api_product_info(product_id: int = Query(..., ge=1)) -> JSONResponse:
     """
@@ -113,7 +147,7 @@ def api_product_info(product_id: int = Query(..., ge=1)) -> JSONResponse:
       - fifo.lot_id (lot à consommer en premier, basé sur la DLC la plus proche)
       - fifo.best_before
       - total_qty (somme des lots qty > 0 de ce produit)
-      - unit, brand (du produit)
+      - unit, brand (du produit) — robustes avec fallbacks
       - location (nom de l'emplacement du lot FIFO)
     """
     try:
@@ -122,14 +156,32 @@ def api_product_info(product_id: int = Query(..., ge=1)) -> JSONResponse:
         return JSONResponse({"error": "invalid product_id"}, status_code=400)
 
     try:
-        # 1) Produit (via helper, pour coller au schéma réel)
+        # 1) Produit via helpers (clé 'brand' peut varier selon dumps)
         prods = list_products() or []
         prod = next((p for p in prods if int(p.get("id", 0)) == pid), None)
         if not prod:
             return JSONResponse({"error": "not found"}, status_code=404)
 
-        unit = prod.get("unit")
-        brand = prod.get("brand")
+        # Fallbacks fréquents pour unit/brand (différents dumps ou anciennes versions)
+        unit = _first_non_empty(
+            prod.get("unit"), prod.get("uom"), prod.get("unity"), prod.get("unite")
+        )
+        brand = _first_non_empty(
+            prod.get("brand"), prod.get("brands"), prod.get("brand_name"),
+            prod.get("marque"), prod.get("producer")
+        )
+
+        # 1.b : si toujours vide, tente lecture directe DB sur les colonnes existantes
+        if unit is None or brand is None:
+            raw = _get_product_fields_from_db(pid, [
+                "unit", "uom", "unity", "unite",
+                "brand", "brands", "brand_name", "marque", "producer",
+            ])
+            if unit is None:
+                unit = _first_non_empty(raw.get("unit"), raw.get("uom"), raw.get("unity"), raw.get("unite"))
+            if brand is None:
+                brand = _first_non_empty(raw.get("brand"), raw.get("brands"), raw.get("brand_name"),
+                                         raw.get("marque"), raw.get("producer"))
 
         # 2) Lots de ce produit (qty > 0)
         lots = [l for l in (list_lots() or [])
@@ -141,7 +193,7 @@ def api_product_info(product_id: int = Query(..., ge=1)) -> JSONResponse:
         # 3) FIFO = DLC la plus proche ; DLC vides en dernier
         def fifo_key(l):
             bb = l.get("best_before")
-            # Mettre les vides après (astuce: "~" trie après les chiffres)
+            # vides après → astuce : "~" > chiffres en tri ASCII
             return ("~", "") if not bb else ("", str(bb))
 
         fifo = {"lot_id": None, "best_before": None, "location": None}
@@ -150,18 +202,17 @@ def api_product_info(product_id: int = Query(..., ge=1)) -> JSONResponse:
             fifo = {
                 "lot_id": first.get("id"),
                 "best_before": first.get("best_before"),
-                # 'location' (comme dans les templates Top8) avec fallback
                 "location": first.get("location") or first.get("location_name"),
             }
 
         return JSONResponse({
             "product_id": pid,
-            "unit": unit,
-            "brand": brand,
+            "unit": unit or "",     # renvoie string (facile à afficher côté UI)
+            "brand": brand or "",   # idem
             "total_qty": total_qty,
             "fifo": fifo,
         })
 
     except Exception as e:
-        # Temporairement verbeux pour debug (en dev uniquement)
+        # Tu peux logguer e si besoin
         return JSONResponse({"error": "server", "detail": str(e)}, status_code=500)
