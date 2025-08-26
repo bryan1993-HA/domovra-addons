@@ -135,6 +135,12 @@
 
       let lastInfo = null;
 
+      // ---------- Console helpers ----------
+      function log(...args) { try { console.log('[consume]', ...args); } catch { } }
+      function dbg(...args) { try { console.debug('[consume]', ...args); } catch { } }
+      function warn(...args) { try { console.warn('[consume]', ...args); } catch { } }
+      function err(...args) { try { console.error('[consume]', ...args); } catch { } }
+
       function normalize(s) {
         return (s || "").toString().trim().toLowerCase()
           .normalize('NFD').replace(/\p{Diacritic}/gu, '')
@@ -178,8 +184,10 @@
 
       async function fetchProductInfo(pid) {
         const url = makeIngressUrl('api/product-info', { product_id: String(pid) });
+        dbg('GET', url);
         const r = await fetch(url, { headers: { 'Accept': 'application/json' } });
         const txt = await r.text();
+        dbg('Response', r.status, txt);
         let data = null; try { data = JSON.parse(txt); } catch { }
         if (!r.ok) return { error: 'http', status: r.status };
         return data ?? { error: 'parse' };
@@ -215,8 +223,10 @@
       function fillInfos(payload) {
         if (!payload || payload.error) {
           lastInfo = null;
-          $fifo.textContent = payload?.error === 'http' ? `Erreur HTTP ${payload.status}`
+          const msg = payload?.error === 'http' ? `Erreur HTTP ${payload.status}`
             : payload?.error === 'parse' ? 'Réponse illisible' : 'Erreur réseau';
+          warn('fillInfos error:', payload);
+          $fifo.textContent = msg;
           $loc.textContent = '—';
           $tot.textContent = '—';
           $unit.textContent = '';
@@ -226,6 +236,7 @@
         }
 
         lastInfo = payload;
+        dbg('fillInfos payload:', payload);
 
         const lotId = payload.fifo && payload.fifo.lot_id ? payload.fifo.lot_id : null;
         const dlc = payload.fifo && payload.fifo.best_before ? payload.fifo.best_before : null;
@@ -256,6 +267,7 @@
         updateDebugLink(sel && sel.id ? sel.id : null);
         if (!sel || !sel.id) return;
 
+        dbg('onProductChanged -> product_id', sel.id);
         $hiddenId.value = String(sel.id);
         const data = await fetchProductInfo(sel.id);
         fillInfos(data);
@@ -267,44 +279,94 @@
         $qty.dispatchEvent(new Event('input'));
       }
 
-      // ---- Consommation FIFO via POST lot/consume (serveur existant) ----
+      // ---- API côté front ----
       async function postLotConsume(lotId, qty) {
         const url = new URL('lot/consume', window.location.href);
         const form = new URLSearchParams();
         form.set('lot_id', String(lotId));
         form.set('qty', String(qty));
-        // La route peut rediriger; on considère tout 2xx/3xx comme succès
+        dbg('POST lot/consume', { lotId, qty, url: url.toString() });
         const r = await fetch(url.toString(), {
           method: 'POST',
           headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
           body: form.toString()
         });
+        dbg('POST lot/consume -> status', r.status);
         return r.ok;
       }
 
+      async function logEvent(kind, payload) {
+        const url = makeIngressUrl('api/log');
+        try {
+          dbg('POST api/log', { kind, payload, url });
+          await fetch(url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ kind, payload })
+          });
+        } catch (e) {
+          warn('logEvent failed', e);
+        }
+      }
+
       async function consumeFIFO(pid, qty) {
-        // On se base sur lastInfo si c’est bien le même produit, sinon on refetch
         const info = (lastInfo && lastInfo.product_id === pid) ? lastInfo : await fetchProductInfo(pid);
         if (!info || info.error) throw new Error('info unavailable');
         if (!info.lots || info.lots.length === 0) throw new Error('no stock');
 
+        const productName = ($input.value || '').trim();
+        const unit = (info.unit || '').trim();
+
         let remaining = qty;
+        let consumed = 0;
         const ops = [];
 
-        for (const l of info.lots) {
-          if (remaining <= 1e-12) break;
-          const lotQty = parseFloat(l.qty || '0') || 0;
-          if (lotQty <= 0) continue;
-          const take = Math.min(remaining, lotQty);
+        console.groupCollapsed('[consume] FIFO run', { pid, qty });
+        try {
+          for (const l of info.lots) {
+            if (remaining <= 1e-12) break;
+            const lotQty = parseFloat(l.qty || '0') || 0;
+            if (lotQty <= 0) continue;
 
-          const ok = await postLotConsume(l.lot_id, take);
-          if (!ok) throw new Error('lot/consume failed');
+            const take = Math.min(remaining, lotQty);
+            dbg('lot step', { lot_id: l.lot_id, lotQty, take });
 
-          ops.push({ lot_id: l.lot_id, take, before: lotQty, best_before: l.best_before, location: l.location });
-          remaining = Math.max(0, remaining - take);
+            const ok = await postLotConsume(l.lot_id, take);
+            if (!ok) throw new Error('lot/consume failed');
+
+            consumed += take;
+            remaining = Math.max(0, remaining - take);
+            ops.push({ lot_id: l.lot_id, take, before: lotQty, after: Math.max(0, lotQty - take), best_before: l.best_before, location: l.location });
+
+            // LOG par lot
+            logEvent('lot_consume', {
+              lot_id: l.lot_id,
+              product_id: pid,
+              qty_delta: -take,
+              before: lotQty,
+              after: Math.max(0, lotQty - take),
+              best_before: l.best_before,
+              location: l.location,
+              unit,
+              name: productName
+            });
+          }
+        } finally {
+          console.groupEnd();
         }
 
-        return { remaining, ops };
+        // LOG récap produit
+        logEvent('product_consume', {
+          product_id: pid,
+          requested_qty: qty,
+          consumed_qty: consumed,
+          remaining_to_consume: remaining,
+          operations_count: ops.length,
+          unit,
+          name: productName
+        });
+
+        return { remaining, consumed, ops };
       }
 
       // ---------- Bouton "Valider la consommation" ----------
@@ -316,9 +378,9 @@
         try {
           const res = await consumeFIFO(pid, q);
           if (res.remaining > 0) {
-            (window.showToast || ((m) => alert(m)))(`Partiel : consommé ${q - res.remaining}/${q}`, 'warn');
+            (window.showToast || ((m) => alert(m)))(`Partiel : consommé ${res.consumed}/${q}`, 'warn');
           } else {
-            (window.showToast || ((m) => alert(m)))(`Consommé ${q}`, 'ok');
+            (window.showToast || ((m) => alert(m)))(`Consommé ${res.consumed}`, 'ok');
           }
           $qty.value = '';
 
@@ -326,6 +388,7 @@
           const info = await fetchProductInfo(pid);
           fillInfos(info);
         } catch (e) {
+          err('consume click failed', e);
           (window.showToast || ((m) => alert(m)))('Consommation impossible', 'error');
         }
       });
@@ -418,6 +481,8 @@
     <div class="muted">Aucun lot enregistré.</div>
     {% endif %}
   </div>
+</div>
+
 </div>
 
 <!-- Produits en faible stock (Top 8) -->

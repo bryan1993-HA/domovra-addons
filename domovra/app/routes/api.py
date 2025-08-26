@@ -248,3 +248,25 @@ def api_consume_lot(
         "remaining_to_consume": round(max(0.0, q - take), 6),
         "lot": {"lot_id": lid, "before": round(before, 6), "after": round(after, 6)},
     })
+
+# ---- Journalisation best-effort depuis le front --------------------
+def _try_log_event(kind: str, payload: Dict[str, Any]) -> None:
+    """Envoie dans un service d'événements si présent (ne plante jamais)."""
+    try:
+        from services.events import add_event  # optionnel selon ton projet
+        add_event(kind, payload)
+    except Exception:
+        pass
+
+@router.post("/api/log")
+def api_log(kind: str = Body(...), payload: Dict[str, Any] = Body(default_factory=dict)) -> JSONResponse:
+    """
+    Écrit un événement dans le journal (si dispo). N'affecte pas la DB.
+    Body JSON: { "kind": "lot_consume" | "product_consume", "payload": {...} }
+    """
+    try:
+        log.debug("api_log kind=%s payload=%s", kind, payload)
+        _try_log_event(kind, payload or {})
+        return JSONResponse({"ok": True})
+    except Exception:
+        return JSONResponse({"ok": False}, status_code=500)
