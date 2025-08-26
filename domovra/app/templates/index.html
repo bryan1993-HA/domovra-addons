@@ -8,7 +8,7 @@
 {% block content %}
 <div class="wrap">
 
-  <!-- Ajout express (inchangé) -->
+  <!-- Ajout express -->
   <div class="card">
     <div class="title">
       <h2>Ajout express</h2><span class="muted">→ produit existant → ajout au stock</span>
@@ -44,13 +44,13 @@
     </div>
   </div>
 
-  <!-- ===================== Carte : Consommer un produit ===================== -->
+  <!-- ===================== Consommer un produit ===================== -->
   <div class="card consume-card" data-role="consume">
     <div class="title">
       <h2>Consommer un produit</h2><span class="muted">→ sélectionnez un produit</span>
     </div>
 
-    <!-- Ligne 1 : Produit (datalist) -->
+    <!-- Produit (datalist) -->
     <div class="field">
       <div class="label">Produit</div>
       <input id="consume-product-input" list="consume-products-dl" placeholder="Commencez à taper..."
@@ -66,7 +66,7 @@
       <input type="hidden" id="consume-product-id">
     </div>
 
-    <!-- Ligne 2 : Infos FIFO + totaux -->
+    <!-- Infos -->
     <div class="consume-infos grid-2">
       <div class="info">
         <div class="muted">FIFO (lot) / DLC</div>
@@ -86,7 +86,7 @@
       </div>
     </div>
 
-    <!-- Ligne 3 : quantité + boutons rapides -->
+    <!-- Quantité -->
     <div class="field">
       <div class="label">Quantité à consommer</div>
       <div class="qty-controls">
@@ -105,7 +105,7 @@
       <span id="consume-json-meta"></span>
     </div>
 
-    <!-- Ligne 4 : bouton -->
+    <!-- Bouton -->
     <div class="field">
       <button type="button" class="btn primary" id="consume-validate" disabled>Valider la consommation</button>
       <div class="muted small">Consomme en FIFO (lot(s) à DLC la plus proche).</div>
@@ -115,7 +115,6 @@
   <!-- ===================== Script ===================== -->
   <script>
     (function () {
-      const BASE = "{{ BASE }}"; // pas requis pour Ingress mais on le garde si tu en as besoin
       const $input = document.getElementById('consume-product-input');
       const $hiddenId = document.getElementById('consume-product-id');
       const $dl = document.getElementById('consume-products-dl');
@@ -130,25 +129,18 @@
       const $btns = document.querySelectorAll('.quick-btns [data-qset]');
       const $validate = document.getElementById('consume-validate');
 
-      // Debug JSON
       const $debugRow = document.getElementById('consume-debug');
       const $jsonLink = document.getElementById('consume-json-link');
       const $jsonMeta = document.getElementById('consume-json-meta');
 
-      // État courant de /api/product-info
       let lastInfo = null;
 
-      // ---------- Helpers ----------
       function normalize(s) {
-        return (s || "")
-          .toString()
-          .trim()
-          .toLowerCase()
+        return (s || "").toString().trim().toLowerCase()
           .normalize('NFD').replace(/\p{Diacritic}/gu, '')
           .replace(/\s+/g, ' ');
       }
 
-      // Map "nom normalisé" -> { id, brand, unit }
       const nameMap = (() => {
         const map = new Map();
         $dl.querySelectorAll('option').forEach(opt => {
@@ -167,7 +159,6 @@
       function findSelectedProduct() {
         const val = ($input.value || '').trim();
         if (!val) return null;
-
         if (window.CSS && CSS.escape) {
           const opt = $dl.querySelector(`option[value="${CSS.escape(val)}"]`);
           if (opt) {
@@ -191,13 +182,9 @@
           const r = await fetch(url, { headers: { 'Accept': 'application/json' } });
           const txt = await r.text();
           let data = null; try { data = JSON.parse(txt); } catch { }
-          if (!r.ok) {
-            console.debug('[consume] API error', { url, status: r.status, body: txt });
-            return { error: 'http', status: r.status };
-          }
+          if (!r.ok) return { error: 'http', status: r.status };
           return data ?? { error: 'parse' };
-        } catch (e) {
-          console.debug('[consume] fetch failed', e);
+        } catch {
           return { error: 'fetch' };
         }
       }
@@ -232,9 +219,8 @@
       function fillInfos(payload) {
         if (!payload || payload.error) {
           lastInfo = null;
-          if (payload?.error === 'http') $fifo.textContent = `Erreur HTTP ${payload.status}`;
-          else if (payload?.error === 'parse') $fifo.textContent = 'Réponse illisible';
-          else $fifo.textContent = 'Erreur réseau';
+          $fifo.textContent = payload?.error === 'http' ? `Erreur HTTP ${payload.status}`
+            : payload?.error === 'parse' ? 'Réponse illisible' : 'Erreur réseau';
           $loc.textContent = '—';
           $tot.textContent = '—';
           $unit.textContent = '';
@@ -256,7 +242,6 @@
         $tot.textContent = t.toString();
         $unit.textContent = (payload.unit && String(payload.unit).trim()) || '';
 
-        // Marque : API -> datalist fallback
         let brandFromApi = (payload.brand && String(payload.brand).trim()) || '';
         if (!brandFromApi) {
           const val = ($input.value || '').trim();
@@ -270,8 +255,7 @@
 
       async function onProductChanged() {
         $hiddenId.value = '';
-        fillInfos(null); // reset visuel
-
+        fillInfos(null);
         const sel = findSelectedProduct();
         updateDebugLink(sel && sel.id ? sel.id : null);
         if (!sel || !sel.id) return;
@@ -287,13 +271,13 @@
         $qty.dispatchEvent(new Event('input'));
       }
 
-      // ---------- POST /api/consume ----------
+      // ---------- POST /api/stock/consume ----------
       $validate.addEventListener('click', async () => {
         const pid = parseInt($hiddenId.value || '0', 10);
         const q = currentQty();
         if (!pid || !q) return;
 
-        const url = makeIngressUrl('api/consume');
+        const url = makeIngressUrl('api/stock/consume'); // <— chemin nouveau
         try {
           const r = await fetch(url, {
             method: 'POST',
@@ -312,19 +296,17 @@
             : `Consommé ${data.consumed_qty}`;
           (window.showToast || ((m, t) => alert(m)))(msg, data.remaining_to_consume > 0 ? 'warn' : 'ok');
 
-          // Reset quantité + refresh infos
           $qty.value = '';
           updateValidateState();
 
           const info = await fetchProductInfo(pid);
           fillInfos(info);
 
-        } catch (e) {
+        } catch {
           (window.showToast || ((m) => alert(m)))('Erreur réseau', 'error');
         }
       });
 
-      // Écouteurs
       ['input', 'change', 'blur'].forEach(evt => $input.addEventListener(evt, onProductChanged));
       $btns.forEach(b => b.addEventListener('click', onQuickBtn));
       $qty.addEventListener('input', updateValidateState);

@@ -3,14 +3,17 @@ from __future__ import annotations
 
 import json
 import sqlite3
+import logging
 from typing import Any, Dict, Optional
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Query, Body
 from fastapi.responses import JSONResponse
 
 from config import DB_PATH
+from db import list_products, list_lots
 
 router = APIRouter()
+log = logging.getLogger("domovra.api")
 
 
 # ========= DB helper =========
@@ -100,16 +103,8 @@ def api_off(barcode: str) -> JSONResponse:
         }
     )
 
-import logging
-log = logging.getLogger("domovra.api")
 
-from fastapi import Query
-from db import list_products, list_lots
-
-# ---- Helpers internes (fallback champs produit) ----------------------------
-
-from typing import Optional, Iterable
-
+# ---- Helpers internes -------------------------------------------------------
 def _first_non_empty(*vals: Optional[str]) -> Optional[str]:
     for v in vals:
         if v is None:
@@ -119,14 +114,16 @@ def _first_non_empty(*vals: Optional[str]) -> Optional[str]:
             return s
     return None
 
+
+# ---- /api/product-info ------------------------------------------------------
 @router.get("/api/product-info")
 def api_product_info(product_id: int = Query(..., ge=1)) -> JSONResponse:
     """
     Infos rapides pour 'Consommer un produit':
       - fifo: lot à consommer en premier (DLC la plus proche)
       - total_qty: somme des lots > 0
-      - unit, brand: métadonnées (brand fallback depuis lots si vide sur produit)
-      - lots: TOUS les lots du produit (tri FIFO), pour affichage/contrôles côté UI
+      - unit, brand
+      - lots: TOUS les lots du produit (tri FIFO)
 
     Réponse:
     {
@@ -157,10 +154,7 @@ def api_product_info(product_id: int = Query(..., ge=1)) -> JSONResponse:
 
     # 2) Lots du produit (qty > 0)
     all_lots = list_lots() or []
-    lots = [
-        l for l in all_lots
-        if int(l.get("product_id", 0)) == pid and float(l.get("qty") or 0) > 0
-    ]
+    lots = [l for l in all_lots if int(l.get("product_id", 0)) == pid and float(l.get("qty") or 0) > 0]
 
     # Total
     total_qty = sum(float(l.get("qty") or 0) for l in lots)
@@ -170,9 +164,7 @@ def api_product_info(product_id: int = Query(..., ge=1)) -> JSONResponse:
         bb = l.get("best_before")
         return ("~", "") if not bb else ("", str(bb))
 
-    fifo_lot = None
-    if lots:
-        fifo_lot = sorted(lots, key=fifo_key)[0]
+    fifo_lot = sorted(lots, key=fifo_key)[0] if lots else None
 
     fifo_payload = {
         "lot_id": fifo_lot.get("id") if fifo_lot else None,
@@ -198,7 +190,7 @@ def api_product_info(product_id: int = Query(..., ge=1)) -> JSONResponse:
             if brand_final:
                 break
 
-    # 5) Construire la liste complète des lots pour le JSON (tri FIFO)
+    # 5) Construire la liste complète des lots
     lots_sorted = sorted(lots, key=fifo_key)
     lots_payload = []
     for l in lots_sorted:
@@ -206,18 +198,14 @@ def api_product_info(product_id: int = Query(..., ge=1)) -> JSONResponse:
             "lot_id": l.get("id"),
             "qty": float(l.get("qty") or 0),
             "unit": _first_non_empty(l.get("unit"), unit_prod) or "",
-
             "best_before": l.get("best_before"),
             "location": l.get("location") or l.get("location_name"),
             "location_id": l.get("location_id"),
-
-            # infos “achats”
             "brand": _first_non_empty(
                 l.get("brand"), l.get("product_brand"),
                 l.get("brands"), l.get("brand_name"),
                 l.get("marque"), l.get("brand_owner"),
             ) or "",
-
             "ean": _first_non_empty(l.get("ean"), l.get("barcode"), l.get("code")) or "",
             "store": l.get("store"),
             "frozen_on": l.get("frozen_on"),
@@ -234,22 +222,23 @@ def api_product_info(product_id: int = Query(..., ge=1)) -> JSONResponse:
         "lots": lots_payload,
     })
 
-from fastapi import Body
 
+# ---- Consommation FIFO par produit -----------------------------------------
 def _fifo_sort_key(l: Dict[str, Any]):
     bb = l.get("best_before")
     return ("~", "") if not bb else ("", str(bb))
 
+
 def _try_log_event(kind: str, payload: Dict[str, Any]) -> None:
-    """Best-effort: logge dans le journal si le service est dispo."""
+    """Best-effort: log in journal service if available."""
     try:
-        from services.events import add_event  # ou log_event selon ton projet
+        from services.events import add_event  # optional in your project
         add_event(kind, payload)
     except Exception:
-        # on ne bloque jamais l'API pour le journal
         pass
 
-@router.post("/api/consume")
+
+@router.post("/api/stock/consume")  # <- chemin distinct pour éviter toute collision 405
 def api_consume(
     product_id: int = Body(..., embed=True, ge=1),
     qty: float = Body(..., embed=True, gt=0),
@@ -257,31 +246,8 @@ def api_consume(
     """
     Consomme `qty` du produit `product_id` en appliquant strictement le FIFO.
     Peut décrémenter plusieurs lots successifs si nécessaire.
-
-    Body JSON:
-      { "product_id": 12, "qty": 2.5 }
-
-    Réponse 200 JSON:
-      {
-        "ok": true,
-        "requested_qty": 2.5,
-        "consumed_qty": 2.5,
-        "remaining_to_consume": 0.0,
-        "operations": [
-          { "lot_id": 20, "take": 2.0, "before": 3.0, "after": 1.0,
-            "best_before": "2025-07-10", "location": "Frigo" },
-          { "lot_id": 22, "take": 0.5, "before": 1.0, "after": 0.5,
-            "best_before": "2025-10-10", "location": "Frigo" }
-        ],
-        "total_qty_before": 3.0,
-        "total_qty_after": 0.5
-      }
-
-    Codes:
-      - 400: invalid product_id / qty
-      - 404: produit introuvable ou aucun lot disponible
     """
-    # 1) Vérifs basiques & données produit
+    # 1) Vérifs
     try:
         pid = int(product_id)
     except Exception:
@@ -309,7 +275,7 @@ def api_consume(
     remaining = q
     ops: list[dict] = []
 
-    # 3) Décrément en transaction
+    # 3) Décrément
     try:
         with _conn() as c:
             cur = c.cursor()
@@ -323,7 +289,6 @@ def api_consume(
                 take = before if before <= remaining else remaining
                 after = max(0.0, before - take)
 
-                # UPDATE lots
                 cur.execute("UPDATE lots SET qty = ? WHERE id = ?", (after, lot_id))
 
                 ops.append({
@@ -335,7 +300,6 @@ def api_consume(
                     "location": l.get("location") or l.get("location_name"),
                 })
 
-                # Journal (best-effort)
                 _try_log_event("lot_consume", {
                     "lot_id": lot_id,
                     "product_id": pid,
@@ -350,14 +314,11 @@ def api_consume(
 
                 remaining = max(0.0, remaining - take)
 
-            # commit implicite via context manager
-
-    except Exception as e:
+    except Exception:
         log.exception("api_consume failed for product_id=%s qty=%s", product_id, qty)
         return JSONResponse({"ok": False, "error": "server"}, status_code=500)
 
     consumed = round(q - remaining, 6)
-    total_after = 0.0
     try:
         with _conn() as c2:
             r = c2.execute(
@@ -366,10 +327,8 @@ def api_consume(
             ).fetchone()
             total_after = float(r["t"] or 0.0)
     except Exception:
-        # pas critique pour la réponse
         total_after = max(0.0, total_before - consumed)
 
-    # Journal global (best-effort)
     _try_log_event("product_consume", {
         "product_id": pid,
         "requested_qty": q,
@@ -388,7 +347,9 @@ def api_consume(
         "total_qty_after": round(total_after, 6),
     })
 
-@router.post("/api/consume-lot")
+
+# ---- Consommation ciblée d’un lot ------------------------------------------
+@router.post("/api/stock/consume-lot")
 def api_consume_lot(
     lot_id: int = Body(..., embed=True, ge=1),
     qty: float = Body(..., embed=True, gt=0),
@@ -423,7 +384,6 @@ def api_consume_lot(
             after = max(0.0, before - take)
             cur.execute("UPDATE lots SET qty = ? WHERE id = ?", (after, lid))
 
-            # journal best-effort
             _try_log_event("lot_consume", {
                 "lot_id": lid,
                 "product_id": int(row["product_id"]),
