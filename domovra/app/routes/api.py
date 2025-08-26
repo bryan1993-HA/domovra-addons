@@ -122,84 +122,114 @@ def _first_non_empty(*vals: Optional[str]) -> Optional[str]:
 @router.get("/api/product-info")
 def api_product_info(product_id: int = Query(..., ge=1)) -> JSONResponse:
     """
-    Infos rapides pour 'Consommer un produit' (lecture seule):
-      - fifo.lot_id (lot à consommer en premier, basé sur la DLC la plus proche)
-      - fifo.best_before
-      - total_qty (somme des lots qty > 0 de ce produit)
-      - unit, brand (du produit — avec fallbacks depuis les lots/achats)
-      - location (nom de l'emplacement du lot FIFO)
+    Infos rapides pour 'Consommer un produit':
+      - fifo: lot à consommer en premier (DLC la plus proche)
+      - total_qty: somme des lots > 0
+      - unit, brand: métadonnées (brand fallback depuis lots si vide sur produit)
+      - lots: TOUS les lots du produit (tri FIFO), pour affichage/contrôles côté UI
+
+    Réponse:
+    {
+      product_id, unit, brand, total_qty,
+      fifo: { lot_id, best_before, location },
+      lots_count, lots: [
+        { lot_id, qty, unit, best_before, location, location_id,
+          brand, ean, store, frozen_on, created_on }
+      ]
+    }
     """
     try:
         pid = int(product_id)
     except Exception:
         return JSONResponse({"error": "invalid product_id"}, status_code=400)
 
-    try:
-        # 1) Produit via helper
-        prods = list_products() or []
-        prod = next((p for p in prods if int(p.get("id", 0)) == pid), None)
-        if not prod:
-            return JSONResponse({"error": "not found"}, status_code=404)
+    # 1) Produit
+    prods = list_products() or []
+    prod = next((p for p in prods if int(p.get("id", 0)) == pid), None)
+    if not prod:
+        return JSONResponse({"error": "not found"}, status_code=404)
 
-        # Unit: quelques alias possibles
-        unit = _first_non_empty(prod.get("unit"), prod.get("uom"), prod.get("unity"), prod.get("unite"))
+    unit_prod = _first_non_empty(prod.get("unit"), prod.get("uom"), prod.get("unity"), prod.get("unite"))
+    brand_prod = _first_non_empty(
+        prod.get("brand"), prod.get("brands"), prod.get("brand_name"),
+        prod.get("marque"), prod.get("producer"), prod.get("brand_owner")
+    )
 
-        # 2) Lots de ce produit (qty > 0)
-        lots = [l for l in (list_lots() or [])
-                if int(l.get("product_id", 0)) == pid and float(l.get("qty") or 0) > 0]
+    # 2) Lots du produit (qty > 0)
+    all_lots = list_lots() or []
+    lots = [
+        l for l in all_lots
+        if int(l.get("product_id", 0)) == pid and float(l.get("qty") or 0) > 0
+    ]
 
-        # Total
-        total_qty = sum(float(l.get("qty") or 0) for l in lots)
+    # Total
+    total_qty = sum(float(l.get("qty") or 0) for l in lots)
 
-        # 3) FIFO = DLC la plus proche ; DLC vides en dernier
-        def fifo_key(l):
-            bb = l.get("best_before")
-            return ("~", "") if not bb else ("", str(bb))
+    # 3) Trie FIFO (DLC vides en dernier)
+    def fifo_key(l):
+        bb = l.get("best_before")
+        return ("~", "") if not bb else ("", str(bb))
 
-        fifo = {"lot_id": None, "best_before": None, "location": None}
-        fifo_lot = None
-        if lots:
-            fifo_lot = sorted(lots, key=fifo_key)[0]
-            fifo = {
-                "lot_id": fifo_lot.get("id"),
-                "best_before": fifo_lot.get("best_before"),
-                "location": fifo_lot.get("location") or fifo_lot.get("location_name"),
-            }
+    fifo_lot = None
+    if lots:
+        fifo_lot = sorted(lots, key=fifo_key)[0]
 
-        # 4) Brand — d'abord sur le produit, sinon **fallback depuis les lots/achats**
-        brand = _first_non_empty(
-            # produit (plusieurs noms possibles)
-            prod.get("brand"), prod.get("brands"), prod.get("brand_name"),
-            prod.get("marque"), prod.get("producer"), prod.get("brand_owner"),
+    fifo_payload = {
+        "lot_id": fifo_lot.get("id") if fifo_lot else None,
+        "best_before": fifo_lot.get("best_before") if fifo_lot else None,
+        "location": (fifo_lot.get("location") or fifo_lot.get("location_name")) if fifo_lot else None,
+    }
+
+    # 4) Marque finale: produit -> lot FIFO -> premier lot qui en a une
+    brand_final = brand_prod
+    if not brand_final and fifo_lot:
+        brand_final = _first_non_empty(
+            fifo_lot.get("brand"), fifo_lot.get("product_brand"),
+            fifo_lot.get("brands"), fifo_lot.get("brand_name"),
+            fifo_lot.get("marque"), fifo_lot.get("brand_owner"),
         )
+    if not brand_final:
+        for l in lots:
+            brand_final = _first_non_empty(
+                l.get("brand"), l.get("product_brand"),
+                l.get("brands"), l.get("brand_name"),
+                l.get("marque"), l.get("brand_owner"),
+            )
+            if brand_final:
+                break
 
-        if not brand:
-            # a) le lot FIFO si dispo
-            if fifo_lot:
-                brand = _first_non_empty(
-                    fifo_lot.get("brand"), fifo_lot.get("product_brand"),
-                    fifo_lot.get("brands"), fifo_lot.get("brand_name"),
-                    fifo_lot.get("marque"), fifo_lot.get("brand_owner"),
-                )
-            # b) sinon, n'importe quel lot du produit qui en a une
-            if not brand:
-                for l in lots:
-                    brand = _first_non_empty(
-                        l.get("brand"), l.get("product_brand"),
-                        l.get("brands"), l.get("brand_name"),
-                        l.get("marque"), l.get("brand_owner"),
-                    )
-                    if brand:
-                        break
+    # 5) Construire la liste complète des lots pour le JSON (tri FIFO)
+    lots_sorted = sorted(lots, key=fifo_key)
+    lots_payload = []
+    for l in lots_sorted:
+        lots_payload.append({
+            "lot_id": l.get("id"),
+            "qty": float(l.get("qty") or 0),
+            "unit": _first_non_empty(l.get("unit"), unit_prod) or "",
 
-        return JSONResponse({
-            "product_id": pid,
-            "unit": unit or "",
-            "brand": brand or "",           # <= maintenant rempli si présent sur les lots/achats
-            "total_qty": total_qty,
-            "fifo": fifo,
+            "best_before": l.get("best_before"),
+            "location": l.get("location") or l.get("location_name"),
+            "location_id": l.get("location_id"),
+
+            # infos “achats”
+            "brand": _first_non_empty(
+                l.get("brand"), l.get("product_brand"),
+                l.get("brands"), l.get("brand_name"),
+                l.get("marque"), l.get("brand_owner"),
+            ) or "",
+
+            "ean": _first_non_empty(l.get("ean"), l.get("barcode"), l.get("code")) or "",
+            "store": l.get("store"),
+            "frozen_on": l.get("frozen_on"),
+            "created_on": l.get("created_on") or l.get("added_on"),
         })
 
-    except Exception as e:
-        log.exception("api_product_info failed for product_id=%s", product_id)
-        return JSONResponse({"error": "server"}, status_code=500)
+    return JSONResponse({
+        "product_id": pid,
+        "unit": unit_prod or "",
+        "brand": brand_final or "",
+        "total_qty": total_qty,
+        "fifo": fifo_payload,
+        "lots_count": len(lots_payload),
+        "lots": lots_payload,
+    })
