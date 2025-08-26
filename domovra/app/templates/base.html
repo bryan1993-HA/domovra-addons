@@ -90,7 +90,7 @@
           {% set seg = request.path.replace(BASE, '').strip('/') %}
           <h1 class="app-title">
             Domovra —
-            {% if seg == '' %}Accueil
+            {% if seg == '' %}Accueil (En travaux)
             {% elif seg.startswith('products') %}Produits
             {% elif seg.startswith('locations') %}Emplacements
             {% elif seg.startswith('lots') %}Stocks
