@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}Domovra — Accueil{% endblock %}
+{% block title %}Domovra — Accueil (En travaux){% endblock %}
 
 {% block head %}
 
@@ -7,42 +7,6 @@
 
 {% block content %}
 <div class="wrap">
-
-  <!-- Ajout express -->
-  <div class="card">
-    <div class="title">
-      <h2>Ajout express</h2><span class="muted">→ produit existant → ajout au stock</span>
-    </div>
-    <form method="post" action="{{ BASE }}lot/add" class="row form-grid">
-      <div class="field">
-        <div class="label">Produit</div>
-        <select name="product_id" required>
-          <option value="">Produit…</option>
-          {% for p in products %}<option value="{{ p.id }}">{{ p.name }}</option>{% endfor %}
-        </select>
-      </div>
-      <div class="field">
-        <div class="label">Emplacement</div>
-        <select name="location_id" required>
-          <option value="">Emplacement…</option>
-          {% for l in locations %}<option value="{{ l.id }}">{{ l.name }}</option>{% endfor %}
-        </select>
-      </div>
-      <div class="field">
-        <div class="label">Quantité</div>
-        <input type="number" name="qty" value="1" min="0.1" step="0.1">
-      </div>
-      <div class="field">
-        <div class="label">À consommer avant</div>
-        <input type="date" name="best_before">
-      </div>
-      <button class="secondary btn-add-stock">＋ Ajouter au stock</button>
-    </form>
-    <div class="row" style="margin-top:8px">
-      <a class="chip" href="{{ BASE }}products">+ Nouveau produit</a>
-      <a class="chip" href="{{ BASE }}locations">+ Nouvel emplacement</a>
-    </div>
-  </div>
 
   <!-- ===================== Consommer un produit ===================== -->
   <div class="card consume-card" data-role="consume">
