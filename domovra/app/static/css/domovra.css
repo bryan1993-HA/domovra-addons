@@ -895,6 +895,53 @@ html[data-theme="light"] .wrap .top8-table tbody tr:hover {
     }
 }
 
+/* --- Carte Consommer (lecture seule étape 2) --- */
+.consume-card .field {
+    margin: .5rem 0;
+}
+
+.consume-card input[list] {
+    width: 100%;
+}
+
+.consume-card .grid-2 {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: .75rem;
+}
+
+.consume-card .info .muted {
+    font-size: .85rem;
+    opacity: .85;
+}
+
+.consume-card .info .strong {
+    font-weight: 600;
+}
+
+.consume-card .qty-controls {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: .5rem;
+    align-items: center;
+}
+
+.consume-card .quick-btns {
+    display: flex;
+    gap: .5rem;
+}
+
+.consume-card input[type="number"] {
+    width: 100%;
+}
+
+@media (max-width: 700px) {
+    .consume-card .grid-2 {
+        grid-template-columns: 1fr;
+    }
+}
+
+
 /* ========================================================================== */
 /* ========== 12) Page Emplacements (/locations) ============================ */
 /* ========================================================================== */

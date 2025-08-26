@@ -44,6 +44,151 @@
     </div>
   </div>
 
+  <!-- ===================== Carte : Consommer un produit (lecture seule) ===================== -->
+  <div class="card consume-card" data-role="consume">
+    <div class="title">
+      <h2>Consommer un produit</h2><span class="muted">→ sélectionnez un produit</span>
+    </div>
+
+    <!-- Ligne 1 : Produit (datalist) -->
+    <div class="field">
+      <div class="label">Produit</div>
+      <input id="consume-product-input" list="consume-products-dl" placeholder="Commencez à taper..."
+        autocomplete="off">
+      <datalist id="consume-products-dl">
+        {% for p in products %}
+        <option value="{{ p.name }}" data-id="{{ p.id }}" data-brand="{{ p.brand or '' }}"
+          data-unit="{{ p.unit or '' }}">{{ p.name }}{% if p.brand %} — {{ p.brand }}{% endif %}{% if p.unit %} ({{
+          p.unit }}){% endif %}</option>
+        {% endfor %}
+      </datalist>
+      <input type="hidden" id="consume-product-id">
+    </div>
+
+    <!-- Ligne 2 : Infos FIFO + totaux -->
+    <div class="consume-infos grid-2">
+      <div class="info">
+        <div class="muted">FIFO (lot) / DLC</div>
+        <div class="strong" id="consume-fifo">—</div>
+      </div>
+      <div class="info">
+        <div class="muted">Emplacement</div>
+        <div class="strong" id="consume-location">—</div>
+      </div>
+      <div class="info">
+        <div class="muted">Quantité totale</div>
+        <div class="strong"><span id="consume-total">—</span> <span id="consume-unit"></span></div>
+      </div>
+      <div class="info">
+        <div class="muted">Marque</div>
+        <div class="strong" id="consume-brand">—</div>
+      </div>
+    </div>
+
+    <!-- Ligne 3 : quantité + boutons rapides -->
+    <div class="field">
+      <div class="label">Quantité à consommer</div>
+      <div class="qty-controls">
+        <input id="consume-qty" type="number" inputmode="numeric" step="1" min="0" placeholder="0">
+        <div class="quick-btns">
+          <button type="button" class="btn small ghost" data-qset="1">−1</button>
+          <button type="button" class="btn small ghost" data-qset="2">−2</button>
+          <button type="button" class="btn small ghost" data-qset="3">−3</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Ligne 4 : bouton (désactivé à cette étape) -->
+    <div class="field">
+      <button type="button" class="btn primary" id="consume-validate" disabled>Valider la consommation</button>
+      <div class="muted small">La validation sera activée à l’étape 3.</div>
+    </div>
+  </div>
+
+  <!-- ===================== Script (lecture seule) ===================== -->
+  <script>
+    (function () {
+      const BASE = "{{ BASE }}";
+      const $input = document.getElementById('consume-product-input');
+      const $hiddenId = document.getElementById('consume-product-id');
+      const $dl = document.getElementById('consume-products-dl');
+
+      const $fifo = document.getElementById('consume-fifo');
+      const $loc = document.getElementById('consume-location');
+      const $tot = document.getElementById('consume-total');
+      const $unit = document.getElementById('consume-unit');
+      const $brand = document.getElementById('consume-brand');
+
+      const $qty = document.getElementById('consume-qty');
+      const $btns = document.querySelectorAll('.quick-btns [data-qset]');
+      const $validate = document.getElementById('consume-validate');
+
+      function resolveSelectedProductId() {
+        const val = ($input.value || '').trim();
+        if (!val) return null;
+        for (const opt of $dl.querySelectorAll('option')) {
+          if ((opt.value || '').trim() === val) {
+            const id = opt.getAttribute('data-id');
+            return id ? parseInt(id, 10) : null;
+          }
+        }
+        return null;
+      }
+
+      async function fetchProductInfo(pid) {
+        try {
+          const r = await fetch(`${BASE}api/product-info?product_id=${encodeURIComponent(pid)}`, { headers: { 'Accept': 'application/json' } });
+          if (!r.ok) throw new Error('HTTP ' + r.status);
+          return await r.json();
+        } catch {
+          return { error: 'fetch' };
+        }
+      }
+
+      function fillInfos(payload) {
+        if (!payload || payload.error) {
+          $fifo.textContent = '—';
+          $loc.textContent = '—';
+          $tot.textContent = '—';
+          $unit.textContent = '';
+          $brand.textContent = '—';
+          $validate.disabled = true;
+          return;
+        }
+        const lotId = payload?.fifo?.lot_id || null;
+        const dlc = payload?.fifo?.best_before || null;
+        $fifo.textContent = lotId ? `#${lotId}${dlc ? ' — ' + dlc : ''}` : 'Aucun lot dispo';
+        $loc.textContent = payload?.fifo?.location || '—';
+        const t = typeof payload.total_qty === 'number' ? payload.total_qty : parseFloat(payload.total_qty || '0') || 0;
+        $tot.textContent = t.toString();
+        $unit.textContent = payload?.unit || '';
+        $brand.textContent = payload?.brand || '—';
+        $validate.disabled = !(payload && t > 0);
+      }
+
+      async function onProductChanged() {
+        const pid = resolveSelectedProductId();
+        $hiddenId.value = pid || '';
+        fillInfos(null); // reset
+        if (!pid) return;
+        const data = await fetchProductInfo(pid);
+        fillInfos(data);
+      }
+
+      function onQuickBtn(e) {
+        const val = parseInt(e.currentTarget.getAttribute('data-qset'), 10) || 0;
+        $qty.value = val ? String(val) : '';
+        $qty.dispatchEvent(new Event('input'));
+      }
+
+      $input.addEventListener('change', onProductChanged);
+      $input.addEventListener('input', onProductChanged);
+      $btns.forEach(b => b.addEventListener('click', onQuickBtn));
+      // $validate → branché en étape 3 (POST /consume)
+    })();
+  </script>
+
+
   <!-- À consommer (Top 8) -->
   <div class="card">
     <div class="title">
