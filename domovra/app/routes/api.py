@@ -254,6 +254,34 @@ def api_consume(
     product_id: int = Body(..., embed=True, ge=1),
     qty: float = Body(..., embed=True, gt=0),
 ) -> JSONResponse:
+    """
+    Consomme `qty` du produit `product_id` en appliquant strictement le FIFO.
+    Peut décrémenter plusieurs lots successifs si nécessaire.
+
+    Body JSON:
+      { "product_id": 12, "qty": 2.5 }
+
+    Réponse 200 JSON:
+      {
+        "ok": true,
+        "requested_qty": 2.5,
+        "consumed_qty": 2.5,
+        "remaining_to_consume": 0.0,
+        "operations": [
+          { "lot_id": 20, "take": 2.0, "before": 3.0, "after": 1.0,
+            "best_before": "2025-07-10", "location": "Frigo" },
+          { "lot_id": 22, "take": 0.5, "before": 1.0, "after": 0.5,
+            "best_before": "2025-10-10", "location": "Frigo" }
+        ],
+        "total_qty_before": 3.0,
+        "total_qty_after": 0.5
+      }
+
+    Codes:
+      - 400: invalid product_id / qty
+      - 404: produit introuvable ou aucun lot disponible
+    """
+    # 1) Vérifs basiques & données produit
     try:
         pid = int(product_id)
     except Exception:
@@ -265,13 +293,12 @@ def api_consume(
     if q <= 0:
         return JSONResponse({"ok": False, "error": "qty must be > 0"}, status_code=400)
 
-    from db import list_products, list_lots  # lazy
-
     prods = list_products() or []
     prod = next((p for p in prods if int(p.get("id", 0)) == pid), None)
     if not prod:
         return JSONResponse({"ok": False, "error": "product not found"}, status_code=404)
 
+    # 2) Lots FIFO (qty > 0)
     all_lots = list_lots() or []
     lots = [l for l in all_lots if int(l.get("product_id", 0)) == pid and float(l.get("qty") or 0) > 0]
     if not lots:
@@ -282,10 +309,7 @@ def api_consume(
     remaining = q
     ops: list[dict] = []
 
-    # ---- LOGS DEBUG UTILES ----
-    log.info("consume request pid=%s qty=%s", pid, q)
-    log.info("fifo order lot_ids=%s", [int(l["id"]) for l in lots])
-
+    # 3) Décrément en transaction
     try:
         with _conn() as c:
             cur = c.cursor()
@@ -299,9 +323,7 @@ def api_consume(
                 take = before if before <= remaining else remaining
                 after = max(0.0, before - take)
 
-                # DEBUG: trace l’UPDATE exact
-                log.info("UPDATE lots SET qty=%s WHERE id=%s (before=%s, take=%s)", after, lot_id, before, take)
-
+                # UPDATE lots
                 cur.execute("UPDATE lots SET qty = ? WHERE id = ?", (after, lot_id))
 
                 ops.append({
@@ -313,6 +335,7 @@ def api_consume(
                     "location": l.get("location") or l.get("location_name"),
                 })
 
+                # Journal (best-effort)
                 _try_log_event("lot_consume", {
                     "lot_id": lot_id,
                     "product_id": pid,
@@ -327,13 +350,14 @@ def api_consume(
 
                 remaining = max(0.0, remaining - take)
 
+            # commit implicite via context manager
+
     except Exception as e:
-        # >>>>> CHANGEMENT ICI : on remonte le détail <<<<<
         log.exception("api_consume failed for product_id=%s qty=%s", product_id, qty)
-        return JSONResponse({"ok": False, "error": "server", "detail": str(e)}, status_code=500)
+        return JSONResponse({"ok": False, "error": "server"}, status_code=500)
 
     consumed = round(q - remaining, 6)
-
+    total_after = 0.0
     try:
         with _conn() as c2:
             r = c2.execute(
@@ -341,10 +365,11 @@ def api_consume(
                 (pid,)
             ).fetchone()
             total_after = float(r["t"] or 0.0)
-    except Exception as e:
-        log.warning("post-consume total_after fallback due to: %s", e)
+    except Exception:
+        # pas critique pour la réponse
         total_after = max(0.0, total_before - consumed)
 
+    # Journal global (best-effort)
     _try_log_event("product_consume", {
         "product_id": pid,
         "requested_qty": q,
@@ -362,7 +387,6 @@ def api_consume(
         "total_qty_before": round(total_before, 6),
         "total_qty_after": round(total_after, 6),
     })
-
 
 @router.post("/api/consume-lot")
 def api_consume_lot(
