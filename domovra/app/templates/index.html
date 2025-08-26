@@ -168,20 +168,35 @@
       }
 
       async function fetchProductInfo(pid) {
+        const url = `${BASE}api/product-info?product_id=${encodeURIComponent(pid)}`;
         try {
-          const r = await fetch(`${BASE}api/product-info?product_id=${encodeURIComponent(pid)}`, {
-            headers: { 'Accept': 'application/json' }
-          });
-          if (!r.ok) throw new Error('HTTP ' + r.status);
-          return await r.json();
+          const r = await fetch(url, { headers: { 'Accept': 'application/json' } });
+          const text = await r.text(); // on lit le body en texte d'abord
+          let data = null;
+          try { data = JSON.parse(text); } catch (e) { }
+
+          if (!r.ok) {
+            console.debug('[consume] API error', { url, status: r.status, body: text });
+            return { error: 'http', status: r.status, url, body: text };
+          }
+
+          return data || { error: 'parse', url, raw: text };
         } catch (e) {
-          return { error: 'fetch' };
+          console.debug('[consume] Fetch failed', e);
+          return { error: 'fetch', url: `${BASE}api/product-info?product_id=${pid}` };
         }
       }
 
       function fillInfos(payload) {
         if (!payload || payload.error) {
-          $fifo.textContent = payload && payload.error === 'fetch' ? 'Erreur réseau' : '—';
+          // messages d’erreur plus clairs
+          if (payload?.error === 'http') {
+            $fifo.textContent = `Erreur HTTP ${payload.status}`;
+          } else if (payload?.error === 'parse') {
+            $fifo.textContent = 'Réponse illisible';
+          } else {
+            $fifo.textContent = 'Erreur réseau';
+          }
           $loc.textContent = '—';
           $tot.textContent = '—';
           $unit.textContent = '';

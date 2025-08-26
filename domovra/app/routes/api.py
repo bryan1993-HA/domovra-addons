@@ -100,24 +100,11 @@ def api_off(barcode: str) -> JSONResponse:
         }
     )
 
+import logging
+log = logging.getLogger("domovra.api")
+
 @router.get("/api/product-info")
 def api_product_info(product_id: int) -> JSONResponse:
-    """
-    Lecture rapide d'infos produit pour le bloc 'Consommer un produit'.
-
-    Retourne:
-      {
-        "product_id": int,
-        "unit": str | null,
-        "brand": str | null,
-        "total_qty": float,
-        "fifo": {
-          "lot_id": int | null,
-          "best_before": "YYYY-MM-DD" | null,
-          "location": str | null
-        }
-      }
-    """
     try:
         pid = int(product_id)
         if pid <= 0:
@@ -125,52 +112,46 @@ def api_product_info(product_id: int) -> JSONResponse:
     except Exception:
         return JSONResponse({"error": "invalid product_id"}, status_code=400)
 
-    with _conn() as c:
-        # 1) Métadonnées produit
-        prod = c.execute(
-            "SELECT id, unit, brand FROM products WHERE id = ? LIMIT 1",
-            (pid,),
-        ).fetchone()
-        if not prod:
-            return JSONResponse({"error": "not found"}, status_code=404)
+    try:
+        with _conn() as c:
+            # Métadonnées produit (tolérant aux NULL)
+            prod = c.execute(
+                "SELECT id, COALESCE(unit,'') AS unit, COALESCE(brand,'') AS brand FROM products WHERE id = ? LIMIT 1",
+                (pid,),
+            ).fetchone()
+            if not prod:
+                return JSONResponse({"error": "not found"}, status_code=404)
 
-        # 2) Quantité totale > 0 sur tous les lots de ce produit
-        total_row = c.execute(
-            "SELECT COALESCE(SUM(qty), 0) AS total_qty FROM lots WHERE product_id = ? AND qty > 0",
-            (pid,),
-        ).fetchone()
-        total_qty = float(total_row["total_qty"] or 0.0)
+            total_row = c.execute(
+                "SELECT COALESCE(SUM(qty), 0) AS total_qty FROM lots WHERE product_id = ? AND qty > 0",
+                (pid,),
+            ).fetchone()
+            total_qty = float(total_row["total_qty"] or 0.0)
 
-        # 3) FIFO = lot avec DLC la plus proche parmi qty > 0
-        #    - Les lots SANS DLC passent après ceux AVEC DLC
-        fifo_row = c.execute(
-            """
-            SELECT l.id AS lot_id,
-                   l.best_before,
-                   loc.name AS location_name
-            FROM lots l
-            LEFT JOIN locations loc ON loc.id = l.location_id
-            WHERE l.product_id = ? AND l.qty > 0
-            ORDER BY
-              CASE WHEN l.best_before IS NULL OR l.best_before = '' THEN 1 ELSE 0 END,
-              l.best_before ASC
-            LIMIT 1
-            """,
-            (pid,),
-        ).fetchone()
+            fifo_row = c.execute("""
+                SELECT l.id AS lot_id, l.best_before, loc.name AS location_name
+                FROM lots l
+                LEFT JOIN locations loc ON loc.id = l.location_id
+                WHERE l.product_id = ? AND l.qty > 0
+                ORDER BY
+                  CASE WHEN l.best_before IS NULL OR l.best_before = '' THEN 1 ELSE 0 END,
+                  l.best_before ASC
+                LIMIT 1
+            """, (pid,)).fetchone()
 
-        fifo = {
-            "lot_id": fifo_row["lot_id"] if fifo_row else None,
-            "best_before": fifo_row["best_before"] if fifo_row else None,
-            "location": fifo_row["location_name"] if fifo_row else None,
-        }
+            fifo = {
+                "lot_id": fifo_row["lot_id"] if fifo_row else None,
+                "best_before": fifo_row["best_before"] if fifo_row else None,
+                "location": fifo_row["location_name"] if fifo_row else None,
+            }
 
-        return JSONResponse(
-            {
+            return JSONResponse({
                 "product_id": prod["id"],
                 "unit": prod["unit"],
                 "brand": prod["brand"],
                 "total_qty": total_qty,
                 "fifo": fifo,
-            }
-        )
+            })
+    except Exception as e:
+        log.exception("api_product_info failed for product_id=%s", product_id)
+        return JSONResponse({"error": "server"}, status_code=500)
