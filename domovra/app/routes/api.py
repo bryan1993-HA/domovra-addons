@@ -129,10 +129,7 @@ def api_product_info(product_id: int = Query(..., ge=1)) -> JSONResponse:
     {
       product_id, unit, brand, total_qty,
       fifo: { lot_id, best_before, location },
-      lots_count, lots: [
-        { lot_id, qty, unit, best_before, location, location_id,
-          brand, ean, store, frozen_on, created_on }
-      ]
+      lots_count, lots: [...]
     }
     """
     try:
@@ -249,7 +246,7 @@ def api_consume(
 ) -> JSONResponse:
     """
     Consomme `qty` du produit `product_id` en FIFO.
-    Accepte POST (JSON) **et** GET (query string) pour contourner certains proxys.
+    Accepte POST (JSON) **et** GET (query string).
     """
     # ---- récupérer les paramètres (body > query) ----
     pid = product_id if product_id is not None else product_id_q
@@ -278,10 +275,6 @@ def api_consume(
     if not lots:
         return JSONResponse({"ok": False, "error": "no stock"}, status_code=404)
 
-    def _fifo_sort_key(l: Dict[str, Any]):
-        bb = l.get("best_before")
-        return ("~", "") if not bb else ("", str(bb))
-
     lots = sorted(lots, key=_fifo_sort_key)
     total_before = sum(float(l.get("qty") or 0) for l in lots)
 
@@ -298,6 +291,7 @@ def api_consume(
                 before = float(l.get("qty") or 0)
                 if before <= 0:
                     continue
+
                 take = before if before <= remaining else remaining
                 after = max(0.0, before - take)
 
@@ -312,10 +306,14 @@ def api_consume(
                     "location": l.get("location") or l.get("location_name"),
                 })
 
-        consumed = round(q - remaining + sum(o["take"] for o in ops), 6)  # recalcul défensif
+                # décrémenter le restant à consommer
+                remaining = max(0.0, remaining - take)
+
     except Exception:
         log.exception("api_consume failed for product_id=%s qty=%s", pid, q)
         return JSONResponse({"ok": False, "error": "server"}, status_code=500)
+
+    consumed = round(q - remaining, 6)
 
     # total après
     try:
@@ -326,13 +324,13 @@ def api_consume(
             ).fetchone()
             total_after = float(r["t"] or 0.0)
     except Exception:
-        total_after = max(0.0, total_before - sum(o["take"] for o in ops))
+        total_after = max(0.0, total_before - consumed)
 
     return JSONResponse({
         "ok": True,
         "requested_qty": q,
-        "consumed_qty": round(sum(o["take"] for o in ops), 6),
-        "remaining_to_consume": round(max(0.0, q - sum(o["take"] for o in ops)), 6),
+        "consumed_qty": consumed,
+        "remaining_to_consume": round(max(0.0, q - consumed), 6),
         "operations": ops,
         "total_qty_before": round(total_before, 6),
         "total_qty_after": round(total_after, 6),

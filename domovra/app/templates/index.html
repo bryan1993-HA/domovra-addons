@@ -2,7 +2,6 @@
 {% block title %}Domovra — Accueil{% endblock %}
 
 {% block head %}
-
 {% endblock %}
 
 {% block content %}
@@ -271,7 +270,7 @@
         $qty.dispatchEvent(new Event('input'));
       }
 
-      // ---------- POST /api/stock/consume ----------
+      // ---------- /api/consume ----------
       $validate.addEventListener('click', async () => {
         const pid = parseInt(($hiddenId.value || '0'), 10);
         const q = parseFloat((($qty.value || '').replace(',', '.')));
@@ -395,6 +394,8 @@
   </div>
 </div>
 
+</div>
+
 <!-- Produits en faible stock (Top 8) -->
 <div class="card">
   <div class="title">
@@ -470,5 +471,4 @@
   </div>
 </div>
 
-</div>
 {% endblock %}
