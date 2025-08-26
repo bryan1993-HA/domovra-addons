@@ -387,3 +387,78 @@ def api_consume(
         "total_qty_before": round(total_before, 6),
         "total_qty_after": round(total_after, 6),
     })
+
+@router.post("/api/consume-lot")
+def api_consume_lot(
+    lot_id: int = Body(..., embed=True, ge=1),
+    qty: float = Body(..., embed=True, gt=0),
+) -> JSONResponse:
+    """Décrémente UNIQUEMENT le lot donné (sans passer au suivant)."""
+    try:
+        lid = int(lot_id)
+    except Exception:
+        return JSONResponse({"ok": False, "error": "invalid lot_id"}, status_code=400)
+    try:
+        q = float(qty)
+    except Exception:
+        return JSONResponse({"ok": False, "error": "invalid qty"}, status_code=400)
+    if q <= 0:
+        return JSONResponse({"ok": False, "error": "qty must be > 0"}, status_code=400)
+
+    try:
+        with _conn() as c:
+            cur = c.cursor()
+            row = cur.execute(
+                "SELECT id, product_id, qty, best_before, location_id FROM lots WHERE id = ?",
+                (lid,)
+            ).fetchone()
+            if not row:
+                return JSONResponse({"ok": False, "error": "lot not found"}, status_code=404)
+
+            before = float(row["qty"] or 0.0)
+            if before <= 0:
+                return JSONResponse({"ok": False, "error": "empty lot"}, status_code=409)
+
+            take = before if before <= q else q
+            after = max(0.0, before - take)
+            cur.execute("UPDATE lots SET qty = ? WHERE id = ?", (after, lid))
+
+            # journal best-effort
+            _try_log_event("lot_consume", {
+                "lot_id": lid,
+                "product_id": int(row["product_id"]),
+                "qty_delta": -round(take, 6),
+                "before": round(before, 6),
+                "after": round(after, 6),
+                "best_before": row["best_before"],
+                "location_id": row["location_id"],
+            })
+
+        # total produit après conso (utile pour UI)
+        try:
+            with _conn() as c2:
+                r = c2.execute(
+                    "SELECT COALESCE(SUM(qty),0) AS t FROM lots WHERE product_id = ? AND qty > 0",
+                    (int(row["product_id"]),)
+                ).fetchone()
+                total_after = float(r["t"] or 0.0)
+        except Exception:
+            total_after = None
+
+        return JSONResponse({
+            "ok": True,
+            "requested_qty": q,
+            "consumed_qty": round(take, 6),
+            "remaining_to_consume": round(max(0.0, q - take), 6),
+            "lot": {
+                "lot_id": lid,
+                "before": round(before, 6),
+                "after": round(after, 6),
+                "best_before": row["best_before"],
+                "location_id": row["location_id"],
+                "product_id": int(row["product_id"]),
+            },
+            "total_qty_after": total_after,
+        })
+    except Exception:
+        return JSONResponse({"ok": False, "error": "server"}, status_code=500)
