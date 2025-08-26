@@ -233,3 +233,157 @@ def api_product_info(product_id: int = Query(..., ge=1)) -> JSONResponse:
         "lots_count": len(lots_payload),
         "lots": lots_payload,
     })
+
+from fastapi import Body
+
+def _fifo_sort_key(l: Dict[str, Any]):
+    bb = l.get("best_before")
+    return ("~", "") if not bb else ("", str(bb))
+
+def _try_log_event(kind: str, payload: Dict[str, Any]) -> None:
+    """Best-effort: logge dans le journal si le service est dispo."""
+    try:
+        from services.events import add_event  # ou log_event selon ton projet
+        add_event(kind, payload)
+    except Exception:
+        # on ne bloque jamais l'API pour le journal
+        pass
+
+@router.post("/api/consume")
+def api_consume(
+    product_id: int = Body(..., embed=True, ge=1),
+    qty: float = Body(..., embed=True, gt=0),
+) -> JSONResponse:
+    """
+    Consomme `qty` du produit `product_id` en appliquant strictement le FIFO.
+    Peut décrémenter plusieurs lots successifs si nécessaire.
+
+    Body JSON:
+      { "product_id": 12, "qty": 2.5 }
+
+    Réponse 200 JSON:
+      {
+        "ok": true,
+        "requested_qty": 2.5,
+        "consumed_qty": 2.5,
+        "remaining_to_consume": 0.0,
+        "operations": [
+          { "lot_id": 20, "take": 2.0, "before": 3.0, "after": 1.0,
+            "best_before": "2025-07-10", "location": "Frigo" },
+          { "lot_id": 22, "take": 0.5, "before": 1.0, "after": 0.5,
+            "best_before": "2025-10-10", "location": "Frigo" }
+        ],
+        "total_qty_before": 3.0,
+        "total_qty_after": 0.5
+      }
+
+    Codes:
+      - 400: invalid product_id / qty
+      - 404: produit introuvable ou aucun lot disponible
+    """
+    # 1) Vérifs basiques & données produit
+    try:
+        pid = int(product_id)
+    except Exception:
+        return JSONResponse({"ok": False, "error": "invalid product_id"}, status_code=400)
+    try:
+        q = float(qty)
+    except Exception:
+        return JSONResponse({"ok": False, "error": "invalid qty"}, status_code=400)
+    if q <= 0:
+        return JSONResponse({"ok": False, "error": "qty must be > 0"}, status_code=400)
+
+    prods = list_products() or []
+    prod = next((p for p in prods if int(p.get("id", 0)) == pid), None)
+    if not prod:
+        return JSONResponse({"ok": False, "error": "product not found"}, status_code=404)
+
+    # 2) Lots FIFO (qty > 0)
+    all_lots = list_lots() or []
+    lots = [l for l in all_lots if int(l.get("product_id", 0)) == pid and float(l.get("qty") or 0) > 0]
+    if not lots:
+        return JSONResponse({"ok": False, "error": "no stock"}, status_code=404)
+    lots = sorted(lots, key=_fifo_sort_key)
+
+    total_before = sum(float(l.get("qty") or 0) for l in lots)
+    remaining = q
+    ops: list[dict] = []
+
+    # 3) Décrément en transaction
+    try:
+        with _conn() as c:
+            cur = c.cursor()
+            for l in lots:
+                if remaining <= 1e-12:
+                    break
+                lot_id = int(l["id"])
+                before = float(l.get("qty") or 0)
+                if before <= 0:
+                    continue
+                take = before if before <= remaining else remaining
+                after = max(0.0, before - take)
+
+                # UPDATE lots
+                cur.execute("UPDATE lots SET qty = ? WHERE id = ?", (after, lot_id))
+
+                ops.append({
+                    "lot_id": lot_id,
+                    "take": round(take, 6),
+                    "before": round(before, 6),
+                    "after": round(after, 6),
+                    "best_before": l.get("best_before"),
+                    "location": l.get("location") or l.get("location_name"),
+                })
+
+                # Journal (best-effort)
+                _try_log_event("lot_consume", {
+                    "lot_id": lot_id,
+                    "product_id": pid,
+                    "qty_delta": -round(take, 6),
+                    "before": round(before, 6),
+                    "after": round(after, 6),
+                    "best_before": l.get("best_before"),
+                    "location": l.get("location") or l.get("location_name"),
+                    "unit": prod.get("unit") or prod.get("uom") or prod.get("unity") or prod.get("unite"),
+                    "name": prod.get("name"),
+                })
+
+                remaining = max(0.0, remaining - take)
+
+            # commit implicite via context manager
+
+    except Exception as e:
+        log.exception("api_consume failed for product_id=%s qty=%s", product_id, qty)
+        return JSONResponse({"ok": False, "error": "server"}, status_code=500)
+
+    consumed = round(q - remaining, 6)
+    total_after = 0.0
+    try:
+        with _conn() as c2:
+            r = c2.execute(
+                "SELECT COALESCE(SUM(qty), 0) AS t FROM lots WHERE product_id = ? AND qty > 0",
+                (pid,)
+            ).fetchone()
+            total_after = float(r["t"] or 0.0)
+    except Exception:
+        # pas critique pour la réponse
+        total_after = max(0.0, total_before - consumed)
+
+    # Journal global (best-effort)
+    _try_log_event("product_consume", {
+        "product_id": pid,
+        "requested_qty": q,
+        "consumed_qty": consumed,
+        "remaining_to_consume": remaining,
+        "operations_count": len(ops),
+    })
+
+    return JSONResponse({
+        "ok": True,
+        "requested_qty": q,
+        "consumed_qty": consumed,
+        "remaining_to_consume": remaining,
+        "operations": ops,
+        "total_qty_before": round(total_before, 6),
+        "total_qty_after": round(total_after, 6),
+    })
