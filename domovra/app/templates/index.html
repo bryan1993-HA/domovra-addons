@@ -123,31 +123,65 @@
       const $btns = document.querySelectorAll('.quick-btns [data-qset]');
       const $validate = document.getElementById('consume-validate');
 
-      function resolveSelectedProductId() {
+      // --- Helpers ---
+      function normalize(s) {
+        return (s || "")
+          .toString()
+          .trim()
+          .toLowerCase()
+          .normalize('NFD').replace(/\p{Diacritic}/gu, '') // enlève accents
+          .replace(/\s+/g, ' '); // espaces multiples -> simple espace
+      }
+
+      // Construit une map "nom normalisé" -> {id, brand, unit}
+      const nameMap = (() => {
+        const map = new Map();
+        $dl.querySelectorAll('option').forEach(opt => {
+          const key = normalize(opt.value);
+          if (key && !map.has(key)) {
+            map.set(key, {
+              id: opt.getAttribute('data-id') ? parseInt(opt.getAttribute('data-id'), 10) : null,
+              brand: opt.getAttribute('data-brand') || '',
+              unit: opt.getAttribute('data-unit') || ''
+            });
+          }
+        });
+        return map;
+      })();
+
+      function findSelectedProduct() {
+        // 1) Essai direct via CSS.escape (le plus fiable si dispo)
         const val = ($input.value || '').trim();
         if (!val) return null;
-        for (const opt of $dl.querySelectorAll('option')) {
-          if ((opt.value || '').trim() === val) {
+
+        if (window.CSS && CSS.escape) {
+          const opt = $dl.querySelector(`option[value="${CSS.escape(val)}"]`);
+          if (opt) {
             const id = opt.getAttribute('data-id');
-            return id ? parseInt(id, 10) : null;
+            return id ? { id: parseInt(id, 10) } : null;
           }
         }
-        return null;
+
+        // 2) Fallback par normalisation (gère accents/casse/espaces)
+        const rec = nameMap.get(normalize(val));
+        return rec && rec.id ? { id: rec.id } : null;
       }
 
       async function fetchProductInfo(pid) {
         try {
-          const r = await fetch(`${BASE}api/product-info?product_id=${encodeURIComponent(pid)}`, { headers: { 'Accept': 'application/json' } });
+          const r = await fetch(`${BASE}api/product-info?product_id=${encodeURIComponent(pid)}`, {
+            headers: { 'Accept': 'application/json' }
+          });
           if (!r.ok) throw new Error('HTTP ' + r.status);
           return await r.json();
-        } catch {
+        } catch (e) {
           return { error: 'fetch' };
         }
       }
 
       function fillInfos(payload) {
         if (!payload || payload.error) {
-          $fifo.textContent = '—';
+          $fifo.textContent = payload && payload.error === 'fetch' ? 'Erreur réseau' : '—';
           $loc.textContent = '—';
           $tot.textContent = '—';
           $unit.textContent = '';
@@ -155,23 +189,27 @@
           $validate.disabled = true;
           return;
         }
-        const lotId = payload?.fifo?.lot_id || null;
-        const dlc = payload?.fifo?.best_before || null;
-        $fifo.textContent = lotId ? `#${lotId}${dlc ? ' — ' + dlc : ''}` : 'Aucun lot dispo';
-        $loc.textContent = payload?.fifo?.location || '—';
-        const t = typeof payload.total_qty === 'number' ? payload.total_qty : parseFloat(payload.total_qty || '0') || 0;
+        var lotId = payload.fifo && payload.fifo.lot_id ? payload.fifo.lot_id : null;
+        var dlc = payload.fifo && payload.fifo.best_before ? payload.fifo.best_before : null;
+        $fifo.textContent = lotId ? ('#' + lotId + (dlc ? (' — ' + dlc) : '')) : 'Aucun lot dispo';
+
+        $loc.textContent = (payload.fifo && payload.fifo.location) ? payload.fifo.location : '—';
+        var t = typeof payload.total_qty === 'number' ? payload.total_qty : parseFloat(payload.total_qty || '0') || 0;
         $tot.textContent = t.toString();
-        $unit.textContent = payload?.unit || '';
-        $brand.textContent = payload?.brand || '—';
-        $validate.disabled = !(payload && t > 0);
+        $unit.textContent = payload.unit || '';
+        $brand.textContent = payload.brand || '—';
+        $validate.disabled = !(t > 0);
       }
 
       async function onProductChanged() {
-        const pid = resolveSelectedProductId();
-        $hiddenId.value = pid || '';
-        fillInfos(null); // reset
-        if (!pid) return;
-        const data = await fetchProductInfo(pid);
+        $hiddenId.value = '';
+        fillInfos(null); // reset visuel
+
+        const sel = findSelectedProduct();
+        if (!sel || !sel.id) return;
+
+        $hiddenId.value = String(sel.id);
+        const data = await fetchProductInfo(sel.id);
         fillInfos(data);
       }
 
@@ -181,12 +219,12 @@
         $qty.dispatchEvent(new Event('input'));
       }
 
-      $input.addEventListener('change', onProductChanged);
-      $input.addEventListener('input', onProductChanged);
+      // Écouteurs (multiplés pour fiabilité selon navigateurs)
+      ['input', 'change', 'blur'].forEach(evt => $input.addEventListener(evt, onProductChanged));
       $btns.forEach(b => b.addEventListener('click', onQuickBtn));
-      // $validate → branché en étape 3 (POST /consume)
     })();
   </script>
+
 
 
   <!-- À consommer (Top 8) -->
