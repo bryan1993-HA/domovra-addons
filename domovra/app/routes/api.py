@@ -238,44 +238,56 @@ def _try_log_event(kind: str, payload: Dict[str, Any]) -> None:
         pass
 
 
-@router.post("/api/stock/consume")  # <- chemin distinct pour éviter toute collision 405
+@router.api_route("/api/consume", methods=["GET", "POST"])
 def api_consume(
-    product_id: int = Body(..., embed=True, ge=1),
-    qty: float = Body(..., embed=True, gt=0),
+    # body (POST)
+    product_id: Optional[int] = Body(None, embed=True),
+    qty: Optional[float] = Body(None, embed=True),
+    # query (GET fallback)
+    product_id_q: Optional[int] = Query(None, alias="product_id"),
+    qty_q: Optional[float] = Query(None, alias="qty"),
 ) -> JSONResponse:
     """
-    Consomme `qty` du produit `product_id` en appliquant strictement le FIFO.
-    Peut décrémenter plusieurs lots successifs si nécessaire.
+    Consomme `qty` du produit `product_id` en FIFO.
+    Accepte POST (JSON) **et** GET (query string) pour contourner certains proxys.
     """
-    # 1) Vérifs
+    # ---- récupérer les paramètres (body > query) ----
+    pid = product_id if product_id is not None else product_id_q
+    q = qty if qty is not None else qty_q
+
     try:
-        pid = int(product_id)
+        pid = int(pid)  # type: ignore[arg-type]
     except Exception:
         return JSONResponse({"ok": False, "error": "invalid product_id"}, status_code=400)
     try:
-        q = float(qty)
+        q = float(q)  # type: ignore[arg-type]
     except Exception:
         return JSONResponse({"ok": False, "error": "invalid qty"}, status_code=400)
     if q <= 0:
         return JSONResponse({"ok": False, "error": "qty must be > 0"}, status_code=400)
 
+    # ---- données produit ----
     prods = list_products() or []
     prod = next((p for p in prods if int(p.get("id", 0)) == pid), None)
     if not prod:
         return JSONResponse({"ok": False, "error": "product not found"}, status_code=404)
 
-    # 2) Lots FIFO (qty > 0)
+    # ---- lots FIFO ----
     all_lots = list_lots() or []
     lots = [l for l in all_lots if int(l.get("product_id", 0)) == pid and float(l.get("qty") or 0) > 0]
     if not lots:
         return JSONResponse({"ok": False, "error": "no stock"}, status_code=404)
-    lots = sorted(lots, key=_fifo_sort_key)
 
+    def _fifo_sort_key(l: Dict[str, Any]):
+        bb = l.get("best_before")
+        return ("~", "") if not bb else ("", str(bb))
+
+    lots = sorted(lots, key=_fifo_sort_key)
     total_before = sum(float(l.get("qty") or 0) for l in lots)
+
     remaining = q
     ops: list[dict] = []
 
-    # 3) Décrément
     try:
         with _conn() as c:
             cur = c.cursor()
@@ -300,25 +312,12 @@ def api_consume(
                     "location": l.get("location") or l.get("location_name"),
                 })
 
-                _try_log_event("lot_consume", {
-                    "lot_id": lot_id,
-                    "product_id": pid,
-                    "qty_delta": -round(take, 6),
-                    "before": round(before, 6),
-                    "after": round(after, 6),
-                    "best_before": l.get("best_before"),
-                    "location": l.get("location") or l.get("location_name"),
-                    "unit": prod.get("unit") or prod.get("uom") or prod.get("unity") or prod.get("unite"),
-                    "name": prod.get("name"),
-                })
-
-                remaining = max(0.0, remaining - take)
-
+        consumed = round(q - remaining + sum(o["take"] for o in ops), 6)  # recalcul défensif
     except Exception:
-        log.exception("api_consume failed for product_id=%s qty=%s", product_id, qty)
+        log.exception("api_consume failed for product_id=%s qty=%s", pid, q)
         return JSONResponse({"ok": False, "error": "server"}, status_code=500)
 
-    consumed = round(q - remaining, 6)
+    # total après
     try:
         with _conn() as c2:
             r = c2.execute(
@@ -327,21 +326,13 @@ def api_consume(
             ).fetchone()
             total_after = float(r["t"] or 0.0)
     except Exception:
-        total_after = max(0.0, total_before - consumed)
-
-    _try_log_event("product_consume", {
-        "product_id": pid,
-        "requested_qty": q,
-        "consumed_qty": consumed,
-        "remaining_to_consume": remaining,
-        "operations_count": len(ops),
-    })
+        total_after = max(0.0, total_before - sum(o["take"] for o in ops))
 
     return JSONResponse({
         "ok": True,
         "requested_qty": q,
-        "consumed_qty": consumed,
-        "remaining_to_consume": remaining,
+        "consumed_qty": round(sum(o["take"] for o in ops), 6),
+        "remaining_to_consume": round(max(0.0, q - sum(o["take"] for o in ops)), 6),
         "operations": ops,
         "total_qty_before": round(total_before, 6),
         "total_qty_after": round(total_after, 6),

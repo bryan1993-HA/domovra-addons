@@ -273,17 +273,17 @@
 
       // ---------- POST /api/stock/consume ----------
       $validate.addEventListener('click', async () => {
-        const pid = parseInt($hiddenId.value || '0', 10);
-        const q = currentQty();
-        if (!pid || !q) return;
+        const pid = parseInt(($hiddenId.value || '0'), 10);
+        const q = parseFloat((($qty.value || '').replace(',', '.')));
+        if (!pid || !(q > 0)) return;
 
-        const url = makeIngressUrl('api/stock/consume'); // <— chemin nouveau
+        // Appel en GET: /api/consume?product_id=..&qty=..
+        const url = new URL('api/consume', window.location.href);
+        url.searchParams.set('product_id', String(pid));
+        url.searchParams.set('qty', String(q));
+
         try {
-          const r = await fetch(url, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
-            body: JSON.stringify({ product_id: pid, qty: q })
-          });
+          const r = await fetch(url.toString(), { headers: { 'Accept': 'application/json' } });
           const data = await r.json().catch(() => ({}));
 
           if (!r.ok || !data.ok) {
@@ -297,12 +297,10 @@
           (window.showToast || ((m, t) => alert(m)))(msg, data.remaining_to_consume > 0 ? 'warn' : 'ok');
 
           $qty.value = '';
-          updateValidateState();
-
-          const info = await fetchProductInfo(pid);
+          // refresh infos
+          const info = await fetch(new URL('api/product-info?product_id=' + pid, window.location.href), { headers: { 'Accept': 'application/json' } }).then(r => r.json()).catch(() => null);
           fillInfos(info);
-
-        } catch {
+        } catch (e) {
           (window.showToast || ((m) => alert(m)))('Erreur réseau', 'error');
         }
       });
