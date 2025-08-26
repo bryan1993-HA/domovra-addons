@@ -98,6 +98,13 @@
       </div>
     </div>
 
+    <!-- Lien debug JSON (affiché dès qu'un produit est sélectionné) -->
+    <div id="consume-debug" class="muted small" style="display:none; margin:.25rem 0 .5rem">
+      🔎 <a id="consume-json-link" href="#" target="_blank" rel="noopener">Ouvrir la réponse JSON</a>
+      <span id="consume-json-meta"></span>
+    </div>
+
+
     <!-- Ligne 4 : bouton (désactivé à cette étape) -->
     <div class="field">
       <button type="button" class="btn primary" id="consume-validate" disabled>Valider la consommation</button>
@@ -122,6 +129,11 @@
       const $qty = document.getElementById('consume-qty');
       const $btns = document.querySelectorAll('.quick-btns [data-qset]');
       const $validate = document.getElementById('consume-validate');
+      // Debug JSON
+      const $debugRow = document.getElementById('consume-debug');
+      const $jsonLink = document.getElementById('consume-json-link');
+      const $jsonMeta = document.getElementById('consume-json-meta');
+
 
       // --- Helpers ---
       function normalize(s) {
@@ -191,6 +203,21 @@
         }
       }
 
+      function updateDebugLink(pid) {
+        if (!$debugRow || !$jsonLink) return;
+        if (pid) {
+          const url = makeIngressUrl('api/product-info', { product_id: String(pid) });
+          $jsonLink.href = url;
+          if ($jsonMeta) $jsonMeta.textContent = ` (product_id=${pid})`;
+          $debugRow.style.display = '';
+        } else {
+          $jsonLink.removeAttribute('href');
+          if ($jsonMeta) $jsonMeta.textContent = '';
+          $debugRow.style.display = 'none';
+        }
+      }
+
+
       function fillInfos(payload) {
         if (!payload || payload.error) {
           // messages d’erreur plus clairs
@@ -225,12 +252,16 @@
         fillInfos(null); // reset visuel
 
         const sel = findSelectedProduct();
+        // NEW: maj du lien (même si pas de sélection pour masquer)
+        updateDebugLink(sel && sel.id ? sel.id : null);
+
         if (!sel || !sel.id) return;
 
         $hiddenId.value = String(sel.id);
         const data = await fetchProductInfo(sel.id);
         fillInfos(data);
       }
+
 
       function onQuickBtn(e) {
         const val = parseInt(e.currentTarget.getAttribute('data-qset'), 10) || 0;
