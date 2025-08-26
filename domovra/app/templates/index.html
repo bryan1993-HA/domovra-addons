@@ -168,22 +168,20 @@
       }
 
       async function fetchProductInfo(pid) {
-        const url = `${BASE}api/product-info?product_id=${encodeURIComponent(pid)}`;
+        // ✅ URL relative — pas besoin de BASE / pas de souci d’ingress
+        const url = `api/product-info?product_id=${encodeURIComponent(pid)}`;
         try {
           const r = await fetch(url, { headers: { 'Accept': 'application/json' } });
-          const text = await r.text(); // on lit le body en texte d'abord
-          let data = null;
-          try { data = JSON.parse(text); } catch (e) { }
-
+          const txt = await r.text();
+          let data = null; try { data = JSON.parse(txt); } catch { }
           if (!r.ok) {
-            console.debug('[consume] API error', { url, status: r.status, body: text });
-            return { error: 'http', status: r.status, url, body: text };
+            console.debug('[consume] API error', { url, status: r.status, body: txt });
+            return { error: 'http', status: r.status };
           }
-
-          return data || { error: 'parse', url, raw: text };
+          return data ?? { error: 'parse' };
         } catch (e) {
-          console.debug('[consume] Fetch failed', e);
-          return { error: 'fetch', url: `${BASE}api/product-info?product_id=${pid}` };
+          console.debug('[consume] fetch failed', e);
+          return { error: 'fetch' };
         }
       }
 
