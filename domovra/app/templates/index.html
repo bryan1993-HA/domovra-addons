@@ -2,6 +2,7 @@
 {% block title %}Domovra — Accueil{% endblock %}
 
 {% block head %}
+
 {% endblock %}
 
 {% block content %}
@@ -177,15 +178,11 @@
 
       async function fetchProductInfo(pid) {
         const url = makeIngressUrl('api/product-info', { product_id: String(pid) });
-        try {
-          const r = await fetch(url, { headers: { 'Accept': 'application/json' } });
-          const txt = await r.text();
-          let data = null; try { data = JSON.parse(txt); } catch { }
-          if (!r.ok) return { error: 'http', status: r.status };
-          return data ?? { error: 'parse' };
-        } catch {
-          return { error: 'fetch' };
-        }
+        const r = await fetch(url, { headers: { 'Accept': 'application/json' } });
+        const txt = await r.text();
+        let data = null; try { data = JSON.parse(txt); } catch { }
+        if (!r.ok) return { error: 'http', status: r.status };
+        return data ?? { error: 'parse' };
       }
 
       function updateDebugLink(pid) {
@@ -270,37 +267,66 @@
         $qty.dispatchEvent(new Event('input'));
       }
 
-      // ---------- /api/consume ----------
+      // ---- Consommation FIFO via POST lot/consume (serveur existant) ----
+      async function postLotConsume(lotId, qty) {
+        const url = new URL('lot/consume', window.location.href);
+        const form = new URLSearchParams();
+        form.set('lot_id', String(lotId));
+        form.set('qty', String(qty));
+        // La route peut rediriger; on considère tout 2xx/3xx comme succès
+        const r = await fetch(url.toString(), {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+          body: form.toString()
+        });
+        return r.ok;
+      }
+
+      async function consumeFIFO(pid, qty) {
+        // On se base sur lastInfo si c’est bien le même produit, sinon on refetch
+        const info = (lastInfo && lastInfo.product_id === pid) ? lastInfo : await fetchProductInfo(pid);
+        if (!info || info.error) throw new Error('info unavailable');
+        if (!info.lots || info.lots.length === 0) throw new Error('no stock');
+
+        let remaining = qty;
+        const ops = [];
+
+        for (const l of info.lots) {
+          if (remaining <= 1e-12) break;
+          const lotQty = parseFloat(l.qty || '0') || 0;
+          if (lotQty <= 0) continue;
+          const take = Math.min(remaining, lotQty);
+
+          const ok = await postLotConsume(l.lot_id, take);
+          if (!ok) throw new Error('lot/consume failed');
+
+          ops.push({ lot_id: l.lot_id, take, before: lotQty, best_before: l.best_before, location: l.location });
+          remaining = Math.max(0, remaining - take);
+        }
+
+        return { remaining, ops };
+      }
+
+      // ---------- Bouton "Valider la consommation" ----------
       $validate.addEventListener('click', async () => {
         const pid = parseInt(($hiddenId.value || '0'), 10);
         const q = parseFloat((($qty.value || '').replace(',', '.')));
         if (!pid || !(q > 0)) return;
 
-        // Appel en GET: /api/consume?product_id=..&qty=..
-        const url = new URL('api/consume', window.location.href);
-        url.searchParams.set('product_id', String(pid));
-        url.searchParams.set('qty', String(q));
-
         try {
-          const r = await fetch(url.toString(), { headers: { 'Accept': 'application/json' } });
-          const data = await r.json().catch(() => ({}));
-
-          if (!r.ok || !data.ok) {
-            (window.showToast || ((m) => alert(m)))('Consommation impossible', 'error');
-            return;
+          const res = await consumeFIFO(pid, q);
+          if (res.remaining > 0) {
+            (window.showToast || ((m) => alert(m)))(`Partiel : consommé ${q - res.remaining}/${q}`, 'warn');
+          } else {
+            (window.showToast || ((m) => alert(m)))(`Consommé ${q}`, 'ok');
           }
-
-          const msg = data.remaining_to_consume > 0
-            ? `Partiel : consommé ${data.consumed_qty}/${data.requested_qty}`
-            : `Consommé ${data.consumed_qty}`;
-          (window.showToast || ((m, t) => alert(m)))(msg, data.remaining_to_consume > 0 ? 'warn' : 'ok');
-
           $qty.value = '';
+
           // refresh infos
-          const info = await fetch(new URL('api/product-info?product_id=' + pid, window.location.href), { headers: { 'Accept': 'application/json' } }).then(r => r.json()).catch(() => null);
+          const info = await fetchProductInfo(pid);
           fillInfos(info);
         } catch (e) {
-          (window.showToast || ((m) => alert(m)))('Erreur réseau', 'error');
+          (window.showToast || ((m) => alert(m)))('Consommation impossible', 'error');
         }
       });
 
@@ -394,15 +420,12 @@
   </div>
 </div>
 
-</div>
-
 <!-- Produits en faible stock (Top 8) -->
 <div class="card">
   <div class="title">
     <h2>Produits en faible stock (Top 8)</h2>
   </div>
 
-  <!-- Desktop -->
   <div class="top8-table table-responsive">
     <table>
       <thead>
@@ -445,7 +468,6 @@
     </table>
   </div>
 
-  <!-- Mobile -->
   <div class="top8-cards">
     {% if low_products and low_products|length > 0 %}
     {% for p in low_products %}
@@ -471,4 +493,5 @@
   </div>
 </div>
 
+</div>
 {% endblock %}

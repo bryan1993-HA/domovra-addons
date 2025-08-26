@@ -15,6 +15,13 @@ from db import list_products, list_lots
 router = APIRouter()
 log = logging.getLogger("domovra.api")
 
+# Active un format lisible et DEBUG si rien n'est configuré ailleurs
+if not log.handlers:
+    logging.basicConfig(
+        level=logging.DEBUG,
+        format="%(asctime)s %(levelname)s %(name)s: %(message)s"
+    )
+log.setLevel(logging.DEBUG)
 
 # ========= DB helper =========
 def _conn() -> sqlite3.Connection:
@@ -23,20 +30,9 @@ def _conn() -> sqlite3.Connection:
     c.row_factory = sqlite3.Row
     return c
 
-
 # ========= Endpoints =========
 @router.get("/api/product/by_barcode")
 def api_product_by_barcode(code: str) -> JSONResponse:
-    """
-    Lookup a product by its barcode.
-
-    Query params:
-      - code: barcode string (spaces allowed; they are stripped)
-    Returns:
-      200 JSON: { id, name, barcode }
-      400 JSON: { error: "missing code" }
-      404 JSON: { error: "not found" }
-    """
     code = (code or "").strip().replace(" ", "")
     if not code:
         return JSONResponse({"error": "missing code"}, status_code=400)
@@ -57,18 +53,8 @@ def api_product_by_barcode(code: str) -> JSONResponse:
 
     return JSONResponse({"id": row["id"], "name": row["name"], "barcode": row["barcode"]})
 
-
 @router.get("/api/off")
 def api_off(barcode: str) -> JSONResponse:
-    """
-    Proxy to Open Food Facts.
-
-    Query params:
-      - barcode: EAN/UPC code
-    Returns:
-      200 JSON: { ok: True, barcode, name, brand, quantity, image }
-      4xx/5xx JSON with { ok: False, error: <reason> }
-    """
     import urllib.request
     import urllib.error
 
@@ -103,8 +89,7 @@ def api_off(barcode: str) -> JSONResponse:
         }
     )
 
-
-# ---- Helpers internes -------------------------------------------------------
+# ---- Helpers -------------------------------------------------------
 def _first_non_empty(*vals: Optional[str]) -> Optional[str]:
     for v in vals:
         if v is None:
@@ -114,30 +99,21 @@ def _first_non_empty(*vals: Optional[str]) -> Optional[str]:
             return s
     return None
 
-
-# ---- /api/product-info ------------------------------------------------------
+# ---- /api/product-info --------------------------------------------
 @router.get("/api/product-info")
 def api_product_info(product_id: int = Query(..., ge=1)) -> JSONResponse:
     """
-    Infos rapides pour 'Consommer un produit':
+    Donne l’état d’un produit pour la carte 'Consommer un produit':
       - fifo: lot à consommer en premier (DLC la plus proche)
       - total_qty: somme des lots > 0
       - unit, brand
-      - lots: TOUS les lots du produit (tri FIFO)
-
-    Réponse:
-    {
-      product_id, unit, brand, total_qty,
-      fifo: { lot_id, best_before, location },
-      lots_count, lots: [...]
-    }
+      - lots: tous les lots triés FIFO
     """
     try:
         pid = int(product_id)
     except Exception:
         return JSONResponse({"error": "invalid product_id"}, status_code=400)
 
-    # 1) Produit
     prods = list_products() or []
     prod = next((p for p in prods if int(p.get("id", 0)) == pid), None)
     if not prod:
@@ -149,27 +125,21 @@ def api_product_info(product_id: int = Query(..., ge=1)) -> JSONResponse:
         prod.get("marque"), prod.get("producer"), prod.get("brand_owner")
     )
 
-    # 2) Lots du produit (qty > 0)
     all_lots = list_lots() or []
     lots = [l for l in all_lots if int(l.get("product_id", 0)) == pid and float(l.get("qty") or 0) > 0]
-
-    # Total
     total_qty = sum(float(l.get("qty") or 0) for l in lots)
 
-    # 3) Trie FIFO (DLC vides en dernier)
     def fifo_key(l):
         bb = l.get("best_before")
         return ("~", "") if not bb else ("", str(bb))
 
     fifo_lot = sorted(lots, key=fifo_key)[0] if lots else None
-
     fifo_payload = {
         "lot_id": fifo_lot.get("id") if fifo_lot else None,
         "best_before": fifo_lot.get("best_before") if fifo_lot else None,
         "location": (fifo_lot.get("location") or fifo_lot.get("location_name")) if fifo_lot else None,
     }
 
-    # 4) Marque finale: produit -> lot FIFO -> premier lot qui en a une
     brand_final = brand_prod
     if not brand_final and fifo_lot:
         brand_final = _first_non_empty(
@@ -187,7 +157,6 @@ def api_product_info(product_id: int = Query(..., ge=1)) -> JSONResponse:
             if brand_final:
                 break
 
-    # 5) Construire la liste complète des lots
     lots_sorted = sorted(lots, key=fifo_key)
     lots_payload = []
     for l in lots_sorted:
@@ -219,125 +188,22 @@ def api_product_info(product_id: int = Query(..., ge=1)) -> JSONResponse:
         "lots": lots_payload,
     })
 
-
-# ---- Consommation FIFO par produit -----------------------------------------
-def _fifo_sort_key(l: Dict[str, Any]):
-    bb = l.get("best_before")
-    return ("~", "") if not bb else ("", str(bb))
-
-
-def _try_log_event(kind: str, payload: Dict[str, Any]) -> None:
-    """Best-effort: log in journal service if available."""
-    try:
-        from services.events import add_event  # optional in your project
-        add_event(kind, payload)
-    except Exception:
-        pass
-
-
+# ---- /api/consume (neutralisé pour éviter 500) ---------------------
 @router.api_route("/api/consume", methods=["GET", "POST"])
-def api_consume(
-    # body (POST)
+def api_consume_disabled(
     product_id: Optional[int] = Body(None, embed=True),
     qty: Optional[float] = Body(None, embed=True),
-    # query (GET fallback)
     product_id_q: Optional[int] = Query(None, alias="product_id"),
     qty_q: Optional[float] = Query(None, alias="qty"),
 ) -> JSONResponse:
     """
-    Consomme `qty` du produit `product_id` en FIFO.
-    Accepte POST (JSON) **et** GET (query string).
+    Neutralisé volontairement : dans ton instance, la table SQLite 'lots' n'existe pas.
+    La consommation se fait côté front en postant sur 'lot/consume' (route historique).
     """
-    # ---- récupérer les paramètres (body > query) ----
-    pid = product_id if product_id is not None else product_id_q
-    q = qty if qty is not None else qty_q
+    log.warning("api_consume disabled: DB table 'lots' missing. Use client-side lot/consume.")
+    return JSONResponse({"ok": False, "error": "disabled"}, status_code=501)
 
-    try:
-        pid = int(pid)  # type: ignore[arg-type]
-    except Exception:
-        return JSONResponse({"ok": False, "error": "invalid product_id"}, status_code=400)
-    try:
-        q = float(q)  # type: ignore[arg-type]
-    except Exception:
-        return JSONResponse({"ok": False, "error": "invalid qty"}, status_code=400)
-    if q <= 0:
-        return JSONResponse({"ok": False, "error": "qty must be > 0"}, status_code=400)
-
-    # ---- données produit ----
-    prods = list_products() or []
-    prod = next((p for p in prods if int(p.get("id", 0)) == pid), None)
-    if not prod:
-        return JSONResponse({"ok": False, "error": "product not found"}, status_code=404)
-
-    # ---- lots FIFO ----
-    all_lots = list_lots() or []
-    lots = [l for l in all_lots if int(l.get("product_id", 0)) == pid and float(l.get("qty") or 0) > 0]
-    if not lots:
-        return JSONResponse({"ok": False, "error": "no stock"}, status_code=404)
-
-    lots = sorted(lots, key=_fifo_sort_key)
-    total_before = sum(float(l.get("qty") or 0) for l in lots)
-
-    remaining = q
-    ops: list[dict] = []
-
-    try:
-        with _conn() as c:
-            cur = c.cursor()
-            for l in lots:
-                if remaining <= 1e-12:
-                    break
-                lot_id = int(l["id"])
-                before = float(l.get("qty") or 0)
-                if before <= 0:
-                    continue
-
-                take = before if before <= remaining else remaining
-                after = max(0.0, before - take)
-
-                cur.execute("UPDATE lots SET qty = ? WHERE id = ?", (after, lot_id))
-
-                ops.append({
-                    "lot_id": lot_id,
-                    "take": round(take, 6),
-                    "before": round(before, 6),
-                    "after": round(after, 6),
-                    "best_before": l.get("best_before"),
-                    "location": l.get("location") or l.get("location_name"),
-                })
-
-                # décrémenter le restant à consommer
-                remaining = max(0.0, remaining - take)
-
-    except Exception:
-        log.exception("api_consume failed for product_id=%s qty=%s", pid, q)
-        return JSONResponse({"ok": False, "error": "server"}, status_code=500)
-
-    consumed = round(q - remaining, 6)
-
-    # total après
-    try:
-        with _conn() as c2:
-            r = c2.execute(
-                "SELECT COALESCE(SUM(qty), 0) AS t FROM lots WHERE product_id = ? AND qty > 0",
-                (pid,)
-            ).fetchone()
-            total_after = float(r["t"] or 0.0)
-    except Exception:
-        total_after = max(0.0, total_before - consumed)
-
-    return JSONResponse({
-        "ok": True,
-        "requested_qty": q,
-        "consumed_qty": consumed,
-        "remaining_to_consume": round(max(0.0, q - consumed), 6),
-        "operations": ops,
-        "total_qty_before": round(total_before, 6),
-        "total_qty_after": round(total_after, 6),
-    })
-
-
-# ---- Consommation ciblée d’un lot ------------------------------------------
+# ---- Consommation ciblée d’un lot (optionnelle) --------------------
 @router.post("/api/stock/consume-lot")
 def api_consume_lot(
     lot_id: int = Body(..., embed=True, ge=1),
@@ -346,68 +212,39 @@ def api_consume_lot(
     """Décrémente UNIQUEMENT le lot donné (sans passer au suivant)."""
     try:
         lid = int(lot_id)
-    except Exception:
-        return JSONResponse({"ok": False, "error": "invalid lot_id"}, status_code=400)
-    try:
         q = float(qty)
     except Exception:
-        return JSONResponse({"ok": False, "error": "invalid qty"}, status_code=400)
+        return JSONResponse({"ok": False, "error": "bad params"}, status_code=400)
     if q <= 0:
         return JSONResponse({"ok": False, "error": "qty must be > 0"}, status_code=400)
 
+    # Si ta base n’a pas de table 'lots', on sort poliment :
     try:
         with _conn() as c:
-            cur = c.cursor()
-            row = cur.execute(
-                "SELECT id, product_id, qty, best_before, location_id FROM lots WHERE id = ?",
+            row = c.execute(
+                "SELECT id, product_id, qty FROM lots WHERE id = ?",
                 (lid,)
             ).fetchone()
-            if not row:
-                return JSONResponse({"ok": False, "error": "lot not found"}, status_code=404)
+    except sqlite3.OperationalError:
+        return JSONResponse({"ok": False, "error": "disabled"}, status_code=501)
 
-            before = float(row["qty"] or 0.0)
-            if before <= 0:
-                return JSONResponse({"ok": False, "error": "empty lot"}, status_code=409)
+    if not row:
+        return JSONResponse({"ok": False, "error": "lot not found"}, status_code=404)
 
-            take = before if before <= q else q
-            after = max(0.0, before - take)
-            cur.execute("UPDATE lots SET qty = ? WHERE id = ?", (after, lid))
+    before = float(row["qty"] or 0.0)
+    take = before if before <= q else q
+    after = max(0.0, before - take)
 
-            _try_log_event("lot_consume", {
-                "lot_id": lid,
-                "product_id": int(row["product_id"]),
-                "qty_delta": -round(take, 6),
-                "before": round(before, 6),
-                "after": round(after, 6),
-                "best_before": row["best_before"],
-                "location_id": row["location_id"],
-            })
-
-        # total produit après conso (utile pour UI)
-        try:
-            with _conn() as c2:
-                r = c2.execute(
-                    "SELECT COALESCE(SUM(qty),0) AS t FROM lots WHERE product_id = ? AND qty > 0",
-                    (int(row["product_id"]),)
-                ).fetchone()
-                total_after = float(r["t"] or 0.0)
-        except Exception:
-            total_after = None
-
-        return JSONResponse({
-            "ok": True,
-            "requested_qty": q,
-            "consumed_qty": round(take, 6),
-            "remaining_to_consume": round(max(0.0, q - take), 6),
-            "lot": {
-                "lot_id": lid,
-                "before": round(before, 6),
-                "after": round(after, 6),
-                "best_before": row["best_before"],
-                "location_id": row["location_id"],
-                "product_id": int(row["product_id"]),
-            },
-            "total_qty_after": total_after,
-        })
+    try:
+        with _conn() as c:
+            c.execute("UPDATE lots SET qty = ? WHERE id = ?", (after, lid))
     except Exception:
         return JSONResponse({"ok": False, "error": "server"}, status_code=500)
+
+    return JSONResponse({
+        "ok": True,
+        "requested_qty": q,
+        "consumed_qty": round(take, 6),
+        "remaining_to_consume": round(max(0.0, q - take), 6),
+        "lot": {"lot_id": lid, "before": round(before, 6), "after": round(after, 6)},
+    })
