@@ -1,60 +1,77 @@
-"""
-<table class="data-table compact">
-    <thead>
-        <tr>
-            {% for col in columns %}
-            <th>
-                {{ col }}
-                <a class="sort" title="Trier"
-                    href="{{ BASE }}admin/db/table/{{ table }}?order_by={{ col }}&desc={{ 'false' if desc else 'true' }}&page=1&page_size={{ page_size }}">⇅</a>
-            </th>
-            {% endfor %}
-        </tr>
-    </thead>
-    <tbody>
-        {% for r in rows %}
-        <tr>
-            {% for col in columns %}
-            {% set v = r[col] %}
-            <td class="mono">{{ v }}</td>
-            {% endfor %}
-        </tr>
-        {% endfor %}
-    </tbody>
-</table>
-</div>
+{% extends "base.html" %} {# ou "basse.html" si c'est le nom chez toi #}
+{% block title %}Admin · {{ table }}{% endblock %}
 
+{% block content %}
+<section class="page">
+    <header class="page-header">
+        <div class="header-row">
+            <h1>🗄️ Table: <code>{{ table }}</code></h1>
+            <div class="actions">
+                <a class="btn" href="{{ BASE }}admin/db">↩︎ Toutes les tables</a>
+                <a class="btn" href="{{ BASE }}admin/db/table/{{ table }}/export.csv">⬇ Export CSV</a>
+            </div>
+        </div>
+        <div class="muted">Lignes: {{ total }} — Page {{ page }} ({{ page_size }} / page)</div>
+    </header>
 
-<nav class="pager">
+    {% if rows and columns and rows|length > 0 and columns|length > 0 %}
+    <div class="table-wrapper horizontal-scroll">
+        <table class="data-table compact">
+            <thead>
+                <tr>
+                    {% for col in columns %}
+                    <th>
+                        {{ col }}
+                        <a class="sort" title="Trier"
+                            href="{{ BASE }}admin/db/table/{{ table }}?order_by={{ col }}&desc={{ 'false' if desc else 'true' }}&page=1&page_size={{ page_size }}">⇅</a>
+                    </th>
+                    {% endfor %}
+                </tr>
+            </thead>
+            <tbody>
+                {% for r in rows %}
+                <tr>
+                    {% for col in columns %}
+                    <td class="mono">{{ r[col] }}</td>
+                    {% endfor %}
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
     {% set last_page = ((total - 1) // page_size) + 1 %}
-    <a class="btn"
-        href="{{ BASE }}admin/db/table/{{ table }}?page=1&page_size={{ page_size }}&order_by={{ order_by }}&desc={{ desc }}">«
-        Première</a>
-    {% if page > 1 %}
-    <a class="btn"
-        href="{{ BASE }}admin/db/table/{{ table }}?page={{ page - 1 }}&page_size={{ page_size }}&order_by={{ order_by }}&desc={{ desc }}">‹
-        Précédente</a>
-    {% else %}
-    <span class="btn disabled">‹ Précédente</span>
-    {% endif %}
-    <span class="muted">Page {{ page }} / {{ last_page }}</span>
-    {% if page < last_page %} <a class="btn"
-        href="{{ BASE }}admin/db/table/{{ table }}?page={{ page + 1 }}&page_size={{ page_size }}&order_by={{ order_by }}&desc={{ desc }}">
-        Suivante ›</a>
-        {% else %}
-        <span class="btn disabled">Suivante ›</span>
-        {% endif %}
+    <nav class="pager">
         <a class="btn"
-            href="{{ BASE }}admin/db/table/{{ table }}?page={{ last_page }}&page_size={{ page_size }}&order_by={{ order_by }}&desc={{ desc }}">Dernière
-            »</a>
-</nav>
+            href="{{ BASE }}admin/db/table/{{ table }}?page=1&page_size={{ page_size }}&order_by={{ order_by }}&desc={{ desc }}">«
+            Première</a>
 
+        {% if page > 1 %}
+        <a class="btn"
+            href="{{ BASE }}admin/db/table/{{ table }}?page={{ page - 1 }}&page_size={{ page_size }}&order_by={{ order_by }}&desc={{ desc }}">‹
+            Précédente</a>
+        {% else %}
+        <span class="btn disabled">‹ Précédente</span>
+        {% endif %}
 
-{% else %}
-<div class="muted">Aucune donnée.</div>
-{% endif %}
+        <span class="muted">Page {{ page }} / {{ last_page }}</span>
+
+        {% if page < last_page %} <a class="btn"
+            href="{{ BASE }}admin/db/table/{{ table }}?page={{ page + 1 }}&page_size={{ page_size }}&order_by={{ order_by }}&desc={{ desc }}">
+            Suivante ›</a>
+            {% else %}
+            <span class="btn disabled">Suivante ›</span>
+            {% endif %}
+
+            <a class="btn"
+                href="{{ BASE }}admin/db/table/{{ table }}?page={{ last_page }}&page_size={{ page_size }}&order_by={{ order_by }}&desc={{ desc }}">Dernière
+                »</a>
+    </nav>
+
+    {% else %}
+    <div class="muted">Aucune donnée.</div>
+    {% endif %}
 </section>
-
 
 <style>
     .table-wrapper {
@@ -141,4 +158,3 @@
     }
 </style>
 {% endblock %}
-"""
