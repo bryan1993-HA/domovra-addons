@@ -256,28 +256,19 @@
             <div class="section">
                 <div class="section-title">
                     <h3>Quantités & Prix</h3>
-                    <span class="muted">par unité, multiplicateur, totaux & €/kg·L</span>
+                    <span class="muted">simple : contenu d’une unité → nombre d’unités → prix total</span>
                 </div>
 
                 <div class="row">
-                    <!-- Quantité par unité + unité -->
+                    <!-- Contenu d’une unité -->
                     <div class="col-4">
-                        <div class="label">Quantité (par unité)</div>
+                        <div class="label">Contenu d’une unité</div>
                         <div class="infield">
-                            <input type="number" step="0.001" min="0.001" name="qty" id="qty" value="1" required>
+                            <input type="number" step="0.001" min="0.001" name="qty" id="qty" value="1"
+                                placeholder="ex. 125" required>
                             <select name="unit" id="unit" style="max-width:140px">
                                 <optgroup label="Comptage">
                                     <option value="pièce">pièce</option>
-                                    <option value="tranche">tranche</option>
-                                    <option value="paquet">paquet</option>
-                                    <option value="boîte">boîte</option>
-                                    <option value="bocal">bocal</option>
-                                    <option value="bouteille">bouteille</option>
-                                    <option value="sachet">sachet</option>
-                                    <option value="lot">lot</option>
-                                    <option value="barquette">barquette</option>
-                                    <option value="rouleau">rouleau</option>
-                                    <option value="dosette">dosette</option>
                                 </optgroup>
                                 <optgroup label="Poids">
                                     <option value="g">g</option>
@@ -289,36 +280,55 @@
                                 </optgroup>
                             </select>
                         </div>
-                        <div class="hint" id="qty_hint"></div>
+                        <div class="hint">Exemples : 125 g · 1 L · 1 pièce</div>
                     </div>
 
-                    <!-- Multiplicateur -->
-                    <div class="col-2">
-                        <div class="label">× N unités</div>
-                        <input type="number" step="1" min="1" name="multiplier" id="multiplier" value="1">
-                    </div>
-
-                    <!-- Prix total -->
+                    <!-- Nombre d’unités -->
                     <div class="col-3">
+                        <div class="label">Nombre d’unités (pack)</div>
+                        <input type="number" step="1" min="1" name="multiplier" id="multiplier" value="1"
+                            placeholder="ex. 6">
+                        <div class="hint">Mets 6 si pack de 6 (sinon 1).</div>
+                    </div>
+
+                    <!-- Prix payé (total) -->
+                    <div class="col-5">
                         <div class="label">Prix payé (total)</div>
                         <div class="infield">
                             <input type="number" step="0.01" min="0" name="price_total" id="price_total"
-                                placeholder="0.00">
+                                placeholder="ex. 2,40">
                             <span style="align-self:center;">€</span>
                         </div>
+                        <div class="hint">Montant TTC sur le ticket (promo incluse).</div>
                     </div>
 
-                    <!-- Hints total & €/kg·L -->
-                    <div class="col-3">
-                        <div class="label">Calculs</div>
-                        <div class="hint" id="total_qty_hint">Quantité totale : 1 pièce</div>
-                        <div class="hint" id="price_calc_hint"></div>
-                    </div>
-
-                    <!-- Hidden quantités totales (pour backend) -->
+                    <!-- Hidden pour le backend -->
                     <input type="hidden" name="qty_total" id="qty_total" value="1">
                 </div>
+
+                <!-- Résumé (lecture seule) -->
+                <div class="summary">
+                    <div class="summary-title">🧮 Résumé</div>
+                    <div class="summary-items">
+                        <div class="summary-item">
+                            <div class="k">Quantité totale</div>
+                            <div class="v" id="sum_total_qty">—</div>
+                        </div>
+                        <div class="summary-item">
+                            <div class="k">Prix / unité</div>
+                            <div class="v" id="sum_price_per_unit">—</div>
+                        </div>
+                        <div class="summary-item" id="sum_price_per_base_wrap">
+                            <div class="k">Prix / kg·L</div>
+                            <div class="v" id="sum_price_per_base">—</div>
+                        </div>
+                    </div>
+                    <div class="examples muted">
+                        Exemples : 6 × 125 g → 750 g · 3 × 1 L → 3 L · 1 × 500 g → 0,5 kg
+                    </div>
+                </div>
             </div>
+
 
             <!-- SECTION 3 — Conservation & Emplacement -->
             <div class="section">
@@ -693,34 +703,83 @@
         // === Calculs quantités / prix
         function updateCalcs() {
             const q = Math.max(valNum(qtyInput), 0);
-            const u = unitSel?.value || 'pièce';
+            const u = (unitSel?.value || 'pièce').trim();
             const m = Math.max(Math.floor(valNum(multInput)) || 1, 1);
             const pt = Math.max(valNum(priceTotal), 0);
 
+            // total
             const totalQty = q * m;
             if (qtyTotalHidden) qtyTotalHidden.value = String(totalQty);
 
-            let qtyTxt = `Quantité totale : ${totalQty} ${u}`;
-            let baseTxt = ''; let perUnitTxt = ''; let perBaseTxt = '';
+            // Affichages
+            const sumTotal = document.querySelector('#sum_total_qty');
+            const sumPerUnit = document.querySelector('#sum_price_per_unit');
+            const sumPerBase = document.querySelector('#sum_price_per_base');
+            const sumPerBaseWrap = document.querySelector('#sum_price_per_base_wrap');
 
-            if (pt > 0 && m > 0) perUnitTxt = `Prix / unité : ${(pt / m).toFixed(2)} €`;
+            // Quantité totale + normalisation texte
+            let totalTxt = `${m} × ${q} ${u}`;
+            // Ajouter équivalence kg/L si pertinent
+            let baseTxt = '';
 
-            const mu = mapUnit(u);
-            if (pt > 0 && mu) {
-                if (mu === 'g' || mu === 'kg') {
-                    const totalKg = (mu === 'kg') ? totalQty : (totalQty / 1000);
-                    if (totalKg > 0) { perBaseTxt = `Prix / kg : ${(pt / totalKg).toFixed(2)} €`; baseTxt = `≈ ${totalKg.toFixed(3)} kg`; }
-                } else if (mu === 'ml' || mu === 'L') {
-                    const totalL = (mu === 'L') ? totalQty : (totalQty / 1000);
-                    if (totalL > 0) { perBaseTxt = `Prix / L : ${(pt / totalL).toFixed(2)} €`; baseTxt = `≈ ${totalL.toFixed(3)} L`; }
-                } else if (mu === 'pièce') {
-                    if (m > 0) perBaseTxt = `Prix / pièce : ${(pt / m).toFixed(2)} €`;
-                }
+            // détermine unité de base pour affichage (kg/L)
+            const mu = mapUnit(u); // ta fonction existante mapUnit()
+            if (mu === 'g' || mu === 'kg') {
+                const totalKg = (mu === 'kg') ? totalQty : (totalQty / 1000);
+                if (totalKg > 0) baseTxt = `≈ ${totalKg.toFixed(3)} kg`;
+            } else if (mu === 'ml' || mu === 'L') {
+                const totalL = (mu === 'L') ? totalQty : (totalQty / 1000);
+                if (totalL > 0) baseTxt = `≈ ${totalL.toFixed(3)} L`;
             }
 
-            setHint(totalQtyHint, [qtyTxt, baseTxt].filter(Boolean).join(' — '));
-            setHint(priceCalcHint, [perUnitTxt, perBaseTxt].filter(Boolean).join(' · '));
+            if (sumTotal) {
+                sumTotal.textContent = [`${totalQty} ${u}`, baseTxt].filter(Boolean).join(' — ');
+            }
+
+            // Prix / unité (si prix > 0)
+            if (sumPerUnit) {
+                if (pt > 0 && m > 0) sumPerUnit.textContent = `${(pt / m).toFixed(2)} € / unité`;
+                else sumPerUnit.textContent = '—';
+            }
+
+            // Prix / kg·L (si poids ou volume)
+            if (sumPerBase && sumPerBaseWrap) {
+                if (pt > 0 && mu) {
+                    if (mu === 'g' || mu === 'kg') {
+                        const totalKg = (mu === 'kg') ? totalQty : (totalQty / 1000);
+                        if (totalKg > 0) {
+                            sumPerBase.textContent = `${(pt / totalKg).toFixed(2)} € / kg`;
+                            sumPerBaseWrap.style.display = '';
+                        } else {
+                            sumPerBase.textContent = '—';
+                            sumPerBaseWrap.style.display = '';
+                        }
+                    } else if (mu === 'ml' || mu === 'L') {
+                        const totalL = (mu === 'L') ? totalQty : (totalQty / 1000);
+                        if (totalL > 0) {
+                            sumPerBase.textContent = `${(pt / totalL).toFixed(2)} € / L`;
+                            sumPerBaseWrap.style.display = '';
+                        } else {
+                            sumPerBase.textContent = '—';
+                            sumPerBaseWrap.style.display = '';
+                        }
+                    } else {
+                        // pièce : cacher le bloc prix/kg·L
+                        sumPerBase.textContent = '—';
+                        sumPerBaseWrap.style.display = 'none';
+                    }
+                } else {
+                    // pas de prix saisi
+                    if (mu === 'g' || mu === 'kg' || mu === 'ml' || mu === 'L') {
+                        sumPerBase.textContent = '—';
+                        sumPerBaseWrap.style.display = '';
+                    } else {
+                        sumPerBaseWrap.style.display = 'none';
+                    }
+                }
+            }
         }
+
 
         ['change', 'input'].forEach(ev => {
             qtyInput?.addEventListener(ev, updateCalcs);

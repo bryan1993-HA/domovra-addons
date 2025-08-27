@@ -2382,3 +2382,47 @@ html[data-theme="light"] .kofi-outline {
     font-size: .95rem;
     opacity: .8;
 }
+
+
+
+
+----------------- .summary {
+    margin-top: .75rem;
+    padding: .75rem;
+    border: 1px solid var(--line, rgba(128, 128, 128, .25));
+    border-radius: 10px;
+    background: var(--bg-soft, rgba(0, 0, 0, .04));
+}
+
+.summary-title {
+    font-weight: 600;
+    margin-bottom: .5rem;
+}
+
+.summary-items {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: .5rem;
+}
+
+.summary-item {
+    padding: .35rem .5rem;
+    border-radius: 8px;
+    background: var(--bg, transparent);
+}
+
+.summary-item .k {
+    opacity: .8;
+    font-size: .9rem;
+}
+
+.summary-item .v {
+    font-weight: 600;
+    margin-top: .15rem;
+}
+
+@media (max-width: 700px) {
+    .summary-items {
+        grid-template-columns: 1fr;
+    }
+}
