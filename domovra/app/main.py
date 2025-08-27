@@ -32,6 +32,7 @@ from routes.settings import router as settings_router
 # Routers techniques
 from routes.api import router as api_router
 from routes.debug import router as debug_router
+from routes.admin_db import router as admin_db_router
 
 # DB (uniquement ce dont on a besoin ici)
 from db import init_db
@@ -148,6 +149,7 @@ app.include_router(settings_router)
 # Technique / API
 app.include_router(api_router)
 app.include_router(debug_router)
+app.include_router(admin_db_router)
 
 
 # ============================================================

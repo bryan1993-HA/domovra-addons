@@ -1,0 +1,41 @@
+"""
+{% extends "base.html" %}
+{% block title %}{{ title }}{% endblock %}
+
+
+{% block content %}
+<section class="page">
+    <header class="page-header">
+        <h1>🗄️ Admin · Base de données</h1>
+        <div class="muted">Fichier: <code>{{ db_path }}</code></div>
+    </header>
+
+
+    {% if tables %}
+    <div class="table-wrapper">
+        <table class="data-table">
+            <colgroup>
+                <col style="width: 100%">
+            </colgroup>
+            <thead>
+                <tr>
+                    <th>Table</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for t in tables %}
+                <tr>
+                    <td>
+                        <a href="{{ BASE }}admin/db/table/{{ t }}">{{ t }}</a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div class="muted">Aucune table trouvée.</div>
+    {% endif %}
+</section>
+{% endblock %}
+"""

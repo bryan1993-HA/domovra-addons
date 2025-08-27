@@ -1,0 +1,144 @@
+"""
+<table class="data-table compact">
+    <thead>
+        <tr>
+            {% for col in columns %}
+            <th>
+                {{ col }}
+                <a class="sort" title="Trier"
+                    href="{{ BASE }}admin/db/table/{{ table }}?order_by={{ col }}&desc={{ 'false' if desc else 'true' }}&page=1&page_size={{ page_size }}">⇅</a>
+            </th>
+            {% endfor %}
+        </tr>
+    </thead>
+    <tbody>
+        {% for r in rows %}
+        <tr>
+            {% for col in columns %}
+            {% set v = r[col] %}
+            <td class="mono">{{ v }}</td>
+            {% endfor %}
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+</div>
+
+
+<nav class="pager">
+    {% set last_page = ((total - 1) // page_size) + 1 %}
+    <a class="btn"
+        href="{{ BASE }}admin/db/table/{{ table }}?page=1&page_size={{ page_size }}&order_by={{ order_by }}&desc={{ desc }}">«
+        Première</a>
+    {% if page > 1 %}
+    <a class="btn"
+        href="{{ BASE }}admin/db/table/{{ table }}?page={{ page - 1 }}&page_size={{ page_size }}&order_by={{ order_by }}&desc={{ desc }}">‹
+        Précédente</a>
+    {% else %}
+    <span class="btn disabled">‹ Précédente</span>
+    {% endif %}
+    <span class="muted">Page {{ page }} / {{ last_page }}</span>
+    {% if page < last_page %} <a class="btn"
+        href="{{ BASE }}admin/db/table/{{ table }}?page={{ page + 1 }}&page_size={{ page_size }}&order_by={{ order_by }}&desc={{ desc }}">
+        Suivante ›</a>
+        {% else %}
+        <span class="btn disabled">Suivante ›</span>
+        {% endif %}
+        <a class="btn"
+            href="{{ BASE }}admin/db/table/{{ table }}?page={{ last_page }}&page_size={{ page_size }}&order_by={{ order_by }}&desc={{ desc }}">Dernière
+            »</a>
+</nav>
+
+
+{% else %}
+<div class="muted">Aucune donnée.</div>
+{% endif %}
+</section>
+
+
+<style>
+    .table-wrapper {
+        margin-top: 1rem;
+    }
+
+    .horizontal-scroll {
+        overflow-x: auto;
+    }
+
+    .data-table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+
+    .data-table th,
+    .data-table td {
+        padding: .5rem .6rem;
+        border-bottom: 1px solid var(--border);
+    }
+
+    .data-table thead th {
+        position: sticky;
+        top: 0;
+        background: var(--bg);
+        z-index: 1;
+    }
+
+    .data-table.compact th,
+    .data-table.compact td {
+        padding: .35rem .5rem;
+    }
+
+    .pager {
+        display: flex;
+        gap: .5rem;
+        align-items: center;
+        margin-top: .75rem;
+        flex-wrap: wrap;
+    }
+
+    .btn {
+        display: inline-flex;
+        align-items: center;
+        gap: .35rem;
+        padding: .45rem .7rem;
+        border: 1px solid var(--border);
+        border-radius: .5rem;
+        text-decoration: none;
+    }
+
+    .btn.disabled {
+        opacity: .5;
+        pointer-events: none;
+    }
+
+    .actions {
+        display: flex;
+        gap: .5rem;
+    }
+
+    .mono {
+        font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+        font-size: .92em;
+    }
+
+    .sort {
+        margin-left: .3rem;
+        text-decoration: none;
+    }
+
+    .page-header {
+        display: flex;
+        flex-direction: column;
+        gap: .25rem;
+    }
+
+    .header-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 1rem;
+        flex-wrap: wrap;
+    }
+</style>
+{% endblock %}
+"""
