@@ -224,12 +224,10 @@
                             <option value="" disabled selected>— Choisir ou scanner —</option>
                             {% for p in products %}
                             <option value="{{ p.id }}" data-barcode="{{ p.barcode or '' }}"
-                                data-unit="{{ p.unit or 'pièce' }}" data-pack="{{ p.pack_of or '' }}"
-                                data-name="{{ p.name }}" data-brand="{{ p.brand or '' }}"
-                                data-default_location_id="{{ p.default_location_id or '' }}"
-                                data-default_location="{{ p.default_location_id or '' }}"
-                                data-no-freeze="{{ 1 if p.no_freeze else 0 }}"
-                                data-no_freeze="{{ 1 if p.no_freeze else 0 }}">
+                                data-unit="{{ p.unit or 'pièce' }}" data-name="{{ p.name }}"
+                                data-brand="{{ p.brand or '' }}"
+                                data-default-location="{{ p.default_location_id or '' }}"
+                                data-no-freeze="{{ 1 if p.no_freeze else 0 }}">
                                 {{ p.name }}{% if p.brand %} — {{ p.brand }}{% endif %}
                             </option>
                             {% endfor %}

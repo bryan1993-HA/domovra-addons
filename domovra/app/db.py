@@ -298,8 +298,21 @@ def add_product(
 def list_products():
     with _conn() as c:
         return [dict(r) for r in c.execute(
-            "SELECT id, name, unit, default_shelf_life_days, barcode, min_qty FROM products ORDER BY name"
+            """
+            SELECT
+              id,
+              name,
+              unit,
+              default_shelf_life_days,
+              barcode,
+              min_qty,
+              default_location_id,
+              COALESCE(no_freeze, 0) AS no_freeze
+            FROM products
+            ORDER BY name COLLATE NOCASE
+            """
         )]
+
 
 def list_products_with_stats():
     with _conn() as c:
