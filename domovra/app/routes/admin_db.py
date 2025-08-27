@@ -7,7 +7,6 @@ from __future__ import annotations
 import csv
 import io
 import sqlite3
-from typing import List
 
 from fastapi import APIRouter, Request, Query, HTTPException
 from fastapi.responses import HTMLResponse, StreamingResponse
@@ -17,13 +16,11 @@ from utils.http import ingress_base, render as render_with_env
 
 router = APIRouter()
 
-
 # ---------- Helpers ----------
 def _conn() -> sqlite3.Connection:
     c = sqlite3.connect(DB_PATH)
     c.row_factory = sqlite3.Row
     return c
-
 
 # ---------- Routes ----------
 @router.get("/admin/db", response_class=HTMLResponse)
@@ -42,14 +39,11 @@ async def admin_db_home(request: Request):
     return render_with_env(
         request,
         "admin/db_list.html",
-        {
-            "BASE": ingress_base(request),
-            "tables": tables,
-            "db_path": DB_PATH,
-            "title": "Admin · Base de données",
-        },
+        BASE=ingress_base(request),
+        tables=tables,
+        db_path=DB_PATH,
+        title="Admin · Base de données",
     )
-
 
 @router.get("/admin/db/table/{table}", response_class=HTMLResponse)
 async def admin_db_table(
@@ -91,20 +85,17 @@ async def admin_db_table(
     return render_with_env(
         request,
         "admin/db_table.html",
-        {
-            "BASE": ingress_base(request),
-            "table": table,
-            "columns": columns,
-            "rows": data,
-            "page": page,
-            "page_size": page_size,
-            "total": total,
-            "order_by": order,
-            "desc": desc,
-            "title": f"Admin · {table}",
-        },
+        BASE=ingress_base(request),
+        table=table,
+        columns=columns,
+        rows=data,
+        page=page,
+        page_size=page_size,
+        total=total,
+        order_by=order,
+        desc=desc,
+        title=f"Admin · {table}",
     )
-
 
 @router.get("/admin/db/table/{table}/export.csv")
 async def admin_db_export_csv(
