@@ -36,9 +36,11 @@ async def admin_db_home(request: Request):
         ).fetchall()
         tables = [r["name"] for r in rows]
 
+    # ⬇️ utils.http.render(templates_env, name, **ctx)
     return render_with_env(
-        request,
+        request.app.state.templates,
         "admin/db_list.html",
+        request=request,
         BASE=ingress_base(request),
         tables=tables,
         db_path=DB_PATH,
@@ -83,8 +85,9 @@ async def admin_db_table(
         data = [dict(r) for r in rows]
 
     return render_with_env(
-        request,
+        request.app.state.templates,
         "admin/db_table.html",
+        request=request,
         BASE=ingress_base(request),
         table=table,
         columns=columns,
