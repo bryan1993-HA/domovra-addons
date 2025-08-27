@@ -244,6 +244,7 @@ Astuce : tu peux combiner (ex. « ddm produits laitiers »)."></span>
         </div>
 
         <footer class="pc-actions">
+          {% set inf = insights.get(it.id) if insights else None %}
           <button class="secondary js-view-open" data-id="{{ it.id }}" data-name="{{ it.name }}"
             data-category="{{ it.category or '' }}" data-unit="{{ it.unit or '' }}"
             data-expiry-kind="{{ it.expiry_kind or 'DLC' }}" data-no-freeze="{{ 1 if (it.no_freeze or 0)!=0 else 0 }}"
@@ -254,9 +255,12 @@ Astuce : tu peux combiner (ex. « ddm produits laitiers »)."></span>
             data-last-price="{{ '%.2f'|format(it.last_price_unit) if it.last_price_unit else '' }}"
             data-price-currency="{{ it.currency or '€' }}"
             data-price-history='{{ (it.price_history_json or "[]")|safe }}'
-            data-stock-value="{{ '%.2f'|format(it.stock_value) if it.stock_value else '' }}">
+            data-stock-value="{{ '%.2f'|format(it.stock_value) if it.stock_value else '' }}"
+            data-last-in="{{ inf.last_in if inf and inf.last_in else '' }}"
+            data-last-out="{{ inf.last_out if inf and inf.last_out else '' }}">
             👁️ Voir
           </button>
+
 
           <button class="secondary js-edit-open" data-id="{{ it.id }}" data-name="{{ it.name }}"
             data-desc="{{ it.description or '' }}" data-default-location="{{ it.default_location_id or '' }}"
