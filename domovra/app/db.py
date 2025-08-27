@@ -45,7 +45,7 @@ def init_db():
             FOREIGN KEY(lot_id) REFERENCES stock_lots(id)
         )""")
 
-        # ----- Migration : products.barcode (+ index unique null‑safe)
+        # ----- Migration : products.barcode (+ index unique null-safe)
         if not _column_exists(c, "products", "barcode"):
             c.execute("ALTER TABLE products ADD COLUMN barcode TEXT")
         c.execute("""
@@ -115,10 +115,43 @@ def init_db():
         if not _column_exists(c, "products", "parent_id"):
             c.execute("ALTER TABLE products ADD COLUMN parent_id INTEGER")
 
+        # ----- Historique complet (soft delete + conversions + raisons)
+        if not _column_exists(c, "stock_lots", "status"):
+            c.execute("ALTER TABLE stock_lots ADD COLUMN status TEXT NOT NULL DEFAULT 'open'")
+        if not _column_exists(c, "stock_lots", "ended_on"):
+            c.execute("ALTER TABLE stock_lots ADD COLUMN ended_on TEXT")
+        if not _column_exists(c, "stock_lots", "initial_qty"):
+            c.execute("ALTER TABLE stock_lots ADD COLUMN initial_qty REAL")
+
+        if not _column_exists(c, "products", "unit_pivot"):
+            c.execute("ALTER TABLE products ADD COLUMN unit_pivot TEXT")
+
+        if not _column_exists(c, "movements", "unit_input"):
+            c.execute("ALTER TABLE movements ADD COLUMN unit_input TEXT")
+        if not _column_exists(c, "movements", "factor_to_pivot"):
+            c.execute("ALTER TABLE movements ADD COLUMN factor_to_pivot REAL DEFAULT 1")
+        if not _column_exists(c, "movements", "reason_code"):
+            c.execute("ALTER TABLE movements ADD COLUMN reason_code TEXT")
+        if not _column_exists(c, "movements", "price_allocated"):
+            c.execute("ALTER TABLE movements ADD COLUMN price_allocated REAL")
+        if not _column_exists(c, "movements", "location_from_id"):
+            c.execute("ALTER TABLE movements ADD COLUMN location_from_id INTEGER")
+        if not _column_exists(c, "movements", "location_to_id"):
+            c.execute("ALTER TABLE movements ADD COLUMN location_to_id INTEGER")
+
+        # ----- Backfill utiles
+        try:
+            c.execute("UPDATE stock_lots SET initial_qty = qty WHERE initial_qty IS NULL")
+        except Exception:
+            pass
+        try:
+            c.execute("UPDATE products SET unit_pivot = unit WHERE unit_pivot IS NULL")
+        except Exception:
+            pass
+
         c.commit()
 
 
-# ---------- Locations
 # ---------- Locations
 def add_location(name: str, is_freezer: int = 0, description: str | None = None) -> int:
     name = name.strip()
@@ -145,7 +178,7 @@ def list_locations():
 
 def update_location(location_id: int, name: str, is_freezer: int | None = None, description: str | None = None):
     """
-    Rétro‑compat : tu peux appeler avec seulement (id, name).
+    Rétro-compat : tu peux appeler avec seulement (id, name).
     Si is_freezer/description sont fournis (non None), on les met à jour aussi.
     """
     sets = ["name=?"]
@@ -274,6 +307,7 @@ def list_products_with_stats():
         WITH totals AS (
           SELECT product_id, COALESCE(SUM(qty),0) AS qty_total, COUNT(id) AS lots_count
           FROM stock_lots
+          WHERE status='open'
           GROUP BY product_id
         )
         SELECT
@@ -306,6 +340,7 @@ def list_low_stock_products(limit: int = 8):
         WITH totals AS (
           SELECT product_id, COALESCE(SUM(qty),0) AS qty_total
           FROM stock_lots
+          WHERE status='open'
           GROUP BY product_id
         )
         SELECT
@@ -424,9 +459,9 @@ def add_lot(product_id: int, location_id: int, qty: float, frozen_on: str | None
     with _conn() as c:
         today = _today()
         cur = c.execute(
-            """INSERT INTO stock_lots(product_id,location_id,qty,frozen_on,best_before,created_on)
-               VALUES(?,?,?,?,?,?)""",
-            (product_id, location_id, qty, frozen_on, best_before, today)
+            """INSERT INTO stock_lots(product_id,location_id,qty,frozen_on,best_before,created_on,initial_qty,status)
+               VALUES(?,?,?,?,?,?,?,?)""",
+            (product_id, location_id, qty, frozen_on, best_before, today, qty, 'open')
         )
         lot_id = cur.lastrowid
         c.execute(
@@ -452,16 +487,17 @@ def add_lot_purchase(
     multiplier: int | None = None,
     unit_at_purchase: str | None = None,
 ) -> int:
-    """Insertion d’un lot depuis la page Achats, en enregistrant les méta‑infos d’article."""
+    """Insertion d’un lot depuis la page Achats, en enregistrant les méta-infos d’article."""
     with _conn() as c:
         today = _today()
         cur = c.execute(
             """
             INSERT INTO stock_lots(
               product_id, location_id, qty, frozen_on, best_before, created_on,
-              article_name, brand, ean, price_total, qty_per_unit, multiplier, unit_at_purchase
+              article_name, brand, ean, price_total, qty_per_unit, multiplier, unit_at_purchase,
+              initial_qty, status
             )
-            VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)
+            VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
             """,
             (
                 int(product_id), int(location_id), float(qty_total),
@@ -473,6 +509,7 @@ def add_lot_purchase(
                 (float(qty_per_unit) if qty_per_unit not in (None, "",) else None),
                 (int(multiplier) if multiplier not in (None, "",) else None),
                 (unit_at_purchase or None),
+                float(qty_total), 'open'
             )
         )
         lot_id = cur.lastrowid
@@ -525,6 +562,7 @@ def list_lots():
         FROM stock_lots l
         JOIN products  p   ON p.id  = l.product_id
         JOIN locations loc ON loc.id = l.location_id
+        WHERE l.status = 'open'
         ORDER BY COALESCE(l.best_before, '9999-12-31') ASC,
                  COALESCE(NULLIF(l.name, ''), NULLIF(l.article_name, ''), p.name)
         """
@@ -557,30 +595,50 @@ def list_lots():
             FROM stock_lots l
             JOIN products  p   ON p.id  = l.product_id
             JOIN locations loc ON loc.id = l.location_id
+            WHERE l.status = 'open'
             ORDER BY COALESCE(l.best_before, '9999-12-31') ASC,
                      COALESCE(NULLIF(l.article_name, ''), p.name)
             """
             return [dict(r) for r in c.execute(q2)]
 
-def consume_lot(lot_id: int, qty: float):
+def consume_lot(lot_id: int, qty: float, reason: str | None = None):
     with _conn() as c:
-        row = c.execute("SELECT qty FROM stock_lots WHERE id=?", (lot_id,)).fetchone()
+        row = c.execute("SELECT qty, price_total, qty_per_unit, multiplier FROM stock_lots WHERE id=?", (lot_id,)).fetchone()
         if not row:
             return
-        new_qty = float(row["qty"]) - float(qty)
+        old_qty = float(row["qty"])
+        qty = float(qty)
+        new_qty = old_qty - qty
+
+        # coût alloué (si prix dispo)
+        price_alloc = None
+        try:
+            if row["price_total"] and row["qty_per_unit"] and row["multiplier"]:
+                total_initial = float(row["qty_per_unit"]) * float(row["multiplier"])
+                if total_initial > 0:
+                    price_alloc = float(row["price_total"]) * (min(qty, old_qty) / total_initial)
+        except Exception:
+            price_alloc = None
+
         if new_qty <= 0:
-            c.execute("DELETE FROM stock_lots WHERE id=?", (lot_id,))
+            # Clôture du lot (soft delete)
             c.execute(
-                """INSERT INTO movements(lot_id,type,qty,ts,note)
-                   VALUES(?,?,?,DATE('now'),?)""",
-                (lot_id, 'OUT', float(row["qty"]), 'delete lot')
+                "UPDATE stock_lots SET qty=0, status='empty', ended_on=DATE('now') WHERE id=?",
+                (lot_id,)
+            )
+            c.execute(
+                """INSERT INTO movements(lot_id,type,qty,ts,note,reason_code,price_allocated)
+                   VALUES(?,?,?,?,?,?,?)""",
+                (lot_id, 'OUT', old_qty, datetime.date.today().isoformat(),
+                 'lot terminé', reason, price_alloc)
             )
         else:
             c.execute("UPDATE stock_lots SET qty=? WHERE id=?", (new_qty, lot_id))
             c.execute(
-                """INSERT INTO movements(lot_id,type,qty,ts,note)
-                   VALUES(?,?,?,DATE('now'),?)""",
-                (lot_id, 'OUT', qty, None)
+                """INSERT INTO movements(lot_id,type,qty,ts,note,reason_code,price_allocated)
+                   VALUES(?,?,?,?,?,?,?)""",
+                (lot_id, 'OUT', qty, datetime.date.today().isoformat(),
+                 None, reason, price_alloc)
             )
         c.commit()
 
@@ -657,6 +715,7 @@ def list_product_insights():
                 "expired_rate": float(r["expired_rate"]) if r["expired_rate"] is not None else None,
             }
         return out
+
 # APRÈS — À AJOUTER dans db.py
 def list_price_history_for_product(product_id: int, limit: int = 10):
     """
@@ -703,7 +762,7 @@ def current_stock_value_by_product():
                 END
               ) AS value
             FROM stock_lots l
-            WHERE l.qty > 0
+            WHERE l.qty > 0 AND l.status='open'
             GROUP BY l.product_id
         """).fetchall()
         out = {}
