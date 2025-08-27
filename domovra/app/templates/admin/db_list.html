@@ -1,6 +1,5 @@
-{% extends "base.html" %}
+{% extends "base.html" %} {# ou "basse.html" selon ton layout #}
 {% block title %}Admin · Base de données{% endblock %}
-
 
 {% block content %}
 <section class="page">
@@ -8,7 +7,6 @@
         <h1>🗄️ Admin · Base de données</h1>
         <div class="muted">Fichier : <code>{{ db_path }}</code></div>
     </header>
-
 
     {% if tables and tables|length > 0 %}
     <div class="table-wrapper">
@@ -18,7 +16,7 @@
             </colgroup>
             <thead>
                 <tr>
-                    <th>Table / Vue</th>
+                    <th>Table</th>
                 </tr>
             </thead>
             <tbody>
@@ -34,7 +32,6 @@
     <div class="muted">Aucune table trouvée.</div>
     {% endif %}
 </section>
-
 
 <style>
     .table-wrapper {
