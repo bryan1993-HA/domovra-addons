@@ -1,7 +1,7 @@
 from __future__ import annotations
 order_by: str | None = Query(None),
 desc: bool = Query(True),
-):
+
 """Exporte la table au format CSV (UTF-8, séparateur ',')."""
 with _conn() as c:
 exists = c.execute(
