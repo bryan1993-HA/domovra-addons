@@ -226,7 +226,8 @@
                             <option value="{{ p.id }}" data-barcode="{{ p.barcode or '' }}"
                                 data-unit="{{ p.unit or 'pièce' }}" data-pack="{{ p.pack_of or '' }}"
                                 data-name="{{ p.name }}" data-brand="{{ p.brand or '' }}"
-                                data-default-location="{{ p.default_location_id or '' }}">
+                                data-default-location="{{ p.default_location_id or '' }}"
+                                data-no-freeze="{{ 1 if p.no_freeze else 0 }}">
                                 {{ p.name }}{% if p.brand %} — {{ p.brand }}{% endif %}
                             </option>
                             {% endfor %}
@@ -344,7 +345,7 @@
                     </div>
 
                     <!-- Date de congélation -->
-                    <div class="col-4">
+                    <div class="col-4" id="frozen_group">
                         <div class="label">Date de congélation (optionnel)</div>
                         <input type="date" name="frozen_on" id="frozen_on">
                     </div>
@@ -733,21 +734,39 @@
             const opt = productSel.options[productSel.selectedIndex];
             if (!opt) return;
 
-            // Unité / pack / emplacement par défaut
+            // 1) Unité par défaut (depuis la fiche)
             selectUnitOnForm(opt.dataset.unit || 'pièce');
 
+            // 2) Pack (inchangé)
             const pack = Number(opt.dataset.pack || '1');
             if (!isNaN(pack) && pack > 1) multInput.value = String(pack);
 
             if (!qtyInput.value || Number(qtyInput.value) <= 0) qtyInput.value = '1';
 
+            // 3) Emplacement par défaut
             const locDefault = opt.dataset.defaultLocation;
-            const locSel = $('#location_id');
+            const locSel = document.querySelector('#location_id');
             if (locDefault && locSel && [...locSel.options].some(o => o.value === String(locDefault))) {
                 locSel.value = String(locDefault);
             }
 
-            setHint($('#product_hint'), `Fiche parent : ${opt.dataset.name}${opt.dataset.brand ? ' — ' + opt.dataset.brand : ''}`);
+            // 4) Congélation : cacher si no_freeze = 1/true
+            const frozenGroup = document.querySelector('#frozen_group');
+            const frozenInput = document.querySelector('#frozen_on');
+            const noFreezeRaw = (opt.dataset.noFreeze || opt.dataset.no_freeze || '').toString().toLowerCase();
+            const noFreeze = (noFreezeRaw === '1' || noFreezeRaw === 'true');
+
+            if (frozenGroup) {
+                if (noFreeze) {
+                    frozenGroup.style.display = 'none';
+                    if (frozenInput) frozenInput.value = ''; // on efface la date si présente
+                } else {
+                    frozenGroup.style.display = ''; // réaffiche (la grille recalcule automatiquement)
+                }
+            }
+
+            setHint(document.querySelector('#product_hint'),
+                `Fiche parent : ${opt.dataset.name}${opt.dataset.brand ? ' — ' + opt.dataset.brand : ''}`);
             setHint(offQtyHint, '');
             updateCalcs();
         });
