@@ -1,17 +1,16 @@
 {% extends "base.html" %}
 {% block title %}Domovra — Accueil{% endblock %}
 
-{% block head %}
-
-{% endblock %}
+{% block head %}{% endblock %}
 
 {% block content %}
-<div class="wrap">
+<div class="wrap"><!-- NOTE: conteneur principal de la page -->
 
   <!-- ===================== Consommer un produit ===================== -->
   <div class="card consume-card" data-role="consume">
     <div class="title">
-      <h2>Consommer un produit</h2><span class="muted">→ sélectionnez un produit</span>
+      <h2>Consommer un produit</h2>
+      <span class="muted">→ sélectionnez un produit</span>
     </div>
 
     <!-- Produit (datalist) -->
@@ -27,7 +26,7 @@
         </option>
         {% endfor %}
       </datalist>
-      <input type="hidden" id="consume-product-id">
+      <input type="hidden" id="consume-product-id"><!-- NOTE: je stocke l’ID produit réellement sélectionné -->
     </div>
 
     <!-- Infos -->
@@ -56,9 +55,10 @@
       <div class="qty-controls">
         <input id="consume-qty" type="number" inputmode="numeric" step="1" min="0" placeholder="0">
         <div class="quick-btns">
-          <button type="button" class="btn small ghost" data-qset="1">−1</button>
-          <button type="button" class="btn small ghost" data-qset="2">−2</button>
-          <button type="button" class="btn small ghost" data-qset="3">−3</button>
+          <!-- NOTE: j’ai retiré le signe “−” sur les libellés, car on remplit une quantité positive -->
+          <button type="button" class="btn small ghost" data-qset="1">1</button>
+          <button type="button" class="btn small ghost" data-qset="2">2</button>
+          <button type="button" class="btn small ghost" data-qset="3">3</button>
         </div>
       </div>
     </div>
@@ -66,7 +66,7 @@
     <!-- Lien debug JSON -->
     <div id="consume-debug" class="muted small" style="display:none; margin:.25rem 0 .5rem">
       🔎 <a id="consume-json-link" href="#" target="_blank" rel="noopener">Ouvrir la réponse JSON</a>
-      <span id="consume-json-meta"></span>
+      <span id="consume-json-meta"></span><!-- NOTE: j’affiche (product_id=xxx) ici -->
     </div>
 
     <!-- Bouton -->
@@ -74,7 +74,7 @@
       <button type="button" class="btn primary" id="consume-validate" disabled>Valider la consommation</button>
       <div class="muted small">Consomme en FIFO (lot(s) à DLC la plus proche).</div>
     </div>
-  </div>
+  </div><!-- /.card.consume-card -->
 
   <!-- ===================== Script ===================== -->
   <script>
@@ -107,10 +107,11 @@
 
       function normalize(s) {
         return (s || "").toString().trim().toLowerCase()
-          .normalize('NFD').replace(/\p{Diacritic}/gu, '')
+          .normalize('NFD').replace(/\p{Diacritic}/gu, '') // NOTE: j’enlève les accents pour matcher proprement
           .replace(/\s+/g, ' ');
       }
 
+      // NOTE: je fabrique une map "nom normalisé → {id, brand, unit}" pour retrouver l’ID même si pas de focus sur l’option exacte
       const nameMap = (() => {
         const map = new Map();
         $dl.querySelectorAll('option').forEach(opt => {
@@ -129,6 +130,8 @@
       function findSelectedProduct() {
         const val = ($input.value || '').trim();
         if (!val) return null;
+
+        // NOTE: si l’option correspond EXACTEMENT à la valeur, je prends son data-id
         if (window.CSS && CSS.escape) {
           const opt = $dl.querySelector(`option[value="${CSS.escape(val)}"]`);
           if (opt) {
@@ -136,6 +139,8 @@
             return id ? { id: parseInt(id, 10) } : null;
           }
         }
+
+        // NOTE: sinon, je tente ma map normalisée
         const rec = nameMap.get(normalize(val));
         return rec && rec.id ? { id: rec.id } : null;
       }
@@ -213,6 +218,7 @@
         $tot.textContent = t.toString();
         $unit.textContent = (payload.unit && String(payload.unit).trim()) || '';
 
+        // NOTE: si l’API ne me renvoie pas la marque, je tente celle de l’option sélectionnée
         let brandFromApi = (payload.brand && String(payload.brand).trim()) || '';
         if (!brandFromApi) {
           const val = ($input.value || '').trim();
@@ -240,7 +246,7 @@
       function onQuickBtn(e) {
         const val = parseInt(e.currentTarget.getAttribute('data-qset'), 10) || 0;
         $qty.value = val ? String(val) : '';
-        $qty.dispatchEvent(new Event('input'));
+        $qty.dispatchEvent(new Event('input')); // NOTE: je déclenche l’update du bouton “Valider”
       }
 
       // ---- API côté front ----
@@ -300,7 +306,14 @@
 
             consumed += take;
             remaining = Math.max(0, remaining - take);
-            ops.push({ lot_id: l.lot_id, take, before: lotQty, after: Math.max(0, lotQty - take), best_before: l.best_before, location: l.location });
+            ops.push({
+              lot_id: l.lot_id,
+              take,
+              before: lotQty,
+              after: Math.max(0, lotQty - take),
+              best_before: l.best_before,
+              location: l.location
+            });
 
             // LOG par lot
             logEvent('lot_consume', {
@@ -357,6 +370,7 @@
         }
       });
 
+      // NOTE: je recalcule les infos dès que l’input change / perd le focus (meilleure robustesse)
       ['input', 'change', 'blur'].forEach(evt => $input.addEventListener(evt, onProductChanged));
       $btns.forEach(b => b.addEventListener('click', onQuickBtn));
       $qty.addEventListener('input', updateValidateState);
@@ -364,17 +378,17 @@
     })();
   </script>
 
-  <!-- À consommer en priorité (Top 8) -->
+  <!-- ===================== À consommer en priorité (Top 8) ===================== -->
   <div class="card">
     <div class="title">
       <h2>À consommer en priorité (Top 8)</h2>
     </div>
 
-    {# On préfiltre : on enlève les 'green' = OK. Restent 'red' et 'yellow'. #}
     {% set urgents = lots
     | selectattr('status', 'defined')
     | selectattr('status', 'in', ['red', 'yellow'])
     | list %}
+
     <!-- Desktop -->
     <div class="top8-table table-responsive">
       <table>
@@ -396,8 +410,11 @@
             <td>{{ '%.2f'|format(it.qty)|trim('0')|trim('.') }} {{ it.unit|pluralize_fr(it.qty) }}</td>
             <td>{{ it.best_before or '—' }}</td>
             <td>
-              {% if it.status == 'red' %}<span class="pill danger">Urgent</span>
-              {% elif it.status == 'yellow' %}<span class="pill warn">Bientôt</span>{% endif %}
+              {% if it.status == 'red' %}
+              <span class="pill danger">Urgent</span>
+              {% elif it.status == 'yellow' %}
+              <span class="pill warn">Bientôt</span>
+              {% endif %}
             </td>
           </tr>
           {% endfor %}
@@ -408,7 +425,7 @@
           {% endif %}
         </tbody>
       </table>
-    </div>
+    </div><!-- /.top8-table -->
 
     <!-- Mobile -->
     <div class="top8-cards">
@@ -422,20 +439,23 @@
             <span>⚖️ {{ '%.2f'|format(it.qty)|trim('0')|trim('.') }} {{ it.unit|pluralize_fr(it.qty) }}</span>
             <span>🗓️ {{ it.best_before or '—' }}</span>
             <span>
-              {% if it.status == 'red' %}<span class="pill danger">Urgent</span>
-              {% elif it.status == 'yellow' %}<span class="pill warn">Bientôt</span>{% endif %}
+              {% if it.status == 'red' %}
+              <span class="pill danger">Urgent</span>
+              {% elif it.status == 'yellow' %}
+              <span class="pill warn">Bientôt</span>
+              {% endif %}
             </span>
           </div>
         </div>
-      </div>
+      </div><!-- /.lot-card -->
       {% endfor %}
       {% else %}
       <div class="muted">Aucun produit urgent ou bientôt à consommer.</div>
       {% endif %}
-    </div>
-  </div>
+    </div><!-- /.top8-cards -->
+  </div><!-- /.card (À consommer en priorité) -->
 
-  <!-- Produits en faible stock (Top 8) -->
+  <!-- ===================== Produits en faible stock (Top 8) ===================== -->
   <div class="card">
     <div class="title">
       <h2>Produits en faible stock (Top 8)</h2>
@@ -455,7 +475,7 @@
         <tbody>
           {% set ns = namespace(count=0) %}
           {% for p in low_products %}
-          {# Valeurs sûres #}
+          {# NOTE: je force des nombres fiables (float) pour éviter les surprises d’affichage #}
           {% set q = (p.qty_total if p.qty_total is defined else 0) | float %}
           {% set minq = (p.min_qty if p.min_qty is defined else 0) | float %}
           {% set manque = (minq - q) if minq > q else 0 %}
@@ -477,15 +497,14 @@
             <tr>
               <td colspan="4" class="muted">
                 Aucun produit en dessous du seuil.
-                <a href="{{ BASE }}api/home-debug" target="_blank" class="btn small ghost" style="margin-left:.5rem">
-                  Voir les données de débogage
-                </a>
+                <a href="{{ BASE }}api/home-debug" target="_blank" class="btn small ghost"
+                  style="margin-left:.5rem">Voir les données de débogage</a>
               </td>
             </tr>
             {% endif %}
         </tbody>
       </table>
-    </div>
+    </div><!-- /.top8-table -->
 
     <!-- Mobile -->
     <div class="top8-cards">
@@ -498,24 +517,30 @@
         <div class="lot-main">
           <div class="lot-title">{{ p.name }}</div>
           <div class="lot-meta">
-            <span>⚖️ {% if q == 0 %}0 {{ p.unit|pluralize_fr(0) if p.unit is defined else '' }}{% else %}{{ ('%.2f' % q)
-              | trim('0') | trim('.') }} {{ p.unit|pluralize_fr(q) if p.unit is defined else '' }}{% endif %}</span>
+            <span>
+              ⚖️
+              {% if q == 0 %}
+              0 {{ p.unit|pluralize_fr(0) if p.unit is defined else '' }}
+              {% else %}
+              {{ ('%.2f' % q) | trim('0') | trim('.') }} {{ p.unit|pluralize_fr(q) if p.unit is defined else '' }}
+              {% endif %}
+            </span>
             <span>🎯 Seuil : {{ (minq|int if minq == minq|int else (('%.2f' % minq)|trim('0')|trim('.'))) }}</span>
             <span>⛽ Manque : {{ manque|int }} {{ p.unit|pluralize_fr(manque) if p.unit is defined else '' }}</span>
           </div>
         </div>
-    </div>
+    </div><!-- /.lot-card -->
     {% endif %}
     {% endfor %}
+
     {% if ns.count == 0 %}
-    <div class="muted">Aucun produit en dessous du seuil.
-      <a href="/api/home-debug" target="_blank" class="btn primary">Voir les données de débogage</a>
+    <div class="muted">
+      Aucun produit en dessous du seuil.
+      <a href="{{ BASE }}api/home-debug" target="_blank" class="btn primary">Voir les données de débogage</a>
     </div>
-
     {% endif %}
-  </div>
-</div>
+  </div><!-- /.top8-cards -->
+</div><!-- /.card (faible stock) -->
 
-</div>
-
+</div><!-- /.wrap -->
 {% endblock %}
