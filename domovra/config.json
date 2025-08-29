@@ -1,7 +1,7 @@
 {
   "name": "Domovra (Beta)",
   "slug": "domovra_beta",
-  "version": "1.2.86-beta.1",
+  "version": "1.2.87-beta.1",
   "description": "Gestion de stock domestique (frigo, congélateur, placards) — interface web via Ingress. Ajout/édition/suppression de produits, emplacements et lots, avec filtres et statut des DLC.",
   "url": "https://github.com/bryan1993-HA/domovra-addons",
   "documentation": "https://github.com/bryan1993-HA/domovra-addons/blob/main/domovra/README.md",

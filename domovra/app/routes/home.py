@@ -27,43 +27,31 @@ def _is_true(v) -> bool:
 
 def _compute_low_products(products, lots):
     """
-    Calcule:
-      - totals: somme des qty par product_id (lots ouverts seulement)
-      - low_products: produits avec low_stock_enabled et qty_total < min_qty
+    Calcule les produits qui sont en faible stock
+    - On prend en compte 'low_stock_enabled' et 'min_qty' pour chaque produit
+    - On somme les quantités des lots et on les compare au min_qty
     """
-    # Somme des quantités par produit (on exclut les lots clos/vides)
+    # Somme des quantités par produit
     totals = {}
-    for l in (lots or []):
+    for l in lots:
         pid = l.get("product_id")
         if not pid:
             continue
-
-        # Filtrage des lots terminés / vides (selon tes colonnes)
-        status = str(l.get("status") or "").lower()
-        ended_on = str(l.get("ended_on") or "").strip()
-        if status in ("empty", "closed", "done"):
-            continue
-        if ended_on:  # ex: '2025-08-27'
-            continue
-
         q = _to_float(l.get("qty"), 0.0)
         totals[pid] = totals.get(pid, 0.0) + q
 
     low_products = []
-    for p in (products or []):
+    for p in products:
         pid = p.get("id")
         if not pid:
             continue
 
-        enabled = _is_true(p.get("low_stock_enabled"))
+        # Vérifie si l'alerte de faible stock est activée
+        enabled = str(p.get("low_stock_enabled") or "0").lower() not in ("0", "false", "off", "no")
         min_qty = _to_float(p.get("min_qty"), 0.0)
         qty_total = _to_float(totals.get(pid, 0.0), 0.0)
 
-        if not enabled:
-            continue
-        if min_qty <= 0:
-            continue
-        if qty_total >= min_qty:
+        if not enabled or min_qty <= 0 or qty_total >= min_qty:
             continue
 
         low_products.append({
@@ -74,9 +62,10 @@ def _compute_low_products(products, lots):
             "min_qty": min_qty,
         })
 
-    # Trier par manque décroissant (min_qty - qty_total)
+    # Trier par manque (min_qty - qty_total) pour avoir les produits en plus faible stock en haut
     low_products.sort(key=lambda x: (x["min_qty"] - x["qty_total"]), reverse=True)
     return totals, low_products
+
 
 @router.get("/", response_class=HTMLResponse)
 @router.get("//", response_class=HTMLResponse)
@@ -87,10 +76,11 @@ def index(request: Request):
     products  = list_products()  or []
     lots      = list_lots()      or []
 
-    # Statut des lots pour le bloc "À consommer en priorité"
+    # Calcul du statut des lots
     for it in lots:
         it["status"] = status_for(it.get("best_before"), WARNING_DAYS, CRITICAL_DAYS)
 
+    # Calcul des produits en faible stock
     totals, low_products = _compute_low_products(products, lots)
 
     return render_with_env(
@@ -106,6 +96,7 @@ def index(request: Request):
         WARNING_DAYS=WARNING_DAYS,
         CRITICAL_DAYS=CRITICAL_DAYS,
     )
+
 
 # --- DEBUG: JSON pour vérifier les données côté front ---
 @router.get("/api/home-debug", response_class=JSONResponse)
