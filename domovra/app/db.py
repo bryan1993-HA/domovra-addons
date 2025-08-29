@@ -618,6 +618,92 @@ def list_lots():
             """
             return [dict(r) for r in c.execute(q2)]
 
+def get_product_info(product_id: int) -> dict | None:
+    """
+    Retourne:
+    {
+      "product_id": int,
+      "unit": str,
+      "brand": str|None,           # si dispo sur le premier lot
+      "total_qty": float,
+      "lots_count": int,
+      "fifo": {
+        "lot_id": int|None,
+        "article_name": str|None,  # <-- injecté
+        "best_before": str|None,
+        "location": str|None,
+        "location_id": int|None
+      },
+      "lots": [ ... mêmes champs utiles pour le front ... ]
+    }
+    """
+    with _conn() as c:
+        # Produit (unité)
+        p = c.execute("SELECT id, name, unit FROM products WHERE id=?", (int(product_id),)).fetchone()
+        if not p:
+            return None
+
+        # Tous les lots 'open' de ce produit (mêmes alias que list_lots)
+        rows = c.execute("""
+            SELECT
+              l.id               AS lot_id,
+              l.qty              AS qty,
+              p.unit             AS unit,
+              l.best_before      AS best_before,
+              loc.name           AS location,
+              l.location_id      AS location_id,
+
+              -- Champs "identité" de lot (priorité: l.name > l.article_name > p.name)
+              COALESCE(NULLIF(l.name,''), NULLIF(l.article_name,''), p.name) AS article_name,
+
+              -- Quelques métadonnées utiles
+              COALESCE(l.brand,'') AS brand,
+              COALESCE(l.ean,'')   AS ean,
+              l.frozen_on,
+              l.created_on
+
+            FROM stock_lots l
+            JOIN products  p   ON p.id  = l.product_id
+            JOIN locations loc ON loc.id = l.location_id
+            WHERE l.status='open' AND l.product_id=?
+            ORDER BY COALESCE(l.best_before,'9999-12-31') ASC, l.id ASC
+        """, (int(product_id),)).fetchall()
+
+        lots = [dict(r) for r in rows]
+        total_qty = sum(float(r["qty"] or 0) for r in rows)
+        lots_count = len(lots)
+
+        # FIFO = premier de la liste ordonnée
+        fifo = None
+        if lots:
+            first = lots[0]
+            fifo = {
+                "lot_id": int(first["lot_id"]),
+                "article_name": first.get("article_name"),
+                "best_before": first.get("best_before"),
+                "location": first.get("location"),
+                "location_id": first.get("location_id"),
+            }
+
+        # Marque: on prend la 1ère non vide trouvée
+        brand = None
+        for r in lots:
+            b = (r.get("brand") or "").strip()
+            if b:
+                brand = b
+                break
+
+        return {
+            "product_id": int(p["id"]),
+            "unit": (p["unit"] or "").strip(),
+            "brand": brand,
+            "total_qty": float(total_qty),
+            "lots_count": lots_count,
+            "fifo": fifo,
+            "lots": lots,
+        }
+
+
 def consume_lot(lot_id: int, qty: float, reason: str | None = None):
     with _conn() as c:
         row = c.execute("SELECT qty, price_total, qty_per_unit, multiplier FROM stock_lots WHERE id=?", (lot_id,)).fetchone()

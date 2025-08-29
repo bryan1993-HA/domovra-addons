@@ -4,7 +4,7 @@ from fastapi.responses import HTMLResponse, PlainTextResponse, JSONResponse
 
 from utils.http import ingress_base, render as render_with_env
 from config import WARNING_DAYS, CRITICAL_DAYS
-from db import list_locations, list_products, list_lots, status_for
+from db import list_locations, list_products, list_lots, status_for, get_product_info
 
 router = APIRouter()
 
@@ -179,3 +179,20 @@ def home_debug(request: Request):
         "products": simple_products,
         "lots": simple_lots,
     }
+
+@router.get("/api/product-info", response_class=JSONResponse)
+def api_product_info(product_id: int = Query(..., alias="product_id")):
+    """
+    Payload utilisé par la page d'accueil (consommation FIFO).
+    Inclut désormais fifo.article_name (fallback: l.name puis p.name).
+    """
+    try:
+        pid = int(product_id)
+    except Exception:
+        return JSONResponse({"error": "bad_product_id"}, status_code=400)
+
+    data = get_product_info(pid)
+    if not data:
+        return JSONResponse({"error": "not_found", "product_id": pid}, status_code=404)
+
+    return JSONResponse(data)
