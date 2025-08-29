@@ -475,7 +475,12 @@
             {% endfor %}
             {% if ns.count == 0 %}
             <tr>
-              <td colspan="4" class="muted">Aucun produit en dessous du seuil.</td>
+              <td colspan="4" class="muted">
+                Aucun produit en dessous du seuil.
+                <a href="{{ BASE }}api/home-debug" target="_blank" class="btn small ghost" style="margin-left:.5rem">
+                  Voir les données de débogage
+                </a>
+              </td>
             </tr>
             {% endif %}
         </tbody>
