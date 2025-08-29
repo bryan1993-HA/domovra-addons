@@ -1,8 +1,19 @@
 {% extends "base.html" %}
-{% block title %}Domovra — Liste de courses{% endblock %}
+{% block title %}Domovra — Liste de courses (démo){% endblock %}
 
 {% block header_right %}
-<span class="chip">🛒 Liste de courses : <b>{{ items|length }}</b></span>
+{# -- Données de démo si rien n'est fourni -- #}
+{% set demo_lists = [{'id':1,'name':'Liste par défaut'},{'id':2,'name':'Barbecue'},{'id':3,'name':'Semaine'}] %}
+{% set lists = lists|default(demo_lists) %}
+{% set current_list = current_list|default(demo_lists[0]) %}
+{% set demo_items = [
+{'id':101,'product_name':'Lait demi écrémé','product_category':'Frais','qty_wanted':2,'is_checked':0},
+{'id':102,'product_name':'Bière','product_category':'Boissons','qty_wanted':12,'is_checked':0},
+{'id':103,'product_name':'Pâtes','product_category':'Épicerie','qty_wanted':3,'is_checked':1},
+{'id':104,'product_name':'Crème fraîche','product_category':'Frais','qty_wanted':1,'is_checked':0},
+] %}
+{% set items = items|default(demo_items) %}
+<span class="chip">🧾 Liste de courses : <b>{{ items|length }}</b></span>
 {% endblock %}
 
 {% block content %}
@@ -10,80 +21,160 @@
 
     <div class="card">
         <div class="title">
-            <h2>🛒 Liste de courses</h2>
-            <span class="muted">→ produits à acheter (par défaut : en rupture)</span>
+            <h2>🧾 Liste de courses</h2>
+            <span class="muted">→ maquette visuelle (aucune action serveur)</span>
         </div>
 
-        <!-- Filtres -->
-        <form method="get" action="{{ BASE }}shopping" class="filters"
-            style="display:grid;gap:.75rem;grid-template-columns:1fr 220px;align-items:end">
+        <!-- Barre d'actions haut -->
+        <div class="actions" style="display:grid;gap:.75rem;grid-template-columns:1fr auto auto;align-items:end">
             <div>
-                <label for="q" class="lbl">Recherche</label>
-                <input id="q" name="q" type="text" value="{{ params.q }}" placeholder="Rechercher un produit…" />
-            </div>
-            <div>
-                <label for="show" class="lbl">Affichage</label>
-                <select id="show" name="show">
-                    <option value="outofstock" {% if params.show=="outofstock" %}selected{% endif %}>En rupture
-                        uniquement</option>
-                    <option value="all" {% if params.show=="all" %}selected{% endif %}>Tous les produits</option>
+                <label class="lbl" for="l">Liste</label>
+                <select id="l" disabled title="Démo visuelle">
+                    {% for L in lists %}
+                    <option value="{{ L.id }}" {% if L.id==current_list.id %}selected{% endif %}>{{ L.name }}</option>
+                    {% endfor %}
                 </select>
             </div>
-            <div style="grid-column:1 / -1;display:flex;gap:.5rem">
-                <button class="btn" type="submit">Appliquer</button>
-                <a class="btn muted" href="{{ BASE }}shopping">Réinitialiser</a>
+            <div>
+                <label class="lbl">&nbsp;</label>
+                <button class="btn" disabled>Ouvrir</button>
             </div>
-        </form>
+            <div>
+                <label class="lbl">&nbsp;</label>
+                <button class="btn" disabled>Générer (ruptures + &lt; min)</button>
+            </div>
+        </div>
+
+        <!-- Créer une nouvelle liste -->
+        <div style="margin-top:.75rem;display:grid;gap:.5rem;grid-template-columns:1fr auto">
+            <input type="text" placeholder="Créer une nouvelle liste…" disabled>
+            <button class="btn" disabled>Créer</button>
+        </div>
+
+        <!-- Ajouter un produit -->
+        <div style="margin-top:1rem;display:grid;gap:.75rem;grid-template-columns:1fr 140px auto">
+            <select disabled>
+                <option>— Ajouter un produit… —</option>
+                <option>Lait demi écrémé — Frais</option>
+                <option>Bière — Boissons</option>
+                <option>Pâtes — Épicerie</option>
+                <option>Crème fraîche — Frais</option>
+            </select>
+            <input type="number" step="0.01" min="0" value="1" disabled />
+            <button class="btn" disabled>Ajouter</button>
+        </div>
+
+        <!-- Actions liste -->
+        <div style="margin-top:.75rem;display:flex;gap:.5rem;flex-wrap:wrap">
+            <button class="btn" disabled>📥 Export CSV</button>
+            <a class="btn" href="javascript:window.print()">🖨️ Imprimer</a>
+            <button class="btn warn" disabled>🧹 Nettoyer (cochés)</button>
+        </div>
 
         {% if items %}
-        <!-- Desktop: tableau -->
+        <!-- Desktop -->
         <table class="table only-desktop" style="margin-top:1rem">
             <colgroup>
-                <col style="width:65%">
-                <col style="width:35%">
+                <col style="width:42%">
+                <col style="width:18%">
+                <col style="width:18%">
+                <col style="width:22%">
             </colgroup>
             <thead>
                 <tr>
                     <th>Produit</th>
-                    <th>Stock actuel</th>
+                    <th>Catégorie</th>
+                    <th>À acheter</th>
+                    <th>Actions</th>
                 </tr>
             </thead>
             <tbody>
                 {% for it in items %}
                 <tr>
-                    <td>{{ it.name }}</td>
                     <td>
-                        {% if (it.stock_qty or 0) <= 0 %} <span class="chip warn">Rupture</span>
-                            {% else %}
-                            {{ it.stock_qty }}
+                        <div style="display:flex;align-items:center;gap:.5rem">
+                            <button class="btn" style="min-width:2rem" disabled>{{ '☑️' if it.is_checked else '⬜'
+                                }}</button>
+                            <span style="{{ 'text-decoration:line-through;opacity:.6' if it.is_checked }}">{{
+                                it.product_name }}</span>
+                            {% if it.product_category in ['Frais','Boucherie'] %}
+                            <span class="chip warn" title="Catégorie sensible">⚠️</span>
                             {% endif %}
+                        </div>
+                    </td>
+                    <td class="muted">{{ it.product_category or '—' }}</td>
+                    <td>
+                        <div style="display:flex;gap:.5rem;align-items:center">
+                            <input type="number" step="0.01" min="0" value="{{ it.qty_wanted }}" disabled />
+                            <button class="btn" disabled>OK</button>
+                        </div>
+                    </td>
+                    <td>
+                        <button class="btn error" disabled>Supprimer</button>
                     </td>
                 </tr>
                 {% endfor %}
             </tbody>
         </table>
 
-        <!-- Mobile: cartes -->
+        <!-- Mobile -->
         <div class="only-mobile" style="display:grid;gap:.75rem;margin-top:1rem">
             {% for it in items %}
             <div class="card" style="background:transparent">
-                <div class="title" style="margin-bottom:.25rem">
-                    <h3 style="margin:0">{{ it.name }}</h3>
+                <div class="title">
+                    <h3 style="margin:0">{{ it.product_name }}</h3>
+                    <span class="muted">{{ it.product_category or '—' }}</span>
                 </div>
-                <div class="muted">
-                    Stock :
-                    {% if (it.stock_qty or 0) <= 0 %} <b class="warn">Rupture</b>
-                        {% else %}
-                        <b>{{ it.stock_qty }}</b>
-                        {% endif %}
+                <div style="display:flex;gap:.5rem;align-items:center;flex-wrap:wrap">
+                    <button class="btn" style="min-width:2rem" disabled>{{ '☑️' if it.is_checked else '⬜' }}</button>
+                    <input type="number" step="0.01" min="0" value="{{ it.qty_wanted }}" disabled />
+                    <button class="btn" disabled>OK</button>
+                    <button class="btn error" disabled>Supprimer</button>
                 </div>
             </div>
             {% endfor %}
         </div>
+
         {% else %}
-        <p class="muted" style="margin-top:1rem">Aucun produit à afficher avec ces filtres.</p>
+        <p class="muted" style="margin-top:1rem">Aucun article (démo).</p>
         {% endif %}
     </div>
 
 </div>
+
+{% endblock %}
+
+{% block head %}
+<style>
+    /* Démo impression : table propre, sans boutons */
+    @media print {
+
+        .actions,
+        form,
+        .btn,
+        .only-mobile,
+        aside,
+        header,
+        .header-right {
+            display: none !important;
+        }
+
+        .only-desktop {
+            display: table !important;
+        }
+
+        .page {
+            padding: 0 !important;
+        }
+
+        .card {
+            box-shadow: none !important;
+        }
+
+        .table th,
+        .table td {
+            border-color: #999 !important;
+        }
+    }
+</style>
 {% endblock %}
