@@ -189,6 +189,113 @@
         $validate.disabled = !(pid && q > 0 && stock > 0);
       }
 
+      // ======== Helpers unités (catégorisation + presets) ========
+      // NOTE (moi) : j’identifie le "type" d’unité et je calcule les boutons rapides + le step
+      function classifyUnit(raw) {
+        const u = String(raw || '').trim().toLowerCase()
+          .normalize('NFD').replace(/\p{Diacritic}/gu, '');
+
+        // volume
+        if (u === 'l' || u === 'litre' || u === 'litres') return { kind: 'volume', base: 'l' };
+        if (u === 'ml' || u === 'millilitre' || u === 'millilitres') return { kind: 'volume', base: 'ml' };
+        if (u === 'cl' || u === 'centilitre' || u === 'centilitres') return { kind: 'volume', base: 'cl' };
+
+        // poids
+        if (u === 'kg' || u === 'kilogramme' || u === 'kilogrammes') return { kind: 'weight', base: 'kg' };
+        if (u === 'g' || u === 'gramme' || u === 'grammes') return { kind: 'weight', base: 'g' };
+
+        // "pièces" (comptage)
+        const countWords = ['piece', 'pieces', 'pièce', 'pièces', 'bouteille', 'bouteilles', 'paquet', 'paquets',
+          'tranche', 'tranches', 'boite', 'boites', 'boîte', 'boîtes', 'bocal', 'bocaux'];
+        if (countWords.includes(u)) return { kind: 'count', base: 'u' };
+
+        // fallback : on traite comme "count"
+        return { kind: 'count', base: 'u' };
+      }
+
+      // NOTE (moi) : je génère 3 boutons rapides + step et label, en prenant en compte les conversions
+      function unitPreset(rawUnit) {
+        const u = classifyUnit(rawUnit);
+
+        // helpers pour fabriquer un bouton
+        const B = (value, label) => ({ value, label });
+
+        if (u.kind === 'volume') {
+          // Objectif : boutons exprimés en L (0.1, 0.5, 1), même si base = ml/cl
+          if (u.base === 'l') {
+            return {
+              step: 0.1,
+              buttons: [B(0.1, '0,1 L'), B(0.5, '0,5 L'), B(1, '1 L')],
+              formatHint: 'L'
+            };
+          }
+          if (u.base === 'ml') {
+            // valeurs envoyées en ml ; labels en L
+            return {
+              step: 50, // 50 ml granulosité raisonnable
+              buttons: [B(100, '0,1 L'), B(500, '0,5 L'), B(1000, '1 L')],
+              formatHint: 'ml→L'
+            };
+          }
+          if (u.base === 'cl') {
+            // valeurs envoyées en cl ; labels en L
+            return {
+              step: 1, // 1 cl
+              buttons: [B(10, '0,1 L'), B(50, '0,5 L'), B(100, '1 L')],
+              formatHint: 'cl→L'
+            };
+          }
+        }
+
+        if (u.kind === 'weight') {
+          // Objectif : boutons exprimés en kg (0.1, 0.5, 1), même si base = g
+          if (u.base === 'kg') {
+            return {
+              step: 0.1,
+              buttons: [B(0.1, '0,1 kg'), B(0.5, '0,5 kg'), B(1, '1 kg')],
+              formatHint: 'kg'
+            };
+          }
+          if (u.base === 'g') {
+            // valeurs envoyées en g ; labels en kg
+            return {
+              step: 50, // 50 g
+              buttons: [B(100, '0,1 kg'), B(500, '0,5 kg'), B(1000, '1 kg')],
+              formatHint: 'g→kg'
+            };
+          }
+        }
+
+        // count (pièces…)
+        return {
+          step: 1,
+          buttons: [B(1, '1'), B(2, '2'), B(3, '3')],
+          formatHint: 'u'
+        };
+      }
+
+      // NOTE (moi) : j’applique les presets au champ quantité + boutons
+      function applyUnitPreset(rawUnit) {
+        const preset = unitPreset(rawUnit);
+        // step quantité
+        $qty.setAttribute('step', String(preset.step || 1));
+        // labels + valeurs des 3 boutons
+        const btns = Array.from(document.querySelectorAll('.quick-btns [data-qset]'));
+        btns.forEach((b, i) => {
+          const conf = preset.buttons[i] || { value: i + 1, label: String(i + 1) };
+          b.setAttribute('data-qset', String(conf.value));
+          b.textContent = conf.label;
+        });
+        // placeholder indicatif (optionnel)
+        if (preset.formatHint === 'ml→L' || preset.formatHint === 'cl→L') {
+          $qty.placeholder = '0 (en ml/cl)';
+        } else if (preset.formatHint === 'g→kg') {
+          $qty.placeholder = '0 (en g)';
+        } else {
+          $qty.placeholder = '0';
+        }
+      }
+
       function fillInfos(payload) {
         if (!payload || payload.error) {
           lastInfo = null;
@@ -201,6 +308,8 @@
           $unit.textContent = '';
           $brand.textContent = '—';
           updateValidateState();
+          // NOTE (moi) : si pas d’info, je remets les boutons par défaut
+          applyUnitPreset(null);
           return;
         }
 
@@ -216,9 +325,13 @@
         const t = (typeof payload.total_qty === 'number') ? payload.total_qty
           : (parseFloat(payload.total_qty || '0') || 0);
         $tot.textContent = t.toString();
-        $unit.textContent = (payload.unit && String(payload.unit).trim()) || '';
 
-        // NOTE: si l’API ne me renvoie pas la marque, je tente celle de l’option sélectionnée
+        const unitText = (payload.unit && String(payload.unit).trim()) || '';
+        $unit.textContent = unitText;
+
+        // NOTE (moi) : j’adapte les boutons + step selon l’unité
+        applyUnitPreset(unitText);
+
         let brandFromApi = (payload.brand && String(payload.brand).trim()) || '';
         if (!brandFromApi) {
           const val = ($input.value || '').trim();
@@ -497,8 +610,6 @@
             <tr>
               <td colspan="4" class="muted">
                 Aucun produit en dessous du seuil.
-                <a href="{{ BASE }}api/home-debug" target="_blank" class="btn small ghost"
-                  style="margin-left:.5rem">Voir les données de débogage</a>
               </td>
             </tr>
             {% endif %}
@@ -536,7 +647,6 @@
     {% if ns.count == 0 %}
     <div class="muted">
       Aucun produit en dessous du seuil.
-      <a href="{{ BASE }}api/home-debug" target="_blank" class="btn primary">Voir les données de débogage</a>
     </div>
     {% endif %}
   </div><!-- /.top8-cards -->
