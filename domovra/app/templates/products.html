@@ -241,7 +241,15 @@ Astuce : tu peux combiner (ex. « ddm produits laitiers »)."></span>
           endif %}
           {% if it.description %}<div class="stat full"><span class="k">Description</span><span class="v">{{
               it.description }}</span></div>{% endif %}
+
+          {% if it.last_price_unit %}
+          <div class="stat">
+            <span class="k">Dernier prix</span>
+            <span class="v">{{ '%.2f'|format(it.last_price_unit) }} {{ it.price_label or '€/pièce' }}</span>
+          </div>
+          {% endif %}
         </div>
+
 
         <footer class="pc-actions">
           {% set inf = insights.get(it.id) if insights else None %}
@@ -253,7 +261,7 @@ Astuce : tu peux combiner (ex. « ddm produits laitiers »)."></span>
             data-min="{{ it.min_qty if it.min_qty is not none else '' }}" data-desc="{{ it.description or '' }}"
             data-lots="{{ it.lots_count|int }}" data-qty="{{ '%.2f'|format(it.qty_total) }}"
             data-last-price="{{ '%.2f'|format(it.last_price_unit) if it.last_price_unit else '' }}"
-            data-price-currency="{{ it.currency or '€' }}"
+            data-price-currency="{{ it.currency or '€' }}" data-price-label="{{ it.price_label or '€/pièce' }}"
             data-price-history='{{ (it.price_history_json or "[]")|safe }}'
             data-stock-value="{{ '%.2f'|format(it.stock_value) if it.stock_value else '' }}"
             data-last-in="{{ inf.last_in if inf and inf.last_in else '' }}"
@@ -887,9 +895,13 @@ Astuce : tu peux combiner (ex. « ddm produits laitiers »)."></span>
 
     const currency = btn.dataset.priceCurrency || '€';
 
-    // (A) Dernier prix = **prix unitaire**
+    // (A) Dernier prix = **prix unitaire** + libellé (€/kg, €/L, €/pièce)
     const lastPriceUnit = parseFloat(btn.dataset.lastPrice || '0') || 0;
-    document.getElementById('v-last-price').textContent = fmtPrice(lastPriceUnit, currency);
+    const priceLabel = btn.dataset.priceLabel || '€/pièce';
+    const vLast = document.getElementById('v-last-price');
+    vLast.textContent = lastPriceUnit > 0
+      ? (fmtPrice(lastPriceUnit, currency) + ' ' + priceLabel)
+      : '—';
 
     // (B) Historique (pour le graphique et la date du dernier achat)
     let history = [];
