@@ -441,6 +441,7 @@
       <h2>Produits en faible stock (Top 8)</h2>
     </div>
 
+    <!-- Desktop -->
     <div class="top8-table table-responsive">
       <table>
         <thead>
@@ -452,61 +453,57 @@
           </tr>
         </thead>
         <tbody>
-          {% if low_products and low_products|length > 0 %}
+          {% set ns = namespace(count=0) %}
           {% for p in low_products %}
-          {% if loop.index0 < 8 %} {% set q=(p.qty_total if p.qty_total is defined else 0) | float %} {% set
-            minq=(p.min_qty if p.min_qty is defined else 0) | float %} {% set manque=(minq - q) if minq> q else 0 %}
-            <tr>
-              <td>{{ p.name }}</td>
-              <td>
-                {% if q == 0 %}
-                0 {{ p.unit|pluralize_fr(0) }}
-                {% else %}
-                {{ ('%.2f' % q) | trim('0') | trim('.') }} {{ p.unit|pluralize_fr(q) }}
-                {% endif %}
-              </td>
-              <td>{{ (minq|int if minq == minq|int else minq) }}</td>
-              <td>
-                {% if manque > 0 %}
-                {{ manque|int }} {{ p.unit|pluralize_fr(manque) }}
-                {% else %}0{% endif %}
-              </td>
+          {# Valeurs sûres #}
+          {% set q = (p.qty_total if p.qty_total is defined else 0) | float %}
+          {% set minq = (p.min_qty if p.min_qty is defined else 0) | float %}
+          {% set manque = (minq - q) if minq > q else 0 %}
+          {% if manque > 0 and ns.count < 8 %} {% set ns.count=ns.count + 1 %} <tr>
+            <td>{{ p.name }}</td>
+            <td>
+              {% if q == 0 %}
+              0 {{ p.unit|pluralize_fr(0) if p.unit is defined else '' }}
+              {% else %}
+              {{ ('%.2f' % q) | trim('0') | trim('.') }} {{ p.unit|pluralize_fr(q) if p.unit is defined else '' }}
+              {% endif %}
+            </td>
+            <td>{{ (minq|int if minq == minq|int else (('%.2f' % minq)|trim('0')|trim('.'))) }}</td>
+            <td>{{ manque|int }} {{ p.unit|pluralize_fr(manque) if p.unit is defined else '' }}</td>
             </tr>
             {% endif %}
             {% endfor %}
-            {% else %}
+            {% if ns.count == 0 %}
             <tr>
-              <td colspan="4" class="muted">Aucun produit en faible stock.</td>
+              <td colspan="4" class="muted">Aucun produit en dessous du seuil.</td>
             </tr>
             {% endif %}
         </tbody>
       </table>
     </div>
 
+    <!-- Mobile -->
     <div class="top8-cards">
-      {% if low_products and low_products|length > 0 %}
+      {% set ns = namespace(count=0) %}
       {% for p in low_products %}
-      {% if loop.index0 < 8 %} {% set q=(p.qty_total if p.qty_total is defined else 0) | float %} {% set minq=(p.min_qty
-        if p.min_qty is defined else 0) | float %} {% set manque=(minq - q) if minq> q else 0 %}
-        <div class="lot-card">
-          <div class="lot-main">
-            <div class="lot-title">{{ p.name }}</div>
-            <div class="lot-meta">
-              <span>⚖️ {% if q == 0 %}0 {{ p.unit|pluralize_fr(0) }}{% else %}{{ ('%.2f' % q) | trim('0') | trim('.') }}
-                {{ p.unit|pluralize_fr(q) }}{% endif %}</span>
-              <span>🎯 Seuil : {{ (minq|int if minq == minq|int else minq) }}</span>
-              <span>Manque : {% if manque > 0 %}{{ manque|int }} {{ p.unit|pluralize_fr(manque) }}{% else %}0{% endif
-                %}</span>
-            </div>
+      {% set q = (p.qty_total if p.qty_total is defined else 0) | float %}
+      {% set minq = (p.min_qty if p.min_qty is defined else 0) | float %}
+      {% set manque = (minq - q) if minq > q else 0 %}
+      {% if manque > 0 and ns.count < 8 %} {% set ns.count=ns.count + 1 %} <div class="lot-card">
+        <div class="lot-main">
+          <div class="lot-title">{{ p.name }}</div>
+          <div class="lot-meta">
+            <span>⚖️ {% if q == 0 %}0 {{ p.unit|pluralize_fr(0) if p.unit is defined else '' }}{% else %}{{ ('%.2f' % q)
+              | trim('0') | trim('.') }} {{ p.unit|pluralize_fr(q) if p.unit is defined else '' }}{% endif %}</span>
+            <span>🎯 Seuil : {{ (minq|int if minq == minq|int else (('%.2f' % minq)|trim('0')|trim('.'))) }}</span>
+            <span>⛽ Manque : {{ manque|int }} {{ p.unit|pluralize_fr(manque) if p.unit is defined else '' }}</span>
           </div>
         </div>
-        {% endif %}
-        {% endfor %}
-        {% else %}
-        <div class="muted">Aucun produit en faible stock.</div>
-        {% endif %}
     </div>
+    {% endif %}
+    {% endfor %}
+    {% if ns.count == 0 %}
+    <div class="muted">Aucun produit en dessous du seuil.</div>
+    {% endif %}
   </div>
-
 </div>
-{% endblock %}
