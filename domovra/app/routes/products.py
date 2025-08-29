@@ -89,37 +89,81 @@ def products_page(request: Request):
         pid = int(it["id"])
         hist = list_price_history_for_product(pid, limit=10) or []
 
-        # ===== Dernier prix unitaire =====
-        last_unit = None
-        if hist:
-            r0 = hist[0]
-            price_total = float(r0.get("price") or 0)
+# ===== Dernier prix unitaire (corrigé) =====
+last_unit = None
+if hist:
+    r0 = hist[0]  # entrée la plus récente
+    price_total = float(r0.get("price") or 0)  # prix total payé
 
-            qty_hist = r0.get("qty")
-            qty_per_unit = r0.get("qty_per_unit")
-            multiplier = r0.get("multiplier")
+    # Données possibles dans l'historique :
+    # - qty : quantité "par unité" (souvent 1 L, 500 g, etc.) OU parfois quantité totale (selon la saisie)
+    # - qty_per_unit : taille d'une unité (ex: 1 L, 500 g)
+    # - multiplier : nombre d'unités achetées (ex: 2 briques)
+    # On reconstruit TOUJOURS la quantité TOTALE = (qty_per_unit ou qty) × (multiplier ou 1)
+    # puis on convertit en unité de base (L ou kg) si nécessaire pour que €/L ou €/kg soient corrects.
+    qty_raw = r0.get("qty")
+    qty_per_unit = r0.get("qty_per_unit")
+    multiplier = r0.get("multiplier")
+    hist_unit = (r0.get("unit") or r0.get("unit_in") or it.get("unit") or "").strip()
 
-            qty_total = None
-            if qty_hist is not None:
-                try:
-                    q = float(qty_hist)
-                    if q > 0:
-                        qty_total = q
-                except Exception:
-                    pass
+    def _norm(u: str) -> str:
+        u = (u or "").strip().lower().replace("l.", "l").replace("ml.", "ml").replace("g.", "g").replace("gr.", "g")
+        if u in ("litre", "litres", "liter", "liters"): return "l"
+        if u in ("centilitre", "centilitres"): return "cl"
+        if u in ("millilitre", "millilitres", "milliliter", "milliliters"): return "ml"
+        if u in ("kilogramme", "kilogrammes"): return "kg"
+        if u in ("gramme", "grammes"): return "g"
+        if u in ("piece", "pièce", "pièces", "pcs", "unité", "unite", "boite", "boîte", "bouteille", "paquet", "sachet", "lot", "barquette", "rouleau", "dosette"):
+            return "pc"
+        return u or "pc"
 
-            if qty_total is None and (qty_per_unit is not None or multiplier is not None):
-                try:
-                    qpu = float(qty_per_unit or 0)
-                    mul = float(multiplier or 0)
-                    q = qpu * mul
-                    if q > 0:
-                        qty_total = q
-                except Exception:
-                    pass
+    def _to_base(q: float, u: str):
+        """Convertit vers l'unité de base (kg/L/pc). Retourne (quantité, base_unit)."""
+        u = _norm(u)
+        if u == "g":  return q / 1000.0, "kg"
+        if u == "kg": return q, "kg"
+        if u == "ml": return q / 1000.0, "l"
+        if u == "cl": return q / 100.0,  "l"
+        if u == "l":  return q, "l"
+        return q, "pc"
 
-            if price_total > 0 and qty_total and qty_total > 0:
-                last_unit = price_total / qty_total
+    # 1) multiplier
+    mul = 1.0
+    try:
+        m = float(multiplier or 0)
+        if m > 0:
+            mul = m
+    except Exception:
+        pass
+
+    # 2) taille "par unité" (préférence à qty_per_unit, sinon qty)
+    per = None
+    for candidate in (qty_per_unit, qty_raw):
+        if candidate is None:
+            continue
+        try:
+            v = float(candidate)
+            if v > 0:
+                per = v
+                break
+        except Exception:
+            continue
+
+    # 3) quantité totale ACHETÉE (non convertie)
+    qty_total_raw = None
+    if per is not None:
+        qty_total_raw = per * mul
+
+    # 4) convertit la quantité totale en base (kg/L/pc)
+    qty_total_base = None
+    if qty_total_raw is not None:
+        q_base, base_u = _to_base(qty_total_raw, hist_unit)
+        qty_total_base = q_base
+
+    # 5) calcule €/base (si quantité valide)
+    if price_total > 0 and qty_total_base and qty_total_base > 0:
+        last_unit = price_total / qty_total_base
+
 
         it["last_price_unit"] = last_unit
         it["currency"] = "€"
