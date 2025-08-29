@@ -181,7 +181,7 @@ def home_debug(request: Request):
     }
 
 @router.get("/api/product-info", response_class=JSONResponse)
-def api_product_info(product_id: int = Query(..., alias="product_id")):
+def api_product_info(product_id: int):
     """
     Payload utilisé par la page d'accueil (consommation FIFO).
     Inclut désormais fifo.article_name (fallback: l.name puis p.name).
