@@ -65,6 +65,9 @@
             class="ico">🏠</span><span>Accueil</span></a>
         <a href="{{ BASE }}products" class="{% if request.path.startswith(BASE ~ 'products')  %}active{% endif %}"><span
             class="ico">📦</span><span>Fiche produit</span></a>
+        <a href="{{ BASE }}shopping" class="{% if request.path.startswith(BASE ~ 'shopping') %}active{% endif %}">
+          <span class="ico">🧾</span><span>Liste de courses</span>
+        </a>
         <a href="{{ BASE }}achats" class="{% if request.path.startswith(BASE ~ 'achats') %}active{% endif %}">
           <span class="ico">🛒</span><span>Achats</span></a>
         <a href="{{ BASE }}lots" class="{% if request.path.startswith(BASE ~ 'lots')       %}active{% endif %}"><span
@@ -81,9 +84,6 @@
             class="ico">☕</span><span>Support</span></a>
         <a href="{{ BASE }}admin/db" class="{% if request.path.startswith(BASE ~ 'admin/db') %}active{% endif %}">
           <span class="ico">🗄️</span><span>Admin DB</span>
-        </a>
-        <a href="{{ BASE }}shopping" class="{% if request.path.startswith(BASE ~ 'shopping') %}active{% endif %}">
-          <span class="ico">🧾</span><span>Liste de courses</span>
         </a>
       </nav>
     </aside>
