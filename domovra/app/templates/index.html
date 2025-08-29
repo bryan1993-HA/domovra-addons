@@ -316,22 +316,32 @@
         lastInfo = payload;
         dbg('fillInfos payload:', payload);
 
-        // --- Nouveau bloc FIFO (affiche nom + id + DLC si dispo) ---
         const fifo = (payload && payload.fifo) ? payload.fifo : {};
 
-        const lotId = fifo.lot_id ?? fifo.id ?? fifo.lotId ?? null;
-        const lotName = fifo.name ?? fifo.lot_name ?? fifo.lotName ?? null;
-        const dlc = fifo.best_before ?? fifo.dlc ?? fifo.expiry ?? fifo.expiration_date ?? fifo.expires_at ?? null;
+        // id du lot (aliases)
+        const lotId = fifo.lot_id ?? fifo.id ?? fifo.lotId ?? fifo.lotID ?? null;
+
+        // NOM du lot (inclut stock_lots.article_name)
+        const lotName =
+          fifo.article_name ?? fifo.name ?? fifo.lot_name ?? fifo.lotName ?? fifo.title ?? null;
+
+        // DLC / date d’expiration (aliases fréquents)
+        const dlc =
+          fifo.best_before ?? fifo.dlc ?? fifo.expiry ?? fifo.expiration_date ??
+          fifo.expires_at ?? fifo.bestBefore ?? null;
+
+        // Emplacement (aliases)
+        const loc =
+          fifo.location ?? fifo.location_name ?? fifo.locationName ?? fifo.place ?? fifo.storage ?? null;
 
         const parts = [];
-        if (lotName) parts.push(String(lotName).trim());         // nom du lot
-        if (lotId != null && String(lotId).trim() !== '') parts.push('#' + lotId); // identifiant
-        if (dlc && String(dlc).trim() !== '') parts.push(String(dlc).trim());      // date limite
+        if (lotName && String(lotName).trim() !== '') parts.push(String(lotName).trim());
+        if (lotId != null && String(lotId).trim() !== '') parts.push('#' + lotId);
+        if (dlc && String(dlc).trim() !== '') parts.push(String(dlc).trim());
+
         $fifo.textContent = parts.length ? parts.join(' — ') : 'Aucun lot dispo';
+        $loc.textContent = (loc && String(loc).trim() !== '') ? String(loc).trim() : '—';
 
-        // --- Fin bloc FIFO ---
-
-        $loc.textContent = (fifo && fifo.location) ? fifo.location : '—';
 
         const t = (typeof payload.total_qty === 'number') ? payload.total_qty
           : (parseFloat(payload.total_qty || '0') || 0);
