@@ -33,6 +33,8 @@ from routes.settings import router as settings_router
 from routes.api import router as api_router
 from routes.debug import router as debug_router
 from routes.admin_db import router as admin_db_router
+from routes.shopping import router as shopping_router
+
 
 # DB (uniquement ce dont on a besoin ici)
 from db import init_db
@@ -145,6 +147,8 @@ app.include_router(achats_router)
 app.include_router(journal_router)
 app.include_router(support_router)
 app.include_router(settings_router)
+app.include_router(shopping_router)
+
 
 # Technique / API
 app.include_router(api_router)

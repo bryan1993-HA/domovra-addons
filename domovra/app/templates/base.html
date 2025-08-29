@@ -82,6 +82,9 @@
         <a href="{{ BASE }}admin/db" class="{% if request.path.startswith(BASE ~ 'admin/db') %}active{% endif %}">
           <span class="ico">🗄️</span><span>Admin DB</span>
         </a>
+        <a href="{{ BASE }}shopping" class="{% if request.path.startswith(BASE ~ 'shopping') %}active{% endif %}">
+          <span class="ico">🧾</span><span>Liste de courses</span>
+        </a>
       </nav>
     </aside>
 
@@ -100,6 +103,7 @@
             {% elif seg.startswith('settings') %}Paramètres
             {% elif seg.startswith('journal') %}Journal
             {% elif seg.startswith('support') %}Support
+            {% elif seg.startswith('shopping') %}Liste de courses
             {% else %}{{ seg|replace('-', ' ')|capitalize }}{% endif %}
           </h1>
         </div>

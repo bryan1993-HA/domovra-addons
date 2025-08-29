@@ -1,0 +1,89 @@
+{% extends "base.html" %}
+{% block title %}Domovra — Liste de courses{% endblock %}
+
+{% block header_right %}
+<span class="chip">🛒 Liste de courses : <b>{{ items|length }}</b></span>
+{% endblock %}
+
+{% block content %}
+<div class="wrap" data-page="shopping">
+
+    <div class="card">
+        <div class="title">
+            <h2>🛒 Liste de courses</h2>
+            <span class="muted">→ produits à acheter (par défaut : en rupture)</span>
+        </div>
+
+        <!-- Filtres -->
+        <form method="get" action="{{ BASE }}shopping" class="filters"
+            style="display:grid;gap:.75rem;grid-template-columns:1fr 220px;align-items:end">
+            <div>
+                <label for="q" class="lbl">Recherche</label>
+                <input id="q" name="q" type="text" value="{{ params.q }}" placeholder="Rechercher un produit…" />
+            </div>
+            <div>
+                <label for="show" class="lbl">Affichage</label>
+                <select id="show" name="show">
+                    <option value="outofstock" {% if params.show=="outofstock" %}selected{% endif %}>En rupture
+                        uniquement</option>
+                    <option value="all" {% if params.show=="all" %}selected{% endif %}>Tous les produits</option>
+                </select>
+            </div>
+            <div style="grid-column:1 / -1;display:flex;gap:.5rem">
+                <button class="btn" type="submit">Appliquer</button>
+                <a class="btn muted" href="{{ BASE }}shopping">Réinitialiser</a>
+            </div>
+        </form>
+
+        {% if items %}
+        <!-- Desktop: tableau -->
+        <table class="table only-desktop" style="margin-top:1rem">
+            <colgroup>
+                <col style="width:65%">
+                <col style="width:35%">
+            </colgroup>
+            <thead>
+                <tr>
+                    <th>Produit</th>
+                    <th>Stock actuel</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for it in items %}
+                <tr>
+                    <td>{{ it.name }}</td>
+                    <td>
+                        {% if (it.stock_qty or 0) <= 0 %} <span class="chip warn">Rupture</span>
+                            {% else %}
+                            {{ it.stock_qty }}
+                            {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+
+        <!-- Mobile: cartes -->
+        <div class="only-mobile" style="display:grid;gap:.75rem;margin-top:1rem">
+            {% for it in items %}
+            <div class="card" style="background:transparent">
+                <div class="title" style="margin-bottom:.25rem">
+                    <h3 style="margin:0">{{ it.name }}</h3>
+                </div>
+                <div class="muted">
+                    Stock :
+                    {% if (it.stock_qty or 0) <= 0 %} <b class="warn">Rupture</b>
+                        {% else %}
+                        <b>{{ it.stock_qty }}</b>
+                        {% endif %}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <p class="muted" style="margin-top:1rem">Aucun produit à afficher avec ces filtres.</p>
+        {% endif %}
+    </div>
+
+</div>
+{% endblock %}
