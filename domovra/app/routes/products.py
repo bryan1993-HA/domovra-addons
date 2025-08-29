@@ -89,81 +89,80 @@ def products_page(request: Request):
         pid = int(it["id"])
         hist = list_price_history_for_product(pid, limit=10) or []
 
-# ===== Dernier prix unitaire (corrigé) =====
-last_unit = None
-if hist:
-    r0 = hist[0]  # entrée la plus récente
-    price_total = float(r0.get("price") or 0)  # prix total payé
+        # ===== Dernier prix unitaire (corrigé) =====
+        last_unit = None
+        if hist:
+            r0 = hist[0]  # entrée la plus récente
+            price_total = float(r0.get("price") or 0)  # prix total payé
 
-    # Données possibles dans l'historique :
-    # - qty : quantité "par unité" (souvent 1 L, 500 g, etc.) OU parfois quantité totale (selon la saisie)
-    # - qty_per_unit : taille d'une unité (ex: 1 L, 500 g)
-    # - multiplier : nombre d'unités achetées (ex: 2 briques)
-    # On reconstruit TOUJOURS la quantité TOTALE = (qty_per_unit ou qty) × (multiplier ou 1)
-    # puis on convertit en unité de base (L ou kg) si nécessaire pour que €/L ou €/kg soient corrects.
-    qty_raw = r0.get("qty")
-    qty_per_unit = r0.get("qty_per_unit")
-    multiplier = r0.get("multiplier")
-    hist_unit = (r0.get("unit") or r0.get("unit_in") or it.get("unit") or "").strip()
+            # Données possibles :
+            # - qty : quantité "par unité" (souvent 1 L, 500 g, etc.) OU parfois quantité totale (selon la saisie)
+            # - qty_per_unit : taille d'une unité (ex: 1 L, 500 g)
+            # - multiplier : nombre d'unités achetées (ex: 2 briques)
+            # On reconstruit toujours la quantité totale = (qty_per_unit ou qty) × (multiplier ou 1)
+            # puis on convertit en unité de base (L ou kg) si nécessaire pour que €/L ou €/kg soient corrects.
+            qty_raw = r0.get("qty")
+            qty_per_unit = r0.get("qty_per_unit")
+            multiplier = r0.get("multiplier")
+            hist_unit = (r0.get("unit") or r0.get("unit_in") or it.get("unit") or "").strip()
 
-    def _norm(u: str) -> str:
-        u = (u or "").strip().lower().replace("l.", "l").replace("ml.", "ml").replace("g.", "g").replace("gr.", "g")
-        if u in ("litre", "litres", "liter", "liters"): return "l"
-        if u in ("centilitre", "centilitres"): return "cl"
-        if u in ("millilitre", "millilitres", "milliliter", "milliliters"): return "ml"
-        if u in ("kilogramme", "kilogrammes"): return "kg"
-        if u in ("gramme", "grammes"): return "g"
-        if u in ("piece", "pièce", "pièces", "pcs", "unité", "unite", "boite", "boîte", "bouteille", "paquet", "sachet", "lot", "barquette", "rouleau", "dosette"):
-            return "pc"
-        return u or "pc"
+            def _norm(u: str) -> str:
+                u = (u or "").strip().lower().replace("l.", "l").replace("ml.", "ml").replace("g.", "g").replace("gr.", "g")
+                if u in ("litre", "litres", "liter", "liters"): return "l"
+                if u in ("centilitre", "centilitres"): return "cl"
+                if u in ("millilitre", "millilitres", "milliliter", "milliliters"): return "ml"
+                if u in ("kilogramme", "kilogrammes"): return "kg"
+                if u in ("gramme", "grammes"): return "g"
+                if u in ("piece", "pièce", "pièces", "pcs", "unité", "unite", "boite", "boîte", "bouteille", "paquet", "sachet", "lot", "barquette", "rouleau", "dosette"):
+                    return "pc"
+                return u or "pc"
 
-    def _to_base(q: float, u: str):
-        """Convertit vers l'unité de base (kg/L/pc). Retourne (quantité, base_unit)."""
-        u = _norm(u)
-        if u == "g":  return q / 1000.0, "kg"
-        if u == "kg": return q, "kg"
-        if u == "ml": return q / 1000.0, "l"
-        if u == "cl": return q / 100.0,  "l"
-        if u == "l":  return q, "l"
-        return q, "pc"
+            def _to_base(q: float, u: str):
+                """Convertit vers l'unité de base (kg/L/pc). Retourne (quantité, base_unit)."""
+                u = _norm(u)
+                if u == "g":  return q / 1000.0, "kg"
+                if u == "kg": return q, "kg"
+                if u == "ml": return q / 1000.0, "l"
+                if u == "cl": return q / 100.0,  "l"
+                if u == "l":  return q, "l"
+                return q, "pc"
 
-    # 1) multiplier
-    mul = 1.0
-    try:
-        m = float(multiplier or 0)
-        if m > 0:
-            mul = m
-    except Exception:
-        pass
+            # 1) multiplier
+            mul = 1.0
+            try:
+                m = float(multiplier or 0)
+                if m > 0:
+                    mul = m
+            except Exception:
+                pass
 
-    # 2) taille "par unité" (préférence à qty_per_unit, sinon qty)
-    per = None
-    for candidate in (qty_per_unit, qty_raw):
-        if candidate is None:
-            continue
-        try:
-            v = float(candidate)
-            if v > 0:
-                per = v
-                break
-        except Exception:
-            continue
+            # 2) taille "par unité" (préférence à qty_per_unit, sinon qty)
+            per = None
+            for candidate in (qty_per_unit, qty_raw):
+                if candidate is None:
+                    continue
+                try:
+                    v = float(candidate)
+                    if v > 0:
+                        per = v
+                        break
+                except Exception:
+                    continue
 
-    # 3) quantité totale ACHETÉE (non convertie)
-    qty_total_raw = None
-    if per is not None:
-        qty_total_raw = per * mul
+            # 3) quantité totale ACHETÉE (non convertie)
+            qty_total_raw = None
+            if per is not None:
+                qty_total_raw = per * mul
 
-    # 4) convertit la quantité totale en base (kg/L/pc)
-    qty_total_base = None
-    if qty_total_raw is not None:
-        q_base, base_u = _to_base(qty_total_raw, hist_unit)
-        qty_total_base = q_base
+            # 4) convertit la quantité totale en base (kg/L/pc)
+            qty_total_base = None
+            if qty_total_raw is not None:
+                q_base, base_u = _to_base(qty_total_raw, hist_unit)
+                qty_total_base = q_base
 
-    # 5) calcule €/base (si quantité valide)
-    if price_total > 0 and qty_total_base and qty_total_base > 0:
-        last_unit = price_total / qty_total_base
-
+            # 5) calcule €/base (si quantité valide)
+            if price_total > 0 and qty_total_base and qty_total_base > 0:
+                last_unit = price_total / qty_total_base
 
         it["last_price_unit"] = last_unit
         it["currency"] = "€"
@@ -314,7 +313,7 @@ def product_update(
         "default_location_id": (int(default_location_id) if str(default_location_id).strip() else None),
         "low_stock_enabled": 0 if str(low_stock_enabled).lower() in ("0","false","off","no") else 1,
         "expiry_kind": (expiry_kind or "DLC").upper(),
-        "default_freeze_shelf_days": default_freeze_shelf_days or None,
+        "default_freeze_shelf_days": default_freeze_shelf_shelf_days if (default_freeze_shelf_days or None) else None if False else default_freeze_shelf_days or None,  # keep as original behavior
         "no_freeze": 1 if str(no_freeze).lower() in ("1","true","on","yes") else 0,
         "category": category or None,
         "parent_id": parent_id or None,
