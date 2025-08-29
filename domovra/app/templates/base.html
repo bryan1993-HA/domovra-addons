@@ -62,11 +62,11 @@
     <aside>
       <nav class="menu">
         <a href="{{ BASE }}" class="{% if request.path == BASE %}active{% endif %}"><span
-            class="ico">🏠</span><span>Accueil</span></a>
+            class="ico">🏠</span><span>🚧Accueil🚧</span></a>
         <a href="{{ BASE }}products" class="{% if request.path.startswith(BASE ~ 'products')  %}active{% endif %}"><span
             class="ico">📦</span><span>Fiche produit</span></a>
         <a href="{{ BASE }}shopping" class="{% if request.path.startswith(BASE ~ 'shopping') %}active{% endif %}">
-          <span class="ico">🧾</span><span>Liste de courses</span>
+          <span class="ico">🧾</span><span>🚧Liste de courses🚧</span>
         </a>
         <a href="{{ BASE }}achats" class="{% if request.path.startswith(BASE ~ 'achats') %}active{% endif %}">
           <span class="ico">🛒</span><span>Achats</span></a>
@@ -96,14 +96,14 @@
           {% set seg = request.path.replace(BASE, '').strip('/') %}
           <h1 class="app-title">
             Domovra —
-            {% if seg == '' %}Accueil (En travaux)
+            {% if seg == '' %}Accueil 🚧(En travaux)🚧
             {% elif seg.startswith('products') %}Produits
             {% elif seg.startswith('locations') %}Emplacements
             {% elif seg.startswith('lots') %}Stocks
             {% elif seg.startswith('settings') %}Paramètres
             {% elif seg.startswith('journal') %}Journal
             {% elif seg.startswith('support') %}Support
-            {% elif seg.startswith('shopping') %}Liste de courses (En travaux)
+            {% elif seg.startswith('shopping') %}🚧Liste de courses (En travaux)🚧
             {% else %}{{ seg|replace('-', ' ')|capitalize }}{% endif %}
           </h1>
         </div>
