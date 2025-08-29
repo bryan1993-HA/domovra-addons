@@ -1,4 +1,3 @@
-# /opt/app/routes/products.py
 from fastapi import APIRouter, Request, Form
 from fastapi.responses import HTMLResponse, RedirectResponse
 from urllib.parse import urlencode
@@ -6,34 +5,75 @@ import json
 
 from utils.http import ingress_base, render as render_with_env
 from services.events import log_event
-import json  # >>> AJOUT si absent
 
 from db import (
     list_products_with_stats, list_locations, list_products, list_product_insights,
     add_product, update_product, delete_product,
     add_lot, list_lots, consume_lot,
     list_price_history_for_product,
-    current_stock_value_by_product,  # >>> AJOUT
+    current_stock_value_by_product,
 )
 
 router = APIRouter()
 
+# -------------------------------------------------------------------
+# Gestion des unités (sans migration DB)
+# -------------------------------------------------------------------
+
+_UNIT_ALIASES = {
+    # volume
+    "l": "l", "litre": "l", "litres": "l", "liter": "l", "liters": "l",
+    "ml": "ml", "millilitre": "ml", "millilitres": "ml",
+    "cl": "cl", "centilitre": "cl", "centilitres": "cl",
+    # masse
+    "kg": "kg", "kilogramme": "kg", "kilogrammes": "kg",
+    "g": "g", "gr": "g", "gramme": "g", "grammes": "g",
+    # comptage
+    "piece": "pc", "pièce": "pc", "pièces": "pc", "pcs": "pc", "pc": "pc",
+    "unite": "pc", "unité": "pc",
+    "boite": "pc", "boîte": "pc", "bouteille": "pc", "bouteilles": "pc",
+    "paquet": "pc", "sachet": "pc", "tranche": "pc", "lot": "pc",
+    "barquette": "pc", "rouleau": "pc", "dosette": "pc",
+}
+
+_UNIT_FAMILY = {
+    "l": "volume", "ml": "volume", "cl": "volume",
+    "kg": "mass", "g": "mass",
+    "pc": "count",
+}
+
+
+def _normalize_unit(unit: str) -> str:
+    """Tolère plein d'écritures et renvoie une unité canonique : kg,g,l,ml,cl,pc"""
+    u = (unit or "").strip().lower()
+    # nettoyages fréquents
+    u = u.replace("gr.", "gr").replace("g.", "g").replace("ml.", "ml").replace("l.", "l")
+    if u.endswith("s") and u not in ("ml", "cl", "kg"):
+        u = u[:-1]
+    return _UNIT_ALIASES.get(u, u) or "pc"
+
+
+def _unit_family(unit: str) -> str:
+    return _UNIT_FAMILY.get(_normalize_unit(unit), "count")
+
 
 def _get_step_for_unit(unit: str) -> float:
-    unit = (unit or "").lower().strip()
-    if unit in ["pièce", "piece", "tranche", "paquet", "boîte", "boite",
-                "bocal", "bouteille", "sachet", "lot", "barquette", "rouleau", "dosette"]:
-        return 1.0
-    if unit == "g":
-        return 50.0
-    if unit == "kg":
-        return 0.1
-    if unit == "ml":
-        return 50.0
-    if unit == "l":
-        return 0.1
-    return 1.0
+    fam = _unit_family(unit)
+    return 0.01 if fam in ("mass", "volume") else 1.0
 
+
+def _price_label_for_unit(unit: str) -> str:
+    fam = _unit_family(unit)
+    if fam == "mass":
+        return "€/kg"
+    if fam == "volume":
+        return "€/L"
+    return "€/pièce"
+
+
+# -------------------------------------------------------------------
+# Routes Produits
+# -------------------------------------------------------------------
 
 @router.get("/products", response_class=HTMLResponse)
 def products_page(request: Request):
@@ -45,11 +85,6 @@ def products_page(request: Request):
     insights = list_product_insights()
     stock_values = current_stock_value_by_product()
 
-    # Enrichir chaque produit avec last_price + historique JSON (pour la modale Voir)
-    # Enrichir chaque produit avec:
-    #  - last_price_unit = dernier prix *unitaire* (prix_total / quantité_achetée)
-    #  - historique JSON (graph)
-    #  - stock_value = somme réelle des lots restants (DB)
     for it in items:
         pid = int(it["id"])
         hist = list_price_history_for_product(pid, limit=10) or []
@@ -57,16 +92,14 @@ def products_page(request: Request):
         # ===== Dernier prix unitaire =====
         last_unit = None
         if hist:
-            r0 = hist[0]  # entrée la plus récente
-            price_total = float(r0.get("price") or 0)  # "price" = prix total saisi lors de l'achat
+            r0 = hist[0]
+            price_total = float(r0.get("price") or 0)
 
-            # On cherche d'abord une quantité totale fiable pour ce lot d'achat.
             qty_hist = r0.get("qty")
             qty_per_unit = r0.get("qty_per_unit")
             multiplier = r0.get("multiplier")
 
             qty_total = None
-            # cas 1: l'historique fournit directement la quantité (ex: 3 L)
             if qty_hist is not None:
                 try:
                     q = float(qty_hist)
@@ -75,7 +108,6 @@ def products_page(request: Request):
                 except Exception:
                     pass
 
-            # cas 2: sinon on reconstitue: qty_per_unit × multiplier (ex: 1 L × 3)
             if qty_total is None and (qty_per_unit is not None or multiplier is not None):
                 try:
                     qpu = float(qty_per_unit or 0)
@@ -86,15 +118,16 @@ def products_page(request: Request):
                 except Exception:
                     pass
 
-            # Si on a une quantité correcte, on calcule le prix unitaire
             if price_total > 0 and qty_total and qty_total > 0:
                 last_unit = price_total / qty_total
 
-        it["last_price_unit"] = last_unit  # peut être None si inconnu
-        it["currency"] = "€"  # TODO: lire depuis settings si besoin
+        it["last_price_unit"] = last_unit
+        it["currency"] = "€"
         it["price_history_json"] = json.dumps(hist, ensure_ascii=False)
         it["stock_value"] = stock_values.get(pid, 0.0)
 
+        # bonus: libellé d’affichage pour prix unitaire
+        it["price_label"] = _price_label_for_unit(it.get("unit"))
 
     loc_map = {str(loc["id"]): loc["name"] for loc in (locations or [])}
 
@@ -118,7 +151,6 @@ def product_add(
     name: str = Form(...),
     unit: str = Form("pièce"),
     shelf: int = Form(90),
-    # étendus
     description: str = Form(""),
     default_location_id: str = Form(""),
     low_stock_enabled: str = Form("1"),
@@ -127,7 +159,6 @@ def product_add(
     no_freeze: str = Form(""),
     category: str = Form(""),
     parent_id: str = Form(""),
-    # compat
     barcode: str = Form(""),
     min_qty: str = Form(""),
 ):
@@ -191,7 +222,6 @@ def product_update(
     name: str = Form(...),
     unit: str = Form("pièce"),
     shelf: int = Form(90),
-    # étendus
     description: str = Form(""),
     default_location_id: str = Form(""),
     low_stock_enabled: str = Form("1"),
@@ -200,7 +230,6 @@ def product_update(
     no_freeze: str = Form(""),
     category: str = Form(""),
     parent_id: str = Form(""),
-    # compat
     barcode: str = Form(""),
     min_qty: str = Form(""),
 ):
@@ -274,8 +303,7 @@ def product_adjust(request: Request, product_id: int = Form(...), delta: int = F
         if locs:
             loc_id = int(locs[0]["id"])
         else:
-            # pas de location -> crée “Général”
-            from db import add_location  # import local pour éviter cycle
+            from db import add_location
             loc_id = int(add_location("Général"))
         add_lot(product_id, loc_id, qty, None, None)
         log_event("product.adjust", {"id": product_id, "delta": qty, "action": "add"})
