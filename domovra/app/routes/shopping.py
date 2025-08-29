@@ -4,7 +4,7 @@ from fastapi.responses import HTMLResponse
 
 from utils.http import ingress_base, render as render_with_env
 
-# On tente d'utiliser la version "with_stats" si dispo, sinon fallback.
+# On tente la version "with_stats" si elle existe, sinon fallback.
 try:
     from db import list_products_with_stats as _list_products
     _HAS_STATS = True
@@ -56,13 +56,14 @@ def shopping_page(
             "stock_qty": qty or 0,
         })
 
+    # ⚠️ Très important: http.render attend l'ENV Jinja en PREMIER argument.
+    # On lui passe request.app.state.templates + on inclut "request" dans le contexte.
     return render_with_env(
-        "shopping.html",
-        {
-            "BASE": base,
-            "items": items,
-            "params": {"show": show, "q": q},
-            "debug": {"has_stats": _HAS_STATS, "raw_count": len(products), "after_filter": len(items)},
-        },
-        request.app.state.templates
+        request.app.state.templates,   # 1) ENV Jinja
+        "shopping.html",               # 2) nom du template
+        BASE=base,
+        items=items,
+        params={"show": show, "q": q},
+        debug={"has_stats": _HAS_STATS, "raw_count": len(products), "after_filter": len(items)},
+        request=request                # 3) nécessaire pour base.html (request.path)
     )
