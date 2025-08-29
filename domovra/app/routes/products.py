@@ -44,25 +44,20 @@ _UNIT_FAMILY = {
     "pc": "count",
 }
 
-
 def _normalize_unit(unit: str) -> str:
     """Tolère plein d'écritures et renvoie une unité canonique : kg,g,l,ml,cl,pc"""
     u = (unit or "").strip().lower()
-    # nettoyages fréquents
     u = u.replace("gr.", "gr").replace("g.", "g").replace("ml.", "ml").replace("l.", "l")
     if u.endswith("s") and u not in ("ml", "cl", "kg"):
         u = u[:-1]
     return _UNIT_ALIASES.get(u, u) or "pc"
 
-
 def _unit_family(unit: str) -> str:
     return _UNIT_FAMILY.get(_normalize_unit(unit), "count")
-
 
 def _get_step_for_unit(unit: str) -> float:
     fam = _unit_family(unit)
     return 0.01 if fam in ("mass", "volume") else 1.0
-
 
 def _price_label_for_unit(unit: str) -> str:
     fam = _unit_family(unit)
@@ -71,7 +66,6 @@ def _price_label_for_unit(unit: str) -> str:
     if fam == "volume":
         return "€/L"
     return "€/pièce"
-
 
 # -------------------------------------------------------------------
 # Routes Produits
@@ -91,7 +85,7 @@ def products_page(request: Request):
         pid = int(it["id"])
         hist = list_price_history_for_product(pid, limit=10) or []
 
-        # ===== Dernier prix unitaire (robuste) =====
+        # ===== Dernier prix unitaire (robuste, aligné sur ta DB) =====
         last_unit = None
         if hist:
             # 0) utilitaires
@@ -100,8 +94,8 @@ def products_page(request: Request):
                     return None
                 if isinstance(x, (int, float)):
                     return float(x)
-                # tolère "1,50"
                 try:
+                    # tolère "1,50"
                     return float(str(x).replace(",", "."))
                 except Exception:
                     return None
@@ -137,51 +131,53 @@ def products_page(request: Request):
                     return q, "l"
                 return q, "pc"
 
-            # 1) on prend la ligne d'historique la plus récente avec des nombres exploitables
-            #    (si l'ordre n'est pas garanti, on trie par date décroissante quand dispo)
-            def parse_date_str(d):
-                try:
-                    # "2025-08-20" ou ISO alike
-                    return (d or "")[:10]
-                except Exception:
-                    return ""
-
-            hist_sorted = sorted(hist, key=lambda r: parse_date_str(r.get("date")), reverse=True)
+            # 1) trie par date décroissante (selon tes champs : 'created_on' ou 'date')
+            def pick_date(r):
+                return (r.get("created_on") or r.get("date") or r.get("ended_on") or "")[:19]
+            hist_sorted = sorted(hist, key=pick_date, reverse=True)
 
             picked = None
             for r in hist_sorted:
-                price_total = to_float(r.get("price"))
-                # champs alias possibles (on couvre plusieurs schémas)
-                qty_raw = r.get("qty") or r.get("qty_in") or r.get("quantity")
+                # --- clés alignées avec ta capture ---
+                price_total = to_float(r.get("price_total") or r.get("price") or r.get("total_price"))
+
+                # quantité "par unité" (ex: 1 L, 500 g) OU null
                 qty_per_unit = r.get("qty_per_unit") or r.get("qty_unit") or r.get("unit_qty") or r.get("size")
+
+                # qty brute (parfois quantité totale ou par unité selon la source)
+                qty_raw = r.get("qty") or r.get("qty_in") or r.get("quantity") or r.get("initial_qty")
+
+                # nombre d'unités achetées
                 multiplier = r.get("multiplier") or r.get("count") or r.get("units") or r.get("nb")
-                hist_unit = (r.get("unit") or r.get("unit_in") or r.get("u_map") or it.get("unit") or "").strip()
+
+                # unité à l'achat
+                hist_unit = (r.get("unit_at_purchase") or r.get("unit") or r.get("unit_in") or r.get("u_map") or it.get("unit") or "").strip()
 
                 per = to_float(qty_per_unit)
                 if per is None:
-                    per = to_float(qty_raw)
+                    per = to_float(qty_raw)  # si pas de per-unit, on prend qty comme total
 
                 mul = to_float(multiplier) or 1.0
 
-                if price_total and per and mul and price_total > 0 and per > 0 and mul > 0:
+                # Si price_total + per sont valides, on a ce qu'il faut
+                if price_total and per and price_total > 0 and per > 0:
                     picked = (price_total, per, mul, hist_unit)
                     break
 
             if picked:
                 price_total, per, mul, hist_unit = picked
-                # ex: 1 L × 2 = 2 L ; 500 g × 3 = 1500 g
-                qty_total_raw = per * mul
-                # -> convertit en L/kg/pc
+                # si 'per' vient de qty_per_unit -> total = per * mul
+                # si 'per' était déjà un total -> mul vaudra 1 -> inchangé
+                qty_total_raw = per * (mul if mul and mul > 0 else 1.0)
+
                 qty_total_base, base_u = _to_base(qty_total_raw, hist_unit)
                 if qty_total_base and qty_total_base > 0:
-                    # -> €/L ou €/kg (ou €/pc)
-                    last_unit = price_total / qty_total_base
+                    last_unit = price_total / qty_total_base  # €/L, €/kg, ou €/pc
 
         it["last_price_unit"] = last_unit
         it["currency"] = "€"
         it["price_history_json"] = json.dumps(hist, ensure_ascii=False)
         it["stock_value"] = stock_values.get(pid, 0.0)
-        # libellé d’affichage pour prix unitaire
         it["price_label"] = _price_label_for_unit(it.get("unit"))
 
     loc_map = {str(loc["id"]): loc["name"] for loc in (locations or [])}
@@ -198,7 +194,6 @@ def products_page(request: Request):
         insights=insights,
         loc_map=loc_map,
     )
-
 
 @router.post("/product/add")
 def product_add(
@@ -269,7 +264,6 @@ def product_add(
     return RedirectResponse(base + f"products?{params}", status_code=303,
                             headers={"Cache-Control": "no-store"})
 
-
 @router.post("/product/update")
 def product_update(
     request: Request,
@@ -334,14 +328,12 @@ def product_update(
     return RedirectResponse(ingress_base(request) + "products",
                             status_code=303, headers={"Cache-Control": "no-store"})
 
-
 @router.post("/product/delete")
 def product_delete(request: Request, product_id: int = Form(...)):
     delete_product(product_id)
     log_event("product.delete", {"id": product_id})
     return RedirectResponse(ingress_base(request) + "products",
                             status_code=303, headers={"Cache-Control": "no-store"})
-
 
 @router.post("/product/adjust")
 def product_adjust(request: Request, product_id: int = Form(...), delta: int = Form(...)):
