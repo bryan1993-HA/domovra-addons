@@ -371,8 +371,10 @@
     </div>
 
     {# On préfiltre : on enlève les 'green' = OK. Restent 'red' et 'yellow'. #}
-    {% set urgents = (lots | rejectattr('status', 'equalto', 'green') | list) %}
-
+    {% set urgents = lots
+    | selectattr('status', 'defined')
+    | selectattr('status', 'in', ['red', 'yellow'])
+    | list %}
     <!-- Desktop -->
     <div class="top8-table table-responsive">
       <table>
