@@ -380,7 +380,6 @@
             <th>Qté</th>
             <th>DLC</th>
             <th>État</th>
-            <th style="text-align:right">Action</th>
           </tr>
         </thead>
         <tbody>
@@ -395,13 +394,6 @@
               {% if it.status == 'red' %}<span class="pill danger">Urgent</span>
               {% elif it.status == 'yellow' %}<span class="pill warn">Bientôt</span>
               {% else %}<span class="pill ok">OK</span>{% endif %}
-            </td>
-            <td style="text-align:right">
-              <form method="post" action="{{ BASE }}lot/consume" class="row" style="justify-content:flex-end;gap:8px">
-                <input type="hidden" name="lot_id" value="{{ it.id }}">
-                <input type="number" name="qty" value="1" min="0.1" step="0.1" style="max-width:90px">
-                <button class="secondary" style="flex:0 0 120px">Consommer</button>
-              </form>
             </td>
             </tr>
             {% endif %}
@@ -433,11 +425,6 @@
             </span>
           </div>
         </div>
-        <form method="post" action="{{ BASE }}lot/consume" class="lot-action">
-          <input type="hidden" name="lot_id" value="{{ it.id }}">
-          <input type="number" name="qty" value="1" min="0.1" step="0.1">
-          <button class="secondary">Consommer</button>
-        </form>
     </div>
     {% endif %}
     {% endfor %}
