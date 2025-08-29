@@ -384,8 +384,9 @@
         </thead>
         <tbody>
           {% if lots %}
+          {% set displayed = 0 %}
           {% for it in lots %}
-          {% if loop.index0 < 8 %} <tr>
+          {% if it.status in ['red', 'yellow'] and displayed < 8 %} {% set displayed=displayed + 1 %} <tr>
             <td>{{ it.product }}</td>
             <td class="muted">{{ it.location }}</td>
             <td>{{ '%.2f'|format(it.qty)|trim('0')|trim('.') }} {{ it.unit|pluralize_fr(it.qty) }}</td>
@@ -393,11 +394,16 @@
             <td>
               {% if it.status == 'red' %}<span class="pill danger">Urgent</span>
               {% elif it.status == 'yellow' %}<span class="pill warn">Bientôt</span>
-              {% else %}<span class="pill ok">OK</span>{% endif %}
+              {% endif %}
             </td>
             </tr>
             {% endif %}
             {% endfor %}
+            {% if displayed == 0 %}
+            <tr>
+              <td colspan="5" class="muted">Aucun produit urgent ou bientôt à consommer.</td>
+            </tr>
+            {% endif %}
             {% else %}
             <tr>
               <td colspan="6" class="muted">Aucun lot enregistré.</td>
@@ -410,8 +416,9 @@
     <!-- Mobile -->
     <div class="top8-cards">
       {% if lots %}
+      {% set displayed = 0 %}
       {% for it in lots %}
-      {% if loop.index0 < 8 %} <div class="lot-card">
+      {% if it.status in ['red', 'yellow'] and displayed < 8 %} {% set displayed=displayed + 1 %} <div class="lot-card">
         <div class="lot-main">
           <div class="lot-title">{{ it.product }}</div>
           <div class="lot-meta">
@@ -421,13 +428,16 @@
             <span>
               {% if it.status == 'red' %}<span class="pill danger">Urgent</span>
               {% elif it.status == 'yellow' %}<span class="pill warn">Bientôt</span>
-              {% else %}<span class="pill ok">OK</span>{% endif %}
+              {% endif %}
             </span>
           </div>
         </div>
     </div>
     {% endif %}
     {% endfor %}
+    {% if displayed == 0 %}
+    <div class="muted">Aucun produit urgent ou bientôt à consommer.</div>
+    {% endif %}
     {% else %}
     <div class="muted">Aucun lot enregistré.</div>
     {% endif %}
