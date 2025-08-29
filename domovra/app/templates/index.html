@@ -370,6 +370,9 @@
       <h2>À consommer (Top 8)</h2>
     </div>
 
+    {# On préfiltre : on enlève les 'green' = OK. Restent 'red' et 'yellow'. #}
+    {% set urgents = (lots | rejectattr('status', 'equalto', 'green') | list) %}
+
     <!-- Desktop -->
     <div class="top8-table table-responsive">
       <table>
@@ -383,42 +386,33 @@
           </tr>
         </thead>
         <tbody>
-          {% if lots %}
-          {% set displayed = 0 %}
-          {% for it in lots %}
-          {% if it.status in ['red', 'yellow'] and displayed < 8 %} {% set displayed=displayed + 1 %} <tr>
+          {% if urgents|length > 0 %}
+          {% for it in urgents[:8] %}
+          <tr>
             <td>{{ it.product }}</td>
             <td class="muted">{{ it.location }}</td>
             <td>{{ '%.2f'|format(it.qty)|trim('0')|trim('.') }} {{ it.unit|pluralize_fr(it.qty) }}</td>
             <td>{{ it.best_before or '—' }}</td>
             <td>
               {% if it.status == 'red' %}<span class="pill danger">Urgent</span>
-              {% elif it.status == 'yellow' %}<span class="pill warn">Bientôt</span>
-              {% endif %}
+              {% elif it.status == 'yellow' %}<span class="pill warn">Bientôt</span>{% endif %}
             </td>
-            </tr>
-            {% endif %}
-            {% endfor %}
-            {% if displayed == 0 %}
-            <tr>
-              <td colspan="5" class="muted">Aucun produit urgent ou bientôt à consommer.</td>
-            </tr>
-            {% endif %}
-            {% else %}
-            <tr>
-              <td colspan="6" class="muted">Aucun lot enregistré.</td>
-            </tr>
-            {% endif %}
+          </tr>
+          {% endfor %}
+          {% else %}
+          <tr>
+            <td colspan="5" class="muted">Aucun produit urgent ou bientôt à consommer.</td>
+          </tr>
+          {% endif %}
         </tbody>
       </table>
     </div>
 
     <!-- Mobile -->
     <div class="top8-cards">
-      {% if lots %}
-      {% set displayed = 0 %}
-      {% for it in lots %}
-      {% if it.status in ['red', 'yellow'] and displayed < 8 %} {% set displayed=displayed + 1 %} <div class="lot-card">
+      {% if urgents|length > 0 %}
+      {% for it in urgents[:8] %}
+      <div class="lot-card">
         <div class="lot-main">
           <div class="lot-title">{{ it.product }}</div>
           <div class="lot-meta">
@@ -427,95 +421,90 @@
             <span>🗓️ {{ it.best_before or '—' }}</span>
             <span>
               {% if it.status == 'red' %}<span class="pill danger">Urgent</span>
-              {% elif it.status == 'yellow' %}<span class="pill warn">Bientôt</span>
-              {% endif %}
+              {% elif it.status == 'yellow' %}<span class="pill warn">Bientôt</span>{% endif %}
             </span>
           </div>
         </div>
-    </div>
-    {% endif %}
-    {% endfor %}
-    {% if displayed == 0 %}
-    <div class="muted">Aucun produit urgent ou bientôt à consommer.</div>
-    {% endif %}
-    {% else %}
-    <div class="muted">Aucun lot enregistré.</div>
-    {% endif %}
-  </div>
-</div>
-
-<!-- Produits en faible stock (Top 8) -->
-<div class="card">
-  <div class="title">
-    <h2>Produits en faible stock (Top 8)</h2>
-  </div>
-
-  <div class="top8-table table-responsive">
-    <table>
-      <thead>
-        <tr>
-          <th>Produit</th>
-          <th>Stock total</th>
-          <th>Seuil min</th>
-          <th>Manque</th>
-        </tr>
-      </thead>
-      <tbody>
-        {% if low_products and low_products|length > 0 %}
-        {% for p in low_products %}
-        {% if loop.index0 < 8 %} {% set q=(p.qty_total if p.qty_total is defined else 0) | float %} {% set
-          minq=(p.min_qty if p.min_qty is defined else 0) | float %} {% set manque=(minq - q) if minq> q else 0 %}
-          <tr>
-            <td>{{ p.name }}</td>
-            <td>
-              {% if q == 0 %}
-              0 {{ p.unit|pluralize_fr(0) }}
-              {% else %}
-              {{ ('%.2f' % q) | trim('0') | trim('.') }} {{ p.unit|pluralize_fr(q) }}
-              {% endif %}
-            </td>
-            <td>{{ (minq|int if minq == minq|int else minq) }}</td>
-            <td>
-              {% if manque > 0 %}
-              {{ manque|int }} {{ p.unit|pluralize_fr(manque) }}
-              {% else %}0{% endif %}
-            </td>
-          </tr>
-          {% endif %}
-          {% endfor %}
-          {% else %}
-          <tr>
-            <td colspan="4" class="muted">Aucun produit en faible stock.</td>
-          </tr>
-          {% endif %}
-      </tbody>
-    </table>
-  </div>
-
-  <div class="top8-cards">
-    {% if low_products and low_products|length > 0 %}
-    {% for p in low_products %}
-    {% if loop.index0 < 8 %} {% set q=(p.qty_total if p.qty_total is defined else 0) | float %} {% set minq=(p.min_qty
-      if p.min_qty is defined else 0) | float %} {% set manque=(minq - q) if minq> q else 0 %}
-      <div class="lot-card">
-        <div class="lot-main">
-          <div class="lot-title">{{ p.name }}</div>
-          <div class="lot-meta">
-            <span>⚖️ {% if q == 0 %}0 {{ p.unit|pluralize_fr(0) }}{% else %}{{ ('%.2f' % q) | trim('0') | trim('.') }}
-              {{ p.unit|pluralize_fr(q) }}{% endif %}</span>
-            <span>🎯 Seuil : {{ (minq|int if minq == minq|int else minq) }}</span>
-            <span>Manque : {% if manque > 0 %}{{ manque|int }} {{ p.unit|pluralize_fr(manque) }}{% else %}0{% endif
-              %}</span>
-          </div>
-        </div>
       </div>
-      {% endif %}
       {% endfor %}
       {% else %}
-      <div class="muted">Aucun produit en faible stock.</div>
+      <div class="muted">Aucun produit urgent ou bientôt à consommer.</div>
       {% endif %}
+    </div>
   </div>
-</div>
+
+  <!-- Produits en faible stock (Top 8) -->
+  <div class="card">
+    <div class="title">
+      <h2>Produits en faible stock (Top 8)</h2>
+    </div>
+
+    <div class="top8-table table-responsive">
+      <table>
+        <thead>
+          <tr>
+            <th>Produit</th>
+            <th>Stock total</th>
+            <th>Seuil min</th>
+            <th>Manque</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% if low_products and low_products|length > 0 %}
+          {% for p in low_products %}
+          {% if loop.index0 < 8 %} {% set q=(p.qty_total if p.qty_total is defined else 0) | float %} {% set
+            minq=(p.min_qty if p.min_qty is defined else 0) | float %} {% set manque=(minq - q) if minq> q else 0 %}
+            <tr>
+              <td>{{ p.name }}</td>
+              <td>
+                {% if q == 0 %}
+                0 {{ p.unit|pluralize_fr(0) }}
+                {% else %}
+                {{ ('%.2f' % q) | trim('0') | trim('.') }} {{ p.unit|pluralize_fr(q) }}
+                {% endif %}
+              </td>
+              <td>{{ (minq|int if minq == minq|int else minq) }}</td>
+              <td>
+                {% if manque > 0 %}
+                {{ manque|int }} {{ p.unit|pluralize_fr(manque) }}
+                {% else %}0{% endif %}
+              </td>
+            </tr>
+            {% endif %}
+            {% endfor %}
+            {% else %}
+            <tr>
+              <td colspan="4" class="muted">Aucun produit en faible stock.</td>
+            </tr>
+            {% endif %}
+        </tbody>
+      </table>
+    </div>
+
+    <div class="top8-cards">
+      {% if low_products and low_products|length > 0 %}
+      {% for p in low_products %}
+      {% if loop.index0 < 8 %} {% set q=(p.qty_total if p.qty_total is defined else 0) | float %} {% set minq=(p.min_qty
+        if p.min_qty is defined else 0) | float %} {% set manque=(minq - q) if minq> q else 0 %}
+        <div class="lot-card">
+          <div class="lot-main">
+            <div class="lot-title">{{ p.name }}</div>
+            <div class="lot-meta">
+              <span>⚖️ {% if q == 0 %}0 {{ p.unit|pluralize_fr(0) }}{% else %}{{ ('%.2f' % q) | trim('0') | trim('.') }}
+                {{ p.unit|pluralize_fr(q) }}{% endif %}</span>
+              <span>🎯 Seuil : {{ (minq|int if minq == minq|int else minq) }}</span>
+              <span>Manque : {% if manque > 0 %}{{ manque|int }} {{ p.unit|pluralize_fr(manque) }}{% else %}0{% endif
+                %}</span>
+            </div>
+          </div>
+        </div>
+        {% endif %}
+        {% endfor %}
+        {% else %}
+        <div class="muted">Aucun produit en faible stock.</div>
+        {% endif %}
+    </div>
+  </div>
 
 </div>
 {% endblock %}
