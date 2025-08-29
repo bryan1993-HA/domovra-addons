@@ -58,10 +58,13 @@ def shopping_page(
             "stock_qty": qty or 0,
         })
 
-    return render_with_env("shopping.html", {
+return render_with_env(
+    "shopping.html",
+    {
         "BASE": base,
         "items": items,
         "params": {"show": show, "q": q},
-        # Debug léger visible dans /data/domovra.log si ton logging est en INFO+
         "debug": {"has_stats": _HAS_STATS, "raw_count": len(products), "after_filter": len(items)},
-    })
+    },
+    request.app.state.templates  # ⬅️ le Jinja2 Environment attendu par utils.http.render
+)
