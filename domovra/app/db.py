@@ -307,11 +307,17 @@ def list_products():
               barcode,
               min_qty,
               default_location_id,
-              COALESCE(no_freeze, 0) AS no_freeze
+              COALESCE(low_stock_enabled,1) AS low_stock_enabled,
+              COALESCE(expiry_kind,'DLC')   AS expiry_kind,
+              default_freeze_shelf_days,
+              COALESCE(no_freeze,0)         AS no_freeze,
+              COALESCE(category,'')         AS category,
+              parent_id
             FROM products
             ORDER BY name COLLATE NOCASE
             """
         )]
+
 
 
 def list_products_with_stats():
@@ -344,10 +350,6 @@ def list_products_with_stats():
 
 
 def list_low_stock_products(limit: int = 8):
-    """
-    Produits FAIBLES : min_qty défini ET qty_total <= min_qty.
-    Tri par criticité (delta croissant), puis qty_total croissant, puis nom.
-    """
     with _conn() as c:
         q = """
         WITH totals AS (
@@ -363,11 +365,13 @@ def list_low_stock_products(limit: int = 8):
         FROM products p
         LEFT JOIN totals t ON t.product_id = p.id
         WHERE p.min_qty IS NOT NULL
+          AND COALESCE(p.low_stock_enabled,1) != 0   -- ← respecter le suivi
           AND COALESCE(t.qty_total,0) <= p.min_qty
         ORDER BY delta ASC, qty_total ASC, p.name
         LIMIT ?
         """
         return [dict(r) for r in c.execute(q, (int(limit),))]
+
 
 def update_product(
     product_id: int,

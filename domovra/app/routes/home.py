@@ -1,5 +1,4 @@
 # domovra/app/routes/home.py
-import os
 from fastapi import APIRouter, Request
 from fastapi.responses import HTMLResponse, PlainTextResponse, JSONResponse
 
@@ -13,6 +12,9 @@ router = APIRouter()
 def ping():
     return "ok"
 
+
+# --- Helpers internes --------------------------------------------------------
+
 def _to_float(x, default=0.0):
     try:
         if x is None:
@@ -21,19 +23,26 @@ def _to_float(x, default=0.0):
     except Exception:
         return default
 
-def _is_true(v) -> bool:
-    s = str(v).strip().lower()
-    return s not in ("0", "false", "off", "no", "none", "")
-
-def _compute_low_products(products, lots):
+def _enabled_from(raw, default_int_0_or_1: int) -> bool:
     """
-    Calcule les produits qui sont en faible stock
-    - On prend en compte 'low_stock_enabled' et 'min_qty' pour chaque produit
-    - On somme les quantités des lots et on les compare au min_qty
+    Convertit le champ low_stock_enabled (qui peut être None/'0'/'1'/bool/str) en bool.
+    Si None/'' -> fallback sur le réglage global (default_int_0_or_1).
+    """
+    if raw is None or str(raw).strip() == "":
+        return bool(int(default_int_0_or_1))
+    s = str(raw).strip().lower()
+    return s not in ("0", "false", "off", "no")
+
+def _compute_low_products(products, lots, default_follow: int = 1):
+    """
+    Calcule la liste des produits en faible stock :
+      - min_qty > 0
+      - low_stock_enabled actif (ou fallback sur default_follow)
+      - qty_total < min_qty
     """
     # Somme des quantités par produit
     totals = {}
-    for l in lots:
+    for l in (lots or []):
         pid = l.get("product_id")
         if not pid:
             continue
@@ -41,17 +50,34 @@ def _compute_low_products(products, lots):
         totals[pid] = totals.get(pid, 0.0) + q
 
     low_products = []
-    for p in products:
+    debug_per_product = []
+
+    for p in (products or []):
         pid = p.get("id")
         if not pid:
             continue
 
-        # Vérifie si l'alerte de faible stock est activée
-        enabled = str(p.get("low_stock_enabled") or "0").lower() not in ("0", "false", "off", "no")
         min_qty = _to_float(p.get("min_qty"), 0.0)
         qty_total = _to_float(totals.get(pid, 0.0), 0.0)
+        enabled = _enabled_from(p.get("low_stock_enabled"), default_follow)
 
-        if not enabled or min_qty <= 0 or qty_total >= min_qty:
+        lack = max(0.0, min_qty - qty_total)
+        debug_per_product.append({
+            "id": pid,
+            "name": p.get("name"),
+            "enabled": enabled,
+            "low_stock_enabled_raw": p.get("low_stock_enabled"),
+            "default_follow": default_follow,
+            "min_qty": min_qty,
+            "qty_total": qty_total,
+            "lack": lack,
+        })
+
+        if not enabled:
+            continue
+        if min_qty <= 0:
+            continue
+        if qty_total >= min_qty:
             continue
 
         low_products.append({
@@ -62,10 +88,12 @@ def _compute_low_products(products, lots):
             "min_qty": min_qty,
         })
 
-    # Trier par manque (min_qty - qty_total) pour avoir les produits en plus faible stock en haut
+    # Trie par manque décroissant
     low_products.sort(key=lambda x: (x["min_qty"] - x["qty_total"]), reverse=True)
-    return totals, low_products
+    return totals, low_products, debug_per_product
 
+
+# --- Page accueil ------------------------------------------------------------
 
 @router.get("/", response_class=HTMLResponse)
 @router.get("//", response_class=HTMLResponse)
@@ -76,12 +104,15 @@ def index(request: Request):
     products  = list_products()  or []
     lots      = list_lots()      or []
 
-    # Calcul du statut des lots
+    # statut pour le bloc "À consommer en priorité"
     for it in lots:
         it["status"] = status_for(it.get("best_before"), WARNING_DAYS, CRITICAL_DAYS)
 
-    # Calcul des produits en faible stock
-    totals, low_products = _compute_low_products(products, lots)
+    # fallback global si low_stock_enabled est None côté DB
+    settings = getattr(request.app.state, "settings", {}) or {}
+    low_stock_default = int(settings.get("low_stock_default", 1))
+
+    totals, low_products, _ = _compute_low_products(products, lots, default_follow=low_stock_default)
 
     return render_with_env(
         request.app.state.templates,
@@ -98,16 +129,20 @@ def index(request: Request):
     )
 
 
-# --- DEBUG: JSON pour vérifier les données côté front ---
+# --- DEBUG JSON --------------------------------------------------------------
+
 @router.get("/api/home-debug", response_class=JSONResponse)
 def home_debug(request: Request):
     products  = list_products()  or []
     lots      = list_lots()      or []
     for it in lots:
         it["status"] = status_for(it.get("best_before"), WARNING_DAYS, CRITICAL_DAYS)
-    totals, low_products = _compute_low_products(products, lots)
 
-    # on simplifie pour que ce soit lisible
+    settings = getattr(request.app.state, "settings", {}) or {}
+    low_stock_default = int(settings.get("low_stock_default", 1))
+
+    totals, low_products, dbg = _compute_low_products(products, lots, default_follow=low_stock_default)
+
     simple_products = [
         {
             "id": p.get("id"),
@@ -132,6 +167,7 @@ def home_debug(request: Request):
     ]
 
     return {
+        "settings": {"low_stock_default": low_stock_default},
         "counts": {
             "products": len(products),
             "lots": len(lots),
@@ -139,6 +175,7 @@ def home_debug(request: Request):
         },
         "totals_by_product_id": totals,
         "low_products": low_products,
+        "debug_per_product": dbg,
         "products": simple_products,
         "lots": simple_lots,
     }
