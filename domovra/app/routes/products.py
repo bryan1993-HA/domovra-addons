@@ -45,7 +45,6 @@ _UNIT_FAMILY = {
 }
 
 def _normalize_unit(unit: str) -> str:
-    """Tolère plein d'écritures et renvoie une unité canonique : kg,g,l,ml,cl,pc"""
     u = (unit or "").strip().lower()
     u = u.replace("gr.", "gr").replace("g.", "g").replace("ml.", "ml").replace("l.", "l")
     if u.endswith("s") and u not in ("ml", "cl", "kg"):
@@ -85,17 +84,16 @@ def products_page(request: Request):
         pid = int(it["id"])
         hist = list_price_history_for_product(pid, limit=10) or []
 
-        # ===== Dernier prix unitaire (robuste, aligné sur ta DB) =====
+        # ===== Dernier prix unitaire (robuste & aligné DB) =====
         last_unit = None
         if hist:
-            # 0) utilitaires
+            # utilitaires
             def to_float(x):
                 if x is None:
                     return None
                 if isinstance(x, (int, float)):
                     return float(x)
                 try:
-                    # tolère "1,50"
                     return float(str(x).replace(",", "."))
                 except Exception:
                     return None
@@ -117,7 +115,6 @@ def products_page(request: Request):
                 return u or "pc"
 
             def _to_base(q: float, u: str):
-                """Convertit vers l'unité de base (kg/L/pc). Retourne (quantité, base_unit)."""
                 u = _norm(u)
                 if u == "g":
                     return q / 1000.0, "kg"
@@ -131,48 +128,47 @@ def products_page(request: Request):
                     return q, "l"
                 return q, "pc"
 
-            # 1) trie par date décroissante (selon tes champs : 'created_on' ou 'date')
+            # tri décroissant (date de création si dispo)
             def pick_date(r):
                 return (r.get("created_on") or r.get("date") or r.get("ended_on") or "")[:19]
             hist_sorted = sorted(hist, key=pick_date, reverse=True)
 
             picked = None
             for r in hist_sorted:
-                # --- clés alignées avec ta capture ---
                 price_total = to_float(r.get("price_total") or r.get("price") or r.get("total_price"))
 
-                # quantité "par unité" (ex: 1 L, 500 g) OU null
-                qty_per_unit = r.get("qty_per_unit") or r.get("qty_unit") or r.get("unit_qty") or r.get("size")
+                # quantité TOTALE si dispo (prioritaire)
+                qty_total_field = to_float(r.get("initial_qty") or r.get("qty_total") or r.get("qty_all"))
 
-                # qty brute (parfois quantité totale ou par unité selon la source)
-                qty_raw = r.get("qty") or r.get("qty_in") or r.get("quantity") or r.get("initial_qty")
+                # sinon : quantité PAR UNITE × N unités
+                qty_per_unit = to_float(r.get("qty_per_unit") or r.get("qty_unit") or r.get("unit_qty") or r.get("size"))
+                multiplier   = to_float(r.get("multiplier") or r.get("count") or r.get("units") or r.get("nb"))
 
-                # nombre d'unités achetées
-                multiplier = r.get("multiplier") or r.get("count") or r.get("units") or r.get("nb")
+                # fallback si la source ne stocke qu'une "qty" simple
+                qty_simple = to_float(r.get("qty") or r.get("qty_in") or r.get("quantity"))
 
-                # unité à l'achat
                 hist_unit = (r.get("unit_at_purchase") or r.get("unit") or r.get("unit_in") or r.get("u_map") or it.get("unit") or "").strip()
 
-                per = to_float(qty_per_unit)
-                if per is None:
-                    per = to_float(qty_raw)  # si pas de per-unit, on prend qty comme total
+                # 1) quantité totale prioritaire
+                qty_total_raw = None
+                if qty_total_field and qty_total_field > 0:
+                    qty_total_raw = qty_total_field
+                # 2) sinon qty_per_unit × multiplier
+                elif qty_per_unit and qty_per_unit > 0:
+                    qty_total_raw = qty_per_unit * (multiplier if (multiplier and multiplier > 0) else 1.0)
+                # 3) sinon qty simple (rare)
+                elif qty_simple and qty_simple > 0:
+                    qty_total_raw = qty_simple
 
-                mul = to_float(multiplier) or 1.0
-
-                # Si price_total + per sont valides, on a ce qu'il faut
-                if price_total and per and price_total > 0 and per > 0:
-                    picked = (price_total, per, mul, hist_unit)
+                if price_total and price_total > 0 and qty_total_raw and qty_total_raw > 0:
+                    picked = (price_total, qty_total_raw, hist_unit)
                     break
 
             if picked:
-                price_total, per, mul, hist_unit = picked
-                # si 'per' vient de qty_per_unit -> total = per * mul
-                # si 'per' était déjà un total -> mul vaudra 1 -> inchangé
-                qty_total_raw = per * (mul if mul and mul > 0 else 1.0)
-
-                qty_total_base, base_u = _to_base(qty_total_raw, hist_unit)
+                price_total, qty_total_raw, hist_unit = picked
+                qty_total_base, _ = _to_base(qty_total_raw, hist_unit)
                 if qty_total_base and qty_total_base > 0:
-                    last_unit = price_total / qty_total_base  # €/L, €/kg, ou €/pc
+                    last_unit = price_total / qty_total_base  # €/L, €/kg ou €/pc
 
         it["last_price_unit"] = last_unit
         it["currency"] = "€"
