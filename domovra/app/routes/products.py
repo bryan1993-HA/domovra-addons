@@ -1,3 +1,5 @@
+# /opt/app/routes/products.py
+
 from fastapi import APIRouter, Request, Form
 from fastapi.responses import HTMLResponse, RedirectResponse
 from urllib.parse import urlencode
@@ -89,82 +91,97 @@ def products_page(request: Request):
         pid = int(it["id"])
         hist = list_price_history_for_product(pid, limit=10) or []
 
-# ===== Dernier prix unitaire (robuste) =====
-last_unit = None
-if hist:
-    # 0) utilitaires
-    def to_float(x):
-        if x is None: return None
-        if isinstance(x, (int, float)): return float(x)
-        # tolère "1,50"
-        try:
-            return float(str(x).replace(',', '.'))
-        except Exception:
-            return None
+        # ===== Dernier prix unitaire (robuste) =====
+        last_unit = None
+        if hist:
+            # 0) utilitaires
+            def to_float(x):
+                if x is None:
+                    return None
+                if isinstance(x, (int, float)):
+                    return float(x)
+                # tolère "1,50"
+                try:
+                    return float(str(x).replace(",", "."))
+                except Exception:
+                    return None
 
-    def _norm(u: str) -> str:
-        u = (u or "").strip().lower().replace("l.", "l").replace("ml.", "ml").replace("g.", "g").replace("gr.", "g")
-        if u in ("litre", "litres", "liter", "liters"): return "l"
-        if u in ("centilitre", "centilitres"): return "cl"
-        if u in ("millilitre", "millilitres", "milliliter", "milliliters"): return "ml"
-        if u in ("kilogramme", "kilogrammes"): return "kg"
-        if u in ("gramme", "grammes"): return "g"
-        if u in ("piece", "pièce", "pièces", "pcs", "unité", "unite", "boite", "boîte", "bouteille", "paquet", "sachet", "lot", "barquette", "rouleau", "dosette"):
-            return "pc"
-        return u or "pc"
+            def _norm(u: str) -> str:
+                u = (u or "").strip().lower().replace("l.", "l").replace("ml.", "ml").replace("g.", "g").replace("gr.", "g")
+                if u in ("litre", "litres", "liter", "liters"):
+                    return "l"
+                if u in ("centilitre", "centilitres"):
+                    return "cl"
+                if u in ("millilitre", "millilitres", "milliliter", "milliliters"):
+                    return "ml"
+                if u in ("kilogramme", "kilogrammes"):
+                    return "kg"
+                if u in ("gramme", "grammes"):
+                    return "g"
+                if u in ("piece", "pièce", "pièces", "pcs", "unité", "unite", "boite", "boîte", "bouteille", "paquet", "sachet", "lot", "barquette", "rouleau", "dosette"):
+                    return "pc"
+                return u or "pc"
 
-    def _to_base(q: float, u: str):
-        u = _norm(u)
-        if u == "g":  return q / 1000.0, "kg"
-        if u == "kg": return q, "kg"
-        if u == "ml": return q / 1000.0, "l"
-        if u == "cl": return q / 100.0,  "l"
-        if u == "l":  return q, "l"
-        return q, "pc"
+            def _to_base(q: float, u: str):
+                """Convertit vers l'unité de base (kg/L/pc). Retourne (quantité, base_unit)."""
+                u = _norm(u)
+                if u == "g":
+                    return q / 1000.0, "kg"
+                if u == "kg":
+                    return q, "kg"
+                if u == "ml":
+                    return q / 1000.0, "l"
+                if u == "cl":
+                    return q / 100.0, "l"
+                if u == "l":
+                    return q, "l"
+                return q, "pc"
 
-    # 1) on prend la ligne d'historique la plus récente avec des nombres exploitables
-    #    (si l'ordre n'est pas garanti, on trie par date décroissante quand dispo)
-    def parse_date_str(d):
-        try:
-            # "2025-08-20" ou ISO alike
-            return (d or "")[:10]
-        except Exception:
-            return ""
-    hist_sorted = sorted(hist, key=lambda r: parse_date_str(r.get("date")), reverse=True)
+            # 1) on prend la ligne d'historique la plus récente avec des nombres exploitables
+            #    (si l'ordre n'est pas garanti, on trie par date décroissante quand dispo)
+            def parse_date_str(d):
+                try:
+                    # "2025-08-20" ou ISO alike
+                    return (d or "")[:10]
+                except Exception:
+                    return ""
 
-    picked = None
-    for r in hist_sorted:
-        price_total = to_float(r.get("price"))
-        # champs alias possibles
-        qty_raw = r.get("qty") or r.get("qty_in") or r.get("quantity")
-        qty_per_unit = r.get("qty_per_unit") or r.get("qty_unit") or r.get("unit_qty") or r.get("size")
-        multiplier = r.get("multiplier") or r.get("count") or r.get("units") or r.get("nb")
-        hist_unit = (r.get("unit") or r.get("unit_in") or r.get("u_map") or it.get("unit") or "").strip()
+            hist_sorted = sorted(hist, key=lambda r: parse_date_str(r.get("date")), reverse=True)
 
-        per = to_float(qty_per_unit)
-        if per is None:
-            per = to_float(qty_raw)
+            picked = None
+            for r in hist_sorted:
+                price_total = to_float(r.get("price"))
+                # champs alias possibles (on couvre plusieurs schémas)
+                qty_raw = r.get("qty") or r.get("qty_in") or r.get("quantity")
+                qty_per_unit = r.get("qty_per_unit") or r.get("qty_unit") or r.get("unit_qty") or r.get("size")
+                multiplier = r.get("multiplier") or r.get("count") or r.get("units") or r.get("nb")
+                hist_unit = (r.get("unit") or r.get("unit_in") or r.get("u_map") or it.get("unit") or "").strip()
 
-        mul = to_float(multiplier) or 1.0
+                per = to_float(qty_per_unit)
+                if per is None:
+                    per = to_float(qty_raw)
 
-        if price_total and per and mul and price_total > 0 and per > 0 and mul > 0:
-            picked = (price_total, per, mul, hist_unit)
-            break
+                mul = to_float(multiplier) or 1.0
 
-    if picked:
-        price_total, per, mul, hist_unit = picked
-        qty_total_raw = per * mul                         # ex: 1 L × 2 = 2 L ; 500 g × 3 = 1500 g
-        qty_total_base, base_u = _to_base(qty_total_raw, hist_unit)   # -> convertit en L/kg/pc
-        if qty_total_base and qty_total_base > 0:
-            last_unit = price_total / qty_total_base      # -> €/L ou €/kg (ou €/pc)
+                if price_total and per and mul and price_total > 0 and per > 0 and mul > 0:
+                    picked = (price_total, per, mul, hist_unit)
+                    break
 
+            if picked:
+                price_total, per, mul, hist_unit = picked
+                # ex: 1 L × 2 = 2 L ; 500 g × 3 = 1500 g
+                qty_total_raw = per * mul
+                # -> convertit en L/kg/pc
+                qty_total_base, base_u = _to_base(qty_total_raw, hist_unit)
+                if qty_total_base and qty_total_base > 0:
+                    # -> €/L ou €/kg (ou €/pc)
+                    last_unit = price_total / qty_total_base
 
         it["last_price_unit"] = last_unit
         it["currency"] = "€"
         it["price_history_json"] = json.dumps(hist, ensure_ascii=False)
         it["stock_value"] = stock_values.get(pid, 0.0)
-
-        # bonus: libellé d’affichage pour prix unitaire
+        # libellé d’affichage pour prix unitaire
         it["price_label"] = _price_label_for_unit(it.get("unit"))
 
     loc_map = {str(loc["id"]): loc["name"] for loc in (locations or [])}
@@ -235,10 +252,10 @@ def product_add(
         "id": pid, "name": name, "unit": unit, "shelf": shelf, "min_qty": mq,
         "description": description or None,
         "default_location_id": (int(default_location_id) if str(default_location_id).strip() else None),
-        "low_stock_enabled": 0 if str(low_stock_enabled).lower() in ("0","false","off","no") else 1,
+        "low_stock_enabled": 0 if str(low_stock_enabled).lower() in ("0", "false", "off", "no") else 1,
         "expiry_kind": (expiry_kind or "DLC").upper(),
         "default_freeze_shelf_days": default_freeze_shelf_days or None,
-        "no_freeze": 1 if str(no_freeze).lower() in ("1","true","on","yes") else 0,
+        "no_freeze": 1 if str(no_freeze).lower() in ("1", "true", "on", "yes") else 0,
         "category": category or None,
         "parent_id": parent_id or None,
     })
@@ -306,10 +323,10 @@ def product_update(
         "id": product_id, "name": name, "unit": unit, "shelf": shelf, "min_qty": mq,
         "description": description or None,
         "default_location_id": (int(default_location_id) if str(default_location_id).strip() else None),
-        "low_stock_enabled": 0 if str(low_stock_enabled).lower() in ("0","false","off","no") else 1,
+        "low_stock_enabled": 0 if str(low_stock_enabled).lower() in ("0", "false", "off", "no") else 1,
         "expiry_kind": (expiry_kind or "DLC").upper(),
-        "default_freeze_shelf_days": default_freeze_shelf_shelf_days if (default_freeze_shelf_days or None) else None if False else default_freeze_shelf_days or None,  # keep as original behavior
-        "no_freeze": 1 if str(no_freeze).lower() in ("1","true","on","yes") else 0,
+        "default_freeze_shelf_days": default_freeze_shelf_days or None,
+        "no_freeze": 1 if str(no_freeze).lower() in ("1", "true", "on", "yes") else 0,
         "category": category or None,
         "parent_id": parent_id or None,
     })
@@ -341,7 +358,7 @@ def product_adjust(request: Request, product_id: int = Form(...), delta: int = F
         if locs:
             loc_id = int(locs[0]["id"])
         else:
-            from db import add_location
+            from db import add_location  # import local pour éviter cycle
             loc_id = int(add_location("Général"))
         add_lot(product_id, loc_id, qty, None, None)
         log_event("product.adjust", {"id": product_id, "delta": qty, "action": "add"})
