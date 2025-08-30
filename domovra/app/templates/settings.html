@@ -1,3 +1,8 @@
+{% extends "base.html" %}
+{% block title %}Domovra — Paramètres{% endblock %}
+
+{% block head %}{% endblock %}
+
 {% block content %}
 <div class="wrap" data-page="settings">
 
@@ -12,196 +17,182 @@
         <button class="tab" data-tab="advanced" role="tab">Avancés</button>
     </nav>
 
-    <!-- ===== Onglet : Apparence ===== -->
-    <section class="panel card" data-panel="appearance">
-        <div class="title">
-            <h2>Apparence</h2><span class="muted">→ thème & affichage</span>
-        </div>
-        <div class="grid">
-            <div class="field">
-                <div class="label">Thème</div>
-                <select name="theme" id="theme">
-                    <option value="auto">Auto</option>
-                    <option value="light">Clair</option>
-                    <option value="dark" selected>Sombre</option>
-                </select>
-            </div>
+    <form method="post" action="{{ BASE }}settings/save">
 
-            <div class="field">
-                <div class="label">Affichage des tableaux</div>
-                <select name="table_scroll" id="table_scroll">
-                    <option value="horizontal" selected>Défilement horizontal</option>
-                    <option value="wrap">Retour à la ligne</option>
-                </select>
-            </div>
+        <!-- ===== Apparence ===== -->
+        <section class="panel card" data-panel="appearance">
+            <h2>Apparence</h2>
+            <div class="row">
+                <div class="field">
+                    <div class="label">Thème</div>
+                    <select name="theme">
+                        <option value="auto" {{ 'selected' if SETTINGS.theme=='auto' }}>Auto</option>
+                        <option value="light" {{ 'selected' if SETTINGS.theme=='light' }}>Clair</option>
+                        <option value="dark" {{ 'selected' if SETTINGS.theme=='dark' }}>Sombre</option>
+                    </select>
+                </div>
 
-            <div class="field">
-                <label class="checkbox">
-                    <input type="checkbox" id="compact_sidebar">
-                    <span>Menu latéral compact</span>
-                </label>
-            </div>
-        </div>
-    </section>
+                <div class="field">
+                    <div class="label">Affichage des tableaux</div>
+                    <select name="table_mode">
+                        <option value="scroll" {{ 'selected' if SETTINGS.table_mode=='scroll' }}>Défilement horizontal
+                        </option>
+                        <option value="stacked" {{ 'selected' if SETTINGS.table_mode=='stacked' }}>Empilé (mobile)
+                        </option>
+                    </select>
+                </div>
 
-    <!-- ===== Onglet : Produits & Stocks ===== -->
-    <section class="panel card" data-panel="stock" hidden>
-        <div class="title">
-            <h2>Produits & Stocks</h2><span class="muted">→ règles par défaut</span>
-        </div>
-        <div class="grid">
-            <div class="field">
-                <div class="label">Durée de conservation par défaut (jours)</div>
-                <input type="number" id="default_shelf_life" value="30" min="0">
-            </div>
-
-            <div class="field">
-                <div class="label">Seuil “faible stock”</div>
-                <input type="number" id="low_stock_threshold" value="1" min="0">
-            </div>
-
-            <div class="field">
-                <div class="label">Statuts</div>
-                <div class="inline">
-                    <label>⚠️ Bientôt (jours)
-                        <input type="number" id="retention_warn" value="{{ WARNING_DAYS|default(7) }}">
-                    </label>
-                    <label>⛔ Urgent (jours)
-                        <input type="number" id="retention_critical" value="{{ CRITICAL_DAYS|default(3) }}">
+                <div class="field">
+                    <div class="label">Menu latéral compact</div>
+                    <label style="display:flex;align-items:center;gap:8px">
+                        <input type="checkbox" name="sidebar_compact" {{ 'checked' if SETTINGS.sidebar_compact }}>
+                        Activer
                     </label>
                 </div>
             </div>
-        </div>
-    </section>
+        </section>
 
-    <!-- ===== Onglet : Notifications ===== -->
-    <section class="panel card" data-panel="toasts" hidden>
-        <div class="title">
-            <h2>Notifications (toasts)</h2><span class="muted">→ durée & style</span>
-        </div>
-        <div class="grid">
-            <div class="field">
-                <div class="label">Durée d’affichage (ms)</div>
-                <input type="number" id="toast_duration" value="3000" min="500" step="100">
-            </div>
+        <!-- ===== Produits / Stocks ===== -->
+        <section class="panel card" data-panel="stock" hidden>
+            <h2>Produits / stocks</h2>
+            <div class="row">
+                <div class="field">
+                    <div class="label">Durée de conservation par défaut (jours)</div>
+                    <input type="number" name="default_shelf_days" value="{{ SETTINGS.default_shelf_days|default(90) }}"
+                        min="1">
+                </div>
 
-            <div class="field">
-                <div class="label">Position</div>
-                <select id="toast_position">
-                    <option value="top-right" selected>Haut droite (desktop)</option>
-                    <option value="bottom">Barre bas (mobile)</option>
-                </select>
-            </div>
-
-            <div class="field">
-                <div class="label">Couleurs (placeholder, non appliquées)</div>
-                <div class="inline">
-                    <input type="text" placeholder="Succès #22c55e">
-                    <input type="text" placeholder="Avertissement #f59e0b">
-                    <input type="text" placeholder="Erreur #ef4444">
+                <div class="field">
+                    <div class="label">Seuil “faible stock” par défaut</div>
+                    <input type="number" name="low_stock_default" value="{{ SETTINGS.low_stock_default|default(1) }}"
+                        min="0">
                 </div>
             </div>
-        </div>
-    </section>
+        </section>
 
-    <!-- ===== Onglet : Journal ===== -->
-    <section class="panel card" data-panel="journal" hidden>
-        <div class="title">
-            <h2>Journal</h2><span class="muted">→ options & maintenance</span>
-        </div>
-        <div class="grid">
-            <div class="field">
-                <div class="label">Purge auto du journal (jours)</div>
-                <input type="number" id="log_retention_days" value="30" min="0">
-            </div>
-            <div class="field">
-                <label class="checkbox">
-                    <input type="checkbox" id="log_consumption" checked>
-                    <span>Tracer les consommations</span>
-                </label>
-                <label class="checkbox">
-                    <input type="checkbox" id="log_add_remove" checked>
-                    <span>Tracer ajouts / suppressions</span>
-                </label>
-            </div>
-            <div class="actions">
-                <a class="btn" href="{{ BASE }}log">Ouvrir la page Journal</a>
-            </div>
-        </div>
-    </section>
+        <!-- ===== Notifications (toasts) ===== -->
+        <section class="panel card" data-panel="toasts" hidden>
+            <h2>Toasts (notifications)</h2>
+            <div class="row">
+                <div class="field">
+                    <div class="label">Durée d’affichage (ms)</div>
+                    <input type="number" name="toast_duration" min="500" step="100"
+                        value="{{ SETTINGS.toast_duration|default(3000) }}">
+                </div>
 
-    <!-- ===== Onglet : Emplacements ===== -->
-    <section class="panel card" data-panel="locations" hidden>
-        <div class="title">
-            <h2>Emplacements</h2><span class="muted">→ petites préférences</span>
-        </div>
-        <div class="grid">
-            <div class="field">
-                <label class="checkbox">
-                    <input type="checkbox" id="ask_move_on_delete" checked>
-                    <span>Proposer de déplacer les lots lors d’une suppression</span>
-                </label>
-            </div>
-            <div class="actions">
-                <a class="btn" href="{{ BASE }}locations">Ouvrir la page Emplacements</a>
-            </div>
-        </div>
-    </section>
+                <div class="field">
+                    <div class="label">Couleur “Succès”</div>
+                    <input type="color" name="toast_ok" value="{{ SETTINGS.toast_ok|default('#4caf50') }}">
+                </div>
 
-    <!-- ===== Onglet : Admin DB ===== -->
-    <section class="panel card" data-panel="admindb" hidden>
-        <div class="title">
-            <h2>Admin DB</h2><span class="muted">→ sauvegarde & utilitaires</span>
-        </div>
-        <div class="grid">
-            <div class="field">
-                <div class="label">Sauvegarde SQLite</div>
-                <button class="btn">Exporter domovra.sqlite3</button>
-            </div>
-            <div class="field">
-                <div class="label">Paramètres UI</div>
-                <button class="btn">Exporter /data/settings.json</button>
-            </div>
-            <div class="actions">
-                <a class="btn" href="{{ BASE }}admin">Ouvrir Admin DB</a>
-            </div>
-        </div>
-    </section>
+                <div class="field">
+                    <div class="label">Couleur “Avertissement”</div>
+                    <input type="color" name="toast_warn" value="{{ SETTINGS.toast_warn|default('#ffb300') }}">
+                </div>
 
-    <!-- ===== Onglet : Avancés ===== -->
-    <section class="panel card" data-panel="advanced" hidden>
-        <div class="title">
-            <h2>Avancés</h2><span class="muted">→ intégrations & modules</span>
-        </div>
-        <div class="grid">
-            <div class="field">
-                <label class="checkbox">
-                    <input type="checkbox" id="enable_off_block" checked>
-                    <span>Afficher le bloc Open Food Facts sur “Fiche produit”</span>
-                </label>
+                <div class="field">
+                    <div class="label">Couleur “Erreur”</div>
+                    <input type="color" name="toast_error" value="{{ SETTINGS.toast_error|default('#ef5350') }}">
+                </div>
             </div>
-            <div class="field">
-                <label class="checkbox">
-                    <input type="checkbox" id="enable_scanner" checked>
-                    <span>Activer le scanner caméra (BarcodeDetector/ZXing)</span>
-                </label>
-            </div>
-            <div class="field">
-                <label class="checkbox">
-                    <input type="checkbox" id="ha_notifications">
-                    <span>Activer les notifications Home Assistant</span>
-                </label>
-            </div>
-        </div>
-    </section>
+        </section>
 
-    <!-- ===== Bouton Enregistrer (placeholder) ===== -->
-    <div class="actions" style="margin-top:1rem">
-        <button class="btn primary" id="save_settings">Enregistrer</button>
-    </div>
+        <!-- ===== Journal ===== -->
+        <section class="panel card" data-panel="journal" hidden>
+            <h2>Journal</h2>
+            <div class="row">
+                <div class="field">
+                    <div class="label">Purge automatique (jours)</div>
+                    <input type="number" name="log_retention_days" value="{{ SETTINGS.log_retention_days|default(30) }}"
+                        min="0">
+                </div>
+                <div class="field">
+                    <label style="display:flex;align-items:center;gap:.5rem">
+                        <input type="checkbox" name="log_consumption" {{ 'checked' if
+                            SETTINGS.log_consumption|default(true) }}> Tracer les consommations
+                    </label>
+                    <label style="display:flex;align-items:center;gap:.5rem;margin-top:.5rem">
+                        <input type="checkbox" name="log_add_remove" {{ 'checked' if
+                            SETTINGS.log_add_remove|default(true) }}> Tracer ajouts / suppressions
+                    </label>
+                </div>
+                <div class="field">
+                    <a class="btn" href="{{ BASE }}log">Ouvrir la page Journal</a>
+                </div>
+            </div>
+        </section>
+
+        <!-- ===== Emplacements ===== -->
+        <section class="panel card" data-panel="locations" hidden>
+            <h2>Emplacements</h2>
+            <div class="row">
+                <div class="field">
+                    <label style="display:flex;align-items:center;gap:.5rem">
+                        <input type="checkbox" name="ask_move_on_delete" {{ 'checked' if
+                            SETTINGS.ask_move_on_delete|default(true) }}>
+                        Proposer de déplacer les lots lors d’une suppression
+                    </label>
+                </div>
+                <div class="field">
+                    <a class="btn" href="{{ BASE }}locations">Ouvrir la page Emplacements</a>
+                </div>
+            </div>
+        </section>
+
+        <!-- ===== Admin DB ===== -->
+        <section class="panel card" data-panel="admindb" hidden>
+            <h2>Admin DB</h2>
+            <div class="row">
+                <div class="field">
+                    <div class="label">Sauvegarde SQLite</div>
+                    <button type="button" class="btn">Exporter domovra.sqlite3</button>
+                </div>
+                <div class="field">
+                    <div class="label">Paramètres UI</div>
+                    <button type="button" class="btn">Exporter /data/settings.json</button>
+                </div>
+                <div class="field">
+                    <a class="btn" href="{{ BASE }}admin">Ouvrir Admin DB</a>
+                </div>
+            </div>
+        </section>
+
+        <!-- ===== Avancés ===== -->
+        <section class="panel card" data-panel="advanced" hidden>
+            <h2>Avancés</h2>
+            <div class="row">
+                <div class="field">
+                    <label style="display:flex;align-items:center;gap:.5rem">
+                        <input type="checkbox" name="enable_off_block" {{ 'checked' if
+                            SETTINGS.enable_off_block|default(true) }}>
+                        Afficher le bloc Open Food Facts sur “Fiche produit”
+                    </label>
+                </div>
+                <div class="field">
+                    <label style="display:flex;align-items:center;gap:.5rem">
+                        <input type="checkbox" name="enable_scanner" {{ 'checked' if
+                            SETTINGS.enable_scanner|default(true) }}>
+                        Activer le scanner caméra (BarcodeDetector/ZXing)
+                    </label>
+                </div>
+                <div class="field">
+                    <label style="display:flex;align-items:center;gap:.5rem">
+                        <input type="checkbox" name="ha_notifications" {{ 'checked' if SETTINGS.ha_notifications }}>
+                        Activer les notifications Home Assistant
+                    </label>
+                </div>
+            </div>
+        </section>
+
+        <!-- ===== Bouton Enregistrer ===== -->
+        <div class="row" style="justify-content:flex-end">
+            <button class="secondary">Enregistrer</button>
+        </div>
+
+    </form>
 </div>
 
-<!-- ===== Styles minimaux des onglets (reprend ton thème) ===== -->
+<!-- ===== Styles très légers pour les onglets (ne casse pas ton thème) ===== -->
 <style>
     .tabs {
         display: flex;
@@ -211,9 +202,9 @@
     }
 
     .tab {
-        padding: .5rem .8rem;
+        padding: .45rem .75rem;
         border-radius: .75rem;
-        border: 1px solid var(--border, rgba(255, 255, 255, .1));
+        border: 1px solid var(--border, rgba(255, 255, 255, .12));
         background: transparent;
         cursor: pointer
     }
@@ -222,42 +213,16 @@
         background: rgba(255, 255, 255, .06)
     }
 
-    .panel .grid {
-        display: grid;
-        gap: 1rem;
-        grid-template-columns: repeat(auto-fit, minmax(260px, 1fr))
-    }
-
-    .inline {
-        display: flex;
-        gap: .5rem;
-        flex-wrap: wrap
-    }
-
-    .actions .btn {
-        display: inline-block
-    }
-
     .btn {
         padding: .55rem .9rem;
         border-radius: .75rem;
-        border: 1px solid var(--border, rgba(255, 255, 255, .12))
-    }
-
-    .btn.primary {
-        background: var(--accent, #2563eb);
-        color: #fff;
-        border-color: transparent
-    }
-
-    .checkbox {
-        display: flex;
-        align-items: center;
-        gap: .5rem
+        border: 1px solid var(--border, rgba(255, 255, 255, .12));
+        display: inline-block
     }
 </style>
+{% endblock %}
 
-<!-- ===== JS des onglets + persistance ===== -->
+{% block scripts %}
 <script>
     (function () {
         const tabs = document.querySelectorAll('.tabs .tab');
@@ -265,33 +230,24 @@
         const KEY = 'settingsActiveTab';
 
         function show(tab) {
-            tabs.forEach(t => {
-                const on = t.dataset.tab === tab;
-                t.setAttribute('aria-selected', on ? 'true' : 'false');
-            });
-            panels.forEach(p => {
-                p.hidden = p.dataset.panel !== tab;
-            });
-            // maj URL (hash propre)
-            const url = new URL(window.location);
+            tabs.forEach(t => t.setAttribute('aria-selected', t.dataset.tab === tab ? 'true' : 'false'));
+            panels.forEach(p => p.hidden = (p.dataset.panel !== tab));
+            const url = new URL(location.href);
             url.searchParams.set('tab', tab);
-            history.replaceState(null, '', url.toString());
-            // persistance
+            history.replaceState(null, '', url);
             localStorage.setItem(KEY, tab);
         }
 
         tabs.forEach(t => t.addEventListener('click', () => show(t.dataset.tab)));
 
-        // tab initial : URL ?tab=..., sinon localStorage, sinon 'appearance'
-        const urlTab = new URL(window.location).searchParams.get('tab');
+        const urlTab = new URL(location.href).searchParams.get('tab');
         const stored = localStorage.getItem(KEY);
         show(urlTab || stored || 'appearance');
 
-        // Bouton Enregistrer (placeholder → remplace par ton POST/PUT plus tard)
-        document.getElementById('save_settings')?.addEventListener('click', (e) => {
-            e.preventDefault();
-            window.showToast?.('Paramètres enregistrés (démo).', 'ok', 2000);
-        });
+        // toasts from query (?ok=1 / ?error=1)
+        const p = new URLSearchParams(location.search);
+        if (p.get('ok') === '1') window.showToast?.('Paramètres enregistrés.', 'ok');
+        if (p.get('error') === '1') window.showToast?.('Erreur lors de l’enregistrement.', 'error');
     })();
 </script>
 {% endblock %}
