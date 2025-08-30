@@ -24,8 +24,11 @@
         <!-- on garde le datalist pour le fallback et pour lire les options, mais on le cache -->
         <datalist id="consume-products-dl" hidden>
           {% for p in products %}
+          {% set q = (totals.get(p.id, 0) if totals is defined else 0) | float %}
+          {% set q_label = (('%.2f' % q) | trim('0') | trim('.')) %}
           <option value="{{ p.name }}" data-id="{{ p.id }}" data-brand="{{ p.brand or '' }}"
-            data-unit="{{ p.unit or '' }}">
+            data-unit="{{ p.unit or '' }}" data-stock="{{ '%.6f'|format(q) }}"
+            data-stock-label="{% if q == 0 %}0{% else %}{{ q_label }}{% endif %} {{ p.unit|pluralize_fr(q) if p.unit is defined else '' }}">
             {{ p.name }}{% if p.brand %} — {{ p.brand }}{% endif %}{% if p.unit %} ({{ p.unit }}){% endif %}
           </option>
           {% endfor %}
@@ -163,8 +166,16 @@
           const id = opt.getAttribute('data-id') ? parseInt(opt.getAttribute('data-id'), 10) : null;
           const brand = opt.getAttribute('data-brand') || '';
           const unit = opt.getAttribute('data-unit') || '';
-          return { id, name, brand, unit, norm: normalize(name) };
+
+          const stock = parseFloat(opt.getAttribute('data-stock') || '0') || 0;
+          const stockLabel = (opt.getAttribute('data-stock-label') || '').trim();
+
+          return { id, name, brand, unit, stock, stockLabel, norm: normalize(name) };
         }).filter(x => x.id);
+
+        // (facultatif) tri alpha
+        itemsIndex.sort((a, b) => a.name.localeCompare(b.name, 'fr', { sensitivity: 'base' }));
+
       })();
       itemsIndex.sort((a, b) => a.name.localeCompare(b.name, 'fr', { sensitivity: 'base' }));
 
@@ -203,16 +214,16 @@
           closeList();
           return;
         }
-
         $list.innerHTML = results.map((it, i) => `
-    <li class="combo-item" role="option" data-idx="${i}">
-      <div>
-        <div class="title">${highlight(it.name, q)}</div>
-        <div class="meta">${it.brand ? `${it.brand} · ` : ''}${it.unit || ''}</div>
-      </div>
-      <div class="pill">${it.unit || '—'}</div>
-    </li>
-  `).join('');
+  <li class="combo-item" role="option" data-idx="${i}">
+    <div>
+      <div class="title">${highlight(it.name, q)}</div>
+      <div class="meta">${it.brand ? `${it.brand} · ` : ''}${it.unit || ''}</div>
+    </div>
+    <div class="pill">${(it.stockLabel || '').trim() || '0'}</div>
+  </li>
+`).join('');
+
 
         Array.from($list.querySelectorAll('.combo-item')).forEach(li => {
           li.addEventListener('mousedown', ev => ev.preventDefault());
