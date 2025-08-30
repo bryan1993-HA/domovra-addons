@@ -112,22 +112,25 @@ def index(request: Request):
     settings = getattr(request.app.state, "settings", {}) or {}
     low_stock_default = int(settings.get("low_stock_default", 1))
 
-    totals, low_products, _ = _compute_low_products(products, lots, default_follow=low_stock_default)
+    # ← calcule les totaux par produit + la liste faible stock
+    totals, low_products, _ = _compute_low_products(
+        products, lots, default_follow=low_stock_default
+    )
 
-return render_with_env(
-    request.app.state.templates,
-    "index.html",
-    BASE=base,
-    page="home",
-    request=request,
-    locations=locations,
-    products=products,
-    lots=lots,
-    low_products=low_products,
-    totals=totals,
-    WARNING_DAYS=WARNING_DAYS,
-    CRITICAL_DAYS=CRITICAL_DAYS,
-)
+    return render_with_env(
+        request.app.state.templates,
+        "index.html",
+        BASE=base,
+        page="home",
+        request=request,
+        locations=locations,
+        products=products,
+        lots=lots,
+        low_products=low_products,
+        totals=totals,  # ← IMPORTANT : passé au template pour le stock dans la liste
+        WARNING_DAYS=WARNING_DAYS,
+        CRITICAL_DAYS=CRITICAL_DAYS,
+    )
 
 
 
