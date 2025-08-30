@@ -13,20 +13,28 @@
       <span class="muted">→ sélectionnez un produit</span>
     </div>
 
-    <!-- Produit (datalist) -->
+    <!-- Produit (combo custom + datalist caché en fallback) -->
     <div class="field">
       <div class="label">Produit</div>
-      <input id="consume-product-input" list="consume-products-dl" placeholder="Commencez à taper..."
-        autocomplete="off">
-      <datalist id="consume-products-dl">
-        {% for p in products %}
-        <option value="{{ p.name }}" data-id="{{ p.id }}" data-brand="{{ p.brand or '' }}"
-          data-unit="{{ p.unit or '' }}">
-          {{ p.name }}{% if p.brand %} — {{ p.brand }}{% endif %}{% if p.unit %} ({{ p.unit }}){% endif %}
-        </option>
-        {% endfor %}
-      </datalist>
-      <!-- NOTE (moi) : je stocke l’ID produit réellement sélectionné -->
+
+      <div class="combo" data-combo="product">
+        <input id="consume-product-input" placeholder="Commencez à taper..." autocomplete="off" role="combobox"
+          aria-autocomplete="list" aria-expanded="false" aria-owns="consume-suggestions" />
+
+        <!-- on garde le datalist pour le fallback et pour lire les options, mais on le cache -->
+        <datalist id="consume-products-dl" hidden>
+          {% for p in products %}
+          <option value="{{ p.name }}" data-id="{{ p.id }}" data-brand="{{ p.brand or '' }}"
+            data-unit="{{ p.unit or '' }}">
+            {{ p.name }}{% if p.brand %} — {{ p.brand }}{% endif %}{% if p.unit %} ({{ p.unit }}){% endif %}
+          </option>
+          {% endfor %}
+        </datalist>
+
+        <!-- notre dropdown custom -->
+        <ul id="consume-suggestions" class="combo-list" role="listbox" hidden></ul>
+      </div>
+
       <input type="hidden" id="consume-product-id">
     </div>
 
@@ -378,7 +386,6 @@
         let remaining = qty;
         let consumed = 0;
         const ops = [];
-
         console.groupCollapsed('[consume] FIFO run', { pid, qty });
         try {
           for (const l of info.lots) {
