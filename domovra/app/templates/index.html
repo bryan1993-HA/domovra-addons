@@ -96,63 +96,160 @@
 
   <script>
     (function () {
+      // ----- BASE ingress (déjà défini plus haut par le backend) -----
+      const BASE = (window.__DOMOVRA_BASE__ || '/').toString();
+
+      // ----- Sélecteurs DOM -----
       const $input = document.getElementById('consume-product-input');
       const $hiddenId = document.getElementById('consume-product-id');
       const $dl = document.getElementById('consume-products-dl');
+      const $list = document.getElementById('consume-suggestions');   // dropdown custom
 
-      // ▶ conteneur à masquer/afficher (englobe Infos + Quantité + Bouton)
+      // bloc à masquer / afficher
       const $details = document.getElementById('consume-details');
       function setDetailsVisible(v) { if ($details) $details.hidden = !v; }
-      setDetailsVisible(false); // état initial : caché
+      setDetailsVisible(false);
 
+      // champs infos
       const $fifo = document.getElementById('consume-fifo');
       const $loc = document.getElementById('consume-location');
       const $tot = document.getElementById('consume-total');
       const $unit = document.getElementById('consume-unit');
       const $brand = document.getElementById('consume-brand');
 
+      // quantité
       const $qty = document.getElementById('consume-qty');
       const $btns = document.querySelectorAll('.quick-btns [data-qset]');
       const $validate = document.getElementById('consume-validate');
 
+      // (optionnels) liens debug JSON
       const $debugRow = document.getElementById('consume-debug');
       const $jsonLink = document.getElementById('consume-json-link');
       const $jsonMeta = document.getElementById('consume-json-meta');
 
       let lastInfo = null;
 
-      function log(...a) { try { console.log('[consume]', ...a) } catch { } }
-      function dbg(...a) { try { console.debug('[consume]', ...a) } catch { } }
-      function warn(...a) { try { console.warn('[consume]', ...a) } catch { } }
-      function err(...a) { try { console.error('[consume]', ...a) } catch { } }
+      // ----- utils -----
+      const log = (...a) => { try { console.log('[consume]', ...a) } catch { } };
+      const dbg = (...a) => { try { console.debug('[consume]', ...a) } catch { } };
+      const warn = (...a) => { try { console.warn('[consume]', ...a) } catch { } };
+      const err = (...a) => { try { console.error('[consume]', ...a) } catch { } };
 
       function normalize(s) {
-        return (s || "").toString().trim().toLowerCase()
+        return (s || '').toString().trim().toLowerCase()
           .normalize('NFD').replace(/\p{Diacritic}/gu, '')
           .replace(/\s+/g, ' ');
       }
 
-      // map "nom normalisé → {id, brand, unit}"
-      const nameMap = (() => {
-        const map = new Map();
-        $dl.querySelectorAll('option').forEach(opt => {
-          const key = normalize(opt.value);
-          if (key && !map.has(key)) {
-            map.set(key, {
-              id: opt.getAttribute('data-id') ? parseInt(opt.getAttribute('data-id'), 10) : null,
-              brand: opt.getAttribute('data-brand') || '',
-              unit: opt.getAttribute('data-unit') || ''
-            });
-          }
-        });
-        return map;
+      function makeIngressUrl(path, params) {
+        const cleanBase = BASE.endsWith('/') ? BASE : (BASE + '/');
+        const cleanPath = String(path || '').replace(/^\/+/, '');
+        const u = new URL(cleanBase + cleanPath, window.location.origin);
+        if (params) for (const [k, v] of Object.entries(params)) u.searchParams.set(k, v);
+        return u.toString();
+      }
+
+      // ===================================================================
+      //  Combobox custom (UI de la liste des produits)
+      // ===================================================================
+      let itemsIndex = []; // {id,name,brand,unit,norm}
+      let results = [];
+      let activeIndex = -1;
+
+      // on lit les <option> du datalist pour faire notre index
+      (function buildIndex() {
+        itemsIndex = Array.from($dl.options).map(opt => {
+          const name = (opt.value || '').trim();
+          const id = opt.getAttribute('data-id') ? parseInt(opt.getAttribute('data-id'), 10) : null;
+          const brand = opt.getAttribute('data-brand') || '';
+          const unit = opt.getAttribute('data-unit') || '';
+          return { id, name, brand, unit, norm: normalize(name) };
+        }).filter(x => x.id);
       })();
+
+      function openList() { $list.hidden = false; $input.setAttribute('aria-expanded', 'true'); }
+      function closeList() { $list.hidden = true; $input.setAttribute('aria-expanded', 'false'); activeIndex = -1; }
+      function setActive(i) {
+        activeIndex = i;
+        Array.from($list.children).forEach((li, idx) => li.classList.toggle('is-active', idx === i));
+      }
+      function highlight(text, query) {
+        if (!query) return text;
+        try {
+          const q = normalize(query).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+          const re = new RegExp(`(${q})`, 'ig');
+          return text.replace(re, '<mark>$1</mark>');
+        } catch { return text; }
+      }
+
+      function renderList(q) {
+        const qn = normalize(q);
+        const MAX = 8;
+        const starts = itemsIndex.filter(it => it.norm.startsWith(qn));
+        const others = itemsIndex.filter(it => it.norm.includes(qn) && !it.norm.startsWith(qn));
+        results = (qn ? [...starts, ...others] : []).slice(0, MAX);
+
+        if (!results.length) { $list.innerHTML = ''; closeList(); return; }
+
+        $list.innerHTML = results.map((it, i) => `
+        <li class="combo-item" role="option" data-idx="${i}">
+          <div>
+            <div class="title">${highlight(it.name, q)}</div>
+            <div class="meta">${it.brand ? `${it.brand} · ` : ''}${it.unit || ''}</div>
+          </div>
+          <div class="pill">${it.unit || '—'}</div>
+        </li>
+      `).join('');
+
+        Array.from($list.querySelectorAll('.combo-item')).forEach(li => {
+          li.addEventListener('mousedown', ev => ev.preventDefault()); // évite blur
+          li.addEventListener('click', () => {
+            const idx = parseInt(li.getAttribute('data-idx'), 10) || 0;
+            chooseResult(idx);
+          });
+        });
+
+        setActive(0);
+        openList();
+      }
+
+      function chooseResult(idx) {
+        const it = results[idx];
+        if (!it) return;
+        $input.value = it.name;
+        $hiddenId.value = String(it.id);
+        closeList();
+        $input.dispatchEvent(new Event('change', { bubbles: true })); // lance le fetch
+      }
+
+      // événements du champ
+      $input.addEventListener('input', (e) => {
+        const v = (e.target.value || '').trim();
+        if (v.length === 0) { closeList(); setDetailsVisible(false); return; }
+        renderList(v);
+      });
+      $input.addEventListener('keydown', (e) => {
+        if ($list.hidden) return;
+        const max = results.length - 1;
+        if (e.key === 'ArrowDown') { e.preventDefault(); setActive(Math.min(max, activeIndex + 1)); }
+        else if (e.key === 'ArrowUp') { e.preventDefault(); setActive(Math.max(0, activeIndex - 1)); }
+        else if (e.key === 'Enter') { e.preventDefault(); chooseResult(activeIndex >= 0 ? activeIndex : 0); }
+        else if (e.key === 'Escape') { closeList(); }
+      });
+      $input.addEventListener('focus', () => {
+        const v = ($input.value || '').trim();
+        if (v) renderList(v);
+      });
+      $input.addEventListener('blur', () => setTimeout(closeList, 100));
+
+      // ===================================================================
+      //  Logique métier (fetch infos, presets, consommation, etc.)
+      // ===================================================================
+      const nameMap = new Map(itemsIndex.map(it => [it.norm, { id: it.id, brand: it.brand, unit: it.unit }]));
 
       function findSelectedProduct() {
         const val = ($input.value || '').trim();
         if (!val) return null;
-
-        // correspondance exacte sur l'option
         if (window.CSS && CSS.escape) {
           const opt = $dl.querySelector(`option[value="${CSS.escape(val)}"]`);
           if (opt) {
@@ -160,19 +257,8 @@
             return id ? { id: parseInt(id, 10) } : null;
           }
         }
-        // sinon map normalisée
         const rec = nameMap.get(normalize(val));
         return rec && rec.id ? { id: rec.id } : null;
-      }
-
-      // URL côté ingress
-      function makeIngressUrl(path, params) {
-        const base = (window.__DOMOVRA_BASE__ || '/').toString();
-        const cleanBase = base.endsWith('/') ? base : (base + '/');
-        const cleanPath = String(path || '').replace(/^\/+/, '');
-        const u = new URL(cleanBase + cleanPath, window.location.origin);
-        if (params) for (const [k, v] of Object.entries(params)) u.searchParams.set(k, v);
-        return u.toString();
       }
 
       async function fetchProductInfo(pid) {
@@ -208,78 +294,56 @@
       function updateValidateState() {
         const pid = ($hiddenId.value || '').trim();
         const q = currentQty();
-        const stock = lastInfo ? (
-          typeof lastInfo.total_qty === 'number' ? lastInfo.total_qty
-            : parseFloat(lastInfo.total_qty || '0') || 0
-        ) : 0;
+        const stock = lastInfo ? (typeof lastInfo.total_qty === 'number'
+          ? lastInfo.total_qty : parseFloat(lastInfo.total_qty || '0') || 0) : 0;
         $validate.disabled = !(pid && q > 0 && stock > 0);
       }
 
-      // ======== unités (presets) ========
+      // unités → presets
       function classifyUnit(raw) {
-        const u = String(raw || '').trim().toLowerCase()
-          .normalize('NFD').replace(/\p{Diacritic}/gu, '');
+        const u = String(raw || '').trim().toLowerCase().normalize('NFD').replace(/\p{Diacritic}/gu, '');
         if (['l', 'litre', 'litres'].includes(u)) return { kind: 'volume', base: 'l' };
         if (['ml', 'millilitre', 'millilitres'].includes(u)) return { kind: 'volume', base: 'ml' };
         if (['cl', 'centilitre', 'centilitres'].includes(u)) return { kind: 'volume', base: 'cl' };
         if (['kg', 'kilogramme', 'kilogrammes'].includes(u)) return { kind: 'weight', base: 'kg' };
         if (['g', 'gramme', 'grammes'].includes(u)) return { kind: 'weight', base: 'g' };
-        const count = ['piece', 'pieces', 'pièce', 'pièces', 'bouteille', 'bouteilles', 'paquet', 'paquets',
-          'tranche', 'tranches', 'boite', 'boites', 'boîte', 'boîtes', 'bocal', 'bocaux'];
+        const count = ['piece', 'pieces', 'pièce', 'pièces', 'bouteille', 'bouteilles', 'paquet', 'paquets', 'tranche', 'tranches', 'boite', 'boites', 'boîte', 'boîtes', 'bocal', 'bocaux'];
         if (count.includes(u)) return { kind: 'count', base: 'u' };
         return { kind: 'count', base: 'u' };
       }
-
       function unitPreset(rawUnit) {
         const u = classifyUnit(rawUnit);
         const B = (value, label) => ({ value, label });
         if (u.kind === 'volume') {
-          if (u.base === 'l') {
-            return { step: 0.1, buttons: [B(0.1, '0,1 L'), B(0.5, '0,5 L'), B(1, '1 L')], formatHint: 'L' };
-          }
-          if (u.base === 'ml') {
-            return { step: 50, buttons: [B(100, '0,1 L'), B(500, '0,5 L'), B(1000, '1 L')], formatHint: 'ml→L' };
-          }
-          if (u.base === 'cl') {
-            return { step: 1, buttons: [B(10, '0,1 L'), B(50, '0,5 L'), B(100, '1 L')], formatHint: 'cl→L' };
-          }
+          if (u.base === 'l') return { step: 0.1, buttons: [B(0.1, '0,1 L'), B(0.5, '0,5 L'), B(1, '1 L')], formatHint: 'L' };
+          if (u.base === 'ml') return { step: 50, buttons: [B(100, '0,1 L'), B(500, '0,5 L'), B(1000, '1 L')], formatHint: 'ml→L' };
+          if (u.base === 'cl') return { step: 1, buttons: [B(10, '0,1 L'), B(50, '0,5 L'), B(100, '1 L')], formatHint: 'cl→L' };
         }
         if (u.kind === 'weight') {
-          if (u.base === 'kg') {
-            return { step: 0.1, buttons: [B(0.1, '0,1 kg'), B(0.5, '0,5 kg'), B(1, '1 kg')], formatHint: 'kg' };
-          }
-          if (u.base === 'g') {
-            return { step: 50, buttons: [B(100, '0,1 kg'), B(500, '0,5 kg'), B(1000, '1 kg')], formatHint: 'g→kg' };
-          }
+          if (u.base === 'kg') return { step: 0.1, buttons: [B(0.1, '0,1 kg'), B(0.5, '0,5 kg'), B(1, '1 kg')], formatHint: 'kg' };
+          if (u.base === 'g') return { step: 50, buttons: [B(100, '0,1 kg'), B(500, '0,5 kg'), B(1000, '1 kg')], formatHint: 'g→kg' };
         }
         return { step: 1, buttons: [B(1, '1'), B(2, '2'), B(3, '3')], formatHint: 'u' };
       }
-
       function applyUnitPreset(rawUnit) {
         const preset = unitPreset(rawUnit);
         $qty.setAttribute('step', String(preset.step || 1));
-        const btns = Array.from(document.querySelectorAll('.quick-btns [data-qset]'));
-        btns.forEach((b, i) => {
+        Array.from(document.querySelectorAll('.quick-btns [data-qset]')).forEach((b, i) => {
           const conf = preset.buttons[i] || { value: i + 1, label: String(i + 1) };
           b.setAttribute('data-qset', String(conf.value));
           b.textContent = conf.label;
         });
-        if (preset.formatHint === 'ml→L' || preset.formatHint === 'cl→L') {
-          $qty.placeholder = '0 (en ml/cl)';
-        } else if (preset.formatHint === 'g→kg') {
-          $qty.placeholder = '0 (en g)';
-        } else {
-          $qty.placeholder = '0';
-        }
+        if (preset.formatHint === 'ml→L' || preset.formatHint === 'cl→L') $qty.placeholder = '0 (en ml/cl)';
+        else if (preset.formatHint === 'g→kg') $qty.placeholder = '0 (en g)';
+        else $qty.placeholder = '0';
       }
 
       function fillInfos(payload) {
         if (!payload || payload.error) {
           lastInfo = null;
-          setDetailsVisible(false); // ← masque le bloc quand pas d’info
-
-          const msg = payload?.error === 'http' ? `Erreur HTTP ${payload.status}`
-            : payload?.error === 'parse' ? 'Réponse illisible' : 'Erreur réseau';
+          setDetailsVisible(false);
+          const msg = payload?.error === 'http' ? `Erreur HTTP ${payload.status}` :
+            payload?.error === 'parse' ? 'Réponse illisible' : 'Erreur réseau';
           warn('fillInfos error:', payload);
           $fifo.textContent = msg || '—';
           $loc.textContent = '—';
@@ -292,13 +356,13 @@
         }
 
         lastInfo = payload;
-        setDetailsVisible(true);  // ← affiche le bloc quand infos valides
-        dbg('fillInfos payload:', payload);
+        setDetailsVisible(true);
 
         const fifo = payload.fifo || {};
         const lotId = fifo.lot_id ?? null;
         const lotName = fifo.article_name ?? null;
         const dlc = fifo.best_before ?? null;
+
         const parts = [];
         if (lotName) parts.push(String(lotName).trim());
         if (lotId != null) parts.push('#' + lotId);
@@ -310,9 +374,9 @@
         const t = (typeof payload.total_qty === 'number') ? payload.total_qty
           : (parseFloat(payload.total_qty || '0') || 0);
         $tot.textContent = t.toString();
+
         const unitText = (payload.unit && String(payload.unit).trim()) || '';
         $unit.textContent = unitText;
-
         applyUnitPreset(unitText);
 
         let brandFromApi = (payload.brand && String(payload.brand).trim()) || '';
@@ -327,10 +391,9 @@
       }
 
       async function onProductChanged() {
+        // ne fetch que si un produit est parfaitement identifié
         $hiddenId.value = '';
-        setDetailsVisible(false); // masque pendant la saisie
-        fillInfos(null);
-
+        setDetailsVisible(false);
         const sel = findSelectedProduct();
         updateDebugLink(sel && sel.id ? sel.id : null);
         if (!sel || !sel.id) return;
@@ -347,31 +410,23 @@
         $qty.dispatchEvent(new Event('input'));
       }
 
-      // ---- API côté front
       async function postLotConsume(lotId, qty) {
         const url = new URL(makeIngressUrl('lot/consume'), window.location.origin);
         const form = new URLSearchParams();
         form.set('lot_id', String(lotId));
         form.set('qty', String(qty));
-        dbg('POST lot/consume', { lotId, qty, url: url.toString() });
         const r = await fetch(url.toString(), {
           method: 'POST',
           headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
           body: form.toString()
         });
-        dbg('POST lot/consume -> status', r.status);
         return r.ok;
       }
 
       async function logEvent(kind, payload) {
         const url = makeIngressUrl('api/log');
         try {
-          dbg('POST api/log', { kind, payload, url });
-          await fetch(url, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ kind, payload })
-          });
+          await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ kind, payload }) });
         } catch (e) { warn('logEvent failed', e); }
       }
 
@@ -386,31 +441,26 @@
         let remaining = qty;
         let consumed = 0;
         const ops = [];
-        console.groupCollapsed('[consume] FIFO run', { pid, qty });
-        try {
-          for (const l of info.lots) {
-            if (remaining <= 1e-12) break;
-            const lotQty = parseFloat(l.qty || '0') || 0;
-            if (lotQty <= 0) continue;
 
-            const take = Math.min(remaining, lotQty);
-            dbg('lot step', { lot_id: l.lot_id, lotQty, take });
+        for (const l of info.lots) {
+          if (remaining <= 1e-12) break;
+          const lotQty = parseFloat(l.qty || '0') || 0;
+          if (lotQty <= 0) continue;
 
-            const ok = await postLotConsume(l.lot_id, take);
-            if (!ok) throw new Error('lot/consume failed');
+          const take = Math.min(remaining, lotQty);
+          const ok = await postLotConsume(l.lot_id, take);
+          if (!ok) throw new Error('lot/consume failed');
 
-            consumed += take;
-            remaining = Math.max(0, remaining - take);
-            ops.push({ lot_id: l.lot_id, take, before: lotQty, after: Math.max(0, lotQty - take), best_before: l.best_before, location: l.location });
+          consumed += take;
+          remaining = Math.max(0, remaining - take);
+          ops.push({ lot_id: l.lot_id, take, before: lotQty, after: Math.max(0, lotQty - take), best_before: l.best_before, location: l.location });
 
-            logEvent('lot_consume', {
-              lot_id: l.lot_id, product_id: pid, qty_delta: -take,
-              before: lotQty, after: Math.max(0, lotQty - take),
-              best_before: l.best_before, location: l.location,
-              unit, name: productName
-            });
-          }
-        } finally { console.groupEnd(); }
+          logEvent('lot_consume', {
+            lot_id: l.lot_id, product_id: pid, qty_delta: -take,
+            before: lotQty, after: Math.max(0, lotQty - take),
+            best_before: l.best_before, location: l.location, unit, name: productName
+          });
+        }
 
         logEvent('product_consume', {
           product_id: pid, requested_qty: qty, consumed_qty: consumed,
@@ -421,12 +471,11 @@
         return { remaining, consumed, ops };
       }
 
-      // Bouton "Valider"
+      // bouton valider
       $validate.addEventListener('click', async () => {
         const pid = parseInt(($hiddenId.value || '0'), 10);
         const q = parseFloat((($qty.value || '').replace(',', '.')));
         if (!pid || !(q > 0)) return;
-
         try {
           const res = await consumeFIFO(pid, q);
           if (res.remaining > 0) {
@@ -443,123 +492,29 @@
         }
       });
 
-      // Listeners
-      ['input', 'change', 'blur'].forEach(evt => $input.addEventListener(evt, onProductChanged));
+      // listeners métier : on ne fetch pas à chaque frappe (seulement change/blur)
+      ['change', 'blur'].forEach(evt => $input.addEventListener(evt, onProductChanged));
       $btns.forEach(b => b.addEventListener('click', onQuickBtn));
       $qty.addEventListener('input', updateValidateState);
       $qty.addEventListener('change', updateValidateState);
-    })();
 
-
-    // === Combobox custom (remplace l'affichage natif du datalist) ===
-    const $list = document.getElementById('consume-suggestions');
-    let itemsIndex = [];     // [{id,name,brand,unit, norm}]
-    let results = [];        // résultats filtrés
-    let activeIndex = -1;
-
-    // 1) Construis l’index depuis le datalist
-    (function buildIndex() {
-      itemsIndex = Array.from($dl.options).map(opt => {
-        const name = (opt.value || '').trim();
-        const id = opt.getAttribute('data-id') ? parseInt(opt.getAttribute('data-id'), 10) : null;
-        const brand = opt.getAttribute('data-brand') || '';
-        const unit = opt.getAttribute('data-unit') || '';
-        return { id, name, brand, unit, norm: normalize(name) };
-      }).filter(x => x.id);
-    })();
-
-    // 2) helpers UI
-    function openList() { $list.hidden = false; $input.setAttribute('aria-expanded', 'true'); }
-    function closeList() { $list.hidden = true; $input.setAttribute('aria-expanded', 'false'); activeIndex = -1; }
-    function setActive(i) {
-      activeIndex = i;
-      Array.from($list.children).forEach((li, idx) => li.classList.toggle('is-active', idx === i));
-    }
-    function highlight(text, query) {
-      if (!query) return text;
-      try {
-        const q = normalize(query).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-        const re = new RegExp(`(${q})`, 'ig');
-        // on met en surbrillance en se basant sur la version non normalisée
-        return text.replace(re, '<mark>$1</mark>');
-      } catch { return text; }
-    }
-
-    // 3) rendu des résultats
-    function renderList(q) {
-      const qn = normalize(q);
-      // filtrage simple : priorise "commence par", puis "contient"
-      const MAX = 8;
-      const starts = itemsIndex.filter(it => it.norm.startsWith(qn));
-      const others = itemsIndex.filter(it => it.norm.includes(qn) && !it.norm.startsWith(qn));
-      results = (qn ? [...starts, ...others] : []).slice(0, MAX);
-
-      if (!results.length) {
-        $list.innerHTML = '';
-        closeList();
-        return;
+      // helpers debug
+      function updateDebugLink(pid) {
+        if (!$debugRow || !$jsonLink) return;
+        if (pid) {
+          const url = makeIngressUrl('api/product-info', { product_id: String(pid) });
+          $jsonLink.href = url;
+          if ($jsonMeta) $jsonMeta.textContent = ` (product_id=${pid})`;
+          $debugRow.style.display = '';
+        } else {
+          $jsonLink.removeAttribute('href');
+          if ($jsonMeta) $jsonMeta.textContent = '';
+          $debugRow.style.display = 'none';
+        }
       }
-
-      $list.innerHTML = results.map((it, i) => `
-    <li class="combo-item" role="option" data-idx="${i}">
-      <div>
-        <div class="title">${highlight(it.name, q)}</div>
-        <div class="meta">${it.brand ? `${it.brand} · ` : ''}${it.unit || ''}</div>
-      </div>
-      <div class="pill">${it.unit || '—'}</div>
-    </li>
-  `).join('');
-
-      // click selection
-      Array.from($list.querySelectorAll('.combo-item')).forEach(li => {
-        li.addEventListener('mousedown', (ev) => { ev.preventDefault(); }); // empêche blur immédiat
-        li.addEventListener('click', () => {
-          const idx = parseInt(li.getAttribute('data-idx'), 10) || 0;
-          chooseResult(idx);
-        });
-      });
-
-      setActive(0);
-      openList();
-    }
-
-    function chooseResult(idx) {
-      const it = results[idx];
-      if (!it) return;
-      $input.value = it.name;
-      $hiddenId.value = String(it.id);
-      closeList();
-      // déclenche le flux normal (fetch infos, etc.)
-      $input.dispatchEvent(new Event('change', { bubbles: true }));
-    }
-
-    // 4) événements input/clavier/focus
-    $input.addEventListener('input', (e) => {
-      const v = (e.target.value || '').trim();
-      // on n’ouvre qu’à partir d’1 caractère
-      if (v.length === 0) { closeList(); return; }
-      renderList(v);
-    });
-
-    $input.addEventListener('keydown', (e) => {
-      if ($list.hidden) return;
-      const max = results.length - 1;
-      if (e.key === 'ArrowDown') { e.preventDefault(); setActive(Math.min(max, activeIndex + 1)); }
-      else if (e.key === 'ArrowUp') { e.preventDefault(); setActive(Math.max(0, activeIndex - 1)); }
-      else if (e.key === 'Enter') { e.preventDefault(); chooseResult(activeIndex >= 0 ? activeIndex : 0); }
-      else if (e.key === 'Escape') { closeList(); }
-    });
-
-    $input.addEventListener('focus', () => {
-      const v = ($input.value || '').trim();
-      if (v) renderList(v);
-    });
-
-    $input.addEventListener('blur', () => {
-      // petit délai pour laisser passer le clic sur un item
-      setTimeout(closeList, 100);
-    });
+    })();
   </script>
+
 
   <!-- ===================== À consommer en priorité (Top 8) ===================== -->
   <div class="card">
