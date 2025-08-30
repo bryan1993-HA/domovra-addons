@@ -26,61 +26,76 @@
         </option>
         {% endfor %}
       </datalist>
-      <input type="hidden" id="consume-product-id"><!-- NOTE: je stocke l’ID produit réellement sélectionné -->
+      <!-- NOTE (moi) : je stocke l’ID produit réellement sélectionné -->
+      <input type="hidden" id="consume-product-id">
     </div>
 
-    <!-- Infos -->
-    <div class="consume-infos grid-2">
-      <div class="info">
-        <div class="muted">FIFO (lot) / DLC</div>
-        <div class="strong" id="consume-fifo">—</div>
-      </div>
-      <div class="info">
-        <div class="muted">Emplacement</div>
-        <div class="strong" id="consume-location">—</div>
-      </div>
-      <div class="info">
-        <div class="muted">Quantité totale</div>
-        <div class="strong"><span id="consume-total">—</span> <span id="consume-unit"></span></div>
-      </div>
-      <div class="info">
-        <div class="muted">Marque</div>
-        <div class="strong" id="consume-brand">—</div>
-      </div>
-    </div>
+    <!-- ⬇️⬇️⬇️ TOUT CE BLOC EST MASQUÉ TANT QU’AUCUN PRODUIT VALIDE N’EST SÉLECTIONNÉ -->
+    <div id="consume-details" hidden>
 
-    <!-- Quantité -->
-    <div class="field">
-      <div class="label">Quantité à consommer</div>
-      <div class="qty-controls">
-        <input id="consume-qty" type="number" inputmode="numeric" step="1" min="0" placeholder="0">
-        <div class="quick-btns">
-          <!-- NOTE: j’ai retiré le signe “−” sur les libellés, car on remplit une quantité positive -->
-          <button type="button" class="btn small ghost" data-qset="1">1</button>
-          <button type="button" class="btn small ghost" data-qset="2">2</button>
-          <button type="button" class="btn small ghost" data-qset="3">3</button>
+      <!-- Infos -->
+      <div class="consume-infos grid-2">
+        <div class="info">
+          <div class="muted">FIFO (lot) / DLC</div>
+          <div class="strong" id="consume-fifo">—</div>
+        </div>
+        <div class="info">
+          <div class="muted">Emplacement</div>
+          <div class="strong" id="consume-location">—</div>
+        </div>
+        <div class="info">
+          <div class="muted">Quantité totale</div>
+          <div class="strong">
+            <span id="consume-total">—</span> <span id="consume-unit"></span>
+          </div>
+        </div>
+        <div class="info">
+          <div class="muted">Marque</div>
+          <div class="strong" id="consume-brand">—</div>
         </div>
       </div>
-    </div>
 
-    <!-- Bouton -->
-    <div class="field">
-      <button type="button" class="btn secondary" id="consume-validate" disabled>Valider la consommation</button>
-      <div class="muted small">Consomme en FIFO (lot(s) à DLC la plus proche).</div>
+      <!-- Quantité -->
+      <div class="field">
+        <div class="label">Quantité à consommer</div>
+        <div class="qty-controls">
+          <input id="consume-qty" type="number" inputmode="numeric" step="1" min="0" placeholder="0">
+          <div class="quick-btns">
+            <button type="button" class="btn small ghost" data-qset="1">1</button>
+            <button type="button" class="btn small ghost" data-qset="2">2</button>
+            <button type="button" class="btn small ghost" data-qset="3">3</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Bouton -->
+      <div class="field">
+        <button type="button" class="btn secondary" id="consume-validate" disabled>Valider la consommation</button>
+        <div class="muted small">Consomme en FIFO (lot(s) à DLC la plus proche).</div>
+      </div>
+
     </div>
+    <!-- ⬆️⬆️⬆️ FIN DU BLOC MASQUÉ QUAND PAS DE PRODUIT -->
+
   </div><!-- /.card.consume-card -->
 
   <!-- ===================== Script ===================== -->
   <script>
-    // NOTE (moi) : BASE fourni par le back via ingress_base()
-    // Exemple attendu sous HA : "/api/hassio_ingress/xxxxxxxx/"
+    // NOTE : BASE fournie par le back via ingress_base()
+    // Exemple sous HA : "/api/hassio_ingress/xxxxxxxx/"
     window.__DOMOVRA_BASE__ = "{{ BASE }}";
   </script>
+
   <script>
     (function () {
       const $input = document.getElementById('consume-product-input');
       const $hiddenId = document.getElementById('consume-product-id');
       const $dl = document.getElementById('consume-products-dl');
+
+      // ▶ conteneur à masquer/afficher (englobe Infos + Quantité + Bouton)
+      const $details = document.getElementById('consume-details');
+      function setDetailsVisible(v) { if ($details) $details.hidden = !v; }
+      setDetailsVisible(false); // état initial : caché
 
       const $fifo = document.getElementById('consume-fifo');
       const $loc = document.getElementById('consume-location');
@@ -98,19 +113,18 @@
 
       let lastInfo = null;
 
-      // ---------- Console helpers ----------
-      function log(...args) { try { console.log('[consume]', ...args); } catch { } }
-      function dbg(...args) { try { console.debug('[consume]', ...args); } catch { } }
-      function warn(...args) { try { console.warn('[consume]', ...args); } catch { } }
-      function err(...args) { try { console.error('[consume]', ...args); } catch { } }
+      function log(...a) { try { console.log('[consume]', ...a) } catch { } }
+      function dbg(...a) { try { console.debug('[consume]', ...a) } catch { } }
+      function warn(...a) { try { console.warn('[consume]', ...a) } catch { } }
+      function err(...a) { try { console.error('[consume]', ...a) } catch { } }
 
       function normalize(s) {
         return (s || "").toString().trim().toLowerCase()
-          .normalize('NFD').replace(/\p{Diacritic}/gu, '') // NOTE: j’enlève les accents pour matcher proprement
+          .normalize('NFD').replace(/\p{Diacritic}/gu, '')
           .replace(/\s+/g, ' ');
       }
 
-      // NOTE: je fabrique une map "nom normalisé → {id, brand, unit}" pour retrouver l’ID même si pas de focus sur l’option exacte
+      // map "nom normalisé → {id, brand, unit}"
       const nameMap = (() => {
         const map = new Map();
         $dl.querySelectorAll('option').forEach(opt => {
@@ -130,7 +144,7 @@
         const val = ($input.value || '').trim();
         if (!val) return null;
 
-        // NOTE: si l’option correspond EXACTEMENT à la valeur, je prends son data-id
+        // correspondance exacte sur l'option
         if (window.CSS && CSS.escape) {
           const opt = $dl.querySelector(`option[value="${CSS.escape(val)}"]`);
           if (opt) {
@@ -138,23 +152,20 @@
             return id ? { id: parseInt(id, 10) } : null;
           }
         }
-
-        // NOTE: sinon, je tente ma map normalisée
+        // sinon map normalisée
         const rec = nameMap.get(normalize(val));
         return rec && rec.id ? { id: rec.id } : null;
       }
 
+      // URL côté ingress
       function makeIngressUrl(path, params) {
-        // NOTE (moi) : je pars TOUJOURS de BASE pour éviter les doubles // et garantir l’ingress HA
         const base = (window.__DOMOVRA_BASE__ || '/').toString();
         const cleanBase = base.endsWith('/') ? base : (base + '/');
-        const cleanPath = String(path || '').replace(/^\/+/, ''); // enlève les slashs en tête
-
+        const cleanPath = String(path || '').replace(/^\/+/, '');
         const u = new URL(cleanBase + cleanPath, window.location.origin);
         if (params) for (const [k, v] of Object.entries(params)) u.searchParams.set(k, v);
         return u.toString();
       }
-
 
       async function fetchProductInfo(pid) {
         const url = makeIngressUrl('api/product-info', { product_id: String(pid) });
@@ -189,109 +200,62 @@
       function updateValidateState() {
         const pid = ($hiddenId.value || '').trim();
         const q = currentQty();
-        const stock = lastInfo ? (typeof lastInfo.total_qty === 'number'
-          ? lastInfo.total_qty : parseFloat(lastInfo.total_qty || '0') || 0) : 0;
+        const stock = lastInfo ? (
+          typeof lastInfo.total_qty === 'number' ? lastInfo.total_qty
+            : parseFloat(lastInfo.total_qty || '0') || 0
+        ) : 0;
         $validate.disabled = !(pid && q > 0 && stock > 0);
       }
 
-      // ======== Helpers unités (catégorisation + presets) ========
-      // NOTE (moi) : j’identifie le "type" d’unité et je calcule les boutons rapides + le step
+      // ======== unités (presets) ========
       function classifyUnit(raw) {
         const u = String(raw || '').trim().toLowerCase()
           .normalize('NFD').replace(/\p{Diacritic}/gu, '');
-
-        // volume
-        if (u === 'l' || u === 'litre' || u === 'litres') return { kind: 'volume', base: 'l' };
-        if (u === 'ml' || u === 'millilitre' || u === 'millilitres') return { kind: 'volume', base: 'ml' };
-        if (u === 'cl' || u === 'centilitre' || u === 'centilitres') return { kind: 'volume', base: 'cl' };
-
-        // poids
-        if (u === 'kg' || u === 'kilogramme' || u === 'kilogrammes') return { kind: 'weight', base: 'kg' };
-        if (u === 'g' || u === 'gramme' || u === 'grammes') return { kind: 'weight', base: 'g' };
-
-        // "pièces" (comptage)
-        const countWords = ['piece', 'pieces', 'pièce', 'pièces', 'bouteille', 'bouteilles', 'paquet', 'paquets',
+        if (['l', 'litre', 'litres'].includes(u)) return { kind: 'volume', base: 'l' };
+        if (['ml', 'millilitre', 'millilitres'].includes(u)) return { kind: 'volume', base: 'ml' };
+        if (['cl', 'centilitre', 'centilitres'].includes(u)) return { kind: 'volume', base: 'cl' };
+        if (['kg', 'kilogramme', 'kilogrammes'].includes(u)) return { kind: 'weight', base: 'kg' };
+        if (['g', 'gramme', 'grammes'].includes(u)) return { kind: 'weight', base: 'g' };
+        const count = ['piece', 'pieces', 'pièce', 'pièces', 'bouteille', 'bouteilles', 'paquet', 'paquets',
           'tranche', 'tranches', 'boite', 'boites', 'boîte', 'boîtes', 'bocal', 'bocaux'];
-        if (countWords.includes(u)) return { kind: 'count', base: 'u' };
-
-        // fallback : on traite comme "count"
+        if (count.includes(u)) return { kind: 'count', base: 'u' };
         return { kind: 'count', base: 'u' };
       }
 
-      // NOTE (moi) : je génère 3 boutons rapides + step et label, en prenant en compte les conversions
       function unitPreset(rawUnit) {
         const u = classifyUnit(rawUnit);
-
-        // helpers pour fabriquer un bouton
         const B = (value, label) => ({ value, label });
-
         if (u.kind === 'volume') {
-          // Objectif : boutons exprimés en L (0.1, 0.5, 1), même si base = ml/cl
           if (u.base === 'l') {
-            return {
-              step: 0.1,
-              buttons: [B(0.1, '0,1 L'), B(0.5, '0,5 L'), B(1, '1 L')],
-              formatHint: 'L'
-            };
+            return { step: 0.1, buttons: [B(0.1, '0,1 L'), B(0.5, '0,5 L'), B(1, '1 L')], formatHint: 'L' };
           }
           if (u.base === 'ml') {
-            // valeurs envoyées en ml ; labels en L
-            return {
-              step: 50, // 50 ml granulosité raisonnable
-              buttons: [B(100, '0,1 L'), B(500, '0,5 L'), B(1000, '1 L')],
-              formatHint: 'ml→L'
-            };
+            return { step: 50, buttons: [B(100, '0,1 L'), B(500, '0,5 L'), B(1000, '1 L')], formatHint: 'ml→L' };
           }
           if (u.base === 'cl') {
-            // valeurs envoyées en cl ; labels en L
-            return {
-              step: 1, // 1 cl
-              buttons: [B(10, '0,1 L'), B(50, '0,5 L'), B(100, '1 L')],
-              formatHint: 'cl→L'
-            };
+            return { step: 1, buttons: [B(10, '0,1 L'), B(50, '0,5 L'), B(100, '1 L')], formatHint: 'cl→L' };
           }
         }
-
         if (u.kind === 'weight') {
-          // Objectif : boutons exprimés en kg (0.1, 0.5, 1), même si base = g
           if (u.base === 'kg') {
-            return {
-              step: 0.1,
-              buttons: [B(0.1, '0,1 kg'), B(0.5, '0,5 kg'), B(1, '1 kg')],
-              formatHint: 'kg'
-            };
+            return { step: 0.1, buttons: [B(0.1, '0,1 kg'), B(0.5, '0,5 kg'), B(1, '1 kg')], formatHint: 'kg' };
           }
           if (u.base === 'g') {
-            // valeurs envoyées en g ; labels en kg
-            return {
-              step: 50, // 50 g
-              buttons: [B(100, '0,1 kg'), B(500, '0,5 kg'), B(1000, '1 kg')],
-              formatHint: 'g→kg'
-            };
+            return { step: 50, buttons: [B(100, '0,1 kg'), B(500, '0,5 kg'), B(1000, '1 kg')], formatHint: 'g→kg' };
           }
         }
-
-        // count (pièces…)
-        return {
-          step: 1,
-          buttons: [B(1, '1'), B(2, '2'), B(3, '3')],
-          formatHint: 'u'
-        };
+        return { step: 1, buttons: [B(1, '1'), B(2, '2'), B(3, '3')], formatHint: 'u' };
       }
 
-      // NOTE (moi) : j’applique les presets au champ quantité + boutons
       function applyUnitPreset(rawUnit) {
         const preset = unitPreset(rawUnit);
-        // step quantité
         $qty.setAttribute('step', String(preset.step || 1));
-        // labels + valeurs des 3 boutons
         const btns = Array.from(document.querySelectorAll('.quick-btns [data-qset]'));
         btns.forEach((b, i) => {
           const conf = preset.buttons[i] || { value: i + 1, label: String(i + 1) };
           b.setAttribute('data-qset', String(conf.value));
           b.textContent = conf.label;
         });
-        // placeholder indicatif (optionnel)
         if (preset.formatHint === 'ml→L' || preset.formatHint === 'cl→L') {
           $qty.placeholder = '0 (en ml/cl)';
         } else if (preset.formatHint === 'g→kg') {
@@ -304,58 +268,43 @@
       function fillInfos(payload) {
         if (!payload || payload.error) {
           lastInfo = null;
+          setDetailsVisible(false); // ← masque le bloc quand pas d’info
+
           const msg = payload?.error === 'http' ? `Erreur HTTP ${payload.status}`
             : payload?.error === 'parse' ? 'Réponse illisible' : 'Erreur réseau';
           warn('fillInfos error:', payload);
-          $fifo.textContent = msg;
+          $fifo.textContent = msg || '—';
           $loc.textContent = '—';
           $tot.textContent = '—';
           $unit.textContent = '';
           $brand.textContent = '—';
           updateValidateState();
-          // NOTE (moi) : si pas d’info, je remets les boutons par défaut
           applyUnitPreset(null);
           return;
         }
 
         lastInfo = payload;
+        setDetailsVisible(true);  // ← affiche le bloc quand infos valides
         dbg('fillInfos payload:', payload);
 
-        const fifo = (payload && payload.fifo) ? payload.fifo : {};
-
-        // id du lot (aliases)
-        const lotId = fifo.lot_id ?? fifo.id ?? fifo.lotId ?? fifo.lotID ?? null;
-
-        // NOM du lot (inclut stock_lots.article_name)
-        const lotName =
-          fifo.article_name ?? fifo.name ?? fifo.lot_name ?? fifo.lotName ?? fifo.title ?? null;
-
-        // DLC / date d’expiration (aliases fréquents)
-        const dlc =
-          fifo.best_before ?? fifo.dlc ?? fifo.expiry ?? fifo.expiration_date ??
-          fifo.expires_at ?? fifo.bestBefore ?? null;
-
-        // Emplacement (aliases)
-        const loc =
-          fifo.location ?? fifo.location_name ?? fifo.locationName ?? fifo.place ?? fifo.storage ?? null;
-
+        const fifo = payload.fifo || {};
+        const lotId = fifo.lot_id ?? null;
+        const lotName = fifo.article_name ?? null;
+        const dlc = fifo.best_before ?? null;
         const parts = [];
-        if (lotName && String(lotName).trim() !== '') parts.push(String(lotName).trim());
-        if (lotId != null && String(lotId).trim() !== '') parts.push('#' + lotId);
-        if (dlc && String(dlc).trim() !== '') parts.push(String(dlc).trim());
-
+        if (lotName) parts.push(String(lotName).trim());
+        if (lotId != null) parts.push('#' + lotId);
+        if (dlc) parts.push(dlc);
         $fifo.textContent = parts.length ? parts.join(' — ') : 'Aucun lot dispo';
-        $loc.textContent = (loc && String(loc).trim() !== '') ? String(loc).trim() : '—';
 
+        $loc.textContent = fifo.location || '—';
 
         const t = (typeof payload.total_qty === 'number') ? payload.total_qty
           : (parseFloat(payload.total_qty || '0') || 0);
         $tot.textContent = t.toString();
-
         const unitText = (payload.unit && String(payload.unit).trim()) || '';
         $unit.textContent = unitText;
 
-        // NOTE (moi) : j’adapte les boutons + step selon l’unité
         applyUnitPreset(unitText);
 
         let brandFromApi = (payload.brand && String(payload.brand).trim()) || '';
@@ -369,10 +318,11 @@
         updateValidateState();
       }
 
-
       async function onProductChanged() {
         $hiddenId.value = '';
+        setDetailsVisible(false); // masque pendant la saisie
         fillInfos(null);
+
         const sel = findSelectedProduct();
         updateDebugLink(sel && sel.id ? sel.id : null);
         if (!sel || !sel.id) return;
@@ -386,12 +336,11 @@
       function onQuickBtn(e) {
         const val = parseInt(e.currentTarget.getAttribute('data-qset'), 10) || 0;
         $qty.value = val ? String(val) : '';
-        $qty.dispatchEvent(new Event('input')); // NOTE: je déclenche l’update du bouton “Valider”
+        $qty.dispatchEvent(new Event('input'));
       }
 
-      // ---- API côté front ----
+      // ---- API côté front
       async function postLotConsume(lotId, qty) {
-        // NOTE (moi) : passe par BASE pour l’ingress
         const url = new URL(makeIngressUrl('lot/consume'), window.location.origin);
         const form = new URLSearchParams();
         form.set('lot_id', String(lotId));
@@ -415,9 +364,7 @@
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ kind, payload })
           });
-        } catch (e) {
-          warn('logEvent failed', e);
-        }
+        } catch (e) { warn('logEvent failed', e); }
       }
 
       async function consumeFIFO(pid, qty) {
@@ -447,47 +394,27 @@
 
             consumed += take;
             remaining = Math.max(0, remaining - take);
-            ops.push({
-              lot_id: l.lot_id,
-              take,
-              before: lotQty,
-              after: Math.max(0, lotQty - take),
-              best_before: l.best_before,
-              location: l.location
-            });
+            ops.push({ lot_id: l.lot_id, take, before: lotQty, after: Math.max(0, lotQty - take), best_before: l.best_before, location: l.location });
 
-            // LOG par lot
             logEvent('lot_consume', {
-              lot_id: l.lot_id,
-              product_id: pid,
-              qty_delta: -take,
-              before: lotQty,
-              after: Math.max(0, lotQty - take),
-              best_before: l.best_before,
-              location: l.location,
-              unit,
-              name: productName
+              lot_id: l.lot_id, product_id: pid, qty_delta: -take,
+              before: lotQty, after: Math.max(0, lotQty - take),
+              best_before: l.best_before, location: l.location,
+              unit, name: productName
             });
           }
-        } finally {
-          console.groupEnd();
-        }
+        } finally { console.groupEnd(); }
 
-        // LOG récap produit
         logEvent('product_consume', {
-          product_id: pid,
-          requested_qty: qty,
-          consumed_qty: consumed,
-          remaining_to_consume: remaining,
-          operations_count: ops.length,
-          unit,
-          name: productName
+          product_id: pid, requested_qty: qty, consumed_qty: consumed,
+          remaining_to_consume: remaining, operations_count: ops.length,
+          unit, name: productName
         });
 
         return { remaining, consumed, ops };
       }
 
-      // ---------- Bouton "Valider la consommation" ----------
+      // Bouton "Valider"
       $validate.addEventListener('click', async () => {
         const pid = parseInt(($hiddenId.value || '0'), 10);
         const q = parseFloat((($qty.value || '').replace(',', '.')));
@@ -496,22 +423,20 @@
         try {
           const res = await consumeFIFO(pid, q);
           if (res.remaining > 0) {
-            (window.showToast || ((m) => alert(m)))(`Partiel : consommé ${res.consumed}/${q}`, 'warn');
+            (window.showToast || (m => alert(m)))(`Partiel : consommé ${res.consumed}/${q}`, 'warn');
           } else {
-            (window.showToast || ((m) => alert(m)))(`Consommé ${res.consumed}`, 'ok');
+            (window.showToast || (m => alert(m)))('Consommé ' + res.consumed, 'ok');
           }
           $qty.value = '';
-
-          // refresh infos
           const info = await fetchProductInfo(pid);
           fillInfos(info);
         } catch (e) {
           err('consume click failed', e);
-          (window.showToast || ((m) => alert(m)))('Consommation impossible', 'error');
+          (window.showToast || (m => alert(m)))('Consommation impossible', 'error');
         }
       });
 
-      // NOTE: je recalcule les infos dès que l’input change / perd le focus (meilleure robustesse)
+      // Listeners
       ['input', 'change', 'blur'].forEach(evt => $input.addEventListener(evt, onProductChanged));
       $btns.forEach(b => b.addEventListener('click', onQuickBtn));
       $qty.addEventListener('input', updateValidateState);
