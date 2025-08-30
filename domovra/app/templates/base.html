@@ -62,7 +62,7 @@
     <aside>
       <nav class="menu">
         <a href="{{ BASE }}" class="{% if request.path == BASE %}active{% endif %}"><span
-            class="ico">🏠</span><span>🚧Accueil🚧</span></a>
+            class="ico">🏠</span><span>Accueil</span></a>
         <a href="{{ BASE }}products" class="{% if request.path.startswith(BASE ~ 'products')  %}active{% endif %}"><span
             class="ico">📦</span><span>Fiche produit</span></a>
         <a href="{{ BASE }}shopping" class="{% if request.path.startswith(BASE ~ 'shopping') %}active{% endif %}">
