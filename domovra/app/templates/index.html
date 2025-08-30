@@ -166,6 +166,8 @@
           return { id, name, brand, unit, norm: normalize(name) };
         }).filter(x => x.id);
       })();
+      itemsIndex.sort((a, b) => a.name.localeCompare(b.name, 'fr', { sensitivity: 'base' }));
+
 
       function openList() { $list.hidden = false; $input.setAttribute('aria-expanded', 'true'); }
       function closeList() { $list.hidden = true; $input.setAttribute('aria-expanded', 'false'); activeIndex = -1; }
@@ -185,24 +187,35 @@
       function renderList(q) {
         const qn = normalize(q);
         const MAX = 8;
-        const starts = itemsIndex.filter(it => it.norm.startsWith(qn));
-        const others = itemsIndex.filter(it => it.norm.includes(qn) && !it.norm.startsWith(qn));
-        results = (qn ? [...starts, ...others] : []).slice(0, MAX);
 
-        if (!results.length) { $list.innerHTML = ''; closeList(); return; }
+        if (qn) {
+          // filtrage : commence par, puis contient
+          const starts = itemsIndex.filter(it => it.norm.startsWith(qn));
+          const others = itemsIndex.filter(it => it.norm.includes(qn) && !it.norm.startsWith(qn));
+          results = [...starts, ...others].slice(0, MAX);
+        } else {
+          // aucune saisie -> on montre les 8 premiers (triés plus haut)
+          results = itemsIndex.slice(0, MAX);
+        }
+
+        if (!results.length) {
+          $list.innerHTML = '';
+          closeList();
+          return;
+        }
 
         $list.innerHTML = results.map((it, i) => `
-        <li class="combo-item" role="option" data-idx="${i}">
-          <div>
-            <div class="title">${highlight(it.name, q)}</div>
-            <div class="meta">${it.brand ? `${it.brand} · ` : ''}${it.unit || ''}</div>
-          </div>
-          <div class="pill">${it.unit || '—'}</div>
-        </li>
-      `).join('');
+    <li class="combo-item" role="option" data-idx="${i}">
+      <div>
+        <div class="title">${highlight(it.name, q)}</div>
+        <div class="meta">${it.brand ? `${it.brand} · ` : ''}${it.unit || ''}</div>
+      </div>
+      <div class="pill">${it.unit || '—'}</div>
+    </li>
+  `).join('');
 
         Array.from($list.querySelectorAll('.combo-item')).forEach(li => {
-          li.addEventListener('mousedown', ev => ev.preventDefault()); // évite blur
+          li.addEventListener('mousedown', ev => ev.preventDefault());
           li.addEventListener('click', () => {
             const idx = parseInt(li.getAttribute('data-idx'), 10) || 0;
             chooseResult(idx);
@@ -212,6 +225,7 @@
         setActive(0);
         openList();
       }
+
 
       function chooseResult(idx) {
         const it = results[idx];
@@ -229,7 +243,13 @@
         renderList(v);
       });
       $input.addEventListener('keydown', (e) => {
+        if ($list.hidden && e.key === 'ArrowDown') {
+          e.preventDefault();
+          renderList(($input.value || ''));
+          return;
+        }
         if ($list.hidden) return;
+
         const max = results.length - 1;
         if (e.key === 'ArrowDown') { e.preventDefault(); setActive(Math.min(max, activeIndex + 1)); }
         else if (e.key === 'ArrowUp') { e.preventDefault(); setActive(Math.max(0, activeIndex - 1)); }
@@ -237,8 +257,8 @@
         else if (e.key === 'Escape') { closeList(); }
       });
       $input.addEventListener('focus', () => {
-        const v = ($input.value || '').trim();
-        if (v) renderList(v);
+        // affiche toujours la liste à l'ouverture du champ
+        renderList(($input.value || ''));
       });
       $input.addEventListener('blur', () => setTimeout(closeList, 100));
 
