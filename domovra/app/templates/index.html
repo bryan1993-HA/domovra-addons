@@ -449,6 +449,116 @@
       $qty.addEventListener('input', updateValidateState);
       $qty.addEventListener('change', updateValidateState);
     })();
+
+
+    // === Combobox custom (remplace l'affichage natif du datalist) ===
+    const $list = document.getElementById('consume-suggestions');
+    let itemsIndex = [];     // [{id,name,brand,unit, norm}]
+    let results = [];        // résultats filtrés
+    let activeIndex = -1;
+
+    // 1) Construis l’index depuis le datalist
+    (function buildIndex() {
+      itemsIndex = Array.from($dl.options).map(opt => {
+        const name = (opt.value || '').trim();
+        const id = opt.getAttribute('data-id') ? parseInt(opt.getAttribute('data-id'), 10) : null;
+        const brand = opt.getAttribute('data-brand') || '';
+        const unit = opt.getAttribute('data-unit') || '';
+        return { id, name, brand, unit, norm: normalize(name) };
+      }).filter(x => x.id);
+    })();
+
+    // 2) helpers UI
+    function openList() { $list.hidden = false; $input.setAttribute('aria-expanded', 'true'); }
+    function closeList() { $list.hidden = true; $input.setAttribute('aria-expanded', 'false'); activeIndex = -1; }
+    function setActive(i) {
+      activeIndex = i;
+      Array.from($list.children).forEach((li, idx) => li.classList.toggle('is-active', idx === i));
+    }
+    function highlight(text, query) {
+      if (!query) return text;
+      try {
+        const q = normalize(query).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        const re = new RegExp(`(${q})`, 'ig');
+        // on met en surbrillance en se basant sur la version non normalisée
+        return text.replace(re, '<mark>$1</mark>');
+      } catch { return text; }
+    }
+
+    // 3) rendu des résultats
+    function renderList(q) {
+      const qn = normalize(q);
+      // filtrage simple : priorise "commence par", puis "contient"
+      const MAX = 8;
+      const starts = itemsIndex.filter(it => it.norm.startsWith(qn));
+      const others = itemsIndex.filter(it => it.norm.includes(qn) && !it.norm.startsWith(qn));
+      results = (qn ? [...starts, ...others] : []).slice(0, MAX);
+
+      if (!results.length) {
+        $list.innerHTML = '';
+        closeList();
+        return;
+      }
+
+      $list.innerHTML = results.map((it, i) => `
+    <li class="combo-item" role="option" data-idx="${i}">
+      <div>
+        <div class="title">${highlight(it.name, q)}</div>
+        <div class="meta">${it.brand ? `${it.brand} · ` : ''}${it.unit || ''}</div>
+      </div>
+      <div class="pill">${it.unit || '—'}</div>
+    </li>
+  `).join('');
+
+      // click selection
+      Array.from($list.querySelectorAll('.combo-item')).forEach(li => {
+        li.addEventListener('mousedown', (ev) => { ev.preventDefault(); }); // empêche blur immédiat
+        li.addEventListener('click', () => {
+          const idx = parseInt(li.getAttribute('data-idx'), 10) || 0;
+          chooseResult(idx);
+        });
+      });
+
+      setActive(0);
+      openList();
+    }
+
+    function chooseResult(idx) {
+      const it = results[idx];
+      if (!it) return;
+      $input.value = it.name;
+      $hiddenId.value = String(it.id);
+      closeList();
+      // déclenche le flux normal (fetch infos, etc.)
+      $input.dispatchEvent(new Event('change', { bubbles: true }));
+    }
+
+    // 4) événements input/clavier/focus
+    $input.addEventListener('input', (e) => {
+      const v = (e.target.value || '').trim();
+      // on n’ouvre qu’à partir d’1 caractère
+      if (v.length === 0) { closeList(); return; }
+      renderList(v);
+    });
+
+    $input.addEventListener('keydown', (e) => {
+      if ($list.hidden) return;
+      const max = results.length - 1;
+      if (e.key === 'ArrowDown') { e.preventDefault(); setActive(Math.min(max, activeIndex + 1)); }
+      else if (e.key === 'ArrowUp') { e.preventDefault(); setActive(Math.max(0, activeIndex - 1)); }
+      else if (e.key === 'Enter') { e.preventDefault(); chooseResult(activeIndex >= 0 ? activeIndex : 0); }
+      else if (e.key === 'Escape') { closeList(); }
+    });
+
+    $input.addEventListener('focus', () => {
+      const v = ($input.value || '').trim();
+      if (v) renderList(v);
+    });
+
+    $input.addEventListener('blur', () => {
+      // petit délai pour laisser passer le clic sur un item
+      setTimeout(closeList, 100);
+    });
   </script>
 
   <!-- ===================== À consommer en priorité (Top 8) ===================== -->

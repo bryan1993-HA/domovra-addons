@@ -941,6 +941,79 @@ html[data-theme="light"] .wrap .top8-table tbody tr:hover {
     }
 }
 
+/* --- Combobox Domovra (look & feel) --- */
+.combo {
+    position: relative;
+}
+
+.combo-list {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: calc(100% + .35rem);
+    z-index: 20;
+    max-height: 320px;
+    overflow: auto;
+    padding: .25rem 0;
+    margin: 0;
+    list-style: none;
+    border: 1px solid var(--border, #2f2f2f);
+    border-radius: .5rem;
+    background: var(--card, #111);
+    box-shadow: 0 8px 30px rgba(0, 0, 0, .35);
+}
+
+.combo-item {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: .25rem .75rem;
+    padding: .5rem .75rem;
+    cursor: pointer;
+    align-items: center;
+}
+
+.combo-item .title {
+    font-weight: 600;
+}
+
+.combo-item .meta {
+    font-size: .85em;
+    opacity: .8;
+}
+
+.combo-item .pill {
+    font-size: .75em;
+    padding: .1rem .45rem;
+    border-radius: 999px;
+    border: 1px solid var(--border, #2f2f2f);
+    opacity: .9;
+}
+
+.combo-item mark {
+    background: transparent;
+    color: var(--accent, #7bdcff);
+    font-weight: 700;
+}
+
+.combo-item:hover,
+.combo-item.is-active {
+    background: rgba(255, 255, 255, .06);
+}
+
+/* clair */
+@media (prefers-color-scheme: light) {
+    .combo-list {
+        background: #fff;
+        border-color: #e5e7eb;
+        box-shadow: 0 12px 24px rgba(0, 0, 0, .08);
+    }
+
+    .combo-item:hover,
+    .combo-item.is-active {
+        background: #f3f4f6;
+    }
+}
+
 
 /* ========================================================================== */
 /* ========== 12) Page Emplacements (/locations) ============================ */
