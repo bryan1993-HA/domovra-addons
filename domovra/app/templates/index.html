@@ -200,12 +200,10 @@
         const MAX = 8;
 
         if (qn) {
-          // filtrage : commence par, puis contient
           const starts = itemsIndex.filter(it => it.norm.startsWith(qn));
           const others = itemsIndex.filter(it => it.norm.includes(qn) && !it.norm.startsWith(qn));
           results = [...starts, ...others].slice(0, MAX);
         } else {
-          // aucune saisie -> on montre les 8 premiers (triés plus haut)
           results = itemsIndex.slice(0, MAX);
         }
 
@@ -214,19 +212,25 @@
           closeList();
           return;
         }
-        $list.innerHTML = results.map((it, i) => `
-  <li class="combo-item" role="option" data-idx="${i}">
-    <div>
-      <div class="title">${highlight(it.name, q)}</div>
-      <div class="meta">${it.brand ? `${it.brand} · ` : ''}${it.unit || ''}</div>
-    </div>
-    <div class="pill">${(it.stockLabel || '').trim() || '0'}</div>
-  </li>
-`).join('');
 
+        $list.innerHTML = results.map((it, i) => {
+          // Texte « quantité + unité » (déjà préparé côté datalist → data-stock-label),
+          // avec un fallback simple si jamais il est vide.
+          const stockText = (it.stockLabel || '').trim() || `0 ${it.unit || ''}`;
+          const brandPart = it.brand ? `${it.brand} · ` : '';
+
+          return `
+      <li class="combo-item" role="option" data-idx="${i}">
+        <div>
+          <div class="title">${highlight(it.name, q)}</div>
+          <div class="meta">${brandPart}${stockText}</div>
+        </div>
+      </li>
+    `;
+        }).join('');
 
         Array.from($list.querySelectorAll('.combo-item')).forEach(li => {
-          li.addEventListener('mousedown', ev => ev.preventDefault());
+          li.addEventListener('mousedown', ev => ev.preventDefault()); // éviter le blur
           li.addEventListener('click', () => {
             const idx = parseInt(li.getAttribute('data-idx'), 10) || 0;
             chooseResult(idx);
@@ -236,7 +240,6 @@
         setActive(0);
         openList();
       }
-
 
       function chooseResult(idx) {
         const it = results[idx];
