@@ -78,6 +78,11 @@
 
   <!-- ===================== Script ===================== -->
   <script>
+    // NOTE (moi) : BASE fourni par le back via ingress_base()
+    // Exemple attendu sous HA : "/api/hassio_ingress/xxxxxxxx/"
+    window.__DOMOVRA_BASE__ = "{{ BASE }}";
+  </script>
+  <script>
     (function () {
       const $input = document.getElementById('consume-product-input');
       const $hiddenId = document.getElementById('consume-product-id');
@@ -146,10 +151,16 @@
       }
 
       function makeIngressUrl(path, params) {
-        const u = new URL(path.replace(/^\//, ''), window.location.href);
+        // NOTE (moi) : je pars TOUJOURS de BASE pour éviter les doubles // et garantir l’ingress HA
+        const base = (window.__DOMOVRA_BASE__ || '/').toString();
+        const cleanBase = base.endsWith('/') ? base : (base + '/');
+        const cleanPath = String(path || '').replace(/^\/+/, ''); // enlève les slashs en tête
+
+        const u = new URL(cleanBase + cleanPath, window.location.origin);
         if (params) for (const [k, v] of Object.entries(params)) u.searchParams.set(k, v);
         return u.toString();
       }
+
 
       async function fetchProductInfo(pid) {
         const url = makeIngressUrl('api/product-info', { product_id: String(pid) });
@@ -386,7 +397,8 @@
 
       // ---- API côté front ----
       async function postLotConsume(lotId, qty) {
-        const url = new URL('lot/consume', window.location.href);
+        // NOTE (moi) : passe par BASE pour l’ingress
+        const url = new URL(makeIngressUrl('lot/consume'), window.location.origin);
         const form = new URLSearchParams();
         form.set('lot_id', String(lotId));
         form.set('qty', String(qty));

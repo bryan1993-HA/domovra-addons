@@ -180,11 +180,13 @@ def home_debug(request: Request):
         "lots": simple_lots,
     }
 
+# tolère aussi //api/product-info si un client externe l’envoie par erreur
+@router.get("//api/product-info", response_class=JSONResponse)
 @router.get("/api/product-info", response_class=JSONResponse)
 def api_product_info(product_id: int):
     """
     Payload utilisé par la page d'accueil (consommation FIFO).
-    Inclut désormais fifo.article_name (fallback: l.name puis p.name).
+    Inclut fifo.article_name (fallback: l.name puis p.name).
     """
     try:
         pid = int(product_id)
