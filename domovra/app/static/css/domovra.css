@@ -2018,8 +2018,26 @@ html[data-theme="light"] .qhelp code {
     }
 }
 
+/* Cache les champs supplémentaires tant que le nom n’est pas rempli */
+form.add-product-form.gate-on [data-gate="create"] {
+    display: none;
+}
 
+@supports (animation: fadein 0.2s) {
+    @keyframes fadein {
+        from {
+            opacity: 0
+        }
 
+        to {
+            opacity: 1
+        }
+    }
+
+    form.add-product-form:not(.gate-on) [data-gate="create"] {
+        animation: fadein .15s ease-out;
+    }
+}
 
 
 

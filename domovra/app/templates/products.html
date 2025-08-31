@@ -18,7 +18,7 @@
     </div>
 
     <!-- grille (conserve ta classe pour réutiliser ton CSS) -->
-    <form id="create_form" method="post" action="{{ BASE }}product/add" class="add-product-form">
+    <form id="create_form" method="post" action="{{ BASE }}product/add" class="add-product-form gate-on">
 
       <!-- Nom & Description -->
       <div class="field" style="grid-column:1 / -1">
@@ -27,14 +27,14 @@
         <input name="name" id="create_name" type="text" required placeholder="ex. Pâtes, Lait demi-écrémé">
       </div>
 
-      <div class="field" style="grid-column:1 / -1">
+      <div class="field" style="grid-column:1 / -1" data-gate="create">
         <div class="label">Description <span class="help" tabindex="0" data-tip="ex. Brique UHT, 6×1 L, marque…"></span>
         </div>
         <textarea name="description" id="create_desc" rows="2" placeholder="ex. Brique UHT, 6×1 L, marque…"></textarea>
       </div>
 
       <!-- Ligne 1 -->
-      <div class="field">
+      <div class="field" data-gate="create">
         <div class="label">Emplacement par défaut <span class="help" tabindex="0"
             data-tip="Là où tu ranges habituellement ce produit."></span></div>
         <select name="default_location_id" id="create_default_location_id">
@@ -45,7 +45,7 @@
         </select>
       </div>
 
-      <div class="field">
+      <div class="field" data-gate="create">
         <div class="label">Unité par défaut</div>
         <select name="unit" id="create_unit">
           <optgroup label="Comptage">
@@ -72,7 +72,7 @@
         </select>
       </div>
 
-      <div class="field">
+      <div class="field" data-gate="create">
         <div class="label">Catégorie de produits</div>
         <select name="category" id="create_category">
           <option value="">— Choisir —</option>
@@ -107,9 +107,8 @@
         </select>
       </div>
 
-
       <!-- Ligne 2 -->
-      <div class="field">
+      <div class="field" data-gate="create">
         <div class="label">Quantité minimum en stock <span class="help" tabindex="0"
             data-tip="Seuil d’alerte propre à ce produit."></span></div>
         <div class="infield-qty">
@@ -120,7 +119,7 @@
         <div class="hint muted" id="create_min_hint">Conseil : 1, 2, 3 pièces…</div>
       </div>
 
-      <div class="field">
+      <div class="field" data-gate="create">
         <div class="label">Alerte stock faible actif ?</div>
         <select name="low_stock_enabled" id="create_low_enabled">
           <option value="1" selected>Oui</option>
@@ -129,7 +128,7 @@
       </div>
 
       <!-- Ligne 3 -->
-      <div class="field">
+      <div class="field" data-gate="create">
         <div class="label">Type d’échéance</div>
         <div class="segmented">
           <label><input type="radio" name="expiry_kind" value="DLC" checked><span>DLC</span></label>
@@ -137,25 +136,25 @@
         </div>
       </div>
 
-      <div class="field no-freeze-cell">
+      <div class="field no-freeze-cell" data-gate="create">
         <label class="checkbox-inline">
           <input type="checkbox" id="create_no_freeze" name="no_freeze" value="1">
           <span>Ne doit pas être congelé</span>
         </label>
       </div>
 
-      <div class="field" id="create_freeze_group">
+      <div class="field" id="create_freeze_group" data-gate="create">
         <div class="label">Péremption après congélation (jours)</div>
         <input name="default_freeze_shelf_days" id="create_freeze_shelf" type="number" min="1" placeholder="ex. 180">
       </div>
 
-      <div class="field">
+      <div class="field" data-gate="create">
         <div class="label">Péremption par défaut (jours)</div>
         <input name="shelf" id="create_shelf" type="number" min="1" placeholder="ex. 90">
       </div>
 
       <!-- Bouton -->
-      <div class="field btn-wide">
+      <div class="field btn-wide" data-gate="create">
         <button class="secondary" type="submit">＋ Ajouter</button>
       </div>
     </form>
@@ -1073,8 +1072,37 @@ Astuce : tu peux combiner (ex. « ddm produits laitiers »)."></span>
     if (e.key === 'ArrowUp') { e.preventDefault(); input.value = (cur + step).toString(); }
     if (e.key === 'ArrowDown') { e.preventDefault(); input.value = (cur - step).toString(); }
   });
+
+  // ===== Verrouillage "Création de fiche" tant que le nom est vide =====
+  (function setupCreateNameGate() {
+    const form = document.getElementById('create_form');
+    const nameInput = document.getElementById('create_name');
+    if (!form || !nameInput) return;
+
+    const gatedBlocks = Array.from(form.querySelectorAll('[data-gate="create"]'));
+    function getControls() {
+      return gatedBlocks.flatMap(b => Array.from(b.querySelectorAll('input, select, textarea, button')));
+    }
+
+    function applyGate() {
+      const hasName = (nameInput.value || '').trim().length > 0;
+      // Ajoute/retire la classe qui pilote l’affichage via CSS
+      form.classList.toggle('gate-on', !hasName);
+
+      // Désactive/réactive les contrôles à l’intérieur (anti-tab, anti-submit)
+      getControls().forEach(el => {
+        if (!hasName) {
+          el.setAttribute('disabled', 'disabled');
+          el.setAttribute('aria-disabled', 'true');
+        } else {
+          el.removeAttribute('disabled');
+          el.removeAttribute('aria-disabled');
+        }
+      });
+    }
+
+    nameInput.addEventListener('input', applyGate);
+    applyGate(); // état initial au chargement
+  })();
 </script>
-
-
-
 {% endblock %}
