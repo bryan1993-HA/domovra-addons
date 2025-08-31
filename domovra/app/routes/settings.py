@@ -4,7 +4,7 @@ from fastapi import APIRouter, Request, Form, Query
 from fastapi.responses import HTMLResponse, RedirectResponse, PlainTextResponse
 
 from utils.http import ingress_base, render as render_with_env
-from services.events import log_event
+from services.events import log_event, list_events  # ← list_events pour l’onglet Journal
 
 # --- Settings store (fallback inclus) ---
 try:
@@ -44,14 +44,15 @@ router = APIRouter()
 @router.get("/settings", response_class=HTMLResponse)
 def settings_page(
     request: Request,
-    tab: str = Query("appearance"),  # permet d’ouvrir directement un onglet (?tab=locations)
+    tab: str = Query("appearance"),         # permet d’ouvrir directement un onglet (?tab=locations|journal|...)
+    jlimit: int = Query(200, alias="jlimit") # nb de lignes à afficher dans le Journal
 ):
     base = ingress_base(request)
     try:
         settings = load_settings()
 
         # ---- Emplacements (pour l’onglet "locations") ----
-        # On reprend la même logique de compteurs que l’ancienne page /locations
+        # Même logique de compteurs que l’ancienne page /locations
         items = list_locations()  # emplacements existants
 
         counts_total: dict[int, int] = {}
@@ -73,6 +74,9 @@ def settings_page(
             it["soon_count"]   = int(counts_soon.get(lid, 0))
             it["urgent_count"] = int(counts_urg.get(lid, 0))
 
+        # ---- Journal (pour l’onglet "journal") ----
+        events = list_events(jlimit)
+
         return render_with_env(
             request.app.state.templates,
             "settings.html",
@@ -80,8 +84,13 @@ def settings_page(
             page="settings",
             request=request,
             SETTINGS=settings,
-            items=items,   # 👈 utilisé par tools/_locations_full.html
-            tab=tab,       # si tu veux t’en servir côté template/JS
+            # Onglet Emplacements
+            items=items,
+            # Onglet Journal
+            events=events,
+            jlimit=jlimit,
+            # Onglet actif (utilisé par ton JS pour sélectionner l'onglet au chargement)
+            tab=tab,
         )
     except Exception as e:
         return PlainTextResponse(f"Erreur chargement paramètres: {e}", status_code=500)

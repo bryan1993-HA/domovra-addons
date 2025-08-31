@@ -12,6 +12,7 @@
         <button class="tab" data-tab="locations">Emplacements</button>
         <button class="tab" data-tab="admindb">Admin DB</button>
         <button class="tab" data-tab="advanced">Avancés</button>
+        <button class="tab" data-tab="journal">Journal</button>
     </nav>
 
     {# ======= FORM RÉGLAGES UNIQUEMENT ======= #}
@@ -45,6 +46,9 @@
     {# ======= PANELS SANS ÊTRE DANS LE FORM GLOBAL ======= #}
     <section class="panel card" data-panel="locations" hidden>
         {% include "tools/_locations_full.html" %}
+    </section>
+    <section class="panel card" data-panel="journal" hidden>
+        {% include "tools/_journal.html" %}
     </section>
 
 </div>
