@@ -166,10 +166,10 @@ header {
     /* occupe la hauteur dispo de l'aside */
 }
 
-.menu a:last-child {
+.menu a:nth-last-child(2) {
     margin-top: auto;
-    /* pousse “Support” en bas */
 }
+
 
 .menu a {
     display: flex;
