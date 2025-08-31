@@ -77,8 +77,6 @@
             class="ico">⚙️</span><span>🚧Paramètres🚧</span></a>
         <a href="{{ BASE }}support" class="{% if request.path.startswith(BASE ~ 'support')    %}active{% endif %}"><span
             class="ico">☕</span><span>Support</span></a>
-        <a href="{{ BASE }}admin/db" class="{% if request.path.startswith(BASE ~ 'admin/db') %}active{% endif %}">
-          <span class="ico">🗄️</span><span>Admin DB</span>
         </a>
       </nav>
     </aside>
