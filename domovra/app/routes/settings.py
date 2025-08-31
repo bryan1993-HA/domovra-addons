@@ -17,7 +17,6 @@ except Exception:  # pragma: no cover
 
     SETTINGS_FILE = Path("/data/settings.json")
 
-    # table_mode SUPPRIMÉ des réglages supportés
     DEFAULTS = {
         "theme": "auto",
         "sidebar_compact": False,

@@ -11,7 +11,6 @@ LOGGER = logging.getLogger("domovra.settings_store")
 DATA_DIR = "/data"
 SETTINGS_PATH = os.path.join(DATA_DIR, "settings.json")
 
-# Clés officiellement supportées par l'UI (table_mode SUPPRIMÉ)
 DEFAULTS: Dict[str, Any] = {
     "theme": "auto",                # auto | light | dark
     "sidebar_compact": False,       # bool
