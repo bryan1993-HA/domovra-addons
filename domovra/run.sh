@@ -1,24 +1,57 @@
 # domovra/run.sh
-#!/usr/bin/with-contenv bashio
+#!/usr/bin/with-contenv bash
 set -euo pipefail
 
-# Dossier persistant
+# --------- Préparation ---------
 mkdir -p /data
-
-# La DB reste au même endroit
 export DB_PATH="/data/domovra.sqlite3"
 
-# ⚠️ Important :
-# Les seuils WARNING_DAYS / CRITICAL_DAYS ne sont PLUS lus depuis l’add-on.
-# Ils sont maintenant gérés dans l’UI Domovra (/settings) et stockés dans /data/settings.json.
-# On n’exporte donc plus ces variables ici.
+echo "[Domovra] DB_PATH=${DB_PATH}"
 
-bashio::log.info "Starting Domovra (DB_PATH=${DB_PATH})"
-cd /app
+# Trouve le répertoire applicatif
+if [ -d "/opt/app" ]; then
+  APP_DIR="/opt/app"
+elif [ -d "/app" ]; then
+  APP_DIR="/app"
+else
+  echo "[Domovra] ERREUR: répertoire applicatif introuvable (/opt/app ou /app manquant)"
+  exit 1
+fi
+cd "$APP_DIR"
 
-# Lancement de l’API (derrière Ingress)
-# --proxy-headers recommandé derrière le proxy du Supervisor
-exec python3 -m uvicorn app.main:app \
-  --host 0.0.0.0 \
-  --port 8099 \
-  --proxy-headers
+# Détermine le module à lancer (app.main:app prioritaire)
+if [ -f "$APP_DIR/app/main.py" ]; then
+  MODULE="app.main:app"
+elif [ -f "$APP_DIR/main.py" ]; then
+  MODULE="main:app"
+else
+  echo "[Domovra] ERREUR: impossible de trouver main.py (ni app/main.py ni main.py)"
+  exit 1
+fi
+echo "[Domovra] Module = ${MODULE}"
+echo "[Domovra] APP_DIR = ${APP_DIR}"
+
+# Trouve uvicorn (venv ou global)
+if [ -x "/opt/venv/bin/uvicorn" ]; then
+  UVICORN="/opt/venv/bin/uvicorn"
+else
+  UVICORN="$(command -v uvicorn || true)"
+fi
+
+# --------- Lancement ---------
+if [ -n "${UVICORN:-}" ]; then
+  # uvicorn binaire dispo
+  exec "${UVICORN}" "${MODULE}" \
+    --host 0.0.0.0 \
+    --port 8099 \
+    --app-dir "${APP_DIR}" \
+    --proxy-headers
+else
+  # fallback via python -m uvicorn
+  echo "[Domovra] uvicorn binaire introuvable, fallback python -m uvicorn"
+  exec python3 -m uvicorn "${MODULE}" \
+    --host 0.0.0.0 \
+    --port 8099 \
+    --app-dir "${APP_DIR}" \
+    --proxy-headers
+fi
