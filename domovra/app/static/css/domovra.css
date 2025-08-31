@@ -2018,9 +2018,10 @@ html[data-theme="light"] .qhelp code {
     }
 }
 
-/* Cache les champs supplémentaires tant que le nom n’est pas rempli */
+/* Cache les champs supplémentaires tant que le nom n’est pas rempli
+   !important pour battre tout style inline (ex: freezeGrp.style.display) */
 form.add-product-form.gate-on [data-gate="create"] {
-    display: none;
+    display: none !important;
 }
 
 @supports (animation: fadein 0.2s) {
@@ -2038,6 +2039,7 @@ form.add-product-form.gate-on [data-gate="create"] {
         animation: fadein .15s ease-out;
     }
 }
+
 
 
 
