@@ -9,13 +9,6 @@
         </select>
     </div>
     <div class="field">
-        <div class="label">Affichage des tableaux</div>
-        <select name="table_mode">
-            <option value="scroll" {{ 'selected' if SETTINGS.table_mode=='scroll' }}>Défilement horizontal</option>
-            <option value="stacked" {{ 'selected' if SETTINGS.table_mode=='stacked' }}>Empilé (mobile)</option>
-        </select>
-    </div>
-    <div class="field">
         <div class="label">Menu latéral compact</div>
         <label style="display:flex;align-items:center;gap:8px">
             <input type="checkbox" name="sidebar_compact" {{ 'checked' if SETTINGS.sidebar_compact }}> Activer

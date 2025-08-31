@@ -11,21 +11,18 @@ LOGGER = logging.getLogger("domovra.settings_store")
 DATA_DIR = "/data"
 SETTINGS_PATH = os.path.join(DATA_DIR, "settings.json")
 
-# Clés officiellement supportées par l'UI (default_shelf_days SUPPRIMÉ)
+# Clés officiellement supportées par l'UI (table_mode SUPPRIMÉ)
 DEFAULTS: Dict[str, Any] = {
     "theme": "auto",                # auto | light | dark
     "sidebar_compact": False,       # bool
-    "table_mode": "scroll",         # scroll | stacked
     # Seuils DLC gérés par l'UI
     "retention_days_warning": 30,   # int >= 0
     "retention_days_critical": 14,  # int >= 0, et <= warning (voir _coerce_types)
     # (low_stock_default retiré de l'UI ; fallback “1” côté home.py)
 }
 
-
 def ensure_data_dir() -> None:
     os.makedirs(DATA_DIR, exist_ok=True)
-
 
 def _atomic_write_json(path: str, payload: Dict[str, Any]) -> None:
     fd, tmp_path = tempfile.mkstemp(
@@ -36,14 +33,12 @@ def _atomic_write_json(path: str, payload: Dict[str, Any]) -> None:
         json.dump(payload, f, ensure_ascii=False, indent=2)
     shutil.move(tmp_path, path)
 
-
 def _only_known_keys(raw: Dict[str, Any]) -> Dict[str, Any]:
     """
     Ne conserve que les clés connues de DEFAULTS.
     (Évite de réécrire des clés obsolètes.)
     """
     return {k: raw.get(k, DEFAULTS[k]) for k in DEFAULTS.keys()}
-
 
 def _coerce_types(raw: Dict[str, Any]) -> Dict[str, Any]:
     """
@@ -59,9 +54,6 @@ def _coerce_types(raw: Dict[str, Any]) -> Dict[str, Any]:
         out["theme"] = "auto"
 
     out["sidebar_compact"] = bool(out.get("sidebar_compact"))
-
-    if out["table_mode"] not in ("scroll", "stacked"):
-        out["table_mode"] = "scroll"
 
     # Seuils DLC >= 0
     def _int_ge0(v, dflt):
@@ -84,7 +76,6 @@ def _coerce_types(raw: Dict[str, Any]) -> Dict[str, Any]:
         out["retention_days_critical"] = out["retention_days_warning"]
 
     return out
-
 
 def load_settings() -> Dict[str, Any]:
     ensure_data_dir()
@@ -113,7 +104,6 @@ def load_settings() -> Dict[str, Any]:
         LOGGER.exception("Erreur de lecture settings.json: %s", e)
         # On ne casse pas l'UI : retourne defaults
         return DEFAULTS.copy()
-
 
 def save_settings(payload: Dict[str, Any]) -> Dict[str, Any]:
     """

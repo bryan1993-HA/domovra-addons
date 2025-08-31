@@ -17,10 +17,9 @@ except Exception:  # pragma: no cover
 
     SETTINGS_FILE = Path("/data/settings.json")
 
-    # ⚠️ default_shelf_days SUPPRIMÉ des réglages supportés
+    # table_mode SUPPRIMÉ des réglages supportés
     DEFAULTS = {
         "theme": "auto",
-        "table_mode": "scroll",
         "sidebar_compact": False,
         # Toasts
         "toast_duration": 3000,
@@ -161,7 +160,6 @@ def settings_save(
     request: Request,
     # Apparence / UI
     theme: str = Form("auto"),
-    table_mode: str = Form("scroll"),
     sidebar_compact: str = Form(None),
     # Toasts
     toast_duration: int = Form(3000),
@@ -201,7 +199,6 @@ def settings_save(
 
     normalized = {
         "theme": theme if theme in ("auto", "light", "dark") else "auto",
-        "table_mode": table_mode if table_mode in ("scroll", "stacked") else "scroll",
         "sidebar_compact": (sidebar_compact == "on"),
 
         "toast_duration": max(500, int(toast_duration or 3000)),
