@@ -1,11 +1,10 @@
 # app/routes/lots.py
 from fastapi import APIRouter, Request, Form, Query
 from fastapi.responses import HTMLResponse, RedirectResponse, JSONResponse
-from urllib.parse import urlencode
 
 from utils.http import ingress_base, render as render_with_env
 from services.events import log_event
-from config import WARNING_DAYS, CRITICAL_DAYS
+from config import get_retention_thresholds
 from db import (
     list_lots, list_locations, list_products,
     add_lot, update_lot, delete_lot, consume_lot,
@@ -22,6 +21,9 @@ def lots_page(
     status: str = Query("", alias="status"),
 ):
     base = ingress_base(request)
+
+    # ← récupère les seuils depuis /data/settings.json (fallback env/valeurs sûres)
+    WARNING_DAYS, CRITICAL_DAYS = get_retention_thresholds()
 
     items = list_lots()
     for it in items:
@@ -46,6 +48,7 @@ def lots_page(
         products=list_products(),
     )
 
+
 @router.post("/lot/add")
 def lot_add_action(request: Request,
                    product_id: int = Form(...),
@@ -60,6 +63,7 @@ def lot_add_action(request: Request,
     })
     return RedirectResponse(ingress_base(request) + "lots?added=1",
                             status_code=303, headers={"Cache-Control": "no-store"})
+
 
 @router.post("/lot/update")
 def lot_update_action(request: Request,
@@ -80,6 +84,7 @@ def lot_update_action(request: Request,
     return RedirectResponse(ingress_base(request) + "lots?updated=1",
                             status_code=303, headers={"Cache-Control": "no-store"})
 
+
 @router.post("/lot/consume")
 def lot_consume_action(request: Request, lot_id: int = Form(...), qty: float = Form(...)):
     q = float(qty)
@@ -87,6 +92,7 @@ def lot_consume_action(request: Request, lot_id: int = Form(...), qty: float = F
     log_event("lot.consume", {"lot_id": lot_id, "qty": q})
     return RedirectResponse(ingress_base(request) + "lots",
                             status_code=303, headers={"Cache-Control":"no-store"})
+
 
 @router.post("/lot/delete")
 def lot_delete_action(request: Request, lot_id: int = Form(...)):
@@ -108,21 +114,7 @@ def lot_delete_action(request: Request, lot_id: int = Form(...)):
     return RedirectResponse(base + "lots?deleted=1", status_code=303, headers={"Cache-Control": "no-store"})
 
 
-# (optionnel) petit debug JSON pratique
-@router.get("/_debug/lots")
-def debug_lots():
-    items = list_lots()
-    for it in items:
-        it["status"] = status_for(it.get("best_before"), WARNING_DAYS, CRITICAL_DAYS)
-    return JSONResponse({"count": len(items), "items": items})
-
-
-# --- Debug JSON : même data que la page /lots -------------------------------
-from fastapi import Query
-from fastapi.responses import JSONResponse
-from config import WARNING_DAYS, CRITICAL_DAYS
-from db import list_lots, list_locations, list_products, status_for
-
+# --- Debug JSON : même data que la page /lots --------------------------------
 @router.get("/_debug/lots")
 def debug_lots(
     request: Request,
@@ -130,6 +122,9 @@ def debug_lots(
     location: str = Query("", alias="location"),
     status: str = Query("", alias="status"),
 ):
+    # Seuils dynamiques
+    WARNING_DAYS, CRITICAL_DAYS = get_retention_thresholds()
+
     # 1) Données brutes
     items = list_lots()
 

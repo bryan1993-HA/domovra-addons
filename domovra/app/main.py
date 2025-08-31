@@ -15,7 +15,7 @@ from logging.handlers import RotatingFileHandler
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 
-from config import WARNING_DAYS, CRITICAL_DAYS, DB_PATH
+from config import DB_PATH, get_retention_thresholds
 from services.events import _ensure_events_table
 from utils.assets import ensure_hashed_asset
 from utils.jinja import build_jinja_env
@@ -149,7 +149,6 @@ app.include_router(support_router)
 app.include_router(settings_router)
 app.include_router(shopping_router)
 
-
 # Technique / API
 app.include_router(api_router)
 app.include_router(debug_router)
@@ -163,7 +162,10 @@ app.include_router(admin_db_router)
 @app.on_event("startup")
 def _startup() -> None:
     logger.info("Domovra starting. DB_PATH=%s", DB_PATH)
-    logger.info("WARNING_DAYS=%s  CRITICAL_DAYS=%s", WARNING_DAYS, CRITICAL_DAYS)
+
+    # Seuils dynamiques (issus de /data/settings.json avec fallback env/valeurs sûres)
+    warn, crit = get_retention_thresholds()
+    logger.info("Retention thresholds: WARNING_DAYS=%s  CRITICAL_DAYS=%s", warn, crit)
 
     # DB & events table
     init_db()
@@ -173,6 +175,7 @@ def _startup() -> None:
     try:
         from settings_store import load_settings  # lazy import
         current = load_settings()
+        app.state.settings = current  # exposé pour les routes qui en ont besoin
         logger.info("Settings au démarrage: %s", current)
     except Exception as e:  # pragma: no cover
         logger.exception("Erreur lecture settings au démarrage: %s", e)

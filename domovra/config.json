@@ -23,12 +23,6 @@
   "map": [
     "data:rw"
   ],
-  "options": {
-    "retention_days_warning": 30,
-    "retention_days_critical": 14
-  },
-  "schema": {
-    "retention_days_warning": "int",
-    "retention_days_critical": "int"
-  }
+  "options": { },
+  "schema": { }
 }

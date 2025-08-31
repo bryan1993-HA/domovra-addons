@@ -1,0 +1,52 @@
+<!-- domovra/app/templates/tools/_stock.html -->
+<div class="title">
+    <h2>Produits & Stocks</h2>
+    <span class="muted">→ seuils DLC (Bientôt/Urgent) et suivi de stock</span>
+</div>
+
+<!-- ===== Seuils DLC ===== -->
+<div class="group">
+    <div class="title">
+        <h3>Durées d’alerte (DLC)</h3>
+        <span class="muted">Coloration des lots : OK (vert) / Bientôt (jaune) / Urgent (rouge)</span>
+    </div>
+
+    <div class="row" style="gap:1rem; flex-wrap:wrap;">
+        <div class="field" style="flex:1; min-width:220px;">
+            <div class="label">Alerte <b>Bientôt</b> (jours)</div>
+            <input type="number" name="retention_days_warning" min="0"
+                value="{{ (SETTINGS.retention_days_warning if SETTINGS.retention_days_warning is not none else (WARNING_DAYS or 30)) }}"
+                inputmode="numeric">
+            <div class="hint">Passe en <b>jaune</b> lorsque la DLC ≤ cette valeur. (Défaut 30)</div>
+        </div>
+
+        <div class="field" style="flex:1; min-width:220px;">
+            <div class="label">Alerte <b>Urgent</b> (jours)</div>
+            <input type="number" name="retention_days_critical" min="0"
+                value="{{ (SETTINGS.retention_days_critical if SETTINGS.retention_days_critical is not none else (CRITICAL_DAYS or 14)) }}"
+                inputmode="numeric">
+            <div class="hint">Passe en <b>rouge</b> lorsque la DLC ≤ cette valeur. (Défaut 14)</div>
+        </div>
+    </div>
+</div>
+
+<!-- ===== Suivi de stock ===== -->
+<div class="group">
+    <div class="title">
+        <h3>Suivi du stock</h3>
+        <span class="muted">Règle par défaut lorsque la fiche produit n’a pas de préférence propre</span>
+    </div>
+
+    <div class="row" style="gap:1rem; flex-wrap:wrap;">
+        <div class="field" style="flex:1; min-width:220px;">
+            <div class="label">Suivre le stock par défaut</div>
+            <select name="low_stock_default">
+                {% set _lsd = (SETTINGS.low_stock_default or 1)|int %}
+                <option value="1" {% if _lsd==1 %}selected{% endif %}>Oui</option>
+                <option value="0" {% if _lsd==0 %}selected{% endif %}>Non</option>
+            </select>
+            <div class="hint">Si désactivé, un produit ne sera compté en “faible stock” que s’il l’active explicitement.
+            </div>
+        </div>
+    </div>
+</div>

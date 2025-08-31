@@ -3,7 +3,7 @@ from fastapi import APIRouter, Request
 from fastapi.responses import HTMLResponse, PlainTextResponse, JSONResponse
 
 from utils.http import ingress_base, render as render_with_env
-from config import WARNING_DAYS, CRITICAL_DAYS
+from config import get_retention_thresholds
 from db import list_locations, list_products, list_lots, status_for, get_product_info
 
 router = APIRouter()
@@ -104,6 +104,9 @@ def index(request: Request):
     products  = list_products()  or []
     lots      = list_lots()      or []
 
+    # seuils dynamiques depuis /data/settings.json (fallback env/valeurs sûres)
+    WARNING_DAYS, CRITICAL_DAYS = get_retention_thresholds()
+
     # statut pour le bloc "À consommer en priorité"
     for it in lots:
         it["status"] = status_for(it.get("best_before"), WARNING_DAYS, CRITICAL_DAYS)
@@ -140,6 +143,10 @@ def index(request: Request):
 def home_debug(request: Request):
     products  = list_products()  or []
     lots      = list_lots()      or []
+
+    # seuils dynamiques pour le calcul des statuts
+    WARNING_DAYS, CRITICAL_DAYS = get_retention_thresholds()
+
     for it in lots:
         it["status"] = status_for(it.get("best_before"), WARNING_DAYS, CRITICAL_DAYS)
 

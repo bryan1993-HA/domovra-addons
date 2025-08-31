@@ -11,6 +11,7 @@ from db import (
     status_for,
     add_location, update_location, delete_location, move_lots_from_location,
 )
+from config import get_retention_thresholds
 
 router = APIRouter()
 
@@ -122,7 +123,10 @@ def debug_locations():
     lots = list_lots()
 
     counts_total, counts_soon, counts_urg = {}, {}, {}
-    from config import WARNING_DAYS, CRITICAL_DAYS
+
+    # ← seuils dynamiques depuis /data/settings.json (fallback env/valeurs sûres)
+    WARNING_DAYS, CRITICAL_DAYS = get_retention_thresholds()
+
     for l in lots:
         st = status_for(l.get("best_before"), WARNING_DAYS, CRITICAL_DAYS)
         lid = int(l["location_id"])
