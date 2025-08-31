@@ -234,7 +234,6 @@
 
                             {% endfor %}
                         </select>
-                        <div class="hint" id="product_hint">Associe l’article à sa fiche parent (obligatoire).</div>
                     </div>
 
                     <!-- Nom article -->
@@ -805,8 +804,6 @@
                 bestBeforeLabel.textContent = `${dateType} (optionnel)`;
             }
 
-            setHint(document.querySelector('#product_hint'),
-                `Fiche parent : ${opt.dataset.name}${opt.dataset.brand ? ' — ' + opt.dataset.brand : ''}`);
             setHint(offQtyHint, '');
             updateCalcs();
         });
