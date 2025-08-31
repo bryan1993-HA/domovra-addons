@@ -1,10 +1,11 @@
 # domovra/app/routes/settings.py
 import time
+import sqlite3
 from fastapi import APIRouter, Request, Form, Query
 from fastapi.responses import HTMLResponse, RedirectResponse, PlainTextResponse
 
 from utils.http import ingress_base, render as render_with_env
-from services.events import log_event, list_events  # ← list_events pour l’onglet Journal
+from services.events import log_event, list_events  # Journal
 
 # --- Settings store (fallback inclus) ---
 try:
@@ -35,26 +36,24 @@ except Exception:
         cur.update(new_values or {})
         return cur
 
-# --- Données pour l'onglet Emplacements ---
+# --- Données pour Emplacements & Admin DB ---
 from db import list_locations, list_lots, status_for
-from config import WARNING_DAYS, CRITICAL_DAYS
+from config import WARNING_DAYS, CRITICAL_DAYS, DB_PATH  # 👈 DB_PATH ajouté
 
 router = APIRouter()
 
 @router.get("/settings", response_class=HTMLResponse)
 def settings_page(
     request: Request,
-    tab: str = Query("appearance"),         # permet d’ouvrir directement un onglet (?tab=locations|journal|...)
-    jlimit: int = Query(200, alias="jlimit") # nb de lignes à afficher dans le Journal
+    tab: str = Query("appearance"),          # ?tab=locations|journal|admindb|...
+    jlimit: int = Query(200, alias="jlimit") # nb de lignes à afficher dans Journal
 ):
     base = ingress_base(request)
     try:
         settings = load_settings()
 
-        # ---- Emplacements (pour l’onglet "locations") ----
-        # Même logique de compteurs que l’ancienne page /locations
-        items = list_locations()  # emplacements existants
-
+        # ---- Emplacements (compteurs) ----
+        items = list_locations()
         counts_total: dict[int, int] = {}
         counts_soon:  dict[int, int] = {}
         counts_urg:   dict[int, int] = {}
@@ -74,8 +73,18 @@ def settings_page(
             it["soon_count"]   = int(counts_soon.get(lid, 0))
             it["urgent_count"] = int(counts_urg.get(lid, 0))
 
-        # ---- Journal (pour l’onglet "journal") ----
+        # ---- Journal ----
         events = list_events(jlimit)
+
+        # ---- Admin DB : liste des tables + chemin fichier ----
+        with sqlite3.connect(DB_PATH) as c:
+            c.row_factory = sqlite3.Row
+            rows = c.execute("""
+                SELECT name FROM sqlite_master
+                WHERE type='table' AND name NOT LIKE 'sqlite_%'
+                ORDER BY name
+            """).fetchall()
+        db_tables = [r["name"] for r in rows]
 
         return render_with_env(
             request.app.state.templates,
@@ -84,12 +93,15 @@ def settings_page(
             page="settings",
             request=request,
             SETTINGS=settings,
-            # Onglet Emplacements
+            # Emplacements
             items=items,
-            # Onglet Journal
+            # Journal
             events=events,
             jlimit=jlimit,
-            # Onglet actif (utilisé par ton JS pour sélectionner l'onglet au chargement)
+            # Admin DB
+            db_tables=db_tables,   # 👈 utilisé par tools/_admindb.html
+            db_path=DB_PATH,       # 👈 affichage du chemin
+            # Onglet actif
             tab=tab,
         )
     except Exception as e:
@@ -108,7 +120,7 @@ def settings_save(
     toast_warn: str = Form("#ffb300"),
     toast_error: str = Form("#ef5350"),
 
-    # champs potentiels d’autres onglets (ok s’ils n’existent pas dans le form)
+    # champs potentiels d’autres onglets
     enable_off_block: str = Form(None),
     enable_scanner: str = Form(None),
     ha_notifications: str = Form(None),
@@ -132,7 +144,6 @@ def settings_save(
         "toast_warn": (toast_warn or "#ffb300").strip(),
         "toast_error": (toast_error or "#ef5350").strip(),
 
-        # options supplémentaires (no-ops si non utilisées côté UI)
         "enable_off_block": as_bool(enable_off_block),
         "enable_scanner": as_bool(enable_scanner),
         "ha_notifications": as_bool(ha_notifications),
