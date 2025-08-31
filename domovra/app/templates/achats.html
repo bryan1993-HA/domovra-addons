@@ -228,7 +228,7 @@
                                 data-brand="{{ p.brand or '' }}"
                                 data-default-location="{{ p.default_location_id or '' }}"
                                 data-no-freeze="{{ 1 if p.no_freeze else 0 }}"
-                                data-date-type="{{ p.date_type or 'DLC' }}">
+                                data-date-type="{{ (p.expiry_kind or p.date_type or 'DLC') | upper }}">
                                 {{ p.name }}{% if p.brand %} — {{ p.brand }}{% endif %}
                             </option>
 
