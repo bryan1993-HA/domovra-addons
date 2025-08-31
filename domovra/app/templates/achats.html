@@ -2,34 +2,8 @@
 {% block title %}Domovra — Achats{% endblock %}
 {% block head %}
 <style>
-    /* --- Empêche le "saut" de layout quand le hint EAN apparaît --- */
     #ean_hint {
-        display: block;
-        min-height: 1.25rem;
-        /* ~1 ligne réservée */
-        line-height: 1.25rem;
         margin-top: .25rem;
-        /* petit espacement sous l'input */
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        /* évite les retours trop longs */
-    }
-
-    /* Optionnel: même traitement pour l'indication OFF sous "Marque" */
-    #off_qty_hint {
-        display: block;
-        min-height: 1.25rem;
-        line-height: 1.25rem;
-    }
-
-    /* En mobile: autorise 2 lignes max pour éviter l’ellipse trop agressive */
-    @media (max-width:700px) {
-        #ean_hint {
-            white-space: normal;
-            min-height: 2.5rem;
-            /* ~2 lignes */
-        }
     }
 
     /* Sections & grille locale (n'altère pas ton CSS global) */
@@ -237,14 +211,13 @@
                 <div class="row">
                     <!-- EAN -->
                     <div class="col-6">
-                        <div class="label">Code‑barres (EAN)</div>
+                        <div class="label">Code-barres (EAN)</div>
                         <div class="infield">
                             <input type="text" name="ean" id="ean" placeholder="Scanner ou saisir" inputmode="numeric"
                                 autocomplete="off">
                             <button type="button" class="btn" id="btn_check_ean"
                                 title="Rechercher le produit par EAN">🔎</button>
                         </div>
-                        <div class="hint" id="ean_hint"></div>
                     </div>
 
                     <!-- Fiche produit (parent) obligatoire -->
@@ -279,6 +252,10 @@
                         <input type="text" id="brand_suggest" name="brand" placeholder="Marque (OFF ou saisie)"
                             autocomplete="off">
                         <div class="hint" id="off_qty_hint"></div>
+                    </div>
+                    <!-- HINT EAN sur une ligne dédiée en pleine largeur -->
+                    <div class="col-12">
+                        <div class="hint" id="ean_hint"></div>
                     </div>
                 </div>
             </div>
