@@ -17,19 +17,20 @@ except Exception:  # pragma: no cover
 
     SETTINGS_FILE = Path("/data/settings.json")
 
+    # ⚠️ default_shelf_days SUPPRIMÉ des réglages supportés
     DEFAULTS = {
         "theme": "auto",
         "table_mode": "scroll",
         "sidebar_compact": False,
-        "default_shelf_days": 90,
+        # Toasts
         "toast_duration": 3000,
         "toast_ok": "#4caf50",
         "toast_warn": "#ffb300",
         "toast_error": "#ef5350",
-        # ↓↓↓ nouveaux réglages gérés par l’UI Domovra ↓↓↓
-        "retention_days_warning": None,  # None ⇒ on tombera sur env/valeur sûre
+        # Seuils DLC (UI)
+        "retention_days_warning": None,  # None ⇒ fallback env/valeur sûre
         "retention_days_critical": None,
-        # autres flags potentiels déjà utilisés par l’app :
+        # Divers drapeaux existants
         "enable_off_block": True,
         "enable_scanner": True,
         "ha_notifications": False,
@@ -162,7 +163,6 @@ def settings_save(
     theme: str = Form("auto"),
     table_mode: str = Form("scroll"),
     sidebar_compact: str = Form(None),
-    default_shelf_days: int = Form(90),
     # Toasts
     toast_duration: int = Form(3000),
     toast_ok: str = Form("#4caf50"),
@@ -203,7 +203,6 @@ def settings_save(
         "theme": theme if theme in ("auto", "light", "dark") else "auto",
         "table_mode": table_mode if table_mode in ("scroll", "stacked") else "scroll",
         "sidebar_compact": (sidebar_compact == "on"),
-        "default_shelf_days": int(default_shelf_days or 90),
 
         "toast_duration": max(500, int(toast_duration or 3000)),
         "toast_ok": (toast_ok or "#4caf50").strip(),
@@ -225,7 +224,8 @@ def settings_save(
     }
     try:
         saved = save_settings(normalized)
-        # rafraîchir l'état en mémoire (utile pour d'autres champs)
+
+        # rafraîchir l'état en mémoire (utile pour d'autres champs éventuels)
         try:
             request.app.state.settings = load_settings()
         except Exception:
