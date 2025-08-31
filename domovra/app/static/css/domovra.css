@@ -215,6 +215,100 @@ header {
 
 /* ========== 04) Formulaires (global) ====================================== */
 
+/* ================================================================ */
+/* Combobox custom (consume-product) — thème-aware                   */
+/* ================================================================ */
+
+.combo {
+    position: relative;
+}
+
+.combo-list {
+    position: absolute;
+    inset-inline: 0;
+    top: calc(100% + 6px);
+    max-height: 320px;
+    overflow: auto;
+    z-index: 60;
+    background: var(--panel, #0f1624);
+    border: 1px solid var(--line, rgba(255, 255, 255, .08));
+    border-radius: 12px;
+    box-shadow: 0 16px 40px rgba(0, 0, 0, .45);
+    padding: 4px 0;
+    color: inherit;
+}
+
+.combo-item {
+    padding: 10px 12px;
+    cursor: pointer;
+}
+
+.combo-item .title {
+    font-weight: 600;
+}
+
+.combo-item .meta {
+    font-size: 12px;
+    opacity: .8;
+}
+
+.combo-item.is-active,
+.combo-item:hover {
+    background: var(--hover, rgba(255, 255, 255, .06));
+}
+
+/* Mark (texte surligné) */
+.combo-item mark {
+    background: transparent;
+    border-bottom: 2px solid currentColor;
+    padding: 0 0 1px 0;
+}
+
+/* Scrollbar discrète */
+.combo-list::-webkit-scrollbar {
+    width: 10px;
+}
+
+.combo-list::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, .15);
+    border-radius: 8px;
+}
+
+/* ========================= Thème clair ========================== */
+html[data-theme="light"] .combo-list {
+    background: #ffffff;
+    border-color: rgba(10, 20, 30, .12);
+    box-shadow: 0 12px 28px rgba(10, 20, 30, .15);
+    color: #0f172a;
+    /* texte principal */
+}
+
+html[data-theme="light"] .combo-item .meta {
+    color: #4b5568;
+    opacity: 1;
+}
+
+html[data-theme="light"] .combo-item.is-active,
+html[data-theme="light"] .combo-item:hover {
+    background: #f3f6fb;
+}
+
+/* Scrollbar clair */
+html[data-theme="light"] .combo-list::-webkit-scrollbar-thumb {
+    background: rgba(0, 0, 0, .18);
+}
+
+/* Optionnel : forcer au-dessus des cards et en-dessous du header */
+header {
+    position: relative;
+    z-index: 100;
+}
+
+.combo-list {
+    z-index: 150;
+}
+
+
 input,
 select,
 button {
