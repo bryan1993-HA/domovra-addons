@@ -36,9 +36,10 @@
             {% include "tools/_advanced.html" %}
         </section>
 
-        <div class="row" style="justify-content:flex-end">
+        <div class="row save-row" style="justify-content:flex-end">
             <button class="secondary">Enregistrer</button>
         </div>
+
     </form>
 
     {# ======= PANELS SANS ÊTRE DANS LE FORM GLOBAL ======= #}
@@ -75,28 +76,27 @@
     (function () {
         const tabs = document.querySelectorAll('.tabs .tab');
         const panels = document.querySelectorAll('[data-panel]');
+        const saveRow = document.querySelector('.save-row'); // 👈 le bouton global
         const KEY = 'settingsActiveTab';
+
         function show(tab) {
             tabs.forEach(t => t.setAttribute('aria-selected', t.dataset.tab === tab ? 'true' : 'false'));
             panels.forEach(p => p.hidden = (p.dataset.panel !== tab));
-            const u = new URL(location.href); u.searchParams.set('tab', tab); history.replaceState(null, '', u);
+
+            // Affiche le bouton seulement pour les onglets du form global
+            if (saveRow) {
+                const isFormTab = ["appearance", "stock", "toasts", "admindb", "advanced"].includes(tab);
+                saveRow.style.display = isFormTab ? "flex" : "none";
+            }
+
+            const u = new URL(location.href); u.searchParams.set('tab', tab);
+            history.replaceState(null, '', u);
             localStorage.setItem(KEY, tab);
         }
+
         tabs.forEach(t => t.addEventListener('click', () => show(t.dataset.tab)));
         const urlTab = new URL(location.href).searchParams.get('tab');
         show(urlTab || localStorage.getItem(KEY) || 'appearance');
     })();
-    function show(tab) {
-        tabs.forEach(t => t.setAttribute('aria-selected', t.dataset.tab === tab ? 'true' : 'false'));
-        panels.forEach(p => p.hidden = (p.dataset.panel !== tab));
-
-        // cache/affiche le bouton "Enregistrer"
-        document.querySelector('.save-row').style.display =
-            (["appearance", "stock", "toasts", "admindb", "advanced"].includes(tab)) ? "flex" : "none";
-
-        const u = new URL(location.href); u.searchParams.set('tab', tab);
-        history.replaceState(null, '', u);
-        localStorage.setItem(KEY, tab);
-    }
 </script>
 {% endblock %}
