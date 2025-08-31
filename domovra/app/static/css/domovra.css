@@ -2158,10 +2158,33 @@ form.add-product-form.gate-on [data-gate="create"] {
 /* Filtres (recherche + sélecteurs) */
 .wrap .filters-row {
     display: grid;
-    grid-template-columns: 2fr 1fr 1fr auto;
+    grid-template-columns: minmax(0, 2fr) minmax(0, 1fr) minmax(0, 1fr) auto;
     gap: 12px;
+    align-items: stretch;
 }
 
+/* Empêche les enfants d'élargir la grille (fix débordement mobile) */
+.wrap .filters-row>* {
+    min-width: 0;
+}
+
+/* Champ recherche + bouton "?" en flex, sans débordement */
+.wrap .filters-row .qwrap {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+.wrap .filters-row .qwrap input {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+.wrap .filters-row .qwrap .icon-btn {
+    flex: 0 0 auto;
+}
+
+/* Points de rupture */
 @media (max-width:900px) {
     .wrap .filters-row {
         grid-template-columns: 1fr 1fr;
@@ -2169,6 +2192,26 @@ form.add-product-form.gate-on [data-gate="create"] {
 
     .wrap .filters-row .wide {
         grid-column: 1 / -1;
+    }
+}
+
+@media (max-width:700px) {
+    .wrap .filters-row {
+        grid-template-columns: 1fr 1fr;
+    }
+
+    .wrap .filters-row .wide {
+        grid-column: 1 / -1;
+    }
+
+    .wrap .filters-row select {
+        width: 100%;
+    }
+
+    .wrap .filters-row .chip {
+        grid-column: 1 / -1;
+        justify-self: start;
+        /* évite de pousser la grille */
     }
 }
 
@@ -2260,7 +2303,7 @@ form.add-product-form.gate-on [data-gate="create"] {
     border: 1px solid var(--line);
 }
 
-/* Empilement propre en mobile */
+/* Empilement propre en mobile (dialogs) */
 @media (max-width:700px) {
 
     .wrap dialog.modal .dlg-actions,
@@ -2276,6 +2319,7 @@ form.add-product-form.gate-on [data-gate="create"] {
         min-width: 0;
     }
 }
+
 
 /* ========================================================================== */
 /* ========== 15) Page Paramètres (/settings) =============================== */
