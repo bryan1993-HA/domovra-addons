@@ -806,19 +806,35 @@
                     const p = await r.json();
                     const opt = [...productSel.options].find(o => (o.dataset.barcode || '').replace(/\s+/g, '') === code);
 
-                    // Sélection de la fiche parent
+                    // Sélection de la fiche parent (unité/pack/loc/etc.)
                     productSel.value = opt ? opt.value : String(p.id);
-                    productSel.dispatchEvent(new Event('change')); // unité/pack/loc + no_freeze + loc par défaut
+                    productSel.dispatchEvent(new Event('change'));
 
-                    // ⇩⇩ Nouveau : préremplir Nom/Marque si l'utilisateur n'a pas commencé à saisir
-                    // (utilise d'abord les données API, sinon les data-* de l'option)
-                    const nameFromLocal = (p.article_name || p.name || opt?.dataset.name || '').trim();
-                    const brandFromLocal = (p.brand || opt?.dataset.brand || '').trim();
+                    // --- Préférence OFF pour Nom/Marque même si trouvé en local ---
+                    try {
+                        const roff = await fetch(`{{ BASE }}api/off?barcode=${encodeURIComponent(code)}`);
+                        const off = await roff.json();
+                        if (off && off.ok) {
+                            const nameOff = (off.name || off.product_name || '').trim();
+                            const brandOff = (off.brand || off.brands || '').trim();
 
-                    setName(nameFromLocal);   // respecte les flags nameTouched
-                    setBrand(brandFromLocal); // respecte les flags brandTouched
+                            // N’écrase pas si l’utilisateur a déjà tapé (setName/setBrand le gèrent)
+                            if (nameOff) setName(nameOff);
+                            if (brandOff) setBrand(brandOff);
+                            setHint(eanHint, `Produit trouvé en local — Nom/Marque suggérés par OFF.`);
+                            toast(`OFF → ${nameOff || 'Nom indisponible'}`, 'warn');
+                            updateCalcs();
+                            return; // on s’arrête ici : OFF a fourni les champs humains
+                        }
+                    } catch { /* OFF indispo → fallback local */ }
 
-                    setHint(eanHint, `Produit trouvé : ${nameFromLocal || p.name || '—'}`);
+                    // Fallback: utiliser les infos locales (fiche parent)
+                    const nameLocal = (p.article_name || p.name || opt?.dataset.name || '').trim();
+                    const brandLocal = (p.brand || opt?.dataset.brand || '').trim();
+                    if (nameLocal) setName(nameLocal);
+                    if (brandLocal) setBrand(brandLocal);
+
+                    setHint(eanHint, `Produit trouvé en local.`);
                     toast('Fiche parent sélectionnée depuis le stock.', 'ok');
                     return;
                 }
