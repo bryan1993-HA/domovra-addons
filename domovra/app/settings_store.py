@@ -11,16 +11,15 @@ LOGGER = logging.getLogger("domovra.settings_store")
 DATA_DIR = "/data"
 SETTINGS_PATH = os.path.join(DATA_DIR, "settings.json")
 
-# Clés officiellement supportées par l'UI
+# Clés officiellement supportées par l'UI (default_shelf_days SUPPRIMÉ)
 DEFAULTS: Dict[str, Any] = {
     "theme": "auto",                # auto | light | dark
     "sidebar_compact": False,       # bool
     "table_mode": "scroll",         # scroll | stacked
-    "default_shelf_days": 30,       # int >= 1
     # Seuils DLC gérés par l'UI
     "retention_days_warning": 30,   # int >= 0
     "retention_days_critical": 14,  # int >= 0, et <= warning (voir _coerce_types)
-    # (low_stock_default a été retiré de l'UI ; un fallback "1" vit côté home.py)
+    # (low_stock_default retiré de l'UI ; fallback “1” côté home.py)
 }
 
 
@@ -41,7 +40,7 @@ def _atomic_write_json(path: str, payload: Dict[str, Any]) -> None:
 def _only_known_keys(raw: Dict[str, Any]) -> Dict[str, Any]:
     """
     Ne conserve que les clés connues de DEFAULTS.
-    (Évite de réécrire des clés obsolètes comme low_stock_default.)
+    (Évite de réécrire des clés obsolètes.)
     """
     return {k: raw.get(k, DEFAULTS[k]) for k in DEFAULTS.keys()}
 
@@ -63,14 +62,6 @@ def _coerce_types(raw: Dict[str, Any]) -> Dict[str, Any]:
 
     if out["table_mode"] not in ("scroll", "stacked"):
         out["table_mode"] = "scroll"
-
-    # Entiers >= 1
-    try:
-        out["default_shelf_days"] = max(
-            1, int(out.get("default_shelf_days", DEFAULTS["default_shelf_days"]))
-        )
-    except Exception:
-        out["default_shelf_days"] = DEFAULTS["default_shelf_days"]
 
     # Seuils DLC >= 0
     def _int_ge0(v, dflt):
