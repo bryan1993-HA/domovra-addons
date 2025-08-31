@@ -2,6 +2,36 @@
 {% block title %}Domovra — Achats{% endblock %}
 {% block head %}
 <style>
+    /* --- Empêche le "saut" de layout quand le hint EAN apparaît --- */
+    #ean_hint {
+        display: block;
+        min-height: 1.25rem;
+        /* ~1 ligne réservée */
+        line-height: 1.25rem;
+        margin-top: .25rem;
+        /* petit espacement sous l'input */
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        /* évite les retours trop longs */
+    }
+
+    /* Optionnel: même traitement pour l'indication OFF sous "Marque" */
+    #off_qty_hint {
+        display: block;
+        min-height: 1.25rem;
+        line-height: 1.25rem;
+    }
+
+    /* En mobile: autorise 2 lignes max pour éviter l’ellipse trop agressive */
+    @media (max-width:700px) {
+        #ean_hint {
+            white-space: normal;
+            min-height: 2.5rem;
+            /* ~2 lignes */
+        }
+    }
+
     /* Sections & grille locale (n'altère pas ton CSS global) */
     .section {
         margin-top: 1rem;
