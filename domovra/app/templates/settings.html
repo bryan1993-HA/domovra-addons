@@ -86,5 +86,17 @@
         const urlTab = new URL(location.href).searchParams.get('tab');
         show(urlTab || localStorage.getItem(KEY) || 'appearance');
     })();
+    function show(tab) {
+        tabs.forEach(t => t.setAttribute('aria-selected', t.dataset.tab === tab ? 'true' : 'false'));
+        panels.forEach(p => p.hidden = (p.dataset.panel !== tab));
+
+        // cache/affiche le bouton "Enregistrer"
+        document.querySelector('.save-row').style.display =
+            (["appearance", "stock", "toasts", "admindb", "advanced"].includes(tab)) ? "flex" : "none";
+
+        const u = new URL(location.href); u.searchParams.set('tab', tab);
+        history.replaceState(null, '', u);
+        localStorage.setItem(KEY, tab);
+    }
 </script>
 {% endblock %}

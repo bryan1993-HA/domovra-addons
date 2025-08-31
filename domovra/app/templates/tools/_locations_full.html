@@ -2,8 +2,6 @@
 
 <!-- Ajouter un emplacement -->
 <div class="card">
-    <a href="{{ BASE }}_debug/locations" target="_blank" rel="noreferrer">DEBUG JSON</a>
-
     <div class="title">
         <h2>Ajouter un emplacement</h2>
     </div>
@@ -169,6 +167,11 @@
         <div class="field">
             <div class="label">Description</div>
             <input type="text" name="description" id="dlg-location-desc" placeholder="ex. placard haut à gauche">
+        </div>
+        <div class="row" style="justify-content:flex-end;gap:8px">
+            <button type="button" class="secondary"
+                onclick="document.getElementById('dlg-edit').close()">Annuler</button>
+            <button class="secondary">Enregistrer</button>
         </div>
     </form>
 </dialog>
