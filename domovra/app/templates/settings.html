@@ -9,46 +9,43 @@
         <button class="tab" data-tab="appearance" aria-selected="true">Apparence</button>
         <button class="tab" data-tab="stock">Produits & Stocks</button>
         <button class="tab" data-tab="toasts">Notifications</button>
-        <button class="tab" data-tab="journal">Journal</button>
         <button class="tab" data-tab="locations">Emplacements</button>
         <button class="tab" data-tab="admindb">Admin DB</button>
         <button class="tab" data-tab="advanced">Avancés</button>
     </nav>
 
-    <form method="post" action="{{ BASE }}settings/save">
-
+    {# ======= FORM RÉGLAGES UNIQUEMENT ======= #}
+    <form id="settings-form" method="post" action="{{ BASE }}settings/save">
         <section class="panel card" data-panel="appearance">
-            {% include "tools/appearance.html" %}
+            {% include "tools/_appearance.html" %}
         </section>
 
         <section class="panel card" data-panel="stock" hidden>
-            {% include "tools/stock.html" %}
+            {% include "tools/_stock.html" %}
         </section>
 
         <section class="panel card" data-panel="toasts" hidden>
-            {% include "tools/toasts.html" %}
-        </section>
-
-        <section class="panel card" data-panel="journal" hidden>
-            {% include "tools/journal.html" %}
-        </section>
-
-        <section class="panel card" data-panel="locations" hidden>
-            {% include "tools/_locations_full.html" %}
+            {% include "tools/_toasts.html" %}
         </section>
 
         <section class="panel card" data-panel="admindb" hidden>
-            {% include "tools/admindb.html" %}
+            {% include "tools/_admindb.html" %}
         </section>
 
         <section class="panel card" data-panel="advanced" hidden>
-            {% include "tools/advanced.html" %}
+            {% include "tools/_advanced.html" %}
         </section>
 
         <div class="row" style="justify-content:flex-end">
             <button class="secondary">Enregistrer</button>
         </div>
     </form>
+
+    {# ======= PANELS SANS ÊTRE DANS LE FORM GLOBAL ======= #}
+    <section class="panel card" data-panel="locations" hidden>
+        {% include "tools/_locations_full.html" %}
+    </section>
+
 </div>
 
 <style>
@@ -77,11 +74,11 @@
 <script>
     (function () {
         const tabs = document.querySelectorAll('.tabs .tab');
-        const panels = document.querySelectorAll('.panel');
+        const panels = document.querySelectorAll('[data-panel]');
         const KEY = 'settingsActiveTab';
         function show(tab) {
             tabs.forEach(t => t.setAttribute('aria-selected', t.dataset.tab === tab ? 'true' : 'false'));
-            panels.forEach(p => p.hidden = p.dataset.panel !== tab);
+            panels.forEach(p => p.hidden = (p.dataset.panel !== tab));
             const u = new URL(location.href); u.searchParams.set('tab', tab); history.replaceState(null, '', u);
             localStorage.setItem(KEY, tab);
         }
