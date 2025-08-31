@@ -11,6 +11,35 @@
   <meta name="domovra:sidebar" content="{{ '1' if SETTINGS.sidebar_compact else '0' }}">
   <meta name="domovra:toastDuration" content="{{ SETTINGS.toast_duration|default(3000) }}">
 
+  <!-- Override des couleurs de toasts depuis les paramètres -->
+  <style>
+    :root {
+      --toast-ok: {
+          {
+          SETTINGS.toast_ok|default('#4caf50')
+        }
+      }
+
+      ;
+
+      --toast-warn: {
+          {
+          SETTINGS.toast_warn|default('#ffb300')
+        }
+      }
+
+      ;
+
+      --toast-error: {
+          {
+          SETTINGS.toast_error|default('#ef5350')
+        }
+      }
+
+      ;
+    }
+  </style>
+
   <script>
     (function () {
       const mTheme = document.querySelector('meta[name="domovra:theme"]');
@@ -50,9 +79,6 @@
   <!-- Précharge la CSS ; si préload annulé par le navigateur, le <link> normal prend le relai -->
   <link rel="preload" href="{{ BASE }}{{ ASSET_CSS_PATH }}" as="style">
   <link rel="stylesheet" href="{{ BASE }}{{ ASSET_CSS_PATH }}">
-
-
-
 
   {% block head %}{% endblock %}
 </head>

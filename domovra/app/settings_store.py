@@ -12,13 +12,67 @@ DATA_DIR = "/data"
 SETTINGS_PATH = os.path.join(DATA_DIR, "settings.json")
 
 DEFAULTS: Dict[str, Any] = {
-    "theme": "auto",                # auto | light | dark
-    "sidebar_compact": False,       # bool
+    "theme": "auto",                 # auto | light | dark
+    "sidebar_compact": False,        # bool
+
+    # Toasts (désormais persistés)
+    "toast_duration": 3000,          # int >= 500
+    "toast_ok": "#4caf50",           # hex #rgb | #rrggbb
+    "toast_warn": "#ffb300",
+    "toast_error": "#ef5350",
+
     # Seuils DLC gérés par l'UI
-    "retention_days_warning": 30,   # int >= 0
-    "retention_days_critical": 14,  # int >= 0, et <= warning (voir _coerce_types)
-    # (low_stock_default retiré de l'UI ; fallback “1” côté home.py)
+    "retention_days_warning": 30,
+    "retention_days_critical": 14,
 }
+
+def _is_hex_color(s: str) -> bool:
+    if not isinstance(s, str):
+        return False
+    s = s.strip()
+    if not s.startswith("#"):
+        return False
+    h = s[1:]
+    return len(h) in (3, 6) and all(c in "0123456789abcdefABCDEF" for c in h)
+
+def _coerce_types(raw: Dict[str, Any]) -> Dict[str, Any]:
+    clean_in = _only_known_keys(raw or {})
+    out = DEFAULTS.copy()
+    out.update(clean_in)
+
+    # Theme
+    if out["theme"] not in ("auto", "light", "dark"):
+        out["theme"] = "auto"
+
+    # Sidebar compact
+    out["sidebar_compact"] = bool(out.get("sidebar_compact", False))
+
+    # Toasts
+    try:
+        out["toast_duration"] = max(500, int(out.get("toast_duration", DEFAULTS["toast_duration"])))
+    except Exception:
+        out["toast_duration"] = DEFAULTS["toast_duration"]
+
+    for k in ("toast_ok", "toast_warn", "toast_error"):
+        v = str(out.get(k, DEFAULTS[k])).strip()
+        out[k] = v if _is_hex_color(v) else DEFAULTS[k]
+
+    # Seuils DLC >= 0
+    def _int_ge0(v, dflt):
+        try:
+            return max(0, int(v))
+        except Exception:
+            return dflt
+
+    out["retention_days_warning"] = _int_ge0(out.get("retention_days_warning", DEFAULTS["retention_days_warning"]), DEFAULTS["retention_days_warning"])
+    out["retention_days_critical"] = _int_ge0(out.get("retention_days_critical", DEFAULTS["retention_days_critical"]), DEFAULTS["retention_days_critical"])
+
+    # Garde-fou logique
+    if out["retention_days_critical"] > out["retention_days_warning"]:
+        out["retention_days_critical"] = out["retention_days_warning"]
+
+    return out
+
 
 def ensure_data_dir() -> None:
     os.makedirs(DATA_DIR, exist_ok=True)
