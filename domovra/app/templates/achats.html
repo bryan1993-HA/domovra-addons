@@ -227,7 +227,8 @@
                                 data-unit="{{ p.unit or 'pièce' }}" data-name="{{ p.name }}"
                                 data-brand="{{ p.brand or '' }}"
                                 data-default-location="{{ p.default_location_id or '' }}"
-                                data-no-freeze="{{ 1 if p.no_freeze else 0 }}">
+                                data-no-freeze="{{ 1 if p.no_freeze else 0 }}"
+                                data-date-type="{{ p.date_type or 'DLC' }}">
                                 {{ p.name }}{% if p.brand %} — {{ p.brand }}{% endif %}
                             </option>
 
@@ -783,11 +784,23 @@
                 }
             }
 
+            // --- NOUVEAU : adapter le label DLC/DDM selon la fiche parent ---
+            const dateType = ((opt.dataset.dateType || 'DLC') + '').toUpperCase(); // 'DLC' ou 'DDM'
+            const bestBeforeInput = document.querySelector('#best_before');
+            const bestBeforeLabel =
+                bestBeforeInput?.previousElementSibling?.classList.contains('label')
+                    ? bestBeforeInput.previousElementSibling
+                    : null;
+            if (bestBeforeLabel) {
+                bestBeforeLabel.textContent = `${dateType} (optionnel)`;
+            }
+
             setHint(document.querySelector('#product_hint'),
                 `Fiche parent : ${opt.dataset.name}${opt.dataset.brand ? ' — ' + opt.dataset.brand : ''}`);
             setHint(offQtyHint, '');
             updateCalcs();
         });
+
 
         // Facultatif : applique les règles au chargement (ou après sélection via scan)
         try { productSel?.dispatchEvent(new Event('change')); } catch { }
