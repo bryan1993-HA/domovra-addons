@@ -732,7 +732,6 @@
         });
         $('#btn_reset')?.addEventListener('click', () => setTimeout(updateCalcs, 0));
 
-        // === Changement de fiche parent (NE PAS toucher au nom/marque article)
         productSel?.addEventListener('change', () => {
             const opt = productSel.options[productSel.selectedIndex];
             if (!opt) return;
@@ -784,14 +783,25 @@
                 }
             }
 
-            // --- NOUVEAU : adapter le label DLC/DDM selon la fiche parent ---
-            const dateType = ((opt.dataset.dateType || 'DLC') + '').toUpperCase(); // 'DLC' ou 'DDM'
+            // --- Adapter le label DLC/DDM (robuste) ---
+            // 1) Récup type de date depuis l'<option> (plusieurs variantes)
+            const rawDateType =
+                opt.dataset.dateType ??
+                opt.getAttribute('data-date-type') ??
+                opt.dataset.datetype ??
+                opt.dataset.date_type ??
+                'DLC';
+
+            const dateType = String(rawDateType).trim().toUpperCase(); // 'DLC' ou 'DDM'
+
+            // 2) Cibler le bon libellé accolé à #best_before
             const bestBeforeInput = document.querySelector('#best_before');
             const bestBeforeLabel =
-                bestBeforeInput?.previousElementSibling?.classList.contains('label')
-                    ? bestBeforeInput.previousElementSibling
-                    : null;
-            if (bestBeforeLabel) {
+                bestBeforeInput?.closest('.col-4')?.querySelector('.label') ||     // cas général (ton HTML)
+                document.querySelector('label[for="best_before"]') ||               // si tu passes à <label for=...>
+                (bestBeforeInput?.previousElementSibling || null);                  // dernier recours
+
+            if (bestBeforeLabel && bestBeforeLabel.textContent !== `${dateType} (optionnel)`) {
                 bestBeforeLabel.textContent = `${dateType} (optionnel)`;
             }
 
