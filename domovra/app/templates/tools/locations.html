@@ -1,0 +1,13 @@
+<h2>Emplacements</h2>
+<div class="row">
+    <div class="field">
+        <label style="display:flex;align-items:center;gap:.5rem">
+            <input type="checkbox" name="ask_move_on_delete" {{ 'checked' if SETTINGS.ask_move_on_delete|default(true)
+                }}>
+            Proposer de déplacer les lots lors d’une suppression
+        </label>
+    </div>
+    <div class="field">
+        <a class="btn" href="{{ BASE }}locations">Ouvrir la page Emplacements</a>
+    </div>
+</div>

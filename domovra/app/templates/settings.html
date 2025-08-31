@@ -1,198 +1,56 @@
 {% extends "base.html" %}
 {% block title %}Domovra — Paramètres{% endblock %}
 
-{% block head %}{% endblock %}
-
 {% block content %}
 <div class="wrap" data-page="settings">
 
-    <!-- ===== Barre d’onglets sous le titre ===== -->
+    <!-- Onglets -->
     <nav class="tabs" role="tablist" aria-label="Catégories de paramètres">
-        <button class="tab" data-tab="appearance" role="tab" aria-selected="true">Apparence</button>
-        <button class="tab" data-tab="stock" role="tab">Produits & Stocks</button>
-        <button class="tab" data-tab="toasts" role="tab">Notifications</button>
-        <button class="tab" data-tab="journal" role="tab">Journal</button>
-        <button class="tab" data-tab="locations" role="tab">Emplacements</button>
-        <button class="tab" data-tab="admindb" role="tab">Admin DB</button>
-        <button class="tab" data-tab="advanced" role="tab">Avancés</button>
+        <button class="tab" data-tab="appearance" aria-selected="true">Apparence</button>
+        <button class="tab" data-tab="stock">Produits & Stocks</button>
+        <button class="tab" data-tab="toasts">Notifications</button>
+        <button class="tab" data-tab="journal">Journal</button>
+        <button class="tab" data-tab="locations">Emplacements</button>
+        <button class="tab" data-tab="admindb">Admin DB</button>
+        <button class="tab" data-tab="advanced">Avancés</button>
     </nav>
 
     <form method="post" action="{{ BASE }}settings/save">
 
-        <!-- ===== Apparence ===== -->
         <section class="panel card" data-panel="appearance">
-            <h2>Apparence</h2>
-            <div class="row">
-                <div class="field">
-                    <div class="label">Thème</div>
-                    <select name="theme">
-                        <option value="auto" {{ 'selected' if SETTINGS.theme=='auto' }}>Auto</option>
-                        <option value="light" {{ 'selected' if SETTINGS.theme=='light' }}>Clair</option>
-                        <option value="dark" {{ 'selected' if SETTINGS.theme=='dark' }}>Sombre</option>
-                    </select>
-                </div>
-
-                <div class="field">
-                    <div class="label">Affichage des tableaux</div>
-                    <select name="table_mode">
-                        <option value="scroll" {{ 'selected' if SETTINGS.table_mode=='scroll' }}>Défilement horizontal
-                        </option>
-                        <option value="stacked" {{ 'selected' if SETTINGS.table_mode=='stacked' }}>Empilé (mobile)
-                        </option>
-                    </select>
-                </div>
-
-                <div class="field">
-                    <div class="label">Menu latéral compact</div>
-                    <label style="display:flex;align-items:center;gap:8px">
-                        <input type="checkbox" name="sidebar_compact" {{ 'checked' if SETTINGS.sidebar_compact }}>
-                        Activer
-                    </label>
-                </div>
-            </div>
+            {% include "tools/_appearance.html" %}
         </section>
 
-        <!-- ===== Produits / Stocks ===== -->
         <section class="panel card" data-panel="stock" hidden>
-            <h2>Produits / stocks</h2>
-            <div class="row">
-                <div class="field">
-                    <div class="label">Durée de conservation par défaut (jours)</div>
-                    <input type="number" name="default_shelf_days" value="{{ SETTINGS.default_shelf_days|default(90) }}"
-                        min="1">
-                </div>
-
-                <div class="field">
-                    <div class="label">Seuil “faible stock” par défaut</div>
-                    <input type="number" name="low_stock_default" value="{{ SETTINGS.low_stock_default|default(1) }}"
-                        min="0">
-                </div>
-            </div>
+            {% include "tools/_stock.html" %}
         </section>
 
-        <!-- ===== Notifications (toasts) ===== -->
         <section class="panel card" data-panel="toasts" hidden>
-            <h2>Toasts (notifications)</h2>
-            <div class="row">
-                <div class="field">
-                    <div class="label">Durée d’affichage (ms)</div>
-                    <input type="number" name="toast_duration" min="500" step="100"
-                        value="{{ SETTINGS.toast_duration|default(3000) }}">
-                </div>
-
-                <div class="field">
-                    <div class="label">Couleur “Succès”</div>
-                    <input type="color" name="toast_ok" value="{{ SETTINGS.toast_ok|default('#4caf50') }}">
-                </div>
-
-                <div class="field">
-                    <div class="label">Couleur “Avertissement”</div>
-                    <input type="color" name="toast_warn" value="{{ SETTINGS.toast_warn|default('#ffb300') }}">
-                </div>
-
-                <div class="field">
-                    <div class="label">Couleur “Erreur”</div>
-                    <input type="color" name="toast_error" value="{{ SETTINGS.toast_error|default('#ef5350') }}">
-                </div>
-            </div>
+            {% include "tools/_toasts.html" %}
         </section>
 
-        <!-- ===== Journal ===== -->
         <section class="panel card" data-panel="journal" hidden>
-            <h2>Journal</h2>
-            <div class="row">
-                <div class="field">
-                    <div class="label">Purge automatique (jours)</div>
-                    <input type="number" name="log_retention_days" value="{{ SETTINGS.log_retention_days|default(30) }}"
-                        min="0">
-                </div>
-                <div class="field">
-                    <label style="display:flex;align-items:center;gap:.5rem">
-                        <input type="checkbox" name="log_consumption" {{ 'checked' if
-                            SETTINGS.log_consumption|default(true) }}> Tracer les consommations
-                    </label>
-                    <label style="display:flex;align-items:center;gap:.5rem;margin-top:.5rem">
-                        <input type="checkbox" name="log_add_remove" {{ 'checked' if
-                            SETTINGS.log_add_remove|default(true) }}> Tracer ajouts / suppressions
-                    </label>
-                </div>
-                <div class="field">
-                    <a class="btn" href="{{ BASE }}log">Ouvrir la page Journal</a>
-                </div>
-            </div>
+            {% include "tools/_journal.html" %}
         </section>
 
-        <!-- ===== Emplacements ===== -->
         <section class="panel card" data-panel="locations" hidden>
-            <h2>Emplacements</h2>
-            <div class="row">
-                <div class="field">
-                    <label style="display:flex;align-items:center;gap:.5rem">
-                        <input type="checkbox" name="ask_move_on_delete" {{ 'checked' if
-                            SETTINGS.ask_move_on_delete|default(true) }}>
-                        Proposer de déplacer les lots lors d’une suppression
-                    </label>
-                </div>
-                <div class="field">
-                    <a class="btn" href="{{ BASE }}locations">Ouvrir la page Emplacements</a>
-                </div>
-            </div>
+            {% include "tools/_locations.html" %}
         </section>
 
-        <!-- ===== Admin DB ===== -->
         <section class="panel card" data-panel="admindb" hidden>
-            <h2>Admin DB</h2>
-            <div class="row">
-                <div class="field">
-                    <div class="label">Sauvegarde SQLite</div>
-                    <button type="button" class="btn">Exporter domovra.sqlite3</button>
-                </div>
-                <div class="field">
-                    <div class="label">Paramètres UI</div>
-                    <button type="button" class="btn">Exporter /data/settings.json</button>
-                </div>
-                <div class="field">
-                    <a class="btn" href="{{ BASE }}admin">Ouvrir Admin DB</a>
-                </div>
-            </div>
+            {% include "tools/_admindb.html" %}
         </section>
 
-        <!-- ===== Avancés ===== -->
         <section class="panel card" data-panel="advanced" hidden>
-            <h2>Avancés</h2>
-            <div class="row">
-                <div class="field">
-                    <label style="display:flex;align-items:center;gap:.5rem">
-                        <input type="checkbox" name="enable_off_block" {{ 'checked' if
-                            SETTINGS.enable_off_block|default(true) }}>
-                        Afficher le bloc Open Food Facts sur “Fiche produit”
-                    </label>
-                </div>
-                <div class="field">
-                    <label style="display:flex;align-items:center;gap:.5rem">
-                        <input type="checkbox" name="enable_scanner" {{ 'checked' if
-                            SETTINGS.enable_scanner|default(true) }}>
-                        Activer le scanner caméra (BarcodeDetector/ZXing)
-                    </label>
-                </div>
-                <div class="field">
-                    <label style="display:flex;align-items:center;gap:.5rem">
-                        <input type="checkbox" name="ha_notifications" {{ 'checked' if SETTINGS.ha_notifications }}>
-                        Activer les notifications Home Assistant
-                    </label>
-                </div>
-            </div>
+            {% include "tools/_advanced.html" %}
         </section>
 
-        <!-- ===== Bouton Enregistrer ===== -->
         <div class="row" style="justify-content:flex-end">
             <button class="secondary">Enregistrer</button>
         </div>
-
     </form>
 </div>
 
-<!-- ===== Styles très légers pour les onglets (ne casse pas ton thème) ===== -->
 <style>
     .tabs {
         display: flex;
@@ -204,20 +62,13 @@
     .tab {
         padding: .45rem .75rem;
         border-radius: .75rem;
-        border: 1px solid var(--border, rgba(255, 255, 255, .12));
+        border: 1px solid var(--line);
         background: transparent;
         cursor: pointer
     }
 
     .tab[aria-selected="true"] {
         background: rgba(255, 255, 255, .06)
-    }
-
-    .btn {
-        padding: .55rem .9rem;
-        border-radius: .75rem;
-        border: 1px solid var(--border, rgba(255, 255, 255, .12));
-        display: inline-block
     }
 </style>
 {% endblock %}
@@ -228,26 +79,15 @@
         const tabs = document.querySelectorAll('.tabs .tab');
         const panels = document.querySelectorAll('.panel');
         const KEY = 'settingsActiveTab';
-
         function show(tab) {
             tabs.forEach(t => t.setAttribute('aria-selected', t.dataset.tab === tab ? 'true' : 'false'));
-            panels.forEach(p => p.hidden = (p.dataset.panel !== tab));
-            const url = new URL(location.href);
-            url.searchParams.set('tab', tab);
-            history.replaceState(null, '', url);
+            panels.forEach(p => p.hidden = p.dataset.panel !== tab);
+            const u = new URL(location.href); u.searchParams.set('tab', tab); history.replaceState(null, '', u);
             localStorage.setItem(KEY, tab);
         }
-
         tabs.forEach(t => t.addEventListener('click', () => show(t.dataset.tab)));
-
         const urlTab = new URL(location.href).searchParams.get('tab');
-        const stored = localStorage.getItem(KEY);
-        show(urlTab || stored || 'appearance');
-
-        // toasts from query (?ok=1 / ?error=1)
-        const p = new URLSearchParams(location.search);
-        if (p.get('ok') === '1') window.showToast?.('Paramètres enregistrés.', 'ok');
-        if (p.get('error') === '1') window.showToast?.('Erreur lors de l’enregistrement.', 'error');
+        show(urlTab || localStorage.getItem(KEY) || 'appearance');
     })();
 </script>
 {% endblock %}
