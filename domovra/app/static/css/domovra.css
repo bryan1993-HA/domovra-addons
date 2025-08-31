@@ -94,6 +94,10 @@ aside {
     padding: 12px;
     position: relative;
     z-index: 45;
+    display: flex;
+    /* + */
+    flex-direction: column;
+    /* + */
 }
 
 main {
@@ -153,8 +157,18 @@ header {
 }
 
 .menu {
-    display: grid;
+    display: flex;
+    /* grid → flex */
+    flex-direction: column;
+    /* + */
     gap: 8px;
+    flex: 1;
+    /* occupe la hauteur dispo de l'aside */
+}
+
+.menu a:last-child {
+    margin-top: auto;
+    /* pousse “Support” en bas */
 }
 
 .menu a {
