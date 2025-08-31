@@ -6,21 +6,13 @@
 
     <!-- Onglets -->
     <nav class="tabs" role="tablist" aria-label="Catégories de paramètres">
-        {% set _tab = (tab or 'appearance') %}
-        <a class="tab" role="tab" data-tab="appearance" href="{{ BASE }}settings?tab=appearance"
-            aria-selected="{{ 'true' if _tab=='appearance' else 'false' }}">Apparence</a>
-        <a class="tab" role="tab" data-tab="stock" href="{{ BASE }}settings?tab=stock"
-            aria-selected="{{ 'true' if _tab=='stock' else 'false' }}">Produits & Stocks</a>
-        <a class="tab" role="tab" data-tab="toasts" href="{{ BASE }}settings?tab=toasts"
-            aria-selected="{{ 'true' if _tab=='toasts' else 'false' }}">Notifications</a>
-        <a class="tab" role="tab" data-tab="locations" href="{{ BASE }}settings?tab=locations"
-            aria-selected="{{ 'true' if _tab=='locations' else 'false' }}">Emplacements</a>
-        <a class="tab" role="tab" data-tab="admindb" href="{{ BASE }}settings?tab=admindb"
-            aria-selected="{{ 'true' if _tab=='admindb' else 'false' }}">Admin DB</a>
-        <a class="tab" role="tab" data-tab="advanced" href="{{ BASE }}settings?tab=advanced"
-            aria-selected="{{ 'true' if _tab=='advanced' else 'false' }}">Avancés</a>
-        <a class="tab" role="tab" data-tab="journal" href="{{ BASE }}settings?tab=journal"
-            aria-selected="{{ 'true' if _tab=='journal' else 'false' }}">Journal</a>
+        <button type="button" class="tab" data-tab="appearance" aria-selected="true">Apparence</button>
+        <button type="button" class="tab" data-tab="stock">Produits & Stocks</button>
+        <button type="button" class="tab" data-tab="toasts">Notifications</button>
+        <button type="button" class="tab" data-tab="locations">Emplacements</button>
+        <button type="button" class="tab" data-tab="admindb">Admin DB</button>
+        <button type="button" class="tab" data-tab="advanced">Avancés</button>
+        <button type="button" class="tab" data-tab="journal">Journal</button>
     </nav>
 
     {# ======= FORM RÉGLAGES UNIQUEMENT ======= #}
@@ -61,27 +53,28 @@
 </div>
 
 <style>
+    /* 🔒 Empêche tout CSS de forcer l’affichage des éléments [hidden] */
+    [hidden] {
+        display: none !important;
+    }
+
     .tabs {
         display: flex;
         gap: .5rem;
         margin: 0 0 1rem 0;
         flex-wrap: wrap;
         position: relative;
-        /* évite overlay */
         z-index: 2;
+        /* évite d’être recouvert par un overlay */
     }
 
     .tab {
-        text-decoration: none;
-        /* liens stylés comme boutons */
-        display: inline-block;
         padding: .45rem .75rem;
         border-radius: .75rem;
         border: 1px solid var(--line);
         background: transparent;
         cursor: pointer;
         -webkit-tap-highlight-color: transparent;
-        /* confort mobile */
     }
 
     .tab[aria-selected="true"] {
@@ -95,7 +88,7 @@
     (function () {
         const tabs = document.querySelectorAll('.tabs .tab');
         const panels = document.querySelectorAll('[data-panel]');
-        const saveRow = document.querySelector('.save-row'); // bouton global
+        const saveRow = document.querySelector('.save-row'); // 👈 le bouton global
         const KEY = 'settingsActiveTab';
 
         function show(tab) {
@@ -114,14 +107,12 @@
             localStorage.setItem(KEY, tab);
         }
 
-        // Intercepte le clic pour éviter un rechargement complet
         tabs.forEach(t => t.addEventListener('click', (e) => {
-            e.preventDefault();
+            e.preventDefault();    // 👈 crucial sur mobile
             e.stopPropagation();
-            show(e.currentTarget.dataset.tab);
-        }), { passive: true });
+            show(t.dataset.tab);
+        }, { passive: false }));
 
-        // Démarrage : URL > localStorage > 'appearance'
         const urlTab = new URL(location.href).searchParams.get('tab');
         show(urlTab || localStorage.getItem(KEY) || 'appearance');
     })();
