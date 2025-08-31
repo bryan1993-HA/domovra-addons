@@ -1,3 +1,4 @@
+# domovra/app/settings_store.py
 import json
 import os
 import tempfile
@@ -15,7 +16,10 @@ DEFAULTS: Dict[str, Any] = {
     "sidebar_compact": False,     # bool
     "table_mode": "scroll",       # scroll | stacked
     "default_shelf_days": 30,     # int >= 1
-    "low_stock_default": 1,       # int >= 0
+    # Seuils DLC gérés par l'UI
+    "retention_days_warning": 30, # int >= 0
+    "retention_days_critical": 14,# int >= 0, et <= warning (voir _coerce_types)
+    # (low_stock_default supprimé de l'UI ; fallback de sécurité codé côté home.py)
 }
 
 def ensure_data_dir() -> None:
@@ -31,20 +35,35 @@ def _atomic_write_json(path: str, payload: Dict[str, Any]) -> None:
 def _coerce_types(raw: Dict[str, Any]) -> Dict[str, Any]:
     out = DEFAULTS.copy()
     out.update(raw or {})
+
     # Normalisations/validations simples
     if out["theme"] not in ("auto", "light", "dark"):
         out["theme"] = "auto"
+
     out["sidebar_compact"] = bool(out.get("sidebar_compact"))
+
     if out["table_mode"] not in ("scroll", "stacked"):
         out["table_mode"] = "scroll"
+
     try:
         out["default_shelf_days"] = max(1, int(out.get("default_shelf_days", DEFAULTS["default_shelf_days"])))
     except Exception:
         out["default_shelf_days"] = DEFAULTS["default_shelf_days"]
-    try:
-        out["low_stock_default"] = max(0, int(out.get("low_stock_default", DEFAULTS["low_stock_default"])))
-    except Exception:
-        out["low_stock_default"] = DEFAULTS["low_stock_default"]
+
+    # Seuils DLC
+    def _int_ge0(v, dflt):
+        try:
+            return max(0, int(v))
+        except Exception:
+            return dflt
+
+    out["retention_days_warning"]  = _int_ge0(out.get("retention_days_warning",  DEFAULTS["retention_days_warning"]),  DEFAULTS["retention_days_warning"])
+    out["retention_days_critical"] = _int_ge0(out.get("retention_days_critical", DEFAULTS["retention_days_critical"]), DEFAULTS["retention_days_critical"])
+
+    # Garde-fou logique : rouge ≤ jaune
+    if out["retention_days_critical"] > out["retention_days_warning"]:
+        out["retention_days_critical"] = out["retention_days_warning"]
+
     return out
 
 def load_settings() -> Dict[str, Any]:

@@ -26,7 +26,7 @@ def _to_float(x, default=0.0):
 def _enabled_from(raw, default_int_0_or_1: int) -> bool:
     """
     Convertit le champ low_stock_enabled (qui peut être None/'0'/'1'/bool/str) en bool.
-    Si None/'' -> fallback sur le réglage global (default_int_0_or_1).
+    Si None/'' -> fallback sur default_int_0_or_1 (sécurité globale).
     """
     if raw is None or str(raw).strip() == "":
         return bool(int(default_int_0_or_1))
@@ -111,13 +111,12 @@ def index(request: Request):
     for it in lots:
         it["status"] = status_for(it.get("best_before"), WARNING_DAYS, CRITICAL_DAYS)
 
-    # fallback global si low_stock_enabled est None côté DB
-    settings = getattr(request.app.state, "settings", {}) or {}
-    low_stock_default = int(settings.get("low_stock_default", 1))
+    # Sécurité : si une fiche n’a pas de préférence, on suit le stock (1)
+    DEFAULT_LOW_STOCK = 1
 
     # ← calcule les totaux par produit + la liste faible stock
     totals, low_products, _ = _compute_low_products(
-        products, lots, default_follow=low_stock_default
+        products, lots, default_follow=DEFAULT_LOW_STOCK
     )
 
     return render_with_env(
@@ -136,7 +135,6 @@ def index(request: Request):
     )
 
 
-
 # --- DEBUG JSON --------------------------------------------------------------
 
 @router.get("/api/home-debug", response_class=JSONResponse)
@@ -150,10 +148,9 @@ def home_debug(request: Request):
     for it in lots:
         it["status"] = status_for(it.get("best_before"), WARNING_DAYS, CRITICAL_DAYS)
 
-    settings = getattr(request.app.state, "settings", {}) or {}
-    low_stock_default = int(settings.get("low_stock_default", 1))
-
-    totals, low_products, dbg = _compute_low_products(products, lots, default_follow=low_stock_default)
+    # Sécurité : suivre le stock par défaut si une fiche est incomplète
+    DEFAULT_LOW_STOCK = 1
+    totals, low_products, dbg = _compute_low_products(products, lots, default_follow=DEFAULT_LOW_STOCK)
 
     simple_products = [
         {
@@ -179,7 +176,7 @@ def home_debug(request: Request):
     ]
 
     return {
-        "settings": {"low_stock_default": low_stock_default},
+        "settings": {"low_stock_default": DEFAULT_LOW_STOCK},
         "counts": {
             "products": len(products),
             "lots": len(lots),
@@ -191,6 +188,7 @@ def home_debug(request: Request):
         "products": simple_products,
         "lots": simple_lots,
     }
+
 
 # tolère aussi //api/product-info si un client externe l’envoie par erreur
 @router.get("//api/product-info", response_class=JSONResponse)

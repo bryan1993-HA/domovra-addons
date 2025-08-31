@@ -37,7 +37,6 @@ except Exception:  # pragma: no cover
         "log_consumption": True,
         "log_add_remove": True,
         "ask_move_on_delete": False,
-        "low_stock_default": 1,
     }
 
     def _env_int(name: str, default: int) -> int:
@@ -169,7 +168,7 @@ def settings_save(
     toast_ok: str = Form("#4caf50"),
     toast_warn: str = Form("#ffb300"),
     toast_error: str = Form("#ef5350"),
-    # Nouvelles valeurs: seuils DLC (UI)
+    # Seuils DLC (UI)
     retention_days_warning: int = Form(30),
     retention_days_critical: int = Form(14),
     # Divers (déjà existants)
@@ -180,14 +179,13 @@ def settings_save(
     log_consumption: str = Form(None),
     log_add_remove: str = Form(None),
     ask_move_on_delete: str = Form(None),
-    low_stock_default: int = Form(1),
 ):
     base = ingress_base(request)
 
     def as_bool(v) -> bool:
         return str(v).lower() in ("1", "true", "on", "yes")
 
-    # garde-fous
+    # Garde-fous numériques
     try:
         retention_days_warning = max(0, int(retention_days_warning))
     except Exception:
@@ -196,6 +194,10 @@ def settings_save(
         retention_days_critical = max(0, int(retention_days_critical))
     except Exception:
         retention_days_critical = 14
+
+    # 🔒 Garde-fou logique : rouge ne doit pas être > jaune
+    if retention_days_critical > retention_days_warning:
+        retention_days_critical = retention_days_warning
 
     normalized = {
         "theme": theme if theme in ("auto", "light", "dark") else "auto",
@@ -220,11 +222,16 @@ def settings_save(
         "log_consumption": as_bool(log_consumption),
         "log_add_remove": as_bool(log_add_remove),
         "ask_move_on_delete": as_bool(ask_move_on_delete),
-        "low_stock_default": int(low_stock_default or 1),
     }
     try:
-        save_settings(normalized)
-        log_event("settings.update", normalized)
+        saved = save_settings(normalized)
+        # rafraîchir l'état en mémoire (utile pour d'autres champs)
+        try:
+            request.app.state.settings = load_settings()
+        except Exception:
+            pass
+
+        log_event("settings.update", saved)
         return RedirectResponse(
             base + f"settings?ok=1&_={int(time.time())}",
             status_code=303,
