@@ -2474,6 +2474,11 @@ html[data-theme="light"] .menu-wrap .menu .menu-item:hover {
     align-self: center;
 }
 
+/* Kebab: garantit que "hidden" ferme visuellement le menu */
+.menu-wrap .menu[hidden] {
+    display: none !important;
+}
+
 
 /* ========================================================================== */
 /* ========== 15) Page Paramètres (/settings) =============================== */

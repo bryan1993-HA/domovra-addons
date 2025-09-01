@@ -356,30 +356,38 @@
   /* ---- Kebab menu (ouvrir/fermer + clic extérieur + ESC) ---- */
   (function () {
     function closeAllMenus() {
-      document.querySelectorAll('.menu-wrap .menu').forEach(m => m.hidden = true);
+      document.querySelectorAll('.menu-wrap .menu').forEach(m => { m.hidden = true; m.dataset.open = '0'; });
       document.querySelectorAll('.menu-wrap .kebab[aria-expanded="true"]').forEach(b => b.setAttribute('aria-expanded', 'false'));
     }
 
-    // toggle au clic sur kebab
+    // Ferme tout au chargement (au cas où)
+    document.addEventListener('DOMContentLoaded', closeAllMenus);
+
+    // Toggle au clic sur le bouton kebab
     document.addEventListener('click', (e) => {
       const btn = e.target.closest('.menu-wrap .kebab');
       if (btn) {
         const wrap = btn.closest('.menu-wrap');
         const menu = wrap?.querySelector('.menu');
-        const nowOpen = menu?.hidden === true;
+        const isOpen = menu?.dataset.open === '1';
+
+        // fermer d'abord tous les autres
         closeAllMenus();
-        if (menu) {
-          menu.hidden = !nowOpen ? true : false;
-          btn.setAttribute('aria-expanded', nowOpen ? 'true' : 'false');
+
+        // ouvrir si c'était fermé
+        if (menu && !isOpen) {
+          menu.hidden = false;
+          menu.dataset.open = '1';
+          btn.setAttribute('aria-expanded', 'true');
         }
-        e.stopPropagation();
+        // si c'était ouvert, on vient de le fermer via closeAllMenus()
         return;
       }
 
-      // clic dans le menu => ne pas fermer avant l'action
+      // Clic à l'intérieur d'un menu => laisser passer
       if (e.target.closest('.menu-wrap .menu')) return;
 
-      // clic ailleurs => fermer
+      // Clic ailleurs => fermer
       closeAllMenus();
     });
 
@@ -387,6 +395,12 @@
     document.addEventListener('keydown', (e) => {
       if (e.key === 'Escape') closeAllMenus();
     });
+
+    // Quand un <details> se referme, on ferme le menu à l'intérieur
+    document.querySelectorAll('details.more').forEach(d => {
+      d.addEventListener('toggle', () => { if (!d.open) closeAllMenus(); });
+    });
   })();
+
 </script>
 {% endblock %}
