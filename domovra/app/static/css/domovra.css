@@ -2155,7 +2155,7 @@ form.add-product-form.gate-on [data-gate="create"] {
 /* ========== 14) Page Stocks (/lots) — s'aligne sur /products =============== */
 /* ========================================================================== */
 
-/* Filtres (recherche + sélecteurs) */
+/* ===== Filtres (version large par défaut, + correctifs shrink) ============ */
 .wrap .filters-row {
     display: grid;
     grid-template-columns: minmax(0, 2fr) minmax(0, 1fr) minmax(0, 1fr) auto;
@@ -2163,12 +2163,16 @@ form.add-product-form.gate-on [data-gate="create"] {
     align-items: stretch;
 }
 
-/* Empêche les enfants d'élargir la grille (fix débordement mobile) */
 .wrap .filters-row>* {
     min-width: 0;
 }
 
-/* Champ recherche + bouton "?" en flex, sans débordement */
+/* Variante compacte : champ recherche + bouton Filtres */
+.wrap .filters-row.compact {
+    grid-template-columns: 1fr auto;
+    gap: 10px;
+}
+
 .wrap .filters-row .qwrap {
     display: flex;
     gap: 8px;
@@ -2184,6 +2188,19 @@ form.add-product-form.gate-on [data-gate="create"] {
     flex: 0 0 auto;
 }
 
+.wrap .btn-filters {
+    padding: 8px 12px;
+}
+
+/* Ligne méta sous la barre (compteur + résumé) */
+.wrap .filters-meta {
+    margin-top: 8px;
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    align-items: center;
+}
+
 /* Points de rupture */
 @media (max-width:900px) {
     .wrap .filters-row {
@@ -2197,7 +2214,7 @@ form.add-product-form.gate-on [data-gate="create"] {
 
 @media (max-width:700px) {
     .wrap .filters-row {
-        grid-template-columns: 1fr 1fr;
+        grid-template-columns: 1fr auto;
     }
 
     .wrap .filters-row .wide {
@@ -2211,11 +2228,10 @@ form.add-product-form.gate-on [data-gate="create"] {
     .wrap .filters-row .chip {
         grid-column: 1 / -1;
         justify-self: start;
-        /* évite de pousser la grille */
     }
 }
 
-/* Pastille d'état (réutilisée dans l'entête de carte) */
+/* ===== Pastille d'état (réutilisée dans l'entête de carte) ================ */
 .wrap .status {
     margin-left: auto;
     display: inline-flex;
@@ -2239,7 +2255,7 @@ form.add-product-form.gate-on [data-gate="create"] {
     background: rgba(239, 83, 80, .12);
 }
 
-/* Bloc Dates (utilisé dans .stat.full comme /products) */
+/* ===== Bloc Dates (utilisé dans .stat.full comme /products) =============== */
 .wrap details.dates {
     margin-top: 6px;
 }
@@ -2274,7 +2290,7 @@ form.add-product-form.gate-on [data-gate="create"] {
     background: transparent;
 }
 
-/* Dialog: actions côte à côte et boutons visibles */
+/* ===== Dialog: actions côte à côte et boutons visibles ==================== */
 .wrap dialog.modal .dlg-actions,
 #dlg-delete .dlg-actions {
     display: flex;
@@ -2282,14 +2298,13 @@ form.add-product-form.gate-on [data-gate="create"] {
     justify-content: flex-end;
 }
 
-/* Les boutons du dialog ne doivent PAS être en 100% largeur */
 .wrap dialog.modal .dlg-actions button,
 #dlg-delete .dlg-actions button {
     width: auto;
     min-width: 120px;
 }
 
-/* Styles des boutons d’action */
+/* ===== Styles des boutons d’action ======================================= */
 .btn-danger {
     background: var(--toast-error);
     border: 0;
@@ -2303,13 +2318,13 @@ form.add-product-form.gate-on [data-gate="create"] {
     border: 1px solid var(--line);
 }
 
-/* Empilement propre en mobile (dialogs) */
+/* ===== Empilement propre en mobile (dialogs) ============================= */
 @media (max-width:700px) {
 
     .wrap dialog.modal .dlg-actions,
     #dlg-delete .dlg-actions {
         flex-direction: column-reverse;
-        /* Annuler en haut, Supprimer bien visible en bas */
+        /* Annuler en haut, Supprimer en bas */
         align-items: stretch;
     }
 
@@ -2318,6 +2333,104 @@ form.add-product-form.gate-on [data-gate="create"] {
         width: 100%;
         min-width: 0;
     }
+}
+
+/* ====== Ajouts "mode compact" pour les cartes ============================ */
+.wrap .prod-card {
+    padding: 10px 12px;
+}
+
+.wrap .pc-head {
+    display: flex;
+    gap: 10px;
+    align-items: flex-start;
+}
+
+.wrap .pc-title {
+    min-width: 0;
+}
+
+/* autorise l'ellipse */
+.wrap .pc-name {
+    margin: 0;
+    font-size: 15px;
+    line-height: 1.25;
+}
+
+.wrap .pc-meta {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 100%;
+    font-size: 12px;
+}
+
+.wrap .pc-body .stat.full {
+    padding: 6px 0;
+}
+
+.wrap .timeline .pill {
+    padding: 2px 6px;
+    font-size: 12px;
+}
+
+/* Actions compactes (icônes) dans <details> */
+.wrap .actions-compact {
+    display: flex;
+    gap: 8px;
+    margin-top: 8px;
+}
+
+.icon-btn.small {
+    width: 34px;
+    height: 34px;
+    display: inline-grid;
+    place-items: center;
+    border: 1px solid var(--line);
+    background: transparent;
+    border-radius: 10px;
+    font-size: 16px;
+    line-height: 1;
+    cursor: pointer;
+}
+
+.icon-btn.small.danger {
+    color: #b3261e;
+    border-color: rgba(179, 38, 30, .35);
+}
+
+.icon-btn.small:hover {
+    background: var(--hover, rgba(255, 255, 255, .06));
+}
+
+html[data-theme="light"] .icon-btn.small:hover {
+    background: #f3f6fb;
+}
+
+/* Dialog Filtres (compact) */
+#dlg-filters.modal.small {
+    max-width: 520px;
+}
+
+#dlg-filters .fields {
+    display: grid;
+    gap: 10px;
+    grid-template-columns: 1fr;
+}
+
+@media (min-width: 540px) {
+    #dlg-filters .fields {
+        grid-template-columns: 1fr 1fr;
+    }
+}
+
+#dlg-filters select {
+    width: 100%;
+}
+
+/* Résumé des filtres (chip) */
+#filters-summary {
+    align-self: center;
 }
 
 

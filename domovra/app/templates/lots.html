@@ -1,8 +1,7 @@
 {% extends "base.html" %}
 {% block title %}Domovra — Stocks{% endblock %}
 
-{% block head %}
-{% endblock %}
+{% block head %}{% endblock %}
 
 {% block header_right %}
 <span class="chip">🧺 Stocks : <b>{{ items|length }}</b></span>
@@ -17,31 +16,23 @@
       <span class="muted">→ lots issus des achats</span>
     </div>
 
-    <div class="filters-row">
+    <!-- Barre compacte : recherche + bouton Filtres -->
+    <div class="filters-row compact">
       <div class="qwrap wide">
         <input id="q" type="search" placeholder="Rechercher (produit, emplacement, EAN)…">
         <button type="button" class="icon-btn" aria-label="Aide recherche"
           onclick="document.getElementById('q-help')?.showModal()">?</button>
       </div>
 
-      <select id="f_loc">
-        <option value="">📍 Tous emplacements</option>
-        {% for l in locations %}<option value="{{ l.name|lower }}">{{ l.name }}</option>{% endfor %}
-      </select>
+      <button type="button" class="btn ghost btn-filters" onclick="document.getElementById('dlg-filters')?.showModal()">
+        Filtres
+      </button>
+    </div>
 
-      <select id="f_prod">
-        <option value="">🧾 Tous produits</option>
-        {% for p in products %}<option value="{{ p.name|lower }}">{{ p.name }}</option>{% endfor %}
-      </select>
-
-      <select id="f_status">
-        <option value="">⚑ Tous états</option>
-        <option value="green">OK</option>
-        <option value="yellow">Bientôt</option>
-        <option value="red">Urgent</option>
-      </select>
-
+    <!-- Ligne méta : compteur + résumé des filtres -->
+    <div class="filters-meta">
       <span class="chip">🧺 Stocks : <b id="lots-count">{{ items|length }}</b></span>
+      <span class="chip" id="filters-summary" hidden></span>
     </div>
   </div>
 
@@ -86,15 +77,7 @@
             {% if it.store %} • 🛍️ {{ it.store }}{% endif %}
           </div>
         </div>
-
-        <div class="pc-actions">
-          <button class="btn small secondary btn-edit" data-id="{{ it.id }}" data-qty="{{ it.qty }}"
-            data-loc="{{ it.location_id }}" data-frozen="{{ it.frozen_on }}"
-            data-bb="{{ it.best_before }}">Modifier</button>
-          <button class="btn small danger btn-delete" data-id="{{ it.id }}"
-            data-product="{{ it.name or it.article_name or it.product }}">Supprimer</button>
-        </div>
-
+        {# (actions retirées du header en mode compact) #}
       </div>
 
       <!-- Corps -->
@@ -137,6 +120,17 @@
               <span class="v">{{ it.note }}</span>
             </div>
             {% endif %}
+
+            <!-- Actions compactes (icônes) -->
+            <div class="actions-compact">
+              <button class="icon-btn small btn-edit" aria-label="Modifier" title="Modifier" data-id="{{ it.id }}"
+                data-qty="{{ it.qty }}" data-loc="{{ it.location_id }}" data-frozen="{{ it.frozen_on }}"
+                data-bb="{{ it.best_before }}">✏️</button>
+
+              <button class="icon-btn small danger btn-delete" aria-label="Supprimer" title="Supprimer"
+                data-id="{{ it.id }}" data-product="{{ it.name or it.article_name or it.product }}">🗑️</button>
+            </div>
+
           </details>
         </div>
       </div>
@@ -162,7 +156,47 @@
   </div>
 </dialog>
 
-<!-- Dialogs -->
+<!-- Dialog Filtres -->
+<dialog id="dlg-filters" class="modal small">
+  <form class="filters-form" method="dialog" onsubmit="return false;">
+    <h3 class="dlg-title">Filtres</h3>
+
+    <div class="fields">
+      <div class="field">
+        <div class="label">Emplacement</div>
+        <select id="f_loc">
+          <option value="">📍 Tous emplacements</option>
+          {% for l in locations %}<option value="{{ l.name|lower }}">{{ l.name }}</option>{% endfor %}
+        </select>
+      </div>
+
+      <div class="field">
+        <div class="label">Produit</div>
+        <select id="f_prod">
+          <option value="">🧾 Tous produits</option>
+          {% for p in products %}<option value="{{ p.name|lower }}">{{ p.name }}</option>{% endfor %}
+        </select>
+      </div>
+
+      <div class="field">
+        <div class="label">État</div>
+        <select id="f_status">
+          <option value="">⚑ Tous états</option>
+          <option value="green">OK</option>
+          <option value="yellow">Bientôt</option>
+          <option value="red">Urgent</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="dlg-actions">
+      <button type="button" class="btn-cancel" id="filters-reset">Réinitialiser</button>
+      <button type="button" class="btn-save secondary" id="filters-apply">Appliquer</button>
+    </div>
+  </form>
+</dialog>
+
+<!-- Dialogs Edit / Delete -->
 <dialog id="dlg-edit" class="modal">
   <form method="post" action="{{ BASE }}lot/update" class="edit-form">
     <h3 class="dlg-title">Modifier le stock</h3>
@@ -282,6 +316,52 @@
     delDialog?.querySelector('form')?.addEventListener('keydown', (e) => {
       if (e.key === 'Enter' && e.target.tagName !== 'TEXTAREA') e.preventDefault();
     });
+  })();
+
+  /* ---- Filtres (dialog) ---- */
+  (function () {
+    const dlg = document.getElementById('dlg-filters');
+    const btnApply = document.getElementById('filters-apply');
+    const btnReset = document.getElementById('filters-reset');
+    const fLoc = document.getElementById('f_loc');
+    const fProd = document.getElementById('f_prod');
+    const fStatus = document.getElementById('f_status');
+    const summary = document.getElementById('filters-summary');
+
+    function updateSummary() {
+      const parts = [];
+      const vLoc = (fLoc?.value || '').trim();
+      const vProd = (fProd?.value || '').trim();
+      const vSt = (fStatus?.value || '').trim();
+      if (vLoc) parts.push('📍 ' + fLoc.options[fLoc.selectedIndex].text);
+      if (vProd) parts.push('🧾 ' + fProd.options[fProd.selectedIndex].text);
+      if (vSt) parts.push('⚑ ' + (vSt === 'green' ? 'OK' : vSt === 'yellow' ? 'Bientôt' : 'Urgent'));
+      if (summary) {
+        if (parts.length) {
+          summary.textContent = parts.join(' · ');
+          summary.hidden = false;
+        } else {
+          summary.hidden = true;
+          summary.textContent = '';
+        }
+      }
+    }
+
+    btnApply?.addEventListener('click', () => {
+      dlg?.close();
+      updateSummary();
+      applyFilter();
+    });
+
+    btnReset?.addEventListener('click', () => {
+      if (fLoc) fLoc.value = '';
+      if (fProd) fProd.value = '';
+      if (fStatus) fStatus.value = '';
+      updateSummary();
+      applyFilter();
+    });
+
+    [fLoc, fProd, fStatus].forEach(el => el && el.addEventListener('input', updateSummary));
   })();
 </script>
 {% endblock %}
