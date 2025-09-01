@@ -34,6 +34,7 @@ from routes.api import router as api_router
 from routes.debug import router as debug_router
 from routes.admin_db import router as admin_db_router
 from routes.shopping import router as shopping_router
+from routes.ha import router as ha_router
 
 
 # DB (uniquement ce dont on a besoin ici)
@@ -153,6 +154,8 @@ app.include_router(shopping_router)
 app.include_router(api_router)
 app.include_router(debug_router)
 app.include_router(admin_db_router)
+app.include_router(ha_router)
+
 
 # ============================================================
 # Endpoint pour Home Assistant (résumé entités)
