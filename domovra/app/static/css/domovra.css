@@ -2342,18 +2342,21 @@ form.add-product-form.gate-on [data-gate="create"] {
     align-items: flex-start;
 }
 
+/* Forcer la méta sous le titre */
 .wrap .pc-title {
-    min-width: 0;
+    display: block;
 }
 
-/* autorise l'ellipse */
 .wrap .pc-name {
+    display: block;
     margin: 0;
     font-size: 15px;
     line-height: 1.25;
 }
 
 .wrap .pc-meta {
+    display: block;
+    margin-top: 2px;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -2478,7 +2481,6 @@ html[data-theme="light"] .menu-wrap .menu .menu-item:hover {
 .menu-wrap .menu[hidden] {
     display: none !important;
 }
-
 
 /* ========================================================================== */
 /* ========== 15) Page Paramètres (/settings) =============================== */
