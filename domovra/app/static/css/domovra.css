@@ -2184,10 +2184,6 @@ form.add-product-form.gate-on [data-gate="create"] {
     min-width: 0;
 }
 
-.wrap .filters-row .qwrap .icon-btn {
-    flex: 0 0 auto;
-}
-
 .wrap .btn-filters {
     padding: 8px 12px;
 }
@@ -2374,14 +2370,22 @@ form.add-product-form.gate-on [data-gate="create"] {
     font-size: 12px;
 }
 
-/* Actions compactes (icônes) dans <details> */
-.wrap .actions-compact {
+/* ====== Détails: tête + kebab ============================================ */
+.wrap .more-head {
     display: flex;
-    gap: 8px;
-    margin-top: 8px;
+    align-items: center;
+    margin: 4px 0 8px 0;
 }
 
-.icon-btn.small {
+.wrap .more-head .spacer {
+    flex: 1 1 auto;
+}
+
+.wrap .menu-wrap {
+    position: relative;
+}
+
+.icon-btn.small.kebab {
     width: 34px;
     height: 34px;
     display: inline-grid;
@@ -2389,22 +2393,59 @@ form.add-product-form.gate-on [data-gate="create"] {
     border: 1px solid var(--line);
     background: transparent;
     border-radius: 10px;
-    font-size: 16px;
+    font-size: 18px;
     line-height: 1;
     cursor: pointer;
 }
 
-.icon-btn.small.danger {
-    color: #b3261e;
-    border-color: rgba(179, 38, 30, .35);
-}
-
-.icon-btn.small:hover {
+.icon-btn.small.kebab:hover {
     background: var(--hover, rgba(255, 255, 255, .06));
 }
 
-html[data-theme="light"] .icon-btn.small:hover {
+html[data-theme="light"] .icon-btn.small.kebab:hover {
     background: #f3f6fb;
+}
+
+/* Menu déroulant */
+.wrap .menu-wrap .menu {
+    position: absolute;
+    top: 40px;
+    right: 0;
+    min-width: 180px;
+    background: var(--panel, #0f1624);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 6px;
+    box-shadow: 0 16px 36px rgba(0, 0, 0, .35);
+    z-index: 50;
+}
+
+html[data-theme="light"] .menu-wrap .menu {
+    background: #fff;
+    box-shadow: 0 12px 28px rgba(10, 20, 30, .15);
+}
+
+.wrap .menu-wrap .menu .menu-item {
+    width: 100%;
+    text-align: left;
+    padding: 8px 10px;
+    border: 0;
+    background: transparent;
+    border-radius: 8px;
+    cursor: pointer;
+    font: inherit;
+}
+
+.wrap .menu-wrap .menu .menu-item:hover {
+    background: var(--hover, rgba(255, 255, 255, .06));
+}
+
+html[data-theme="light"] .menu-wrap .menu .menu-item:hover {
+    background: #f3f6fb;
+}
+
+.wrap .menu-wrap .menu .menu-item.danger {
+    color: #b3261e;
 }
 
 /* Dialog Filtres (compact) */

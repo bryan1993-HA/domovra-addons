@@ -16,12 +16,10 @@
       <span class="muted">→ lots issus des achats</span>
     </div>
 
-    <!-- Barre compacte : recherche + bouton Filtres -->
+    <!-- Barre compacte : recherche + bouton Filtres (sans "?") -->
     <div class="filters-row compact">
       <div class="qwrap wide">
         <input id="q" type="search" placeholder="Rechercher (produit, emplacement, EAN)…">
-        <button type="button" class="icon-btn" aria-label="Aide recherche"
-          onclick="document.getElementById('q-help')?.showModal()">?</button>
       </div>
 
       <button type="button" class="btn ghost btn-filters" onclick="document.getElementById('dlg-filters')?.showModal()">
@@ -77,7 +75,7 @@
             {% if it.store %} • 🛍️ {{ it.store }}{% endif %}
           </div>
         </div>
-        {# (actions retirées du header en mode compact) #}
+        {# plus d'actions dans le header en mode compact #}
       </div>
 
       <!-- Corps -->
@@ -86,6 +84,22 @@
           <span class="k">Plus d'informations</span>
           <details class="more">
             <summary>➕ Plus d'informations</summary>
+
+            <!-- Tête du panneau détails avec kebab à droite -->
+            <div class="more-head">
+              <div class="spacer"></div>
+              <div class="menu-wrap">
+                <button class="icon-btn small kebab" aria-label="Actions" aria-haspopup="menu"
+                  aria-expanded="false">⋮</button>
+                <div class="menu" role="menu" hidden>
+                  <button class="menu-item btn-edit" role="menuitem" data-id="{{ it.id }}" data-qty="{{ it.qty }}"
+                    data-loc="{{ it.location_id }}" data-frozen="{{ it.frozen_on }}" data-bb="{{ it.best_before }}">✏️
+                    Modifier</button>
+                  <button class="menu-item danger btn-delete" role="menuitem" data-id="{{ it.id }}"
+                    data-product="{{ it.name or it.article_name or it.product }}">🗑️ Supprimer</button>
+                </div>
+              </div>
+            </div>
 
             <div class="kv">
               <div class="row"><span class="k">Quantité totale</span><span class="v">{{ it.qty }} {{ (it.unit or
@@ -120,17 +134,6 @@
               <span class="v">{{ it.note }}</span>
             </div>
             {% endif %}
-
-            <!-- Actions compactes (icônes) -->
-            <div class="actions-compact">
-              <button class="icon-btn small btn-edit" aria-label="Modifier" title="Modifier" data-id="{{ it.id }}"
-                data-qty="{{ it.qty }}" data-loc="{{ it.location_id }}" data-frozen="{{ it.frozen_on }}"
-                data-bb="{{ it.best_before }}">✏️</button>
-
-              <button class="icon-btn small danger btn-delete" aria-label="Supprimer" title="Supprimer"
-                data-id="{{ it.id }}" data-product="{{ it.name or it.article_name or it.product }}">🗑️</button>
-            </div>
-
           </details>
         </div>
       </div>
@@ -141,20 +144,6 @@
     {% endif %}
   </div>
 </div>
-
-<!-- Aide recherche -->
-<dialog id="q-help" class="modal">
-  <div class="prose">
-    <h3>Recherche dans les stocks</h3>
-    <ul>
-      <li>Par nom de produit, code-barres (EAN) et emplacement</li>
-      <li>Filtres par emplacement, produit et état</li>
-    </ul>
-  </div>
-  <div class="dlg-actions">
-    <button class="btn-cancel" onclick="this.closest('dialog')?.close()">Fermer</button>
-  </div>
-</dialog>
 
 <!-- Dialog Filtres -->
 <dialog id="dlg-filters" class="modal small">
@@ -362,6 +351,42 @@
     });
 
     [fLoc, fProd, fStatus].forEach(el => el && el.addEventListener('input', updateSummary));
+  })();
+
+  /* ---- Kebab menu (ouvrir/fermer + clic extérieur + ESC) ---- */
+  (function () {
+    function closeAllMenus() {
+      document.querySelectorAll('.menu-wrap .menu').forEach(m => m.hidden = true);
+      document.querySelectorAll('.menu-wrap .kebab[aria-expanded="true"]').forEach(b => b.setAttribute('aria-expanded', 'false'));
+    }
+
+    // toggle au clic sur kebab
+    document.addEventListener('click', (e) => {
+      const btn = e.target.closest('.menu-wrap .kebab');
+      if (btn) {
+        const wrap = btn.closest('.menu-wrap');
+        const menu = wrap?.querySelector('.menu');
+        const nowOpen = menu?.hidden === true;
+        closeAllMenus();
+        if (menu) {
+          menu.hidden = !nowOpen ? true : false;
+          btn.setAttribute('aria-expanded', nowOpen ? 'true' : 'false');
+        }
+        e.stopPropagation();
+        return;
+      }
+
+      // clic dans le menu => ne pas fermer avant l'action
+      if (e.target.closest('.menu-wrap .menu')) return;
+
+      // clic ailleurs => fermer
+      closeAllMenus();
+    });
+
+    // ESC pour fermer
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') closeAllMenus();
+    });
   })();
 </script>
 {% endblock %}
