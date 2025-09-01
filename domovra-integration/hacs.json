@@ -1,8 +1,0 @@
-{
-    "name": "Domovra",
-    "render_readme": true,
-    "domains": [
-        "sensor"
-    ],
-    "homeassistant": "2023.9.0"
-}
