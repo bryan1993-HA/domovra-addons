@@ -11,7 +11,7 @@ from config import DB_PATH, get_retention_thresholds
 router = APIRouter(prefix="/api/ha", tags=["home-assistant"])
 
 
-# --------- Utils introspection SQLite ----------------------------------------
+# ---------- Introspection SQLite --------------------------------------------
 def _table_exists(conn: sqlite3.Connection, table: str) -> bool:
     cur = conn.execute(
         "SELECT 1 FROM sqlite_master WHERE type='table' AND name=? LIMIT 1",
@@ -35,7 +35,6 @@ def _columns(conn: sqlite3.Connection, table: str) -> Set[str]:
 
 
 def _find_activation_column(cols: Set[str]) -> Optional[str]:
-    # Reconnaît diverses conventions pour le flag d’activation
     for c in ("active", "enabled", "is_active"):
         if c in cols:
             return c
@@ -44,10 +43,9 @@ def _find_activation_column(cols: Set[str]) -> Optional[str]:
 
 def _guess_lots_table(conn: sqlite3.Connection) -> Optional[str]:
     """
-    Heuristique pour trouver la table des "lots".
-    Critères principaux :
-      - colonne best_before
-      - colonne qty OU quantity
+    Trouve la table des lots :
+      - doit avoir best_before
+      - et qty OU quantity
     Bonus si le nom évoque lot/stock/batch/invent…
     """
     candidates: List[Tuple[int, str]] = []
@@ -61,7 +59,6 @@ def _guess_lots_table(conn: sqlite3.Connection) -> Optional[str]:
             candidates.append((score, t))
 
     if not candidates:
-        # Fallback minimaliste : tenter 'lots' si existante
         if _table_exists(conn, "lots"):
             return "lots"
         return None
@@ -70,16 +67,16 @@ def _guess_lots_table(conn: sqlite3.Connection) -> Optional[str]:
     return candidates[0][1]
 
 
-# --------- Construction dynamique des requêtes lots --------------------------
+# ---------- Construction FROM/WHERE dynamique (lots “actifs”) ----------------
 def _build_from_where_for_lots(
     conn: sqlite3.Connection, lots_table: str
 ) -> Tuple[str, str, Tuple]:
     """
-    Construit dynamiquement la clause FROM/WHERE pour compter les lots en
-    respectant les flags d’activation s’ils existent.
-
-    - Filtre lots.<active>=1 si dispo.
-    - Joint products si possible pour exiger products.<active>=1.
+    Construit FROM/WHERE en ne gardant que les lots *actifs* si les colonnes existent :
+      - status ∈ ('open','active') si L.status existe
+      - ended_on est NULL/'' si L.ended_on existe
+      - qty > 0 si L.qty existe
+      - + jointure produits actifs si possible
     """
     pcols = _columns(conn, "products") if _table_exists(conn, "products") else set()
     lcols = _columns(conn, lots_table)
@@ -88,17 +85,21 @@ def _build_from_where_for_lots(
     l_has_product_id = "product_id" in lcols
 
     p_active_col = _find_activation_column(pcols) if pcols else None
-    l_active_col = _find_activation_column(lcols)
 
     params: List[object] = []
     from_clause = f"{lots_table} AS L"
     where_parts: List[str] = []
 
-    # Activation côté lots
-    if l_active_col:
-        where_parts.append(f"L.{l_active_col} = 1")
+    # Filtre d'état “actif” côté lots
+    if "status" in lcols:
+        # Par défaut on traite NULL/valeurs non reconnues comme inactives ? Non → on whiteliste open/active
+        where_parts.append("COALESCE(L.status, 'open') IN ('open','active')")
+    if "ended_on" in lcols:
+        where_parts.append("(L.ended_on IS NULL OR L.ended_on = '')")
+    if "qty" in lcols:
+        where_parts.append("L.qty > 0")
 
-    # Activation côté produit (via jointure)
+    # Produits actifs via jointure
     if p_has_id and l_has_product_id and p_active_col:
         from_clause += " JOIN products AS P ON P.id = L.product_id"
         where_parts.append(f"P.{p_active_col} = 1")
@@ -110,11 +111,11 @@ def _build_from_where_for_lots(
 @router.get("/summary")
 def ha_summary():
     """
-    Compteurs Home Assistant (version 'actifs uniquement' si colonnes dispos) :
+    Compteurs Home Assistant (uniquement *actifs* quand les colonnes existent) :
       - products : COUNT(*) FROM products [WHERE active=1 si dispo]
-      - lots     : COUNT(*) FROM <lots> [WHERE L.active=1] [AND P.active=1 via JOIN products]
-      - urgent   : lots avec days_left <= crit_days (actifs uniquement)
-      - soon     : crit_days < days_left <= warn_days (actifs uniquement)
+      - lots     : COUNT(*) FROM <lots actifs>
+      - urgent   : lots actifs avec days_left <= crit_days
+      - soon     : lots actifs avec crit_days < days_left <= warn_days
 
     days_left = julianday(best_before) - julianday(today)
     """
@@ -131,7 +132,7 @@ def ha_summary():
         conn = sqlite3.connect(DB_PATH)
         conn.row_factory = sqlite3.Row
 
-        # ---------------- PRODUCTS (avec filtre 'active' si dispo) ------------
+        # ---- PRODUCTS (actifs si possible) -----------------------------------
         if _table_exists(conn, "products"):
             pcols = _columns(conn, "products")
             p_active_col = _find_activation_column(pcols)
@@ -146,7 +147,7 @@ def ha_summary():
             except sqlite3.Error:
                 products_count = 0
 
-        # ---------------- LOTS (détection + filtres d’activation) --------------
+        # ---- LOTS (table + filtres “actifs”) ---------------------------------
         lots_table = None
         try:
             lots_table = _guess_lots_table(conn)
@@ -157,7 +158,7 @@ def ha_summary():
             try:
                 from_clause, where_clause, params = _build_from_where_for_lots(conn, lots_table)
 
-                # Total lots (sans condition qty, même logique que lots|length)
+                # Total lots actifs
                 row = conn.execute(
                     f"SELECT COUNT(*) AS c FROM {from_clause} WHERE {where_clause}",
                     params,
@@ -166,7 +167,7 @@ def ha_summary():
             except sqlite3.Error:
                 lots_count = 0
 
-            # URGENTS : days_left <= crit_days (actifs uniquement)
+            # URGENTS (sur lots actifs)
             try:
                 row = conn.execute(
                     f"""
@@ -183,7 +184,7 @@ def ha_summary():
             except sqlite3.Error:
                 urgent_count = 0
 
-            # BIENTÔT : crit_days < days_left <= warn_days (actifs uniquement)
+            # BIENTÔT (sur lots actifs)
             try:
                 row = conn.execute(
                     f"""
@@ -200,7 +201,7 @@ def ha_summary():
                 soon_count = int(row["c"] if row and row["c"] is not None else 0)
             except sqlite3.Error:
                 soon_count = 0
-        # sinon : pas de table lots plausible → compteurs à 0 (tolérant)
+        # sinon : pas de table plausible → compteurs à 0
 
     except sqlite3.Error as e:
         raise HTTPException(status_code=500, detail=f"SQLite error: {e}") from e
