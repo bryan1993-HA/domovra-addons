@@ -1,0 +1,21 @@
+<h2>Avancés</h2>
+<div class="row">
+  <div class="field">
+    <label style="display:flex;align-items:center;gap:.5rem">
+      <input type="checkbox" name="enable_off_block" {{ 'checked' if SETTINGS.enable_off_block|default(true) }}>
+      Afficher le bloc Open Food Facts sur “Fiche produit”
+    </label>
+  </div>
+  <div class="field">
+    <label style="display:flex;align-items:center;gap:.5rem">
+      <input type="checkbox" name="enable_scanner" {{ 'checked' if SETTINGS.enable_scanner|default(true) }}>
+      Activer le scanner caméra (BarcodeDetector/ZXing)
+    </label>
+  </div>
+  <div class="field">
+    <label style="display:flex;align-items:center;gap:.5rem">
+      <input type="checkbox" name="ha_notifications" {{ 'checked' if SETTINGS.ha_notifications }}>
+      Activer les notifications Home Assistant
+    </label>
+  </div>
+</div>

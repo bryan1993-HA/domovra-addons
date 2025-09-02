@@ -1,0 +1,946 @@
+{% extends "base.html" %}
+{% block title %}Domovra — Achats{% endblock %}
+{% block head %}
+<style>
+    #ean_hint {
+        margin-top: .25rem;
+    }
+
+    /* Sections & grille locale (n'altère pas ton CSS global) */
+    .section {
+        margin-top: 1rem;
+        padding-top: 1rem;
+        border-top: 1px solid var(--line, rgba(255, 255, 255, .08));
+    }
+
+    .section:first-of-type {
+        margin-top: .25rem;
+        padding-top: 0;
+        border-top: 0;
+    }
+
+    .section .section-title {
+        display: flex;
+        align-items: baseline;
+        gap: .5rem;
+        margin: .25rem 0 .75rem;
+    }
+
+    .section .section-title h3 {
+        font-size: 1.05rem;
+        margin: 0;
+    }
+
+    .section .section-title .muted {
+        font-size: .9rem;
+        opacity: .8;
+    }
+
+    .row {
+        display: grid;
+        grid-template-columns: repeat(12, 1fr);
+        gap: .75rem;
+    }
+
+    .col-12 {
+        grid-column: span 12;
+    }
+
+    .col-9 {
+        grid-column: span 9;
+    }
+
+    .col-8 {
+        grid-column: span 8;
+    }
+
+    .col-6 {
+        grid-column: span 6;
+    }
+
+    .col-4 {
+        grid-column: span 4;
+    }
+
+    .col-3 {
+        grid-column: span 3;
+    }
+
+    .end {
+        justify-self: end;
+    }
+
+    .inline {
+        display: flex;
+        gap: .5rem;
+        align-items: center;
+    }
+
+    .inline>* {
+        min-width: 0;
+    }
+
+    .hint {
+        opacity: .85;
+    }
+
+    /* Modale scanner (overlay plein écran) */
+    .scan-modal {
+        position: fixed;
+        inset: 0;
+        z-index: 10000;
+        background: rgba(0, 0, 0, .65);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .scan-modal.hidden {
+        display: none;
+    }
+
+    .scan-box {
+        position: relative;
+        width: min(92vw, 700px);
+        aspect-ratio: 3/4;
+        background: #000;
+        border-radius: 16px;
+        overflow: hidden;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, .4);
+    }
+
+    #scan_video,
+    #scan_overlay {
+        position: absolute;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+
+    .scan-hud {
+        position: absolute;
+        right: .75rem;
+        top: .75rem;
+        display: flex;
+        gap: .5rem;
+        z-index: 3
+    }
+
+    .scan-tip {
+        position: absolute;
+        left: 0;
+        right: 0;
+        bottom: .5rem;
+        text-align: center;
+        color: #fff;
+        font-weight: 600;
+        text-shadow: 0 1px 2px #000;
+        z-index: 3
+    }
+
+    .scan-frame {
+        position: absolute;
+        inset: 12% 8%;
+        border: 3px solid rgba(255, 255, 255, .8);
+        border-radius: 12px;
+        box-shadow: 0 0 0 200vmax rgba(0, 0, 0, .35);
+        z-index: 2;
+    }
+
+    .scan-frame::after {
+        content: "";
+        position: absolute;
+        left: 10%;
+        right: 10%;
+        top: 50%;
+        height: 2px;
+        background: rgba(0, 255, 128, .9);
+        box-shadow: 0 0 12px rgba(0, 255, 128, .9);
+        transform: translateY(-1px);
+        animation: scanline 2.1s linear infinite;
+    }
+
+    @keyframes scanline {
+        0% {
+            top: 18%
+        }
+
+        100% {
+            top: 82%
+        }
+    }
+
+    /* Mobile */
+    @media (max-width: 700px) {
+        .row {
+            grid-template-columns: 1fr;
+        }
+
+        .end {
+            justify-self: stretch;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block header_right %}
+<span class="chip">🛒 Achats</span>
+{% endblock %}
+
+{% block content %}
+<div class="wrap" data-page="achats">
+    <div class="card">
+        <!-- Titre + bouton Scan -->
+        <div class="title" style="display:flex; align-items:center; justify-content:space-between; gap:.5rem;">
+            <div>
+                <h2>Ajouter au stock</h2>
+                <span class="muted">→ page dédiée aux entrées (scan ou saisie)</span>
+            </div>
+            <button type="button" class="btn" id="btn_scan_live" title="Scanner en direct">🎥</button>
+        </div>
+
+        <form id="achats_form" method="post" action="{{ BASE }}achats/add">
+            <!-- SECTION 1 — Identification -->
+            <div class="section">
+                <div class="section-title">
+                    <h3>Identification</h3>
+                    <span class="muted">EAN → Fiche parent → Nom / Marque (article)</span>
+                </div>
+
+                <div class="row">
+                    <!-- EAN -->
+                    <div class="col-6">
+                        <div class="label">Code-barres (EAN)</div>
+                        <div class="infield">
+                            <input type="text" name="ean" id="ean" placeholder="Scanner ou saisir" inputmode="numeric"
+                                autocomplete="off">
+                            <button type="button" class="btn" id="btn_check_ean"
+                                title="Rechercher le produit par EAN">🔎</button>
+                        </div>
+                    </div>
+
+                    <!-- Fiche produit (parent) obligatoire -->
+                    <div class="col-6">
+                        <div class="label">Fiche produit</div>
+                        <select name="product_id" id="product_select" required>
+                            <option value="" disabled selected>— Choisir ou scanner —</option>
+                            {% for p in products %}
+                            <option value="{{ p.id }}" data-barcode="{{ p.barcode or '' }}"
+                                data-unit="{{ p.unit or 'pièce' }}" data-name="{{ p.name }}"
+                                data-brand="{{ p.brand or '' }}"
+                                data-default-location="{{ p.default_location_id or '' }}"
+                                data-no-freeze="{{ 1 if p.no_freeze else 0 }}"
+                                data-date-type="{{ (p.expiry_kind or p.date_type or 'DLC') | upper }}">
+                                {{ p.name }}{% if p.brand %} — {{ p.brand }}{% endif %}
+                            </option>
+
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <!-- Nom article -->
+                    <div class="col-6">
+                        <div class="label">Nom</div>
+                        <input type="text" id="name_suggest" name="name"
+                            placeholder="Libellé de l’article sur le ticket" autocomplete="off">
+                    </div>
+
+                    <!-- Marque article -->
+                    <div class="col-6">
+                        <div class="label">Marque</div>
+                        <input type="text" id="brand_suggest" name="brand" placeholder="Marque (OFF ou saisie)"
+                            autocomplete="off">
+                        <div class="hint" id="off_qty_hint"></div>
+                    </div>
+                    <!-- HINT EAN sur une ligne dédiée en pleine largeur -->
+                    <div class="col-12">
+                        <div class="hint" id="ean_hint"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- SECTION 2 — Quantités & Prix -->
+            <div class="section">
+                <div class="section-title">
+                    <h3>Quantités & Prix</h3>
+                    <span class="muted">par unité, multiplicateur, totaux & €/kg·L</span>
+                </div>
+
+                <div class="row">
+                    <!-- Quantité par unité + unité -->
+                    <div class="col-4">
+                        <div class="label">Quantité (par unité)</div>
+                        <div class="infield">
+                            <input type="number" step="0.001" min="0.001" name="qty" id="qty" value="1" required>
+                            <select name="unit" id="unit" style="max-width:140px">
+                                <optgroup label="Comptage">
+                                    <option value="pièce">pièce</option>
+                                    <option value="tranche">tranche</option>
+                                    <option value="paquet">paquet</option>
+                                    <option value="boîte">boîte</option>
+                                    <option value="bocal">bocal</option>
+                                    <option value="bouteille">bouteille</option>
+                                    <option value="sachet">sachet</option>
+                                    <option value="lot">lot</option>
+                                    <option value="barquette">barquette</option>
+                                    <option value="rouleau">rouleau</option>
+                                    <option value="dosette">dosette</option>
+                                </optgroup>
+                                <optgroup label="Poids">
+                                    <option value="g">g</option>
+                                    <option value="kg">kg</option>
+                                </optgroup>
+                                <optgroup label="Volume">
+                                    <option value="ml">ml</option>
+                                    <option value="L">L</option>
+                                </optgroup>
+                            </select>
+                        </div>
+                        <div class="hint" id="qty_hint"></div>
+                    </div>
+
+                    <!-- Multiplicateur -->
+                    <div class="col-2">
+                        <div class="label">× N unités</div>
+                        <input type="number" step="1" min="1" name="multiplier" id="multiplier" value="1">
+                    </div>
+
+                    <!-- Prix total -->
+                    <div class="col-3">
+                        <div class="label">Prix payé (total)</div>
+                        <div class="infield">
+                            <input type="number" step="0.01" min="0" name="price_total" id="price_total"
+                                placeholder="0.00">
+                            <span style="align-self:center;">€</span>
+                        </div>
+                    </div>
+
+                    <!-- Hints total & €/kg·L -->
+                    <div class="col-3">
+                        <div class="label">Calculs</div>
+                        <div class="hint" id="total_qty_hint">Quantité totale : 1 pièce</div>
+                        <div class="hint" id="price_calc_hint"></div>
+                    </div>
+
+                    <!-- Hidden quantités totales (pour backend) -->
+                    <input type="hidden" name="qty_total" id="qty_total" value="1">
+                </div>
+            </div>
+
+            <!-- SECTION 3 — Conservation & Emplacement -->
+            <div class="section">
+                <div class="section-title">
+                    <h3>Conservation & Emplacement</h3>
+                    <span class="muted">où ranger et dates</span>
+                </div>
+
+                <div class="row">
+                    <!-- Emplacement -->
+                    <div class="col-4">
+                        <div class="label">Emplacement</div>
+                        <select name="location_id" id="location_id" required>
+                            {% for loc in locations %}
+                            <option value="{{ loc.id }}">{{ loc.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <!-- DLC -->
+                    <div class="col-4">
+                        <div class="label">DLC (optionnel)</div>
+                        <input type="date" name="best_before" id="best_before">
+                    </div>
+
+                    <!-- Date de congélation -->
+                    <div class="col-4" id="frozen_group">
+                        <div class="label">Date de congélation (optionnel)</div>
+                        <input type="date" name="frozen_on" id="frozen_on">
+                    </div>
+
+                </div>
+            </div>
+
+            <!-- SECTION 4 — Magasin & Notes -->
+            <div class="section">
+                <div class="section-title">
+                    <h3>Magasin & Notes</h3>
+                    <span class="muted">infos d’achat</span>
+                </div>
+
+                <div class="row">
+                    <!-- Magasin -->
+                    <div class="col-4">
+                        <div class="label">Magasin</div>
+                        <input type="text" name="store" id="store" placeholder="Ex. Carrefour, Leclerc, Lidl…"
+                            autocomplete="off">
+                    </div>
+
+                    <!-- Note -->
+                    <div class="col-8">
+                        <div class="label">Note (optionnel)</div>
+                        <textarea name="note" rows="2"
+                            placeholder="Infos complémentaires (lot fournisseur, promo, etc.)"></textarea>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Actions -->
+            <div class="section" style="border-top:0; padding-top:.5rem;">
+                <div class="row">
+                    <div class="col-12 end" style="display:flex; gap:.5rem;">
+                        <button type="reset" class="btn ghost" id="btn_reset">Réinitialiser</button>
+                        <button type="submit" class="btn primary">Ajouter</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Aperçu vidéo (scan en direct) -->
+            <div id="live_scanner" style="display:none; margin-top: .75rem;">
+                <video id="video_preview" playsinline autoplay muted
+                    style="width:100%; max-height:280px; border-radius:12px; background:#000;"></video>
+                <div class="hint" id="live_hint">Pointe un code‑barres vers la caméra…</div>
+                <div style="margin-top:.5rem; display:flex; gap:.5rem;">
+                    <button type="button" class="btn" id="btn_live_stop">Arrêter</button>
+                    <button type="button" class="btn ghost" id="btn_live_flip">Changer de caméra</button>
+                </div>
+            </div>
+        </form>
+
+        <!-- DEBUG (caché par défaut) -->
+        <div id="dbg_panel" style="display:none; margin-top:1rem;">
+            <div class="card" style="background:var(--bg-soft,#1f2937); color:var(--fg,#e5e7eb);">
+                <div class="title">
+                    <h3>Debug scan</h3>
+                </div>
+                <pre id="dbg_log"
+                    style="white-space:pre-wrap; max-height:220px; overflow:auto; font-family:ui-monospace, SFMono-Regular, Menlo, monospace; font-size:12px;"></pre>
+            </div>
+        </div>
+    </div>
+
+    <!-- === MODALE SCAN (déplacée hors du <form> pour un vrai overlay) === -->
+    <div id="scan_modal" class="scan-modal hidden" aria-hidden="true">
+        <div class="scan-box">
+            <video id="scan_video" playsinline autoplay muted></video>
+            <canvas id="scan_overlay"></canvas>
+
+            <!-- HUD -->
+            <div class="scan-hud">
+                <button type="button" class="btn ghost" id="scan_flip" title="Changer de caméra">🔁</button>
+                <button type="button" class="btn" id="scan_close" title="Fermer">✖</button>
+            </div>
+
+            <!-- Tip -->
+            <div class="scan-tip">Alignez le code-barres dans le cadre</div>
+
+            <!-- Cadre de guidage (statique) -->
+            <div class="scan-frame"></div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<!-- ZXing (déjà ok) -->
+<script src="https://unpkg.com/@zxing/library@0.20.0"></script>
+
+<!-- ======= LECTURE CODE‑BARRES — BLOC D’ORIGINE (inchangé) ======= -->
+<script>
+    (function () {
+        // ---------- utils ----------
+        const $ = (s, p = document) => p.querySelector(s);
+        const toast = (m, t = 'ok') => window.showToast?.(m, t);
+
+        // Champs/form
+        const elEAN = $('#ean');
+
+        // Boutons
+        const btnLive = $('#btn_scan_live');
+        const btnPhoto = $('#btn_scan'); // inchangé
+
+        // Modale : on supporte *les deux* conventions d’ID
+        const modal = $('#scan-modal') || $('#scan_modal');
+        const video = $('#scan-video') || $('#scan_video');
+        const btnClose = $('#scan-close') || $('#scan_close');
+
+        // Évite qu’un mauvais ID casse tout
+        function openModal() {
+            if (!modal) return;
+            if (modal.nodeName.toLowerCase() === 'dialog') modal.showModal();
+            else { modal.classList.remove('hidden'); modal.setAttribute('aria-hidden', 'false'); }
+        }
+        function closeModal() {
+            if (!modal) return;
+            if (modal.nodeName.toLowerCase() === 'dialog') { try { modal.close(); } catch { } }
+            else { modal.classList.add('hidden'); modal.setAttribute('aria-hidden', 'true'); }
+        }
+
+        // État caméra
+        let stream = null;
+        let zxingReader = null;
+        let liveActive = false;
+
+        function stopStream() {
+            liveActive = false;
+            try { zxingReader?.reset?.(); } catch { }
+            if (stream) try { stream.getTracks().forEach(t => t.stop()); } catch { }
+            stream = null;
+        }
+
+        // --- Validation triple lecture ---
+        const REQUIRED_STREAK = 3;       // ← 3 fois
+        let lastRead = '';               // dernier code lu
+        let streak = 0;                  // compteur de répétitions consécutives
+        let streakTimer = null;          // reset auto si plus de lectures pendant un moment
+        const STREAK_TIMEOUT_MS = 1800;  // reset si > 1.8 s sans même code
+
+        function resetStreak() {
+            lastRead = '';
+            streak = 0;
+            if (streakTimer) { clearTimeout(streakTimer); streakTimer = null; }
+        }
+
+        function handleRead(rawCode) {
+            // On garde uniquement les chiffres (EAN/UPC)
+            const code = ('' + rawCode).replace(/\D+/g, '');
+            if (!code) return;
+
+            if (code === lastRead) {
+                streak += 1;
+            } else {
+                lastRead = code;
+                streak = 1;
+            }
+
+            // (Re)programme le reset automatique du streak
+            if (streakTimer) clearTimeout(streakTimer);
+            streakTimer = setTimeout(resetStreak, STREAK_TIMEOUT_MS);
+
+            // Feedback léger tant qu'on n'a pas validé
+            if (streak < REQUIRED_STREAK) {
+                toast(`Lecture ${streak}/${REQUIRED_STREAK} : ${code}`, 'warn');
+                return;
+            }
+
+            // 3/3 OK → on valide définitivement
+            commitDetected(code);
+        }
+
+        async function commitDetected(code) {
+            resetStreak();        // on repart propre pour la prochaine fois
+            stopStream();         // stoppe la caméra
+            closeModal();         // ferme la modale
+            if (elEAN) elEAN.value = code;
+            toast('Code détecté : ' + code, 'ok');
+            if (typeof lookupByEAN === 'function') lookupByEAN(code);
+        }
+
+        // ---------- Live: BarcodeDetector -> fallback ZXing ----------
+        async function startLiveScan() {
+            if (!video) { toast("Élément <video> introuvable dans la modale.", "error"); return; }
+
+            // Attributs iOS
+            video.setAttribute('playsinline', ''); video.setAttribute('webkit-playsinline', '');
+            video.muted = true;
+
+            // Contraintes: arrière si possible + un peu de résolution
+            const constraints = {
+                audio: false,
+                video: { facingMode: { ideal: 'environment' }, width: { ideal: 1280 }, height: { ideal: 720 } }
+            };
+
+            // 1) try BarcodeDetector (si https & support)
+            if (window.isSecureContext && 'BarcodeDetector' in window) {
+                try {
+                    const det = new BarcodeDetector({ formats: ['ean_13', 'ean_8', 'upc_a', 'upc_e'] });
+                    stream = await navigator.mediaDevices.getUserMedia(constraints);
+                    video.srcObject = stream; try { await video.play(); } catch { }
+                    liveActive = true;
+
+                    const tick = async () => {
+                        if (!liveActive) return;
+                        try {
+                            const res = await det.detect(video);
+                            if (res && res[0] && res[0].rawValue) handleRead(res[0].rawValue);
+                        } catch { }
+                        requestAnimationFrame(tick);
+                    };
+                    tick();
+                    return; // on reste dans ce mode si tout va bien
+                } catch (e) {
+                    // pass → on tentera ZXing juste après
+                }
+            }
+
+            // 2) fallback ZXing
+            try {
+                stream = await navigator.mediaDevices.getUserMedia(constraints);
+                video.srcObject = stream; try { await video.play(); } catch { }
+            } catch (e) {
+                toast("Caméra indisponible (permissions/domain). Essaie le mode photo.", "warn");
+                stopStream(); closeModal();
+                return;
+            }
+
+            try {
+                if (!zxingReader) zxingReader = new ZXing.BrowserMultiFormatReader(hintsForEAN());
+                // optionnel: accélère un peu les tentatives
+                zxingReader.timeBetweenDecodingAttempts = 150;
+
+                liveActive = true;
+                await zxingReader.decodeFromVideoDevice(null, video, (result, err) => {
+                    if (!liveActive) return;
+                    const code = result && (result.text || result.getText) ? (result.text || result.getText()) : '';
+                    if (code) handleRead(code);
+                });
+            } catch (e) {
+                toast("Décodage live indisponible ici. Essaie le mode photo.", "warn");
+                stopStream(); closeModal();
+            }
+        }
+
+        // Hints pour ZXing (meilleure détection EAN/UPC)
+        function hintsForEAN() {
+            const H = ZXing.DecodeHintType, F = ZXing.BarcodeFormat;
+            const hints = new Map();
+            hints.set(H.POSSIBLE_FORMATS, [F.EAN_13, F.EAN_8, F.UPC_A, F.UPC_E]);
+            hints.set(H.TRY_HARDER, true);
+            hints.set(H.ASSUME_GS1, true);
+            return hints;
+        }
+
+        // ---------- Handlers ----------
+        btnLive?.addEventListener('click', async () => {
+            if (!navigator.mediaDevices?.getUserMedia) { toast('getUserMedia indisponible.', 'warn'); return; }
+            resetStreak(); // on repart propre à chaque ouverture
+            openModal();
+            await startLiveScan();
+        });
+
+        btnClose?.addEventListener('click', () => { stopStream(); closeModal(); resetStreak(); });
+        // fermeture si clic sur le fond (pour la version <div>)
+        modal?.addEventListener('click', (e) => {
+            const box = e.target.closest('.scan-box');
+            if (!box) { stopStream(); closeModal(); resetStreak(); }
+        });
+
+        // (facultatif) le bouton 📷 reste géré par ton code existant
+    })();
+</script>
+
+<!-- ======= LOGIQUE FORMULAIRE / OFF / PRIX ======= -->
+<script>
+    (function () {
+        const $ = (s, p = document) => p.querySelector(s);
+        const toast = (m, t = 'ok') => window.showToast?.(m, t);
+
+        const elEAN = $('#ean');
+        const eanHint = $('#ean_hint');
+        const productSel = $('#product_select');
+        const nameSuggest = $('#name_suggest');
+        const brandSuggest = $('#brand_suggest');
+        const offQtyHint = $('#off_qty_hint');
+
+        const qtyInput = $('#qty');
+        const unitSel = $('#unit');
+        const multInput = $('#multiplier');
+        const totalQtyHint = $('#total_qty_hint');
+
+        const priceTotal = $('#price_total');
+        const priceCalcHint = $('#price_calc_hint');
+
+        const qtyTotalHidden = $('#qty_total');
+
+        function setHint(el, txt) { if (el) el.textContent = txt || ''; }
+        function valNum(el) { const n = Number(String(el?.value || '').replace(',', '.')); return isFinite(n) ? n : 0; }
+
+        /* Flags: ne pas écraser Nom/Marque saisis par l'utilisateur */
+        let nameTouched = false;
+        let brandTouched = false;
+        nameSuggest?.addEventListener('input', () => { nameTouched = true; });
+        brandSuggest?.addEventListener('input', () => { brandTouched = true; });
+
+        function mapUnit(u) {
+            if (!u) return null;
+            const x = ('' + u).toLowerCase().trim();
+            if (['g', 'gram', 'grams', 'gramme', 'grammes'].includes(x)) return 'g';
+            if (['kg', 'kilogram', 'kilograms', 'kilogramme', 'kilogrammes'].includes(x)) return 'kg';
+            if (['ml', 'millilitre', 'millilitres', 'milliliter', 'milliliters'].includes(x)) return 'ml';
+            if (['l', 'litre', 'litres', 'liter', 'liters'].includes(x)) return 'L';
+            if (['cl', 'centilitre', 'centilitres', 'centiliter', 'centiliters'].includes(x)) return 'cl';
+            if (['piece', 'pièce', 'pieces', 'pièces', 'pcs', 'pc'].includes(x)) return 'pièce';
+            return null;
+        }
+        function selectUnitOnForm(uWanted) {
+            if (!unitSel) return;
+            let mapped = mapUnit(uWanted);
+            if (mapped === 'cl') mapped = 'ml'; // cohérence UI
+            const target = mapped || uWanted;
+            const opt = [...unitSel.options].find(o => o.value === target);
+            if (opt) unitSel.value = opt.value;
+        }
+        function safeSet(el, v) { if (el) el.value = v; }
+        function safeSetQty(v) {
+            const n = Number(String(v).replace(',', '.'));
+            if (!isNaN(n) && n > 0) qtyInput.value = String(n);
+        }
+        function setName(v, { force = false } = {}) {
+            if (!nameSuggest) return;
+            const nv = (v || '').trim();
+            if (force) { nameSuggest.value = nv; return; }
+            if (!nameTouched && !nameSuggest.value) nameSuggest.value = nv;
+        }
+        function setBrand(v, { force = false } = {}) {
+            if (!brandSuggest) return;
+            const nv = (v || '').trim();
+            if (force) { brandSuggest.value = nv; return; }
+            if (!brandTouched && !brandSuggest.value) brandSuggest.value = nv;
+        }
+
+        // === Calculs quantités / prix
+        function updateCalcs() {
+            const q = Math.max(valNum(qtyInput), 0);
+            const u = unitSel?.value || 'pièce';
+            const m = Math.max(Math.floor(valNum(multInput)) || 1, 1);
+            const pt = Math.max(valNum(priceTotal), 0);
+
+            const totalQty = q * m;
+            if (qtyTotalHidden) qtyTotalHidden.value = String(totalQty);
+
+            let qtyTxt = `Quantité totale : ${totalQty} ${u}`;
+            let baseTxt = ''; let perUnitTxt = ''; let perBaseTxt = '';
+
+            if (pt > 0 && m > 0) perUnitTxt = `Prix / unité : ${(pt / m).toFixed(2)} €`;
+
+            const mu = mapUnit(u);
+            if (pt > 0 && mu) {
+                if (mu === 'g' || mu === 'kg') {
+                    const totalKg = (mu === 'kg') ? totalQty : (totalQty / 1000);
+                    if (totalKg > 0) { perBaseTxt = `Prix / kg : ${(pt / totalKg).toFixed(2)} €`; baseTxt = `≈ ${totalKg.toFixed(3)} kg`; }
+                } else if (mu === 'ml' || mu === 'L') {
+                    const totalL = (mu === 'L') ? totalQty : (totalQty / 1000);
+                    if (totalL > 0) { perBaseTxt = `Prix / L : ${(pt / totalL).toFixed(2)} €`; baseTxt = `≈ ${totalL.toFixed(3)} L`; }
+                } else if (mu === 'pièce') {
+                    if (m > 0) perBaseTxt = `Prix / pièce : ${(pt / m).toFixed(2)} €`;
+                }
+            }
+
+            setHint(totalQtyHint, [qtyTxt, baseTxt].filter(Boolean).join(' — '));
+            setHint(priceCalcHint, [perUnitTxt, perBaseTxt].filter(Boolean).join(' · '));
+        }
+
+        ['change', 'input'].forEach(ev => {
+            qtyInput?.addEventListener(ev, updateCalcs);
+            unitSel?.addEventListener(ev, updateCalcs);
+            multInput?.addEventListener(ev, updateCalcs);
+            priceTotal?.addEventListener(ev, updateCalcs);
+        });
+        $('#btn_reset')?.addEventListener('click', () => setTimeout(updateCalcs, 0));
+
+        productSel?.addEventListener('change', () => {
+            const opt = productSel.options[productSel.selectedIndex];
+            if (!opt) return;
+
+            // Unité
+            selectUnitOnForm(opt.dataset.unit || 'pièce');
+
+            // Pack
+            const pack = Number(opt.dataset.pack || '1');
+            if (!isNaN(pack) && pack > 1) multInput.value = String(pack);
+            if (!qtyInput.value || Number(qtyInput.value) <= 0) qtyInput.value = '1';
+
+            // === Emplacement par défaut (essaie toutes les variantes)
+            const locDefault = (
+                opt.dataset.defaultLocationId ??
+                opt.dataset.defaultLocation ??
+                opt.dataset.default_location_id ??
+                opt.dataset.default_location ??
+                ''
+            ).toString();
+
+            const locSel = document.querySelector('#location_id');
+            if (locSel && locDefault) {
+                // forcer l’affectation; si la valeur n’existe pas, le navigateur ignore
+                locSel.value = String(locDefault);
+            }
+
+            // === Congélation : cacher si no_freeze = 1/true/oui/yes
+            const frozenInput = document.querySelector('#frozen_on') || document.querySelector('[name="frozen_on"]');
+            const frozenGroup =
+                document.querySelector('#frozen_group') ||
+                (frozenInput ? frozenInput.closest('.col-4') : null) ||
+                (frozenInput ? frozenInput.parentElement : null);
+
+            const noFreezeRaw = (
+                opt.dataset.noFreeze ??
+                opt.dataset.no_freeze ??
+                ''
+            ).toString().trim().toLowerCase();
+
+            const noFreeze = (noFreezeRaw === '1' || noFreezeRaw === 'true' || noFreezeRaw === 'oui' || noFreezeRaw === 'yes');
+
+            if (frozenGroup) {
+                if (noFreeze) {
+                    frozenGroup.style.display = 'none';
+                    if (frozenInput) frozenInput.value = '';
+                } else {
+                    frozenGroup.style.display = '';
+                }
+            }
+
+            // --- Adapter le label DLC/DDM (robuste) ---
+            // 1) Récup type de date depuis l'<option> (plusieurs variantes)
+            const rawDateType =
+                opt.dataset.dateType ??
+                opt.getAttribute('data-date-type') ??
+                opt.dataset.datetype ??
+                opt.dataset.date_type ??
+                'DLC';
+
+            const dateType = String(rawDateType).trim().toUpperCase(); // 'DLC' ou 'DDM'
+
+            // 2) Cibler le bon libellé accolé à #best_before
+            const bestBeforeInput = document.querySelector('#best_before');
+            const bestBeforeLabel =
+                bestBeforeInput?.closest('.col-4')?.querySelector('.label') ||     // cas général (ton HTML)
+                document.querySelector('label[for="best_before"]') ||               // si tu passes à <label for=...>
+                (bestBeforeInput?.previousElementSibling || null);                  // dernier recours
+
+            if (bestBeforeLabel && bestBeforeLabel.textContent !== `${dateType} (optionnel)`) {
+                bestBeforeLabel.textContent = `${dateType} (optionnel)`;
+            }
+
+            setHint(offQtyHint, '');
+            updateCalcs();
+        });
+
+
+        // Facultatif : applique les règles au chargement (ou après sélection via scan)
+        try { productSel?.dispatchEvent(new Event('change')); } catch { }
+
+
+        // ===== Recherche EAN (local puis OFF)
+        async function lookupByEAN_impl(ean) {
+            const code = (ean || '').replace(/\s+/g, '').trim();
+            if (!code) { toast('EAN vide.', 'warn'); return; }
+            if (elEAN) elEAN.value = code;
+
+            // 1) DB locale (peut déjà renvoyer une fiche parent)
+            try {
+                const r = await fetch(`{{ BASE }}api/product/by_barcode?code=${encodeURIComponent(code)}`);
+                if (r.ok) {
+                    const p = await r.json();
+                    const opt = [...productSel.options].find(o => (o.dataset.barcode || '').replace(/\s+/g, '') === code);
+
+                    // Sélection de la fiche parent (unité/pack/loc/etc.)
+                    productSel.value = opt ? opt.value : String(p.id);
+                    productSel.dispatchEvent(new Event('change'));
+
+                    // --- Préférence OFF pour Nom/Marque même si trouvé en local ---
+                    try {
+                        const roff = await fetch(`{{ BASE }}api/off?barcode=${encodeURIComponent(code)}`);
+                        const off = await roff.json();
+                        if (off && off.ok) {
+                            const nameOff = (off.name || off.product_name || '').trim();
+                            const brandOff = (off.brand || off.brands || '').trim();
+
+                            // N’écrase pas si l’utilisateur a déjà tapé (setName/setBrand le gèrent)
+                            if (nameOff) setName(nameOff);
+                            if (brandOff) setBrand(brandOff);
+                            setHint(eanHint, `Produit trouvé en local — Nom/Marque suggérés par OFF.`);
+                            toast(`OFF → ${nameOff || 'Nom indisponible'}`, 'warn');
+                            updateCalcs();
+                            return; // on s’arrête ici : OFF a fourni les champs humains
+                        }
+                    } catch { /* OFF indispo → fallback local */ }
+
+                    // Fallback: utiliser les infos locales (fiche parent)
+                    const nameLocal = (p.article_name || p.name || opt?.dataset.name || '').trim();
+                    const brandLocal = (p.brand || opt?.dataset.brand || '').trim();
+                    if (nameLocal) setName(nameLocal);
+                    if (brandLocal) setBrand(brandLocal);
+
+                    setHint(eanHint, `Produit trouvé en local.`);
+                    toast('Fiche parent sélectionnée depuis le stock.', 'ok');
+                    return;
+                }
+            } catch { }
+
+            // 2) Open Food Facts (préremplit article si vide)
+            try {
+                const r = await fetch(`{{ BASE }}api/off?barcode=${encodeURIComponent(code)}`);
+                const data = await r.json();
+                if (data && data.ok) {
+                    setHint(eanHint, "Produit non connu en local — infos récupérées depuis OFF.");
+
+                    // Nom & marque ARTICLE (protégés par flags)
+                    setName(data.name || data.product_name || '');
+                    setBrand(data.brand || data.brands || '');
+
+                    // Quantité/Unité + pack éventuel
+                    let unitFromOff = data.unit || '';
+                    let qtyFromOff = data.quantity_value || '';
+                    let packOf = data.pack_of || '';
+
+                    if ((!unitFromOff || !qtyFromOff) && data.quantity) {
+                        const qtxt = String(data.quantity).toLowerCase().replace(',', '.').trim();
+                        let mPack = qtxt.match(/(\d+)\s*[x×]\s*(\d+(?:\.\d+)?)\s*([a-zA-Z]+)/i);
+                        if (mPack) { packOf = mPack[1]; qtyFromOff = mPack[2]; unitFromOff = mPack[3]; }
+                        else {
+                            let m = qtxt.match(/(\d+(?:\.\d+)?)\s*([a-zA-Z]+)/);
+                            if (m) { qtyFromOff = m[1]; unitFromOff = m[2]; }
+                        }
+                    }
+
+                    if (unitFromOff) selectUnitOnForm(unitFromOff);
+
+                    const uMap = mapUnit(unitFromOff);
+                    if (uMap && ['g', 'kg', 'ml', 'L', 'cl'].includes(uMap) && qtyFromOff) {
+                        if ((String(unitFromOff).toLowerCase().trim() === 'cl')) {
+                            const n = Number(String(qtyFromOff));
+                            if (!isNaN(n)) { safeSetQty(n * 10); selectUnitOnForm('ml'); }
+                            else safeSetQty(qtyFromOff);
+                        } else {
+                            safeSetQty(qtyFromOff);
+                        }
+                    } else {
+                        if (!qtyInput.value || Number(qtyInput.value) <= 0) qtyInput.value = '1';
+                        if (!uMap) selectUnitOnForm('pièce');
+                    }
+
+                    const packN = Math.max(1, Number(packOf || 1));
+                    safeSet(multInput, String(packN));
+
+                    const offTxt = [];
+                    if (data.quantity) offTxt.push(`Quantité OFF : ${data.quantity}`);
+                    if (packN > 1) offTxt.push(`Pack de ${packN}`);
+                    setHint(offQtyHint, offTxt.join(' — '));
+
+                    toast(`OFF → ${data.name || data.product_name || 'Nom indisponible'}`, 'warn');
+                    updateCalcs();
+                } else {
+                    setHint(eanHint, "Ni Domovra ni OFF n’ont trouvé ce code.");
+                    setName(''); setBrand('');
+                    setHint(offQtyHint, '');
+                    updateCalcs();
+                    toast("Aucun résultat pour cet EAN.", "warn");
+                }
+            } catch (e) {
+                setHint(eanHint, "Erreur OFF.");
+                toast("Erreur lors de la récupération OFF.", "error");
+            }
+        }
+
+        // Expose pour le scanner
+        if (typeof window.lookupByEAN !== 'function') window.lookupByEAN = lookupByEAN_impl;
+
+        // Bouton 🔎 et Entrée sur EAN
+        $('#btn_check_ean')?.addEventListener('click', () => window.lookupByEAN(elEAN.value));
+        elEAN?.addEventListener('keydown', (ev) => { if (ev.key === 'Enter') { ev.preventDefault(); window.lookupByEAN(elEAN.value); } });
+
+        // Init calculs
+        updateCalcs();
+    })();
+</script>
+{% endblock %}

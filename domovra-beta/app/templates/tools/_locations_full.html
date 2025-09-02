@@ -1,0 +1,314 @@
+<h2>Emplacements</h2>
+
+<!-- Ajouter un emplacement -->
+<div class="card">
+    <div class="title">
+        <h2>Ajouter un emplacement</h2>
+    </div>
+    <form method="post" action="{{ BASE }}location/add" class="form-grid add-location-form">
+        <div class="field">
+            <div class="label">Nom de l’emplacement</div>
+            <input name="name" type="text" required placeholder="ex. Frigo, Congélateur, Placard haut">
+        </div>
+
+        <div class="field">
+            <div class="label">Type</div>
+            <label style="display:flex;align-items:center;gap:8px;">
+                <input type="checkbox" name="is_freezer" value="1" style="width:16px;height:16px;">
+                Est un congélateur
+            </label>
+        </div>
+
+        <div class="field">
+            <div class="label">Description (optionnel)</div>
+            <input type="text" name="description" placeholder="ex. placard haut à gauche">
+        </div>
+
+        <div class="field" style="grid-column:1/-1">
+            <button class="secondary" style="width:100%">＋ Ajouter</button>
+        </div>
+    </form>
+</div>
+
+<!-- Outils -->
+<div class="card">
+    <div class="title">
+        <h2>Outils</h2><span class="muted">Recherche & compteur</span>
+    </div>
+    <div class="tools-row">
+        <div class="tools-search" style="flex:1">
+            <div class="label">Rechercher</div>
+            <input id="search-input" type="search" placeholder="Filtrer les emplacements…" style="width:100%">
+        </div>
+    </div>
+</div>
+
+<!-- Liste -->
+<div class="card">
+    <div class="title">
+        <h2>Liste</h2>
+    </div>
+
+    <div class="table-responsive">
+        <table>
+            <colgroup>
+                <col style="width:30%">
+                <col style="width:30%">
+                <col style="width:20%">
+                <col style="width:20%">
+            </colgroup>
+            <thead>
+                <tr>
+                    <th>Nom</th>
+                    <th>Description</th>
+                    <th>Infos</th>
+                    <th style="text-align:right">Actions</th>
+                </tr>
+            </thead>
+            <tbody id="locations-body">
+                {% if items %}
+                {% for loc in items %}
+                <tr data-id="{{ loc.id }}" data-name="{{ loc.name }}" data-lots="{{ loc.lot_count|int }}"
+                    data-freezer="{{ 1 if loc.is_freezer else 0 }}" data-desc="{{ (loc.description or '')|e }}">
+                    <td>
+                        <div style="display:flex;align-items:center;gap:.4rem;max-width:100%">
+                            {% if loc.is_freezer %}<span aria-label="Congélateur">❄️</span>{% endif %}
+                            <span
+                                style="display:inline-block;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">
+                                {{ loc.name }}
+                            </span>
+                        </div>
+                    </td>
+                    <td>
+                        {% if loc.description %}{{ loc.description }}{% else %}<span class="muted">—</span>{% endif %}
+                    </td>
+                    <td>
+                        {% if loc.lot_count is defined %}
+                        <span class="pill">{{ loc.lot_count|int }} lot{{ '' if (loc.lot_count|int) == 1 else 's'
+                            }}</span>
+                        {% if loc.urgent_count|int > 0 %}
+                        <span class="badge danger">{{ loc.urgent_count|int }} urgent{{ '' if (loc.urgent_count|int) == 1
+                            else 's' }}</span>
+                        {% endif %}
+                        {% if loc.soon_count|int > 0 %}
+                        <span class="badge warn">{{ loc.soon_count|int }} bientôt</span>
+                        {% endif %}
+                        {% else %}
+                        <span class="muted">—</span>
+                        {% endif %}
+                    </td>
+                    <td class="t-actions">
+                        <div class="actions-grid">
+                            <button type="button" class="secondary js-rename">✏️ <span
+                                    class="btn-text">Modifier</span></button>
+                            <button type="button" class="secondary js-delete-open">🗑️ <span
+                                    class="btn-text">Supprimer</span></button>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+                {% else %}
+                <tr>
+                    <td colspan="3" class="muted">Aucun emplacement.</td>
+                </tr>
+                {% endif %}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Cartes mobile -->
+    <div class="loc-cards" id="locations-cards">
+        {% if items %}
+        {% for loc in items %}
+        <div class="loc-card" data-id="{{ loc.id }}" data-name="{{ loc.name }}" data-lots="{{ loc.lot_count|int }}"
+            data-freezer="{{ 1 if loc.is_freezer else 0 }}" data-desc="{{ (loc.description or '')|e }}">
+            <div class="loc-main">
+                <div class="loc-title">{% if loc.is_freezer %}❄️ {% endif %}{{ loc.name }}</div>
+                <div class="loc-meta">
+                    {% if loc.description %}<span>{{ loc.description }}</span>{% endif %}
+                    {% if loc.lot_count is defined %}
+                    {% if loc.description %}<span>•</span>{% endif %}
+                    <span>🧮 {{ loc.lot_count|int }} lot{{ '' if (loc.lot_count|int) == 1 else 's' }}</span>
+                    {% if loc.urgent_count|int > 0 %}<span>⛔ {{ loc.urgent_count|int }} urgent{{ '' if
+                        (loc.urgent_count|int)==1 else 's' }}</span>{% endif %}
+                    {% if loc.soon_count|int > 0 %}<span>⏰ {{ loc.soon_count|int }} bientôt</span>{% endif %}
+                    {% endif %}
+                </div>
+            </div>
+            <div class="loc-actions">
+                <button type="button" class="secondary js-rename" title="Modifier">✏️</button>
+                <button type="button" class="secondary js-delete-open" title="Supprimer">🗑️</button>
+            </div>
+        </div>
+        {% endfor %}
+        {% else %}
+        <div class="muted">Aucun emplacement.</div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Dialog Modifier -->
+<dialog id="dlg-edit">
+    <form method="post" action="{{ BASE }}location/update" style="display:grid;gap:10px;min-width:min(520px,92vw)">
+        <h3 style="margin:0">Modifier l’emplacement</h3>
+        <input type="hidden" name="location_id" id="dlg-location-id">
+        <div class="field">
+            <div class="label">Nom</div>
+            <input type="text" name="name" id="dlg-location-name" required>
+        </div>
+        <div class="field">
+            <div class="label">Type</div>
+            <label style="display:flex;align-items:center;gap:8px;">
+                <input type="checkbox" name="is_freezer" id="dlg-location-freezer" value="1"
+                    style="width:16px;height:16px;">
+                Est un congélateur
+            </label>
+        </div>
+        <div class="field">
+            <div class="label">Description</div>
+            <input type="text" name="description" id="dlg-location-desc" placeholder="ex. placard haut à gauche">
+        </div>
+        <div class="row" style="justify-content:flex-end;gap:8px">
+            <button type="button" class="secondary"
+                onclick="document.getElementById('dlg-edit').close()">Annuler</button>
+            <button class="secondary">Enregistrer</button>
+        </div>
+    </form>
+</dialog>
+
+<!-- Dialog Supprimer (avec déplacement) -->
+<dialog id="dlg-delete">
+    <form method="post" action="{{ BASE }}location/delete" style="display:grid;gap:10px;min-width:min(420px,92vw)">
+        <h3 style="margin:0">Supprimer l’emplacement</h3>
+        <p id="dlg-delete-text" class="muted" style="margin:0"></p>
+        <input type="hidden" name="location_id" id="dlg-delete-id">
+
+        <fieldset id="del-mgmt" class="del-mgmt">
+            <legend class="muted">Gestion des lots existants</legend>
+            <div class="del-choices">
+                <label class="opt"><input type="radio" name="del_mode" value="remove" checked><span>Supprimer les lots
+                        liés</span></label>
+                <label class="opt">
+                    <input type="radio" name="del_mode" value="move"><span>Déplacer les lots vers :</span>
+                    <select name="move_to" id="dlg-move-select" disabled>
+                        {% for loc in items %}
+                        <option value="{{ loc.id }}" data-freezer="{{ 1 if loc.is_freezer else 0 }}">{{ loc.name }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </label>
+            </div>
+        </fieldset>
+
+        <div class="row" style="justify-content:flex-end;gap:8px">
+            <button type="button" class="secondary"
+                onclick="document.getElementById('dlg-delete').close()">Annuler</button>
+            <button class="secondary">Supprimer</button>
+        </div>
+    </form>
+</dialog>
+
+<script>
+    // IIFE pour éviter les collisions globales
+    (function () {
+        const $ = (s, r = document) => r.querySelector(s);
+
+        // Filtre live (table + cartes)
+        (function () {
+            const norm = (t) => (t || '').normalize('NFD').replace(/\p{Diacritic}/gu, '').toLowerCase();
+            const search = $('#search-input');
+            function applyFilter(q) {
+                const N = norm(q);
+                document.querySelectorAll('#locations-body tr, #locations-cards [data-id]').forEach((el) => {
+                    const name = norm(el.dataset.name || '');
+                    el.style.display = name.includes(N) ? '' : 'none';
+                });
+            }
+            if (search) search.addEventListener('input', (e) => applyFilter(e.target.value));
+        })();
+
+        function openEdit(btn) {
+            const row = btn.closest('[data-id]');
+            const id = row?.dataset.id || btn.dataset.id;
+            const name = row?.dataset.name || btn.dataset.name || '';
+            const freezer = (row?.dataset.freezer === '1');
+            const desc = row?.dataset.desc || '';
+
+            $('#dlg-location-id').value = id || '';
+            $('#dlg-location-name').value = name;
+            $('#dlg-location-freezer').checked = freezer;
+            $('#dlg-location-desc').value = desc;
+
+            $('#dlg-edit').showModal();
+            setTimeout(() => $('#dlg-location-name').focus(), 50);
+        }
+
+        function openDelete(btn) {
+            const row = btn.closest('[data-id]');
+            const id = row?.dataset.id || btn.dataset.id;
+            const name = row?.dataset.name || btn.dataset.name || '';
+            const lots = parseInt(row?.dataset.lots || '0', 10);
+
+            $('#dlg-delete-id').value = id || '';
+            $('#dlg-delete-text').textContent = `Supprimer « ${name} » ?`;
+
+            const mgmt = $('#del-mgmt');
+            mgmt.style.display = (lots > 0) ? 'block' : 'none';
+
+            const sel = $('#dlg-move-select');
+            const srcIsFreezer = (row?.dataset.freezer === '1');
+
+            // Désactive soi-même + toute destination de type différent
+            Array.from(sel.options).forEach(o => {
+                const destIsFreezer = (o.dataset.freezer === '1');
+                const sameType = (destIsFreezer === srcIsFreezer);
+                o.disabled = (o.value === id) || !sameType;
+            });
+
+            const firstValid = Array.from(sel.options).find(o => !o.disabled);
+
+            const radios = document.querySelectorAll('input[name="del_mode"]');
+            const toggle = () => {
+                const mode = Array.from(radios).find(r => r.checked)?.value || 'remove';
+                sel.disabled = (mode !== 'move') || !firstValid;
+            };
+
+            if (lots <= 0 || !firstValid) {
+                radios.forEach(r => r.checked = (r.value === 'remove'));
+                sel.disabled = true;
+            } else {
+                sel.value = firstValid.value;
+            }
+            radios.forEach(r => r.addEventListener('change', toggle));
+            toggle();
+
+            $('#dlg-delete').showModal();
+        }
+
+        document.addEventListener('click', function (e) {
+            const r = e.target.closest('.js-rename'); if (r) return openEdit(r);
+            const d = e.target.closest('.js-delete-open'); if (d) return openDelete(d);
+        });
+
+        // Envoi : si "move" non choisi, on vide move_to
+        document.querySelector('#dlg-delete form')?.addEventListener('submit', (e) => {
+            const mode = Array.from(document.querySelectorAll('input[name="del_mode"]'))
+                .find(r => r.checked)?.value || 'remove';
+            if (mode !== 'move') {
+                const s = e.target.querySelector('select[name="move_to"]');
+                if (s) { s.disabled = true; s.value = ''; }
+            }
+        });
+
+        // TOASTS via query params
+        (function () {
+            const p = new URLSearchParams(location.search);
+            const n = p.get('name') || '';
+            if (p.get('duplicate') === '1') window.showToast?.(`Emplacement « ${n} » existe déjà.`, 'warn');
+            else if (p.get('added') === '1') window.showToast?.(`Emplacement « ${n} » ajouté.`, 'ok');
+            else if (p.get('updated') === '1') window.showToast?.(`Emplacement renommé en « ${n} ».`, 'ok');
+            else if (p.get('deleted') === '1') window.showToast?.(`Emplacement supprimé.`, 'ok');
+            else if (p.get('move_invalid') === '1') window.showToast?.(`Déplacement refusé : types incompatibles (congélateur ↔ non congélateur).`, 'warn');
+        })();
+    })();
+</script>

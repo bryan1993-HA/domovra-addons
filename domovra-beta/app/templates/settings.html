@@ -1,0 +1,120 @@
+{% extends "base.html" %}
+{% block title %}Domovra — Paramètres{% endblock %}
+
+{% block content %}
+<div class="wrap" data-page="settings">
+
+    <!-- Onglets -->
+    <nav class="tabs" role="tablist" aria-label="Catégories de paramètres">
+        <button type="button" class="tab" data-tab="appearance" aria-selected="true">Apparence</button>
+        <button type="button" class="tab" data-tab="stock">Produits & Stocks</button>
+        <button type="button" class="tab" data-tab="toasts">Notifications</button>
+        <button type="button" class="tab" data-tab="locations">Emplacements</button>
+        <button type="button" class="tab" data-tab="admindb">Admin DB</button>
+        <button type="button" class="tab" data-tab="advanced">Avancés</button>
+        <button type="button" class="tab" data-tab="journal">Journal</button>
+    </nav>
+
+    {# ======= FORM RÉGLAGES UNIQUEMENT ======= #}
+    <form id="settings-form" method="post" action="{{ BASE }}settings/save">
+        <section class="panel card" data-panel="appearance">
+            {% include "tools/_appearance.html" %}
+        </section>
+
+        <section class="panel card" data-panel="stock" hidden>
+            {% include "tools/_stock.html" %}
+        </section>
+
+        <section class="panel card" data-panel="toasts" hidden>
+            {% include "tools/_toasts.html" %}
+        </section>
+
+        <section class="panel card" data-panel="admindb" hidden>
+            {% include "tools/_admindb.html" %}
+        </section>
+
+        <section class="panel card" data-panel="advanced" hidden>
+            {% include "tools/_advanced.html" %}
+        </section>
+
+        <div class="row save-row" style="justify-content:flex-end">
+            <button class="secondary" type="submit">Enregistrer</button>
+        </div>
+    </form>
+
+    {# ======= PANELS SANS ÊTRE DANS LE FORM GLOBAL ======= #}
+    <section class="panel card" data-panel="locations" hidden>
+        {% include "tools/_locations_full.html" %}
+    </section>
+    <section class="panel card" data-panel="journal" hidden>
+        {% include "tools/_journal_full.html" %}
+    </section>
+
+</div>
+
+<style>
+    /* 🔒 Empêche tout CSS de forcer l’affichage des éléments [hidden] */
+    [hidden] {
+        display: none !important;
+    }
+
+    .tabs {
+        display: flex;
+        gap: .5rem;
+        margin: 0 0 1rem 0;
+        flex-wrap: wrap;
+        position: relative;
+        z-index: 2;
+        /* évite d’être recouvert par un overlay */
+    }
+
+    .tab {
+        padding: .45rem .75rem;
+        border-radius: .75rem;
+        border: 1px solid var(--line);
+        background: transparent;
+        cursor: pointer;
+        -webkit-tap-highlight-color: transparent;
+    }
+
+    .tab[aria-selected="true"] {
+        background: rgba(255, 255, 255, .06);
+    }
+</style>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    (function () {
+        const tabs = document.querySelectorAll('.tabs .tab');
+        const panels = document.querySelectorAll('[data-panel]');
+        const saveRow = document.querySelector('.save-row'); // 👈 le bouton global
+        const KEY = 'settingsActiveTab';
+
+        function show(tab) {
+            tabs.forEach(t => t.setAttribute('aria-selected', t.dataset.tab === tab ? 'true' : 'false'));
+            panels.forEach(p => p.hidden = (p.dataset.panel !== tab));
+
+            // Affiche le bouton seulement pour les onglets du form global
+            if (saveRow) {
+                const isFormTab = ["appearance", "stock", "toasts", "admindb", "advanced"].includes(tab);
+                saveRow.style.display = isFormTab ? "flex" : "none";
+            }
+
+            const u = new URL(location.href);
+            u.searchParams.set('tab', tab);
+            history.replaceState(null, '', u);
+            localStorage.setItem(KEY, tab);
+        }
+
+        tabs.forEach(t => t.addEventListener('click', (e) => {
+            e.preventDefault();    // 👈 crucial sur mobile
+            e.stopPropagation();
+            show(t.dataset.tab);
+        }, { passive: false }));
+
+        const urlTab = new URL(location.href).searchParams.get('tab');
+        show(urlTab || localStorage.getItem(KEY) || 'appearance');
+    })();
+</script>
+{% endblock %}

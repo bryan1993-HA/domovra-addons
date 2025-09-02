@@ -1,0 +1,437 @@
+{% extends "base.html" %}
+{% block title %}Domovra — Stocks{% endblock %}
+
+{% block head %}{% endblock %}
+
+{% block header_right %}
+<span class="chip">🧺 Stocks : <b>{{ items|length }}</b></span>
+{% endblock %}
+
+{% block content %}
+<div class="wrap" data-page="lots">
+
+  <div class="card">
+    <div class="title">
+      <h2>Stocks</h2>
+      <span class="muted">→ lots issus des achats</span>
+    </div>
+
+    <!-- Barre compacte : recherche + bouton Filtres (sans "?") -->
+    <div class="filters-row compact">
+      <div class="qwrap wide">
+        <input id="q" type="search" placeholder="Rechercher (produit, emplacement, EAN)…">
+      </div>
+
+      <button type="button" class="btn ghost btn-filters" onclick="document.getElementById('dlg-filters')?.showModal()">
+        Filtres
+      </button>
+    </div>
+
+    <!-- Ligne méta : compteur + résumé des filtres -->
+    <div class="filters-meta">
+      <span class="chip" id="filters-summary" hidden></span>
+    </div>
+  </div>
+
+  <!-- Grille de cartes -->
+  <div class="cards-grid" id="lot-cards">
+    {% if items %}
+    {% for it in items %}
+    {% set code = it.ean or it.barcode %}
+    {% set m = (it.multiplier or 1) | int %}
+    {% set qty_unit = it.qty_per_unit or 0 %}
+    {% set u_buy = (it.unit_at_purchase or '') %}
+    {% set price_total = it.price_total %}
+    {% set per_unit = (price_total / m) if (price_total is not none and m > 0) else none %}
+
+    {# prix/kg·L si poids/volume #}
+    {% set u_map = (u_buy | lower) %}
+    {% set price_per_base = none %}
+    {% if price_total is not none and qty_unit and m %}
+    {% if u_map in ['g','kg'] %}
+    {% set total_kg = ((qty_unit/1000.0) if u_map=='g' else qty_unit) * m %}
+    {% if total_kg > 0 %}{% set price_per_base = price_total / total_kg %}{% endif %}
+    {% elif u_map in ['ml','l'] %}
+    {% set total_l = ((qty_unit/1000.0) if u_map=='ml' else qty_unit) * m %}
+    {% if total_l > 0 %}{% set price_per_base = price_total / total_l %}{% endif %}
+    {% endif %}
+    {% endif %}
+
+    <article class="prod-card" data-name="{{ (it.name or it.article_name or it.product)|lower }}"
+      data-product="{{ (it.name or it.article_name or it.product)|lower }}" data-loc="{{ it.location|lower }}"
+      data-barcode="{{ (code or '')|lower }}" data-status="{{ it.status }}">
+
+      <!-- En-tête -->
+      <div class="pc-head">
+        <div class="pc-title">
+          <h3 class="pc-name">
+            {{ it.name or it.article_name or it.product }}
+            {% if it.brand %}<span class="muted"> — {{ it.brand }}</span>{% endif %}
+          </h3>
+          <div class="pc-meta muted">
+            {{ it.qty }} {{ (it.unit or 'pcs')|pluralize_fr(it.qty) }} • 📍 {{ it.location }}
+            {% if code %} • 🏷️ {{ code }}{% endif %}
+            {% if it.store %} • 🛍️ {{ it.store }}{% endif %}
+          </div>
+        </div>
+        {# plus d'actions dans le header en mode compact #}
+      </div>
+
+      <!-- Corps -->
+      <div class="pc-body">
+        <div class="stat full">
+          <span class="k">Plus d'informations</span>
+          <details class="more">
+            <summary>➕ Plus d'informations</summary>
+
+            <!-- Tête du panneau détails avec kebab à droite -->
+            <div class="more-head">
+              <div class="spacer"></div>
+              <div class="menu-wrap">
+                <button class="icon-btn small kebab" aria-label="Actions" aria-haspopup="menu"
+                  aria-expanded="false">⋮</button>
+                <div class="menu" role="menu" hidden>
+                  <button class="menu-item btn-edit" role="menuitem" data-id="{{ it.id }}" data-qty="{{ it.qty }}"
+                    data-loc="{{ it.location_id }}" data-frozen="{{ it.frozen_on }}" data-bb="{{ it.best_before }}">✏️
+                    Modifier</button>
+                  <button class="menu-item danger btn-delete" role="menuitem" data-id="{{ it.id }}"
+                    data-product="{{ it.name or it.article_name or it.product }}">🗑️ Supprimer</button>
+                </div>
+              </div>
+            </div>
+
+            <div class="kv">
+              {# Quantité : utile même seule #}
+              <div class="row">
+                <span class="k">Quantité totale</span>
+                <span class="v">{{ it.qty }} {{ (it.unit or 'pcs')|pluralize_fr(it.qty) }}</span>
+              </div>
+
+              {# Prix total #}
+              {% if price_total is not none %}
+              <div class="row">
+                <span class="k">Prix total</span>
+                <span class="v">{{ '%.2f'|format(price_total) }} €</span>
+              </div>
+              {% endif %}
+
+              {# Prix / unité #}
+              {% if per_unit is not none %}
+              <div class="row">
+                <span class="k">Prix / unité</span>
+                <span class="v">{{ '%.2f'|format(per_unit) }} €</span>
+              </div>
+              {% endif %}
+
+              {# Conditionnement : montré seulement si pack ou quantité/unité connus #}
+              {% if (qty_unit and u_buy) or m > 1 %}
+              <div class="row">
+                <span class="k">Conditionnement</span>
+                <span class="v">
+                  {% if qty_unit and u_buy %}{{ qty_unit|float }} {{ u_buy }} × {{ m }}
+                  {% elif m > 1 %}Pack × {{ m }}
+                  {% endif %}
+                </span>
+              </div>
+              {% endif %}
+
+              {# Prix / kg·L : seulement si calculé #}
+              {% if price_per_base is not none %}
+              <div class="row">
+                <span class="k">Prix / kg·L</span>
+                <span class="v">{{ '%.2f'|format(price_per_base) }} €/{{ 'kg' if u_map in ['g','kg'] else 'L' }}</span>
+              </div>
+              {% endif %}
+
+              {# Emplacement : utile #}
+              <div class="row">
+                <span class="k">Emplacement</span>
+                <span class="v">{{ it.location }}</span>
+              </div>
+            </div>
+
+            {% if it.frozen_on or it.best_before or it.created_on %}
+            <div class="timeline" style="margin-top:.75rem">
+              {% if it.frozen_on %}<span class="pill">❄ <span>{{ it.frozen_on }}</span></span>{% endif %}
+              {% if it.best_before %}<span class="pill">⏳ <span>{{ it.best_before }}</span></span>{% endif %}
+              {% if it.created_on %}<span class="pill">➕ <span>{{ it.created_on }}</span></span>{% endif %}
+            </div>
+            {% endif %}
+
+
+            {% if it.note %}
+            <div class="note" style="margin-top:.5rem">
+              <span class="k">Note</span>
+              <span class="v">{{ it.note }}</span>
+            </div>
+            {% endif %}
+          </details>
+        </div>
+      </div>
+    </article>
+    {% endfor %}
+    {% else %}
+    <div class="muted" style="padding:1rem">Aucun stock pour l’instant.</div>
+    {% endif %}
+  </div>
+</div>
+
+<!-- Dialog Filtres -->
+<dialog id="dlg-filters" class="modal small">
+  <form class="filters-form" method="dialog" onsubmit="return false;">
+    <h3 class="dlg-title">Filtres</h3>
+
+    <div class="fields">
+      <div class="field">
+        <div class="label">Emplacement</div>
+        <select id="f_loc">
+          <option value="">📍 Tous emplacements</option>
+          {% for l in locations %}<option value="{{ l.name|lower }}">{{ l.name }}</option>{% endfor %}
+        </select>
+      </div>
+
+      <div class="field">
+        <div class="label">Produit</div>
+        <select id="f_prod">
+          <option value="">🧾 Tous produits</option>
+          {% for p in products %}<option value="{{ p.name|lower }}">{{ p.name }}</option>{% endfor %}
+        </select>
+      </div>
+
+      <div class="field">
+        <div class="label">État</div>
+        <select id="f_status">
+          <option value="">⚑ Tous états</option>
+          <option value="green">OK</option>
+          <option value="yellow">Bientôt</option>
+          <option value="red">Urgent</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="dlg-actions">
+      <button type="button" class="btn-cancel" id="filters-reset">Réinitialiser</button>
+      <button type="button" class="btn-save secondary" id="filters-apply">Appliquer</button>
+    </div>
+  </form>
+</dialog>
+
+<!-- Dialogs Edit / Delete -->
+<dialog id="dlg-edit" class="modal">
+  <form method="post" action="{{ BASE }}lot/update" class="edit-form">
+    <h3 class="dlg-title">Modifier le stock</h3>
+    <input type="hidden" name="lot_id" id="dlg-lot-id">
+
+    <div class="row">
+      <div class="field">
+        <div class="label">Quantité</div>
+        <input type="number" name="qty" id="dlg-qty" step="0.01" min="0" required>
+      </div>
+      <div class="field">
+        <div class="label">Emplacement</div>
+        <select name="location_id" id="dlg-loc" required>
+          {% for l in locations %}<option value="{{ l.id }}">{{ l.name }}</option>{% endfor %}
+        </select>
+      </div>
+      <div class="field">
+        <div class="label">Congelé le</div>
+        <input type="date" name="frozen_on" id="dlg-frozen-on">
+      </div>
+      <div class="field">
+        <div class="label">À consommer avant</div>
+        <input type="date" name="best_before" id="dlg-best-before">
+      </div>
+    </div>
+
+    <div class="dlg-actions">
+      <button type="button" class="btn-cancel" onclick="document.getElementById('dlg-edit').close()">Annuler</button>
+      <button class="btn-save secondary">Enregistrer</button>
+    </div>
+  </form>
+</dialog>
+
+<dialog id="dlg-delete" class="modal">
+  <form method="post" action="{{ BASE }}lot/delete" class="edit-form">
+    <h3 class="dlg-title">Supprimer du stock</h3>
+    <input type="hidden" name="lot_id" id="del-lot-id">
+    <div class="muted" id="del-msg">Supprimer cette entrée de stock ?</div>
+    <div class="dlg-actions">
+      <button type="button" class="btn-cancel" onclick="document.getElementById('dlg-delete').close()">Annuler</button>
+      <button type="submit" class="btn small danger btn-confirm-delete">Supprimer</button>
+    </div>
+  </form>
+</dialog>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  const $ = s => document.querySelector(s);
+  const cardsWrap = document.getElementById('lot-cards');
+  const cards = Array.from(cardsWrap?.querySelectorAll('.prod-card') || []);
+  const q = document.getElementById('q');
+  const fProd = document.getElementById('f_prod');
+  const fLoc = document.getElementById('f_loc');
+  const fStatus = document.getElementById('f_status');
+  const countEl = document.getElementById('lots-count');
+
+  function matches(ds, txt, loc, st, prod) {
+    const s = (ds.name + ' ' + (ds.loc || '') + ' ' + (ds.barcode || '')).includes(txt);
+    const l = loc ? (ds.loc === loc) : true;
+    const t = st ? ((ds.status || '') === st) : true;
+    const p = prod ? ((ds.product || '') === prod) : true;
+    return s && l && t && p;
+  }
+
+  function applyFilter() {
+    const txt = (q?.value || '').toLowerCase().trim();
+    const loc = (fLoc?.value || '').toLowerCase().trim();
+    const st = (fStatus?.value || '').trim();
+    const prod = (fProd?.value || '').toLowerCase().trim();
+    let shown = 0;
+    cards.forEach(card => {
+      const m = matches(card.dataset, txt, loc, st, prod);
+      card.style.display = m ? '' : 'none';
+      if (m) shown++;
+    });
+    if (countEl) countEl.textContent = (txt || loc || st || prod) ? shown : cards.length;
+  }
+  [q, fLoc, fStatus, fProd].forEach(el => el && el.addEventListener('input', applyFilter));
+
+  /* --- Toasts via querystring --- */
+  (function () {
+    const p = new URLSearchParams(location.search);
+    if (p.get('added') === '1') window.showToast?.('Stock ajouté.', 'ok');
+    if (p.get('updated') === '1') window.showToast?.('Stock mis à jour.', 'ok');
+    if (p.get('deleted') === '1') window.showToast?.('Stock supprimé.', 'warn');
+  })();
+
+  /* --- Modales Edit / Delete --- */
+  (function () {
+    const editDialog = document.getElementById('dlg-edit');
+    const delDialog = document.getElementById('dlg-delete');
+    const setVal = (id, v) => { const el = document.getElementById(id); if (el) el.value = v ?? ''; };
+
+    document.querySelectorAll('.btn-edit').forEach(btn => {
+      btn.addEventListener('click', () => {
+        setVal('dlg-lot-id', btn.dataset.id);
+        setVal('dlg-qty', btn.dataset.qty);
+        setVal('dlg-loc', btn.dataset.loc);
+        setVal('dlg-frozen-on', btn.dataset.frozen);
+        setVal('dlg-best-before', btn.dataset.bb);
+        editDialog?.showModal();
+      });
+    });
+    document.querySelectorAll('.btn-delete[data-id]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        setVal('del-lot-id', btn.dataset.id);
+        const msg = document.getElementById('del-msg');
+        msg && (msg.textContent = btn.dataset.product
+          ? `Supprimer "${btn.dataset.product}" du stock ?`
+          : 'Supprimer cette entrée de stock ?');
+        delDialog?.showModal();
+      });
+    });
+
+    // sécurité : ENTER ne soumet pas la modale delete par mégarde
+    delDialog?.querySelector('form')?.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && e.target.tagName !== 'TEXTAREA') e.preventDefault();
+    });
+  })();
+
+  /* ---- Filtres (dialog) ---- */
+  (function () {
+    const dlg = document.getElementById('dlg-filters');
+    const btnApply = document.getElementById('filters-apply');
+    const btnReset = document.getElementById('filters-reset');
+    const fLoc = document.getElementById('f_loc');
+    const fProd = document.getElementById('f_prod');
+    const fStatus = document.getElementById('f_status');
+    const summary = document.getElementById('filters-summary');
+
+    function updateSummary() {
+      const parts = [];
+      const vLoc = (fLoc?.value || '').trim();
+      const vProd = (fProd?.value || '').trim();
+      const vSt = (fStatus?.value || '').trim();
+      if (vLoc) parts.push('📍 ' + fLoc.options[fLoc.selectedIndex].text);
+      if (vProd) parts.push('🧾 ' + fProd.options[fProd.selectedIndex].text);
+      if (vSt) parts.push('⚑ ' + (vSt === 'green' ? 'OK' : vSt === 'yellow' ? 'Bientôt' : 'Urgent'));
+      if (summary) {
+        if (parts.length) {
+          summary.textContent = parts.join(' · ');
+          summary.hidden = false;
+        } else {
+          summary.hidden = true;
+          summary.textContent = '';
+        }
+      }
+    }
+
+    btnApply?.addEventListener('click', () => {
+      dlg?.close();
+      updateSummary();
+      applyFilter();
+    });
+
+    btnReset?.addEventListener('click', () => {
+      if (fLoc) fLoc.value = '';
+      if (fProd) fProd.value = '';
+      if (fStatus) fStatus.value = '';
+      updateSummary();
+      applyFilter();
+    });
+
+    [fLoc, fProd, fStatus].forEach(el => el && el.addEventListener('input', updateSummary));
+  })();
+
+  /* ---- Kebab menu (ouvrir/fermer + clic extérieur + ESC) ---- */
+  (function () {
+    function closeAllMenus() {
+      document.querySelectorAll('.menu-wrap .menu').forEach(m => { m.hidden = true; m.dataset.open = '0'; });
+      document.querySelectorAll('.menu-wrap .kebab[aria-expanded="true"]').forEach(b => b.setAttribute('aria-expanded', 'false'));
+    }
+
+    // Ferme tout au chargement (au cas où)
+    document.addEventListener('DOMContentLoaded', closeAllMenus);
+
+    // Toggle au clic sur le bouton kebab
+    document.addEventListener('click', (e) => {
+      const btn = e.target.closest('.menu-wrap .kebab');
+      if (btn) {
+        const wrap = btn.closest('.menu-wrap');
+        const menu = wrap?.querySelector('.menu');
+        const isOpen = menu?.dataset.open === '1';
+
+        // fermer d'abord tous les autres
+        closeAllMenus();
+
+        // ouvrir si c'était fermé
+        if (menu && !isOpen) {
+          menu.hidden = false;
+          menu.dataset.open = '1';
+          btn.setAttribute('aria-expanded', 'true');
+        }
+        // si c'était ouvert, on vient de le fermer via closeAllMenus()
+        return;
+      }
+
+      // Clic à l'intérieur d'un menu => laisser passer
+      if (e.target.closest('.menu-wrap .menu')) return;
+
+      // Clic ailleurs => fermer
+      closeAllMenus();
+    });
+
+    // ESC pour fermer
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') closeAllMenus();
+    });
+
+    // Quand un <details> se referme, on ferme le menu à l'intérieur
+    document.querySelectorAll('details.more').forEach(d => {
+      d.addEventListener('toggle', () => { if (!d.open) closeAllMenus(); });
+    });
+  })();
+
+</script>
+{% endblock %}

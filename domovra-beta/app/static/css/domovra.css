@@ -1,0 +1,2834 @@
+/* *****************************************************************************
+ * Domovra — feuille de styles globale
+ * -----------------------------------------------------------------------------
+ * Table des matières
+ *  01) Variables & thèmes (root, dark/light)
+ *  02) Resets & éléments génériques
+ *  03) Layout général (aside/main/header, menu, cards…)
+ *  04) Formulaires (style global)
+ *  05) Tables (style global)
+ *  06) Grilles utilitaires (grid/row/responsive helpers)
+ *  07) Sidebar (desktop) & off‑canvas (mobile)
+ *  08) Variantes claires (overrides pour data-theme="light")
+ *  09) Header compact mobile
+ *  10) Toasts (notifications)
+ *  11) Page Accueil (/): styles scopés (.wrap …)
+ *  12) Page Emplacements (/locations)
+ *  13) Page Produits (/products)
+ *  14) Page Stocks (/lots)
+ *  15) Page Paramètres (/settings)
+ *  16) Page Journal (/journal)
+ *  17) Page Support (/support)
+ * *****************************************************************************/
+
+/* ========== 01) Variables & thèmes ======================================== */
+
+/* Préférences générales */
+:root {
+    color-scheme: dark;
+
+    /* Largeurs sidebar */
+    --sidebar-w: 260px;
+    --sidebar-mini-w: 72px;
+
+    /* Couleurs globales */
+    --accent: #00bcd4;
+
+    /* Toasts (valeurs par défaut ; override depuis base.html) */
+    --toast-ok: #4caf50;
+    --toast-warn: #ffb300;
+    --toast-error: #ef5350;
+}
+
+/* Thèmes (valeurs pilotées par html[data-theme]) */
+html[data-theme="dark"] {
+    --bg-body: #0f1115;
+    --bg-card: #151922;
+    --line: #2a2f36;
+    --text-muted: #8ea0b7;
+}
+
+html[data-theme="light"] {
+    --bg-body: #ffffff;
+    --bg-card: #ffffff;
+    --line: #e5e7eb;
+    --text-muted: #6b7280;
+}
+
+html[data-theme="dark"] body {
+    background: var(--bg-body);
+    color: #e5e7eb;
+}
+
+html[data-theme="light"] body {
+    background: var(--bg-body);
+    color: #1f2328;
+}
+
+/* ========== 02) Resets & éléments génériques ============================== */
+
+* {
+    box-sizing: border-box;
+}
+
+a {
+    color: inherit;
+    text-decoration: none;
+}
+
+img {
+    max-width: 100%;
+    display: block;
+}
+
+/* ========== 03) Layout général ============================================ */
+
+.layout {
+    min-height: 100dvh;
+    display: block;
+}
+
+aside {
+    background: #111315;
+    border-right: 1px solid var(--line);
+    padding: 12px;
+    position: relative;
+    z-index: 45;
+    display: flex;
+    /* + */
+    flex-direction: column;
+    /* + */
+}
+
+main {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+}
+
+header {
+    position: sticky;
+    top: 0;
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 10px 16px;
+    border-bottom: 1px solid var(--line);
+    background: var(--bg-body);
+}
+
+.header-left,
+.header-right {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+}
+
+.app-title {
+    margin: 0;
+    font-size: 1.1rem;
+    opacity: .9;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.header-chips {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+/* Harmonisée sur les variables de thème */
+.chip {
+    background: var(--bg-card);
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    padding: 6px 10px;
+    white-space: nowrap;
+    color: inherit;
+}
+
+.chip b {
+    font-weight: 700;
+}
+
+.menu {
+    display: flex;
+    /* grid → flex */
+    flex-direction: column;
+    /* + */
+    gap: 8px;
+    flex: 1;
+    /* occupe la hauteur dispo de l'aside */
+}
+
+.menu a:nth-last-child(2) {
+    margin-top: auto;
+}
+
+
+.menu a {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 12px;
+    border: 1px solid #242932;
+    background: #151922;
+    border-radius: 10px;
+    cursor: pointer;
+}
+
+.menu a:hover {
+    filter: brightness(1.05);
+}
+
+.menu a.active {
+    border-color: #4f46e5;
+    box-shadow: 0 0 0 1px #4f46e5 inset;
+}
+
+.menu .ico {
+    width: 22px;
+    display: inline-grid;
+    place-items: center;
+    opacity: .9;
+}
+
+.page {
+    padding: 16px;
+}
+
+.card {
+    background: var(--bg-card);
+    border: 1px solid #242932;
+    border-radius: 12px;
+    padding: 12px;
+}
+
+.muted {
+    opacity: .7;
+}
+
+/* ========== 04) Formulaires (global) ====================================== */
+
+/* ================================================================ */
+/* Combobox custom (consume-product) — thème-aware                   */
+/* ================================================================ */
+
+.combo {
+    position: relative;
+}
+
+.combo-list {
+    position: absolute;
+    inset-inline: 0;
+    top: calc(100% + 6px);
+    max-height: 320px;
+    overflow: auto;
+    z-index: 60;
+    background: var(--panel, #0f1624);
+    border: 1px solid var(--line, rgba(255, 255, 255, .08));
+    border-radius: 12px;
+    box-shadow: 0 16px 40px rgba(0, 0, 0, .45);
+    padding: 4px 0;
+    color: inherit;
+}
+
+.combo-item {
+    padding: 10px 12px;
+    cursor: pointer;
+}
+
+.combo-item .title {
+    font-weight: 600;
+}
+
+.combo-item .meta {
+    font-size: 12px;
+    opacity: .8;
+}
+
+.combo-item.is-active,
+.combo-item:hover {
+    background: var(--hover, rgba(255, 255, 255, .06));
+}
+
+/* Mark (texte surligné) */
+.combo-item mark {
+    background: transparent;
+    border-bottom: 2px solid currentColor;
+    padding: 0 0 1px 0;
+}
+
+/* Scrollbar discrète */
+.combo-list::-webkit-scrollbar {
+    width: 10px;
+}
+
+.combo-list::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, .15);
+    border-radius: 8px;
+}
+
+/* ========================= Thème clair ========================== */
+html[data-theme="light"] .combo-list {
+    background: #ffffff;
+    border-color: rgba(10, 20, 30, .12);
+    box-shadow: 0 12px 28px rgba(10, 20, 30, .15);
+    color: #0f172a;
+    /* texte principal */
+}
+
+html[data-theme="light"] .combo-item .meta {
+    color: #4b5568;
+    opacity: 1;
+}
+
+html[data-theme="light"] .combo-item.is-active,
+html[data-theme="light"] .combo-item:hover {
+    background: #f3f6fb;
+}
+
+/* Scrollbar clair */
+html[data-theme="light"] .combo-list::-webkit-scrollbar-thumb {
+    background: rgba(0, 0, 0, .18);
+}
+
+/* Optionnel : forcer au-dessus des cards et en-dessous du header */
+header {
+    position: relative;
+    z-index: 100;
+}
+
+.combo-list {
+    z-index: 150;
+}
+
+
+input,
+select,
+button {
+    width: 100%;
+    min-height: 44px;
+    border-radius: 10px;
+    border: 1px solid #2d3340;
+    background: #0f1320;
+    color: #e5e7eb;
+    padding: 8px 10px;
+}
+
+button {
+    cursor: pointer;
+}
+
+option,
+optgroup {
+    background: #0f1320;
+    color: #e5e7eb;
+}
+
+html[data-theme="light"] option,
+html[data-theme="light"] optgroup {
+    background: #ffffff;
+    color: #111827;
+}
+
+/* ========== 05) Tables (global) =========================================== */
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+th,
+td {
+    border: 1px solid #242932;
+    padding: 8px 10px;
+}
+
+th {
+    background: #121520;
+}
+
+tbody tr:nth-child(even) {
+    background: #121620;
+}
+
+/* ========== 06) Grilles utilitaires ======================================= */
+
+.grid {
+    display: grid;
+    grid-template-columns: repeat(12, 1fr);
+    gap: 16px;
+}
+
+/* Spécifique aux cartes placées DANS .grid */
+.grid>.card {
+    grid-column: span 4;
+}
+
+@media (max-width:1200px) {
+    .grid>.card {
+        grid-column: span 6;
+    }
+}
+
+@media (max-width:768px) {
+    .grid>.card {
+        grid-column: 1/-1;
+    }
+}
+
+.row {
+    display: flex;
+    gap: 16px;
+}
+
+.row>* {
+    flex: 1 1 0;
+    min-width: 0;
+}
+
+@media (max-width:768px) {
+    .row {
+        flex-direction: column;
+    }
+}
+
+.table-responsive {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+}
+
+.table-responsive table {
+    min-width: 720px;
+}
+
+/* ========== 07) Sidebar (desktop) & off‑canvas (mobile) ==================== */
+
+@media (min-width:1025px) {
+    aside {
+        position: fixed;
+        top: 0;
+        left: 0;
+        bottom: 0;
+        width: var(--sidebar-w);
+        overflow: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    main {
+        margin-left: var(--sidebar-w);
+    }
+
+    /* Mode compact */
+    .sidebar-mini aside {
+        width: var(--sidebar-mini-w);
+    }
+
+    .sidebar-mini main {
+        margin-left: var(--sidebar-mini-w);
+    }
+
+    .sidebar-mini .menu a {
+        justify-content: center;
+        gap: 0;
+    }
+
+    .sidebar-mini .menu a span:not(.ico) {
+        display: none;
+    }
+
+    .sidebar-mini aside {
+        padding: 12px 8px;
+    }
+}
+
+@media (max-width:1024px) {
+    .layout {
+        display: block;
+    }
+
+    aside {
+        position: fixed;
+        inset: 0 auto 0 0;
+        width: var(--sidebar-w);
+        transform: translateX(-100%);
+        transition: transform .25s ease;
+        z-index: 2000;
+    }
+
+    body.sidebar-open aside {
+        transform: translateX(0);
+        box-shadow: 0 10px 30px rgba(0, 0, 0, .45);
+    }
+
+    main {
+        margin-left: 0;
+    }
+}
+
+/* Burger */
+.hamburger {
+    display: inline-grid;
+    place-content: center;
+    gap: 4px;
+    width: 40px;
+    height: 40px;
+    border: 0;
+    background: transparent;
+    cursor: pointer;
+    border-radius: 10px;
+}
+
+.hamburger span {
+    display: block;
+    width: 22px;
+    height: 2px;
+    background: currentColor;
+}
+
+@media (min-width:1025px) {
+    .hamburger {
+        display: none;
+    }
+}
+
+/* ========== 08) Variantes claires (overrides) ============================== */
+
+html[data-theme="light"] aside {
+    background: #f7f7f8;
+    border-right: 1px solid var(--line);
+}
+
+html[data-theme="light"] header {
+    background: #ffffff;
+    border-bottom: 1px solid var(--line);
+}
+
+html[data-theme="light"] .muted {
+    color: var(--text-muted);
+}
+
+html[data-theme="light"] .menu a {
+    background: #ffffff;
+    border: 1px solid var(--line);
+    color: #1f2328;
+}
+
+html[data-theme="light"] .menu a.active {
+    background: #eef2ff;
+    border-color: #c7d2fe;
+}
+
+html[data-theme="light"] .card {
+    background: #ffffff;
+    border: 1px solid var(--line);
+}
+
+html[data-theme="light"] input,
+html[data-theme="light"] select {
+    background: #ffffff;
+    color: #111827;
+    border: 1px solid #d1d5db;
+}
+
+html[data-theme="light"] button {
+    background: #f3f4f6;
+    color: #111827;
+    border: 1px solid #d1d5db;
+}
+
+html[data-theme="light"] th,
+html[data-theme="light"] td {
+    border: 1px solid var(--line);
+}
+
+html[data-theme="light"] th {
+    background: #f8fafc;
+    color: #111827;
+}
+
+html[data-theme="light"] tbody tr:nth-child(even) {
+    background: #f9fafb;
+}
+
+html[data-theme="light"] .chip {
+    background: var(--bg-card);
+    border: 1px solid var(--line);
+}
+
+/* ========== 09) Header compact mobile ===================================== */
+
+@media (max-width:640px) {
+    .header-right {
+        display: none;
+    }
+}
+
+/* ========== 10) Toasts ===================================================== */
+
+.toast-stack {
+    position: fixed;
+    top: 12px;
+    right: 12px;
+    display: grid;
+    gap: 8px;
+    z-index: 3000;
+}
+
+.toast {
+    position: relative;
+    border: 1px solid #242932;
+    border-radius: 10px;
+    padding: 10px 12px 10px 16px;
+    box-shadow: 0 6px 16px rgba(0, 0, 0, .25);
+    animation: toast-in .2s ease both;
+    background: rgba(20, 24, 32, .85);
+    backdrop-filter: blur(2px);
+    color: inherit;
+}
+
+.toast .stripe {
+    position: absolute;
+    inset: -1px auto -1px -1px;
+    width: 6px;
+    border-radius: 10px 0 0 10px;
+    background: transparent;
+    pointer-events: none;
+}
+
+@keyframes toast-in {
+    from {
+        opacity: 0;
+        transform: translateY(-8px);
+    }
+
+    to {
+        opacity: 1;
+        transform: none;
+    }
+}
+
+@media (max-width:700px) {
+    .toast-stack {
+        top: auto;
+        right: auto;
+        left: 0;
+        bottom: 12px;
+        width: 100%;
+        padding: 0 12px;
+    }
+
+    .toast {
+        width: 100%;
+    }
+}
+
+/* ========================================================================== */
+/* ========== 11) Page Accueil (styles scopés) =============================== */
+/* ========================================================================== */
+
+.wrap {
+    --gap: 12px;
+    --radius: 14px;
+    --border: var(--line);
+    --chip: #1a2230;
+    /* dark */
+    --muted: var(--text-muted);
+    --accent: var(--accent);
+    --ok: var(--toast-ok);
+    --warn: var(--toast-warn);
+    --danger: var(--toast-error);
+
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 0 12px;
+}
+
+html[data-theme="light"] .wrap {
+    --chip: #ffffff;
+}
+
+.wrap .row {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.wrap .row>* {
+    flex: initial;
+}
+
+.wrap .chip {
+    background: var(--chip);
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    padding: 6px 10px;
+    color: var(--muted);
+    white-space: nowrap;
+}
+
+.wrap .card {
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 12px;
+    margin-bottom: 12px;
+}
+
+.wrap .title {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin: 6px 0 8px;
+}
+
+.wrap .title h2 {
+    font-size: 16px;
+    margin: 0;
+}
+
+/* Champs & labels (scopés) */
+.wrap input,
+.wrap select,
+.wrap button {
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 10px;
+    background: transparent;
+    color: inherit;
+    min-height: 0;
+    /* override global */
+    width: auto;
+    /* override global */
+}
+
+.wrap .field {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    min-width: 160px;
+}
+
+.wrap .label {
+    font-size: 12px;
+    color: var(--muted);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+/* Bouton primaire (UNIQUE définition) */
+.wrap button.primary {
+    background: var(--accent);
+    border: 0;
+    color: #02222a;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.wrap .btn-add-stock {
+    height: 44px;
+    align-self: end;
+}
+
+/* Grille “Ajout express” */
+.wrap .form-grid {
+    display: grid !important;
+    grid-template-columns: 2fr 2fr 1fr 1fr auto;
+    gap: 12px;
+    align-items: end;
+}
+
+.wrap .form-grid .field {
+    margin: 0;
+}
+
+@media (max-width:1100px) {
+    .wrap .form-grid {
+        grid-template-columns: 2fr 2fr 1fr auto;
+    }
+}
+
+@media (max-width:900px) {
+    .wrap .form-grid {
+        grid-template-columns: 1fr 1fr 1fr;
+    }
+
+    .wrap .btn-add-stock {
+        grid-column: 1 / -1;
+        justify-self: stretch;
+    }
+}
+
+@media (max-width:700px) {
+    .wrap .form-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .wrap .btn-add-stock {
+        width: 100%;
+    }
+}
+
+/* Tableaux “Top 8” */
+.wrap .top8-table thead th {
+    font-size: 12px;
+    color: var(--muted);
+    text-align: left;
+    padding: 6px 8px;
+    border: 0;
+    border-bottom: 1px solid var(--border);
+    background: transparent;
+}
+
+.wrap .top8-table tbody td {
+    padding: 10px 8px;
+    border: 0;
+    border-bottom: 1px solid var(--border);
+}
+
+.wrap .top8-table tbody tr:hover {
+    background-color: rgba(255, 255, 255, .03);
+}
+
+html[data-theme="light"] .wrap .top8-table tbody tr:hover {
+    background-color: rgba(0, 0, 0, .03);
+}
+
+.wrap .muted {
+    color: var(--muted);
+    opacity: 1;
+}
+
+/* Pastilles */
+.wrap .pill {
+    padding: 2px 8px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 600;
+    border: 1px solid transparent;
+}
+
+.wrap .ok {
+    color: var(--ok);
+    border-color: rgba(76, 175, 80, .35);
+}
+
+.wrap .warn {
+    color: var(--warn);
+    border-color: rgba(255, 179, 0, .35);
+}
+
+.wrap .danger {
+    color: var(--danger);
+    border-color: rgba(239, 83, 80, .35);
+}
+
+/* Bascule table/cartes (scopée automatiquement via :has) */
+.wrap .top8-table {
+    display: block;
+}
+
+.wrap .top8-cards {
+    display: none;
+}
+
+@media (max-width:700px) {
+    .wrap .top8-table {
+        display: none;
+    }
+
+    .wrap .top8-cards {
+        display: grid;
+        gap: 10px;
+    }
+}
+
+.wrap .lot-card {
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 10px;
+    background: transparent;
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 8px;
+    align-items: center;
+}
+
+.wrap .lot-main {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.wrap .lot-title {
+    font-weight: 600;
+}
+
+.wrap .lot-meta {
+    font-size: .9rem;
+    color: var(--muted);
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.wrap .lot-action {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+.wrap .lot-action input {
+    max-width: 90px;
+}
+
+/* Espacements */
+.wrap .card+.card {
+    margin-top: 12px;
+}
+
+.wrap .card .row {
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+/* Fix Companion (élargit breakpoint mobile cards) */
+@media (max-width: 900px) {
+    .wrap .top8-table {
+        display: none !important;
+    }
+
+    .wrap .top8-cards {
+        display: grid !important;
+        gap: 10px;
+    }
+
+    .wrap .card {
+        display: block;
+        width: 100%;
+        margin: 0 0 12px 0;
+    }
+
+    .wrap .card .row>* {
+        flex: initial !important;
+        min-width: 0;
+    }
+
+    .wrap .lot-card {
+        border: 1px solid var(--border, var(--line));
+        border-radius: 12px;
+        padding: 10px;
+        background: transparent;
+        display: grid;
+        grid-template-columns: 1fr auto;
+        gap: 8px;
+        align-items: center;
+    }
+
+    .wrap .lot-main {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+    }
+
+    .wrap .lot-title {
+        font-weight: 600;
+    }
+
+    .wrap .lot-meta {
+        font-size: .9rem;
+        color: var(--muted, var(--text-muted));
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+    }
+
+    .wrap .lot-action {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+    }
+
+    .wrap .lot-action input {
+        max-width: 90px;
+    }
+
+    .wrap .lot-action button {
+        white-space: nowrap;
+    }
+}
+
+/* Fallback densité tactile */
+@media (pointer: coarse) {
+    .wrap .top8-table {
+        display: none !important;
+    }
+
+    .wrap .top8-cards {
+        display: grid !important;
+        gap: 10px;
+    }
+}
+
+/* WebKit iOS (portrait) */
+@supports (-webkit-touch-callout: none) {
+    @media (orientation: portrait) {
+        .wrap .top8-table {
+            display: none !important;
+        }
+
+        .wrap .top8-cards {
+            display: grid !important;
+            gap: 10px;
+        }
+    }
+}
+
+/* Neutraliser l’étirement dans les cartes */
+@media (max-width: 900px),
+(pointer: coarse) {
+    .wrap .card .row>* {
+        flex: initial !important;
+        min-width: 0;
+    }
+
+    .wrap .lot-action button {
+        white-space: nowrap;
+    }
+}
+
+/* --- Carte Consommer (lecture seule étape 2) --- */
+.consume-card .field {
+    margin: .5rem 0;
+}
+
+.consume-card input[list] {
+    width: 100%;
+}
+
+.consume-card .grid-2 {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: .75rem;
+}
+
+.consume-card .info .muted {
+    font-size: .85rem;
+    opacity: .85;
+}
+
+.consume-card .info .strong {
+    font-weight: 600;
+}
+
+.consume-card .qty-controls {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: .5rem;
+    align-items: center;
+}
+
+.consume-card .quick-btns {
+    display: flex;
+    gap: .5rem;
+}
+
+.consume-card input[type="number"] {
+    width: 100%;
+}
+
+@media (max-width: 700px) {
+    .consume-card .grid-2 {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* --- Combobox Domovra (look & feel) --- */
+.combo {
+    position: relative;
+}
+
+.combo-list {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: calc(100% + .35rem);
+    z-index: 20;
+    max-height: 320px;
+    overflow: auto;
+    padding: .25rem 0;
+    margin: 0;
+    list-style: none;
+    border: 1px solid var(--border, #2f2f2f);
+    border-radius: .5rem;
+    background: var(--card, #111);
+    box-shadow: 0 8px 30px rgba(0, 0, 0, .35);
+}
+
+.combo-item {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: .25rem .75rem;
+    padding: .5rem .75rem;
+    cursor: pointer;
+    align-items: center;
+}
+
+.combo-item .title {
+    font-weight: 600;
+}
+
+.combo-item .meta {
+    font-size: .85em;
+    opacity: .8;
+}
+
+.combo-item .pill {
+    font-size: .75em;
+    padding: .1rem .45rem;
+    border-radius: 999px;
+    border: 1px solid var(--border, #2f2f2f);
+    opacity: .9;
+}
+
+.combo-item mark {
+    background: transparent;
+    color: var(--accent, #7bdcff);
+    font-weight: 700;
+}
+
+.combo-item:hover,
+.combo-item.is-active {
+    background: rgba(255, 255, 255, .06);
+}
+
+/* clair */
+@media (prefers-color-scheme: light) {
+    .combo-list {
+        background: #fff;
+        border-color: #e5e7eb;
+        box-shadow: 0 12px 24px rgba(0, 0, 0, .08);
+    }
+
+    .combo-item:hover,
+    .combo-item.is-active {
+        background: #f3f4f6;
+    }
+}
+
+
+/* ========================================================================== */
+/* ========== 12) Page Emplacements (/locations) ============================ */
+/* ========================================================================== */
+
+/* Ajout express — grille compacte */
+.wrap form[action$="location/add"].form-grid {
+    display: grid !important;
+    grid-template-columns: 1fr auto;
+    gap: 12px;
+    align-items: end;
+}
+
+/* Grille si on affiche Type + Description */
+@media (min-width:901px) {
+    .wrap form[action$="location/add"].form-grid {
+        grid-template-columns: 2fr 1fr auto;
+        /* Nom (2fr) | Type (1fr) | Bouton */
+    }
+
+    /* La description passe sous Nom+Type pour garder un bouton compact */
+    .wrap form[action$="location/add"].form-grid .field:nth-of-type(3) {
+        grid-column: 1 / 3;
+    }
+}
+
+/* Ajout express : grille spéciale */
+.add-location-form {
+    display: grid;
+    gap: 12px;
+}
+
+/* Desktop → tout sur une ligne */
+@media (min-width: 901px) {
+    .add-location-form {
+        grid-template-columns: 2fr 1fr 2fr auto;
+        /* Nom | Type | Description | Bouton */
+        align-items: end;
+    }
+}
+
+
+@media (max-width:700px) {
+    .wrap form[action$="location/add"].form-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* Outils */
+.wrap .tools-row {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 12px;
+    align-items: end;
+}
+
+.wrap .tools-search {
+    min-width: 220px;
+}
+
+@media (max-width:700px) {
+    .wrap .tools-row {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* Actions */
+.wrap .t-actions {
+    text-align: right;
+}
+
+.wrap .actions-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    justify-items: stretch;
+}
+
+.wrap .actions-grid button {
+    width: 100% !important;
+    min-width: 0;
+}
+
+/* Table (ciblée) */
+.wrap table:has(#locations-body) thead th {
+    font-size: 12px;
+    color: var(--text-muted);
+    text-align: left;
+    padding: 6px 8px;
+    border: 0;
+    border-bottom: 1px solid var(--line);
+    background: transparent;
+}
+
+.wrap table:has(#locations-body) tbody td {
+    padding: 10px 8px;
+    border: 0;
+    border-bottom: 1px solid var(--line);
+}
+
+.wrap table:has(#locations-body) tbody tr:hover {
+    background-color: rgba(255, 255, 255, .03);
+}
+
+html[data-theme="light"] .wrap table:has(#locations-body) tbody tr:hover {
+    background-color: rgba(0, 0, 0, .03);
+}
+
+/* Badges */
+.wrap .badge {
+    padding: 2px 8px;
+    border-radius: 999px;
+    font-size: 12px;
+    border: 1px solid transparent;
+}
+
+.wrap .badge.warn {
+    color: var(--toast-warn);
+    border-color: rgba(255, 177, 0, .35);
+}
+
+.wrap .badge.danger {
+    color: var(--toast-error);
+    border-color: rgba(239, 83, 80, .35);
+}
+
+/* Cartes mobiles */
+.wrap .loc-cards {
+    display: none;
+}
+
+@media (max-width:700px) {
+    .wrap .table-responsive:has(#locations-body) {
+        display: none;
+    }
+
+    .wrap .loc-cards {
+        display: grid;
+        gap: 10px;
+    }
+
+    .wrap .loc-card {
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        padding: 10px;
+        background: transparent;
+        display: grid;
+        grid-template-columns: 1fr auto;
+        gap: 8px;
+        align-items: center;
+    }
+
+    .wrap .loc-main {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+    }
+
+    .wrap .loc-title {
+        font-weight: 600;
+    }
+
+    .wrap .loc-meta {
+        font-size: .9rem;
+        color: var(--text-muted);
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+    }
+
+    .wrap .loc-actions {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+        justify-content: flex-end;
+    }
+
+    .wrap .loc-actions button {
+        width: auto !important;
+        min-width: 40px;
+    }
+
+    .wrap .btn-text {
+        display: none;
+    }
+}
+
+/* Dialog (ajustements) */
+.wrap dialog input[type="radio"] {
+    width: 16px;
+    height: 16px;
+    accent-color: var(--accent);
+}
+
+.wrap dialog select {
+    min-height: 44px;
+}
+
+.wrap #del-mgmt label {
+    gap: 8px;
+}
+
+/* Emplacements — l'input occupe toute sa colonne */
+.wrap form[action$="location/add"].form-grid .field>input,
+.wrap form[action$="location/add"].form-grid .field>select,
+.wrap form[action$="location/add"].form-grid .field>textarea {
+    width: 100%;
+    min-width: 0;
+}
+
+/* Desktop : donner plus d'espace au champ nom */
+@media (min-width:701px) {
+    .wrap form[action$="location/add"].form-grid {
+        grid-template-columns: 2fr auto;
+        /* au lieu de 1fr auto */
+    }
+}
+
+/* === Dialog Supprimer : mise en page propre === */
+#dlg-delete .del-mgmt {
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 12px;
+}
+
+#dlg-delete .del-choices {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    /* 2 colonnes sur desktop */
+    gap: 10px 16px;
+    align-items: center;
+}
+
+#dlg-delete .opt {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-height: 32px;
+    white-space: nowrap;
+}
+
+/* largeur confortable pour le select */
+#dlg-delete .opt select {
+    min-width: 220px;
+}
+
+/* Réinitialiser d’éventuels styles globaux qui gonflent les radios */
+#dlg-delete input[type="radio"] {
+    width: auto;
+    height: auto;
+    transform: none;
+    accent-color: var(--accent);
+    /* joli dans les thèmes modernes */
+    margin: 0;
+}
+
+/* Empiler proprement sur mobile */
+@media (max-width: 700px) {
+    .wrap .add-product-form .infield-qty {
+        width: 100%;
+    }
+
+    .wrap .add-product-form .infield-qty input {
+        width: 100%;
+        padding-right: 56px;
+    }
+
+    .wrap .add-product-form .infield-qty .suffix {
+        right: 12px;
+    }
+}
+
+
+
+/* ========================================================================== */
+/* ========== 13) Page Produits (/products) ================================= */
+/* ========================================================================== */
+
+/* Variantes de boutons (cohérent avec le reste de l’app) */
+.wrap button.secondary {
+    background: var(--chip, #1a2230);
+    border: 1px solid var(--line);
+    color: inherit;
+}
+
+/* Placeholders harmonisés */
+.wrap input::placeholder,
+.wrap textarea::placeholder {
+    color: rgba(200, 210, 225, .7);
+}
+
+html[data-theme="light"] .wrap input::placeholder,
+html[data-theme="light"] .wrap textarea::placeholder {
+    color: rgba(60, 70, 90, .6);
+}
+
+/* Aide “?” minimaliste */
+.wrap .help {
+    display: inline-grid;
+    place-items: center;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    font-size: 12px;
+    line-height: 1;
+    cursor: help;
+    background: #1f2735;
+    border: 1px solid var(--line);
+    color: #cfe3ff;
+    position: relative;
+}
+
+.wrap .help::before {
+    content: "?";
+    font-weight: 700;
+}
+
+.wrap .help:hover::after,
+.wrap .help:focus-visible::after {
+    content: attr(data-tip);
+    position: absolute;
+    left: 50%;
+    bottom: 100%;
+    transform: translate(-50%, -8px);
+    background: #0f1320;
+    color: #e5e7eb;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 6px 8px;
+    white-space: normal;
+    width: max-content;
+    max-width: 280px;
+    z-index: 60;
+}
+
+html[data-theme="light"] .wrap .help:hover::after,
+html[data-theme="light"] .wrap .help:focus-visible::after {
+    background: #fff;
+    color: #111827;
+}
+
+/* ======================= */
+/* FORMULAIRE D’AJOUT      */
+/* ======================= */
+
+/* Utiliser class="add-product-form" sur le <form> */
+.wrap .add-product-form {
+    display: grid;
+    gap: 12px;
+    align-items: end;
+    grid-template-columns: 2fr 1fr 1fr 1fr 1fr;
+    /* desktop : 5 colonnes */
+}
+
+/* Champs pleine largeur */
+.wrap .add-product-form .field>input,
+.wrap .add-product-form .field>select,
+.wrap .add-product-form .field>textarea {
+    width: 100%;
+    min-width: 0;
+}
+
+/* Bouton du bas sur toute la largeur */
+.wrap .add-product-form .btn-wide {
+    grid-column: 1 / -1 !important;
+    width: 100%;
+    justify-self: stretch;
+}
+
+/* Suffixe d’unité (quantité mini) */
+.wrap .add-product-form .infield-qty {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.wrap .add-product-form .infield-qty input {
+    width: 100%;
+    padding-right: 56px;
+}
+
+.wrap .add-product-form .infield-qty .suffix {
+    position: absolute;
+    right: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    opacity: .8;
+    pointer-events: none;
+    background: transparent;
+    border: 0;
+    padding: 0;
+    line-height: 1;
+}
+
+/* Aide compacte sous la quantité — masquée pour l’alignement */
+.wrap .add-product-form #create_min_hint {
+    display: none;
+}
+
+/* Checkbox “Ne doit pas être congelé” alignée */
+.wrap .add-product-form .no-freeze-cell {
+    display: flex;
+    align-items: center;
+    min-height: 44px;
+}
+
+/* Groupe “après congélation” */
+.wrap .add-product-form #create_freeze_group {
+    display: flex;
+    flex-direction: column;
+}
+
+/* Radios DLC/DDM (segmentés) */
+.wrap .add-product-form .segmented {
+    display: inline-flex;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    overflow: hidden;
+    white-space: nowrap;
+}
+
+.wrap .add-product-form .segmented label {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    cursor: pointer;
+}
+
+.wrap .add-product-form .segmented label+label {
+    border-left: 1px solid var(--line);
+}
+
+/* Responsive ≤900px : mono‑colonne */
+@media (max-width:900px) {
+    .wrap .add-product-form {
+        grid-template-columns: 1fr !important;
+    }
+
+    .wrap .add-product-form .segmented {
+        width: 100%;
+        justify-content: space-between;
+    }
+
+    .wrap .add-product-form .segmented label {
+        flex: 1 1 auto;
+        justify-content: center;
+        padding: 10px 8px;
+    }
+
+    .wrap .add-product-form .btn-wide {
+        width: 100%;
+        justify-self: stretch;
+    }
+}
+
+/* Textarea dans le style global */
+.wrap textarea {
+    width: 100%;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    background: transparent;
+    color: inherit;
+    resize: vertical;
+    min-height: 72px;
+}
+
+/* ======================= */
+/* OUTILS & TABLE DESKTOP  */
+/* ======================= */
+
+.wrap[data-page="product"] .tools-row {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 12px;
+    align-items: end;
+}
+
+.wrap[data-page="product"] .tools-row input[type="search"] {
+    width: 100%;
+    min-width: 0;
+}
+
+/* Table (si tu l’utilises encore quelque part) */
+.wrap[data-page="product"] #tbl {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.wrap[data-page="product"] #tbl thead th {
+    font-size: 12px;
+    color: var(--text-muted);
+    text-align: left;
+    padding: 6px 8px;
+    border: 0;
+    border-bottom: 1px solid var(--line);
+    background: transparent;
+}
+
+.wrap[data-page="product"] #tbl tbody td {
+    padding: 10px 8px;
+    border: 0;
+    border-bottom: 1px solid var(--line);
+    vertical-align: top;
+}
+
+.wrap[data-page="product"] #tbl tbody tr:hover {
+    background: rgba(255, 255, 255, .03);
+}
+
+html[data-theme="light"] .wrap[data-page="product"] #tbl tbody tr:hover {
+    background: rgba(0, 0, 0, .03);
+}
+
+/* Actions alignées à droite (colonne Actions) */
+.wrap[data-page="product"] .t-actions {
+    text-align: right;
+}
+
+.wrap[data-page="product"] .actions-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    justify-items: stretch;
+}
+
+.wrap[data-page="product"] .actions-grid button {
+    width: 100% !important;
+    min-width: 0;
+}
+
+/* ========================================================================== */
+/* PRODUITS — Cartes (grille responsive)                                      */
+/* ========================================================================== */
+
+/* Grille : colonnes fluides */
+.cards-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 16px;
+}
+
+/* Carte */
+.prod-card {
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    background: transparent;
+    padding: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    height: 100%;
+    min-width: 0;
+    position: relative;
+    overflow: hidden;
+}
+
+/* En‑tête */
+.pc-head {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.pc-title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    min-width: 0;
+}
+
+.pc-name {
+    margin: 0;
+    font-size: 1.05rem;
+    font-weight: 700;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.pc-sub {
+    color: var(--muted);
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* Pills */
+.prod-card .pill {
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    padding: 3px 8px;
+}
+
+.prod-card .pill.danger {
+    color: #ffb4b4;
+    border-color: var(--danger);
+}
+
+/* Corps : 2 colonnes (tombe à 1 en mobile) */
+.pc-body {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+}
+
+.stat {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 10px 12px;
+    min-height: 48px;
+}
+
+.stat.full {
+    grid-column: 1 / -1;
+}
+
+.stat .k {
+    display: block;
+    font-size: .85rem;
+    opacity: .8;
+    line-height: 1.05;
+}
+
+.stat .v {
+    display: block;
+    font-weight: 600;
+}
+
+/* Actions */
+.pc-actions {
+    margin-top: auto;
+    /* colle en bas */
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 10px;
+}
+
+.pc-actions .secondary,
+.pc-actions button {
+    width: 100%;
+    justify-content: center;
+}
+
+/* Breakpoints */
+@media (max-width:900px) {
+    .cards-grid {
+        grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    }
+}
+
+@media (max-width:640px) {
+    .pc-body {
+        grid-template-columns: 1fr;
+    }
+
+    .pc-actions {
+        grid-template-columns: 1fr;
+    }
+
+    .pc-sub {
+        white-space: normal;
+    }
+
+    /* autorise le retour à la ligne */
+}
+
+/* Modale “Aperçu” (layout façon Grocy) */
+.kv {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px 16px;
+}
+
+@media (max-width:700px) {
+    .kv {
+        grid-template-columns: 1fr;
+    }
+}
+
+.tabs.compact {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+}
+
+.tabs.compact .tab {
+    border: 1px solid var(--line);
+    background: transparent;
+    border-radius: 8px;
+    padding: 6px 10px;
+}
+
+.tabs.compact .tab.active {
+    background: rgba(255, 255, 255, .04);
+}
+
+/* Sécurité : neutralise d’éventuels styles de debug sur .stat */
+.stat::before,
+.stat::after {
+    content: none !important;
+}
+
+/* Input + bouton ? collé */
+.qwrap {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.qwrap input[type="search"] {
+    width: 100%;
+    padding-right: 40px;
+}
+
+.qwrap .icon-btn {
+    position: absolute;
+    right: 6px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 28px;
+    height: 28px;
+    border-radius: 999px;
+    border: 1px solid var(--line);
+    background: transparent;
+    color: inherit;
+    cursor: pointer;
+    display: grid;
+    place-items: center;
+    font-weight: 700;
+}
+
+/* Dialog d’aide */
+#q-help {
+    border: 0;
+    padding: 0;
+    background: transparent;
+}
+
+#q-help::backdrop {
+    backdrop-filter: blur(2px);
+    background: rgba(0, 0, 0, .4);
+}
+
+.qhelp {
+    min-width: min(720px, 96vw);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    background: var(--panel);
+    padding: 14px;
+}
+
+.qhelp header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.qhelp header .icon-btn {
+    margin-left: auto;
+}
+
+.qhelp .help-list {
+    margin: 8px 0;
+    padding-left: 18px;
+}
+
+.qhelp code {
+    background: rgba(255, 255, 255, .06);
+    padding: 1px 6px;
+    border-radius: 6px;
+}
+
+html[data-theme="light"] .qhelp code {
+    background: rgba(0, 0, 0, .06);
+}
+
+.qhelp .quick-ex {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 10px;
+}
+
+.qhelp .quick-ex button {
+    border: 1px solid var(--line);
+    background: transparent;
+    border-radius: 999px;
+    padding: 6px 10px;
+    cursor: pointer;
+}
+
+@media (max-width:640px) {
+    .qhelp {
+        min-width: min(520px, 96vw);
+    }
+}
+
+/* ===== Modale Éditer : style propre, sombre/clair cohérent ===== */
+.wrap dialog.modal {
+    border: 0;
+    padding: 0;
+    background: transparent;
+}
+
+.wrap dialog.modal::backdrop {
+    backdrop-filter: blur(3px);
+    background: rgba(0, 0, 0, .4);
+}
+
+.wrap dialog.modal .edit-form {
+    display: grid;
+    gap: 12px;
+    /* largeur confortable, responsive */
+    width: min(860px, 96vw);
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    padding: 14px;
+    background: var(--bg-card);
+}
+
+/* Titre */
+.wrap dialog.modal .dlg-title {
+    margin: 0 0 2px 0;
+    font-size: 1.05rem;
+    font-weight: 700;
+    text-align: left;
+}
+
+/* Grille 2 colonnes fluide pour les lignes multi‑champs */
+.wrap dialog.modal .row {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 10px;
+}
+
+@media (max-width: 760px) {
+    .wrap dialog.modal .row {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* Champs : mêmes codes que .wrap */
+.wrap dialog.modal .label {
+    font-size: 12px;
+    color: var(--text-muted);
+    display: flex;
+    gap: 6px;
+}
+
+.wrap dialog.modal input,
+.wrap dialog.modal select,
+.wrap dialog.modal textarea {
+    width: 100%;
+    min-width: 0;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    background: transparent;
+    color: inherit;
+    padding: 10px;
+}
+
+/* Suffixe de quantité mini */
+.wrap dialog.modal .infield-qty {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.wrap dialog.modal .infield-qty input {
+    padding-right: 56px;
+}
+
+.wrap dialog.modal .infield-qty .suffix {
+    position: absolute;
+    right: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    opacity: .8;
+    pointer-events: none;
+}
+
+/* Radios DLC/DDM en pastilles */
+.wrap dialog.modal [type="radio"] {
+    appearance: auto;
+    width: auto;
+    height: auto;
+    margin: 0;
+    accent-color: var(--accent);
+}
+
+.wrap dialog.modal .segmented,
+/* si tu veux réutiliser le style segmenté */
+.wrap dialog.modal .radio-row {
+    display: inline-flex;
+    gap: 14px;
+    align-items: center;
+}
+
+.wrap dialog.modal .radio-row label {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+/* Groupe “après congélation” masqué proprement quand interdit */
+.wrap dialog.modal #dlg-freeze-group {
+    display: flex;
+    flex-direction: column;
+}
+
+/* Actions */
+.wrap dialog.modal .dlg-actions {
+    display: flex;
+    gap: 8px;
+    justify-content: flex-end;
+    margin-top: 4px;
+}
+
+.wrap dialog.modal .btn-cancel {
+    background: transparent;
+    border: 1px solid var(--line);
+}
+
+.wrap dialog.modal .btn-save {
+    font-weight: 600;
+}
+
+/* Petits polissages visuels */
+.wrap dialog.modal select optgroup {
+    color: var(--text-muted);
+}
+
+.wrap dialog.modal textarea {
+    resize: vertical;
+    min-height: 72px;
+}
+
+/* Évite la “pastille” bleue sur les radios (cf. screenshot) venant de styles globaux */
+.wrap dialog.modal input[type="radio"]::before,
+.wrap dialog.modal input[type="radio"]::after {
+    content: none !important;
+}
+
+/* Taille discrète pour la case à cocher et bon espacement du label au‑dessus */
+#dlg-edit .chk {
+    width: 16px;
+    height: 16px;
+    margin: 0;
+}
+
+/* Harmonise la hauteur des <select> de la modale (y compris Type d’échéance) */
+#dlg-edit select {
+    min-height: 40px;
+}
+
+/* Fallback si :has() n’est pas supporté */
+.wrap .prod-card[data-status="red"]::after {
+    content: "Urgent";
+    background: var(--ribbon-danger, #ef4444);
+    color: #fff;
+}
+
+.wrap .prod-card[data-status="yellow"]::after {
+    content: "Bientôt";
+    background: var(--ribbon-warn, #f59e0b);
+    color: #121212;
+}
+
+/* Base commune (peut réutiliser ta base existante) */
+.wrap .prod-card[data-status="red"]::after,
+.wrap .prod-card[data-status="yellow"]::after {
+    position: absolute;
+    top: 12px;
+    right: -42px;
+    width: 170px;
+    height: 28px;
+    line-height: 28px;
+    transform: rotate(45deg);
+    text-align: center;
+    font-weight: 700;
+    letter-spacing: .3px;
+    z-index: 10;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, .25);
+    pointer-events: none;
+}
+
+@media (max-width:700px) {
+
+    .wrap .prod-card[data-status="red"]::after,
+    .wrap .prod-card[data-status="yellow"]::after {
+        top: 10px;
+        right: -36px;
+        width: 150px;
+        height: 24px;
+        line-height: 24px;
+        font-size: .85rem;
+    }
+}
+
+/* Cache les champs supplémentaires tant que le nom n’est pas rempli
+   !important pour battre tout style inline (ex: freezeGrp.style.display) */
+form.add-product-form.gate-on [data-gate="create"] {
+    display: none !important;
+}
+
+@supports (animation: fadein 0.2s) {
+    @keyframes fadein {
+        from {
+            opacity: 0
+        }
+
+        to {
+            opacity: 1
+        }
+    }
+
+    form.add-product-form:not(.gate-on) [data-gate="create"] {
+        animation: fadein .15s ease-out;
+    }
+}
+
+
+
+
+/* ========================================================================== */
+/* ========== 14) Page Stocks (/lots) — s'aligne sur /products =============== */
+/* ========================================================================== */
+
+/* ===== Filtres (version large par défaut, + correctifs shrink) ============ */
+.wrap .filters-row {
+    display: grid;
+    grid-template-columns: minmax(0, 2fr) minmax(0, 1fr) minmax(0, 1fr) auto;
+    gap: 12px;
+    align-items: stretch;
+}
+
+.wrap .filters-row>* {
+    min-width: 0;
+}
+
+/* Variante compacte : champ recherche + bouton Filtres */
+.wrap .filters-row.compact {
+    grid-template-columns: 1fr auto;
+    gap: 10px;
+}
+
+.wrap .filters-row .qwrap {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+.wrap .filters-row .qwrap input {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+.wrap .btn-filters {
+    padding: 8px 12px;
+}
+
+/* Ligne méta sous la barre (compteur + résumé) */
+.wrap .filters-meta {
+    margin-top: 8px;
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    align-items: center;
+}
+
+/* Points de rupture */
+@media (max-width:900px) {
+    .wrap .filters-row {
+        grid-template-columns: 1fr 1fr;
+    }
+
+    .wrap .filters-row .wide {
+        grid-column: 1 / -1;
+    }
+}
+
+@media (max-width:700px) {
+    .wrap .filters-row {
+        grid-template-columns: 1fr auto;
+    }
+
+    .wrap .filters-row .wide {
+        grid-column: 1 / -1;
+    }
+
+    .wrap .filters-row select {
+        width: 100%;
+    }
+
+    .wrap .filters-row .chip {
+        grid-column: 1 / -1;
+        justify-self: start;
+    }
+}
+
+/* ===== Pastille d'état (réutilisée dans l'entête de carte) ================ */
+.wrap .status {
+    margin-left: auto;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 10px;
+    border-radius: 999px;
+    border: 1px solid var(--line);
+    font-weight: 600;
+}
+
+.wrap .status.green {
+    background: rgba(76, 175, 80, .12);
+}
+
+.wrap .status.yellow {
+    background: rgba(255, 179, 0, .12);
+}
+
+.wrap .status.red {
+    background: rgba(239, 83, 80, .12);
+}
+
+/* ===== Bloc Dates (utilisé dans .stat.full comme /products) =============== */
+.wrap details.dates {
+    margin-top: 6px;
+}
+
+.wrap details.dates summary {
+    cursor: pointer;
+    list-style: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--text-muted);
+}
+
+.wrap details.dates summary::-webkit-details-marker {
+    display: none;
+}
+
+.wrap .timeline {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-top: 6px;
+}
+
+.wrap .timeline .pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 8px;
+    border-radius: 999px;
+    border: 1px solid var(--line);
+    background: transparent;
+}
+
+/* ===== Dialog: actions côte à côte et boutons visibles ==================== */
+.wrap dialog.modal .dlg-actions,
+#dlg-delete .dlg-actions {
+    display: flex;
+    gap: 10px;
+    justify-content: flex-end;
+}
+
+.wrap dialog.modal .dlg-actions button,
+#dlg-delete .dlg-actions button {
+    width: auto;
+    min-width: 120px;
+}
+
+/* ===== Styles des boutons d’action ======================================= */
+.btn-danger {
+    background: var(--toast-error);
+    border: 0;
+    color: #1d0c0c;
+    /* bon contraste sur le rouge */
+    font-weight: 700;
+}
+
+.btn-cancel {
+    background: transparent;
+    border: 1px solid var(--line);
+}
+
+/* ===== Empilement propre en mobile (dialogs) ============================= */
+@media (max-width:700px) {
+
+    .wrap dialog.modal .dlg-actions,
+    #dlg-delete .dlg-actions {
+        flex-direction: column-reverse;
+        /* Annuler en haut, Supprimer en bas */
+        align-items: stretch;
+    }
+
+    .wrap dialog.modal .dlg-actions button,
+    #dlg-delete .dlg-actions button {
+        width: 100%;
+        min-width: 0;
+    }
+}
+
+/* ====== Ajouts "mode compact" pour les cartes ============================ */
+.wrap .prod-card {
+    padding: 10px 12px;
+}
+
+.wrap .pc-head {
+    display: flex;
+    gap: 10px;
+    align-items: flex-start;
+}
+
+/* Forcer la méta sous le titre */
+.wrap .pc-title {
+    display: block;
+}
+
+.wrap .pc-name {
+    display: block;
+    margin: 0;
+    font-size: 15px;
+    line-height: 1.25;
+}
+
+.wrap .pc-meta {
+    display: block;
+    margin-top: 2px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 100%;
+    font-size: 12px;
+}
+
+.wrap .pc-body .stat.full {
+    padding: 6px 0;
+}
+
+.wrap .timeline .pill {
+    padding: 2px 6px;
+    font-size: 12px;
+}
+
+/* ====== Détails: tête + kebab ============================================ */
+.wrap .more-head {
+    display: flex;
+    align-items: center;
+    margin: 4px 0 8px 0;
+}
+
+.wrap .more-head .spacer {
+    flex: 1 1 auto;
+}
+
+.wrap .menu-wrap {
+    position: relative;
+}
+
+.icon-btn.small.kebab {
+    width: 34px;
+    height: 34px;
+    display: inline-grid;
+    place-items: center;
+    border: 1px solid var(--line);
+    background: transparent;
+    border-radius: 10px;
+    font-size: 18px;
+    line-height: 1;
+    cursor: pointer;
+}
+
+.icon-btn.small.kebab:hover {
+    background: var(--hover, rgba(255, 255, 255, .06));
+}
+
+html[data-theme="light"] .icon-btn.small.kebab:hover {
+    background: #f3f6fb;
+}
+
+/* Menu déroulant */
+.wrap .menu-wrap .menu {
+    position: absolute;
+    top: 40px;
+    right: 0;
+    min-width: 180px;
+    background: var(--panel, #0f1624);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 6px;
+    box-shadow: 0 16px 36px rgba(0, 0, 0, .35);
+    z-index: 50;
+}
+
+html[data-theme="light"] .menu-wrap .menu {
+    background: #fff;
+    box-shadow: 0 12px 28px rgba(10, 20, 30, .15);
+}
+
+.wrap .menu-wrap .menu .menu-item {
+    width: 100%;
+    text-align: left;
+    padding: 8px 10px;
+    border: 0;
+    background: transparent;
+    border-radius: 8px;
+    cursor: pointer;
+    font: inherit;
+}
+
+.wrap .menu-wrap .menu .menu-item:hover {
+    background: var(--hover, rgba(255, 255, 255, .06));
+}
+
+html[data-theme="light"] .menu-wrap .menu .menu-item:hover {
+    background: #f3f6fb;
+}
+
+.wrap .menu-wrap .menu .menu-item.danger {
+    color: #b3261e;
+}
+
+/* Dialog Filtres (compact) */
+#dlg-filters.modal.small {
+    max-width: 520px;
+}
+
+#dlg-filters .fields {
+    display: grid;
+    gap: 10px;
+    grid-template-columns: 1fr;
+}
+
+@media (min-width: 540px) {
+    #dlg-filters .fields {
+        grid-template-columns: 1fr 1fr;
+    }
+}
+
+#dlg-filters select {
+    width: 100%;
+}
+
+/* Résumé des filtres (chip) */
+#filters-summary {
+    align-self: center;
+}
+
+/* Kebab: garantit que "hidden" ferme visuellement le menu */
+.menu-wrap .menu[hidden] {
+    display: none !important;
+}
+
+/* ========================================================================== */
+/* ========== 15) Page Paramètres (/settings) =============================== */
+/* ========================================================================== */
+
+.wrap form[action$="settings/save"] {
+    max-width: 900px;
+    margin: 0 auto;
+}
+
+.wrap form[action$="settings/save"] .field {
+    flex: 1 1 240px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    min-width: 220px;
+}
+
+.wrap form[action$="settings/save"] .preview {
+    display: inline-block;
+    min-width: 44px;
+    height: 44px;
+    border-radius: 999px;
+    border: 1px solid var(--line);
+}
+
+.wrap .prod-card:has(.pc-status.red)::after {
+    content: "Urgent";
+    background: var(--ribbon-danger, #ef4444);
+    color: #fff;
+}
+
+.wrap .prod-card:has(.pc-status.yellow)::after {
+    content: "Bientôt";
+    background: var(--ribbon-warn, #f59e0b);
+    color: #121212;
+}
+
+/* base commune */
+.wrap .prod-card:has(.pc-status.red)::after,
+.wrap .prod-card:has(.pc-status.yellow)::after {
+    position: absolute;
+    top: 12px;
+    right: -42px;
+    width: 170px;
+    height: 28px;
+    line-height: 28px;
+    transform: rotate(45deg);
+    text-align: center;
+    font-weight: 700;
+    letter-spacing: .3px;
+    z-index: 10;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, .25);
+    pointer-events: none;
+}
+
+
+
+/* ========================================================================== */
+/* ========== 16) Page Journal (/journal) =================================== */
+/* ========================================================================== */
+
+.events-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.events-head h1 {
+    margin: 0;
+}
+
+.events-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.events-table th,
+.events-table td {
+    padding: 8px 10px;
+    border-bottom: 1px solid var(--line);
+    vertical-align: top;
+}
+
+.events-table th {
+    text-align: left;
+    opacity: .8;
+    font-weight: 600;
+}
+
+.nowrap {
+    white-space: nowrap;
+}
+
+.code {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+    font-size: .9rem;
+}
+
+/* Pastille type d'événement */
+.events-table .pill {
+    display: inline-block;
+    padding: .15rem .5rem;
+    border-radius: 999px;
+    border: 1px solid currentColor;
+    font-size: .85rem;
+    background: transparent;
+}
+
+/* Couleurs par type d’événement */
+.kind-settings_update {
+    color: #5fb673;
+    border-color: #5fb673;
+}
+
+.kind-settings_error {
+    color: #ff5a5a;
+    border-color: #ff5a5a;
+}
+
+.kind-journal_clear {
+    color: #7aa7ff;
+    border-color: #7aa7ff;
+}
+
+.kind-product_add {
+    color: #55c46a;
+    border-color: #55c46a;
+}
+
+.kind-product_update {
+    color: #b7a52b;
+    border-color: #b7a52b;
+}
+
+.kind-product_delete {
+    color: #ff6b6b;
+    border-color: #ff6b6b;
+}
+
+.kind-location_add {
+    color: #55c46a;
+    border-color: #55c46a;
+}
+
+.kind-location_update {
+    color: #b7a52b;
+    border-color: #b7a52b;
+}
+
+.kind-location_delete {
+    color: #ff6b6b;
+    border-color: #ff6b6b;
+}
+
+.kind-lot_add {
+    color: #55c46a;
+    border-color: #55c46a;
+}
+
+.kind-lot_update {
+    color: #b7a52b;
+    border-color: #b7a52b;
+}
+
+.kind-lot_consume {
+    color: #7aa7ff;
+    border-color: #7aa7ff;
+}
+
+.kind-lot_delete {
+    color: #ff6b6b;
+    border-color: #ff6b6b;
+}
+
+/* Flash message (?cleared=1) */
+.flash {
+    display: none;
+    margin: 8px 0 12px;
+    padding: 10px 12px;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+}
+
+/* ========================================================================== */
+/* ========== 17) Page Support (/support) =================================== */
+/* ========================================================================== */
+
+.support-wrap {
+    max-width: 880px;
+    margin: 0 auto;
+    padding: 1.25rem;
+}
+
+/* Hero */
+.support-hero {
+    position: relative;
+    border-radius: 16px;
+    padding: 28px;
+    overflow: hidden;
+    border: 1px solid var(--line);
+}
+
+html[data-theme="dark"] .support-hero {
+    background:
+        radial-gradient(1000px 400px at -10% -10%, rgba(79, 70, 229, .28), transparent 50%),
+        radial-gradient(900px 360px at 110% 0%, rgba(16, 185, 129, .22), transparent 50%),
+        linear-gradient(180deg, #141824, #0f1115 40%);
+}
+
+html[data-theme="light"] .support-hero {
+    background:
+        radial-gradient(900px 360px at -10% -10%, rgba(99, 102, 241, .15), transparent 50%),
+        radial-gradient(800px 320px at 110% 0%, rgba(16, 185, 129, .12), transparent 50%),
+        linear-gradient(180deg, #ffffff, #f8fafc 60%);
+}
+
+/* Titres & sous-titre */
+.support-title {
+    font-size: 1.8rem;
+    margin: 0 0 .25rem 0;
+    display: flex;
+    align-items: center;
+    gap: .5rem;
+}
+
+.support-sub {
+    margin: 0;
+    opacity: .9;
+    line-height: 1.6;
+}
+
+/* Actions */
+.support-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: .75rem;
+    align-items: center;
+    margin: 1.1rem 0 0;
+}
+
+/* Ko‑fi */
+.kofi-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: .6rem;
+    padding: .75rem 1.1rem;
+    border-radius: 999px;
+    font-weight: 700;
+    text-decoration: none;
+    border: 1px solid transparent;
+    transition: transform .04s ease, filter .15s ease, border-color .15s ease;
+    will-change: transform;
+}
+
+.kofi-btn:active {
+    transform: translateY(1px);
+}
+
+.kofi-primary {
+    background: #29abe0;
+    color: #0b1016;
+}
+
+html[data-theme="dark"] .kofi-outline {
+    border-color: #3b4252;
+    color: #e5e7eb;
+    background: transparent;
+}
+
+html[data-theme="light"] .kofi-outline {
+    border-color: #d1d5db;
+    color: #1f2328;
+    background: transparent;
+}
+
+.kofi-outline:hover {
+    filter: brightness(1.05);
+}
+
+.kofi-logo {
+    width: 22px;
+    height: 22px;
+    display: inline-block;
+}
+
+/* Carte d’explication */
+.support-card {
+    margin-top: 1rem;
+    border-radius: 12px;
+    border: 1px solid var(--line);
+    padding: 14px 16px;
+    background: var(--bg-card);
+}
+
+.support-list {
+    margin: .4rem 0 0 1.25rem;
+}
+
+/* Note finale */
+.support-note {
+    margin: 1.5rem 0 0;
+    font-size: .95rem;
+    opacity: .8;
+}
+
+
+
+
+----------------- .summary {
+    margin-top: .75rem;
+    padding: .75rem;
+    border: 1px solid var(--line, rgba(128, 128, 128, .25));
+    border-radius: 10px;
+    background: var(--bg-soft, rgba(0, 0, 0, .04));
+}
+
+.summary-title {
+    font-weight: 600;
+    margin-bottom: .5rem;
+}
+
+.summary-items {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: .5rem;
+}
+
+.summary-item {
+    padding: .35rem .5rem;
+    border-radius: 8px;
+    background: var(--bg, transparent);
+}
+
+.summary-item .k {
+    opacity: .8;
+    font-size: .9rem;
+}
+
+.summary-item .v {
+    font-weight: 600;
+    margin-top: .15rem;
+}
+
+@media (max-width: 700px) {
+    .summary-items {
+        grid-template-columns: 1fr;
+    }
+}
