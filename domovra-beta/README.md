@@ -42,3 +42,16 @@ Retours, idées et suivi : https://forum.hacf.fr/t/domovra-gestion-de-stock-dome
 
 ## 🖼️ Captures
 ![Accueil](https://raw.githubusercontent.com/bryan1993-HA/domovra-addons/main/domovra/images/EcranPrincipal.png)
+
+## 📝 Conventions de commits (simplifiées)
+
+Pour garder un historique clair, utilisez un mot-clé suivi d’une courte description :  
+
+- **feat:** ajout d’une fonctionnalité  
+  → `feat: ajout du scan code-barres`  
+- **fix:** correction d’un bug  
+  → `fix: éviter le crash si la DLC est vide`  
+- **docs:** documentation seulement  
+  → `docs: mise à jour du README avec guide installation`  
+- **chore:** maintenance, mise à jour ou version  
+  → `chore: bump version to 1.4.1`
