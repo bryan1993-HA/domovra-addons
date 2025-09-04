@@ -1,0 +1,314 @@
+<h2 style="margin:0 0 12px">À propos / Infos système</h2>
+
+<div class="about-grid v2">
+    <!-- ADD-ON -->
+    <section class="abox v2 addon">
+        <header class="abox-h">
+            <div class="title">
+                <strong>{{ ABOUT.addon.name|default('Domovra') }}</strong>
+                <span class="badge version">v{{ ABOUT.addon.version|default('n/a') }}</span>
+                <span class="badge channel {{ ABOUT.addon.channel|default('Stable')|lower }}">
+                    {{ ABOUT.addon.channel|default('Stable') }}
+                </span>
+            </div>
+            <div class="sub">
+                <code class="mono break">{{ ABOUT.addon.slug|default('domovra') }}</code>
+            </div>
+        </header>
+
+        <dl class="kv2">
+            {% if ABOUT.addon.url %}
+            <div>
+                <dt>Projet</dt>
+                <dd><a href="{{ ABOUT.addon.url }}" target="_blank" rel="noreferrer">GitHub</a></dd>
+            </div>
+            {% endif %}
+            {% if ABOUT.addon.documentation %}
+            <div>
+                <dt>Documentation</dt>
+                <dd><a href="{{ ABOUT.addon.documentation }}" target="_blank" rel="noreferrer">Voir</a></dd>
+            </div>
+            {% endif %}
+            {% if ABOUT.addon.issue_tracker %}
+            <div>
+                <dt>Issues</dt>
+                <dd><a href="{{ ABOUT.addon.issue_tracker }}" target="_blank" rel="noreferrer">Signaler un bug</a></dd>
+            </div>
+            {% endif %}
+            {% if ABOUT.addon.changelog %}
+            <div>
+                <dt>Changelog</dt>
+                <dd><a href="{{ ABOUT.addon.changelog }}" target="_blank" rel="noreferrer">Voir</a></dd>
+            </div>
+            {% endif %}
+            {% if ABOUT.addon.description %}
+            <div class="full">
+                <dt>Description</dt>
+                <dd class="muted">{{ ABOUT.addon.description }}</dd>
+            </div>
+            {% endif %}
+        </dl>
+    </section>
+
+    <!-- SYSTÈME -->
+    <section class="abox v2 sys">
+        <h3 class="abox-t">Système</h3>
+        <dl class="kv2">
+            <div>
+                <dt>Python</dt>
+                <dd>{{ ABOUT.sys.python|default('n/a') }}</dd>
+            </div>
+            <div>
+                <dt>FastAPI</dt>
+                <dd>{{ ABOUT.sys.fastapi|default('n/a') }}</dd>
+            </div>
+            <div>
+                <dt>Jinja2</dt>
+                <dd>{{ ABOUT.sys.jinja2|default('n/a') }}</dd>
+            </div>
+            <div>
+                <dt>SQLite (lib)</dt>
+                <dd>{{ ABOUT.sys.sqlite_lib|default('n/a') }}</dd>
+            </div>
+        </dl>
+    </section>
+
+    <!-- DONNÉES -->
+    <section class="abox v2 data">
+        <h3 class="abox-t">Données</h3>
+        <dl class="kv2">
+            <div class="full">
+                <dt>Base</dt>
+                <dd><code class="mono break">{{ ABOUT.sys.db_path|default('/data/domovra.sqlite3') }}</code> — {{
+                    ABOUT.sys.db_size|default('n/a') }}</dd>
+            </div>
+            <div class="full">
+                <dt>Paramètres</dt>
+                <dd><code class="mono break">{{ ABOUT.sys.settings_path|default('/data/settings.json') }}</code> — {{
+                    ABOUT.sys.settings_size|default('n/a') }}</dd>
+            </div>
+            <div class="full">
+                <dt>Journal</dt>
+                <dd><code class="mono break">{{ ABOUT.sys.log_path|default('/data/domovra.log') }}</code> — {{
+                    ABOUT.sys.log_size|default('n/a') }}</dd>
+            </div>
+        </dl>
+    </section>
+
+    <!-- COMPORTEMENT & UI -->
+    <section class="abox v2 ui">
+        <h3 class="abox-t">Comportement & UI</h3>
+        <dl class="kv2">
+            <div>
+                <dt>Thème</dt>
+                <dd>{{ SETTINGS.theme|default('auto') }}</dd>
+            </div>
+            <div>
+                <dt>Sidebar</dt>
+                <dd>{{ 'Compacte' if SETTINGS.sidebar_compact else 'Normale' }}</dd>
+            </div>
+            <div>
+                <dt>Toast</dt>
+                <dd>{{ SETTINGS.toast_duration|default(3000) }} ms</dd>
+            </div>
+            <div>
+                <dt>Seuil Bientôt</dt>
+                <dd>{{ SETTINGS.retention_days_warning|default(5) }} jours</dd>
+            </div>
+            <div>
+                <dt>Seuil Urgent</dt>
+                <dd>{{ SETTINGS.retention_days_critical|default(2) }} jours</dd>
+            </div>
+        </dl>
+    </section>
+</div>
+
+<style>
+    /* ===== À propos v2 (responsive + patch anti-chevauchement) ===== */
+
+    /* Grille principale */
+    .about-grid.v2 {
+        display: grid;
+        grid-template-columns: repeat(12, 1fr);
+        gap: 16px;
+        grid-auto-flow: row;
+        grid-auto-rows: auto;
+        align-items: start;
+    }
+
+    /* Cartes */
+    .abox.v2 {
+        border: 1px solid var(--line);
+        border-radius: 14px;
+        padding: 14px 16px;
+        background: transparent;
+        display: block;
+        position: relative;
+        min-width: 0;
+        overflow: visible;
+        grid-column: span 6;
+    }
+
+    /* Placement desktop large (≥1100px) */
+    .abox.v2.addon {
+        grid-column: span 6;
+    }
+
+    .abox.v2.sys {
+        grid-column: span 3;
+    }
+
+    .abox.v2.data {
+        grid-column: span 3;
+    }
+
+    .abox.v2.ui {
+        grid-column: span 6;
+    }
+
+    /* Palier ≤1100px : 2 colonnes */
+    @media (max-width:1100px) {
+        .about-grid.v2 {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+
+        .abox.v2 {
+            grid-column: auto;
+        }
+    }
+
+    /* Palier ≤720px : pile en 1 colonne (hotfix) */
+    @media (max-width:720px) {
+        .about-grid.v2 {
+            grid-template-columns: 1fr !important;
+            grid-auto-flow: row;
+            gap: 12px;
+        }
+
+        .about-grid.v2>.abox.v2 {
+            grid-column: 1 / -1 !important;
+            padding: 12px 14px;
+        }
+    }
+
+    /* En-têtes & badges */
+    .abox-h {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        margin-bottom: 8px;
+    }
+
+    .abox-h .title {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .abox-h .sub {
+        color: var(--muted-fg, #8a8a8a);
+        font-size: .95rem;
+    }
+
+    .abox-t {
+        margin: 0 0 8px;
+        font-size: 1.02rem;
+    }
+
+    .badge {
+        display: inline-block;
+        padding: 2px 8px;
+        border-radius: 999px;
+        border: 1px solid var(--line);
+        font-size: .85rem;
+        line-height: 1.2;
+        white-space: nowrap;
+    }
+
+    .badge.version {
+        font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    }
+
+    .badge.channel.beta {
+        border-color: #c08b00;
+    }
+
+    .badge.channel.dev {
+        border-color: #7c6cff;
+    }
+
+    /* Grille terme/valeur */
+    .kv2 {
+        display: grid;
+        grid-template-columns: 42% 58%;
+        gap: 8px 12px;
+        align-items: start;
+        min-width: 0;
+    }
+
+    .kv2 .full {
+        grid-column: 1 / -1;
+    }
+
+    .kv2 dt {
+        color: var(--muted-fg, #8a8a8a);
+        font-weight: 600;
+    }
+
+    .kv2 dd {
+        margin: 0;
+        min-width: 0;
+    }
+
+    .mono {
+        font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    }
+
+    .break {
+        overflow-wrap: anywhere;
+        word-break: break-word;
+    }
+
+    .muted {
+        color: var(--muted-fg, #8a8a8a);
+    }
+
+    .abox.v2,
+    .kv2 dd,
+    .kv2 dt {
+        line-height: 1.35;
+    }
+
+    /* Palier ≤540px : terme/valeur en pile */
+    @media (max-width:540px) {
+        .kv2 {
+            grid-template-columns: 1fr;
+            gap: 6px 10px;
+        }
+
+        .abox.v2 {
+            padding: 12px;
+        }
+
+        .badge {
+            margin-left: 0;
+        }
+    }
+
+    /* Palier ≤400px : micro-ajustements */
+    @media (max-width:400px) {
+        .badge {
+            font-size: .8rem;
+            padding: 2px 6px;
+        }
+
+        .kv2 {
+            gap: 5px 8px;
+        }
+
+        .abox.v2 {
+            padding: 10px 12px;
+        }
+    }
+</style>

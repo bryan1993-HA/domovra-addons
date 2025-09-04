@@ -19,6 +19,23 @@ else
 fi
 cd "$APP_DIR"
 
+# ✅ Exporte la version depuis config.json si dispo (fallback ENV)
+if [ -z "${DOMOVRA_VERSION:-}" ] && [ -f "$APP_DIR/config.json" ]; then
+  DOMOVRA_VERSION="$(python3 - <<'PY' "$APP_DIR/config.json" 2>/dev/null || true)
+import json, sys
+try:
+    with open(sys.argv[1], 'r', encoding='utf-8') as f:
+        print(json.load(f).get('version',''))
+except Exception:
+    pass
+PY
+"
+  export DOMOVRA_VERSION
+  echo "[Domovra] Version détectée: ${DOMOVRA_VERSION:-n/a}"
+else
+  echo "[Domovra] Version (ENV): ${DOMOVRA_VERSION:-n/a}"
+fi
+
 # Détermine le module à lancer (app.main:app prioritaire)
 if [ -f "$APP_DIR/app/main.py" ]; then
   MODULE="app.main:app"
@@ -40,14 +57,12 @@ fi
 
 # --------- Lancement ---------
 if [ -n "${UVICORN:-}" ]; then
-  # uvicorn binaire dispo
   exec "${UVICORN}" "${MODULE}" \
     --host 0.0.0.0 \
     --port 8099 \
     --app-dir "${APP_DIR}" \
     --proxy-headers
 else
-  # fallback via python -m uvicorn
   echo "[Domovra] uvicorn binaire introuvable, fallback python -m uvicorn"
   exec python3 -m uvicorn "${MODULE}" \
     --host 0.0.0.0 \

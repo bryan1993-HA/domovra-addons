@@ -4,16 +4,37 @@
 {% block content %}
 <div class="wrap" data-page="settings">
 
-    <!-- Onglets -->
-    <nav class="tabs" role="tablist" aria-label="Catégories de paramètres">
-        <button type="button" class="tab" data-tab="appearance" aria-selected="true">Apparence</button>
-        <button type="button" class="tab" data-tab="stock">Produits & Stocks</button>
-        <button type="button" class="tab" data-tab="toasts">Notifications</button>
-        <button type="button" class="tab" data-tab="locations">Emplacements</button>
-        <button type="button" class="tab" data-tab="admindb">Admin DB</button>
-        <button type="button" class="tab" data-tab="advanced">Avancés</button>
-        <button type="button" class="tab" data-tab="journal">Journal</button>
-    </nav>
+    <!-- Barre sous le header : onglets (desktop) + select (mobile) -->
+    <div class="tabs-fixed" role="navigation" aria-label="Catégories de paramètres">
+        <!-- PC / Tablette : onglets en 1 ligne -->
+        <nav class="tabs desktop" role="tablist">
+            <button type="button" class="tab" data-tab="appearance" aria-selected="true">Apparence</button>
+            <button type="button" class="tab" data-tab="stock">Produits & Stocks</button>
+            <button type="button" class="tab" data-tab="toasts">Notifications</button>
+            <button type="button" class="tab" data-tab="locations">Emplacements</button>
+            <button type="button" class="tab" data-tab="admindb">Admin DB</button>
+            <button type="button" class="tab" data-tab="advanced">Avancés</button>
+            <button type="button" class="tab" data-tab="journal">Journal</button>
+            <button type="button" class="tab" data-tab="about">À propos</button>
+        </nav>
+
+        <!-- Mobile : select -->
+        <div class="tabs-select mobile" aria-label="Choisir un onglet">
+            <select id="tabSelect">
+                <option value="appearance">Apparence</option>
+                <option value="stock">Produits & Stocks</option>
+                <option value="toasts">Notifications</option>
+                <option value="locations">Emplacements</option>
+                <option value="admindb">Admin DB</option>
+                <option value="advanced">Avancés</option>
+                <option value="journal">Journal</option>
+                <option value="about">À propos</option>
+            </select>
+        </div>
+    </div>
+
+    <!-- Décalage inutilisé ici -->
+    <div class="tabs-offset" aria-hidden="true"></div>
 
     {# ======= FORM RÉGLAGES UNIQUEMENT ======= #}
     <form id="settings-form" method="post" action="{{ BASE }}settings/save">
@@ -37,48 +58,150 @@
             {% include "tools/_advanced.html" %}
         </section>
 
-        <div class="row save-row" style="justify-content:flex-end">
+        <div class="save-row sticky-save" style="justify-content:flex-end">
             <button class="secondary" type="submit">Enregistrer</button>
         </div>
     </form>
 
-    {# ======= PANELS SANS ÊTRE DANS LE FORM GLOBAL ======= #}
+    {# ======= PANELS HORS FORM ======= #}
     <section class="panel card" data-panel="locations" hidden>
         {% include "tools/_locations_full.html" %}
     </section>
     <section class="panel card" data-panel="journal" hidden>
         {% include "tools/_journal_full.html" %}
     </section>
+    <section class="panel card" data-panel="about" hidden>
+        {% include "tools/_about.html" %}
+    </section>
 
 </div>
 
 <style>
-    /* 🔒 Empêche tout CSS de forcer l’affichage des éléments [hidden] */
     [hidden] {
         display: none !important;
     }
 
-    .tabs {
+    /* ---- Barre sous le header ---- */
+    .wrap[data-page="settings"] .tabs-fixed {
+        position: static;
+        width: 100%;
+        background: var(--bg-body);
+        border-bottom: 1px solid var(--line);
+        box-shadow: none;
+        margin-top: var(--header-compensate, 0px);
+    }
+
+    .wrap[data-page="settings"] .tabs-offset {
+        display: none;
+        height: 0;
+    }
+
+    /* Desktop : onglets en ligne */
+    .tabs.desktop {
         display: flex;
-        gap: .5rem;
-        margin: 0 0 1rem 0;
-        flex-wrap: wrap;
-        position: relative;
-        z-index: 2;
-        /* évite d’être recouvert par un overlay */
+        flex-wrap: nowrap;
+        justify-content: center;
+        gap: 8px;
+        padding: 8px 8px 10px;
+        white-space: nowrap;
+        overflow-x: auto;
+        scrollbar-width: none;
     }
 
-    .tab {
-        padding: .45rem .75rem;
-        border-radius: .75rem;
-        border: 1px solid var(--line);
-        background: transparent;
+    .tabs.desktop::-webkit-scrollbar {
+        display: none;
+    }
+
+    /* === Palette thème-aware pour onglets === */
+    :root {
+        --tab-bg: var(--card-bg, #ffffff);
+        --tab-border: var(--line, #e5e7eb);
+        --tab-text: var(--fg, #111827);
+        --tab-hover: color-mix(in oklab, var(--tab-bg) 94%, black 6%);
+        --tab-selected: var(--accent, #4f46e5);
+        --tab-outline: var(--tab-selected);
+    }
+
+    :root[data-theme="dark"],
+    .dark {
+        --tab-bg: var(--card-bg, #151922);
+        --tab-border: var(--line, #242932);
+        --tab-text: var(--fg, #e5e7eb);
+        --tab-hover: color-mix(in oklab, var(--tab-bg) 100%, white 6%);
+    }
+
+    @media (prefers-color-scheme: dark) {
+        :root:not([data-theme="light"]):not(.light) {
+            --tab-bg: var(--card-bg, #151922);
+            --tab-border: var(--line, #242932);
+            --tab-text: var(--fg, #e5e7eb);
+            --tab-hover: color-mix(in oklab, var(--tab-bg) 100%, white 6%);
+        }
+    }
+
+    .tabs.desktop .tab {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 10px 12px;
+        border: 1px solid var(--tab-border);
+        background: var(--tab-bg);
+        color: var(--tab-text);
+        border-radius: 10px;
         cursor: pointer;
-        -webkit-tap-highlight-color: transparent;
+        user-select: none;
+        white-space: nowrap;
+        transition: background-color .12s, border-color .12s, box-shadow .12s;
+        font-weight: 500;
     }
 
-    .tab[aria-selected="true"] {
-        background: rgba(255, 255, 255, .06);
+    .tabs.desktop .tab:hover {
+        background: var(--tab-hover);
+    }
+
+    .tabs.desktop .tab[aria-selected="true"] {
+        border-color: var(--tab-selected);
+        box-shadow: 0 0 0 1px var(--tab-selected) inset;
+    }
+
+    .tabs.desktop .tab:focus-visible {
+        outline: 2px solid var(--tab-outline);
+        outline-offset: 2px;
+    }
+
+    /* Mobile : select */
+    .tabs-select.mobile {
+        display: none;
+        padding: 8px;
+    }
+
+    .tabs-select.mobile select {
+        width: 100%;
+        padding: 10px 12px;
+        border: 1px solid var(--tab-border);
+        border-radius: 10px;
+        background: var(--tab-bg);
+        color: var(--tab-text);
+    }
+
+    @media (max-width: 719.98px) {
+        .tabs.desktop {
+            display: none;
+        }
+
+        .tabs-select.mobile {
+            display: block;
+        }
+    }
+
+    /* Bouton Enregistrer sticky */
+    .sticky-save {
+        position: sticky;
+        bottom: 8px;
+        z-index: 3;
+        padding-top: 8px;
+        background: linear-gradient(180deg, rgba(0, 0, 0, 0), rgba(0, 0, 0, .05));
+        border-top: 1px solid var(--line);
     }
 </style>
 {% endblock %}
@@ -86,35 +209,55 @@
 {% block scripts %}
 <script>
     (function () {
-        const tabs = document.querySelectorAll('.tabs .tab');
+        const tabs = document.querySelectorAll('.tabs.desktop .tab');
         const panels = document.querySelectorAll('[data-panel]');
-        const saveRow = document.querySelector('.save-row'); // 👈 le bouton global
+        const saveRow = document.querySelector('.save-row');
+        const sel = document.getElementById('tabSelect');
+        const FORM_TABS = ["appearance", "stock", "toasts", "admindb", "advanced"];
         const KEY = 'settingsActiveTab';
 
         function show(tab) {
             tabs.forEach(t => t.setAttribute('aria-selected', t.dataset.tab === tab ? 'true' : 'false'));
             panels.forEach(p => p.hidden = (p.dataset.panel !== tab));
-
-            // Affiche le bouton seulement pour les onglets du form global
-            if (saveRow) {
-                const isFormTab = ["appearance", "stock", "toasts", "admindb", "advanced"].includes(tab);
-                saveRow.style.display = isFormTab ? "flex" : "none";
-            }
+            if (saveRow) saveRow.style.display = FORM_TABS.includes(tab) ? "flex" : "none";
 
             const u = new URL(location.href);
             u.searchParams.set('tab', tab);
             history.replaceState(null, '', u);
             localStorage.setItem(KEY, tab);
+
+            if (sel && sel.value !== tab) sel.value = tab;
         }
 
         tabs.forEach(t => t.addEventListener('click', (e) => {
-            e.preventDefault();    // 👈 crucial sur mobile
-            e.stopPropagation();
+            e.preventDefault(); e.stopPropagation();
             show(t.dataset.tab);
+            t.focus();
         }, { passive: false }));
 
-        const urlTab = new URL(location.href).searchParams.get('tab');
-        show(urlTab || localStorage.getItem(KEY) || 'appearance');
+        sel?.addEventListener('change', () => show(sel.value));
+
+        const tablist = document.querySelector('.tabs.desktop[role="tablist"]');
+        tablist?.addEventListener('keydown', (e) => {
+            if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(e.key)) return;
+            e.preventDefault();
+            const list = Array.from(tabs);
+            const i = list.findIndex(b => b.getAttribute('aria-selected') === 'true');
+            let ni = i;
+            if (e.key === 'ArrowRight') ni = (i + 1) % list.length;
+            if (e.key === 'ArrowLeft') ni = (i - 1 + list.length) % list.length;
+            if (e.key === 'Home') ni = 0;
+            if (e.key === 'End') ni = list.length - 1;
+            const btn = list[ni];
+            btn?.click(); btn?.focus();
+        });
+
+        const params = new URL(location.href).searchParams;
+        const urlTab = params.get('tab');
+        const hashTab = (location.hash || '').replace('#', '');
+        const initial = hashTab || urlTab || localStorage.getItem(KEY) || 'appearance';
+        const exists = Array.from(panels).some(p => p.dataset.panel === initial);
+        show(exists ? initial : 'appearance');
     })();
 </script>
 {% endblock %}
